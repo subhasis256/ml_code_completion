@@ -1,0 +1,29 @@
+#!/usr/bin/env python
+# This file goes through the data directory, looking for source files that
+# match the input pattern, parses these files and extracts out key words from
+# the files.
+# Usage:
+# ./extract_key_words -s <comma separated suffix list> -o <outfile>
+
+import re
+import optparse as op
+
+def get_comma_separated_args(option, opt, value, parser):
+  setattr(parser.values, option.dest, value.split(','))
+
+parser = op.OptionParser()
+parser.add_option('-s', '--suffix', dest='suffix',
+                  type='string', action='callback',
+                  callback=get_comma_separated_args,
+                  help='include files with this suffix from data directory')
+parser.add_option('-o', '--outfile', dest='outfile',
+                  type='string',
+                  help='dave key words to this file')
+
+(options, args) = parser.parse_args()
+
+if not (options.suffix and options.outfile):
+  print('Please pass a list of suffixes for filenames, and an output file'\
+        'name to save key words to.')
+  print('Try ./extract_key_words -h for a list of all options.')
+  exit(1)
