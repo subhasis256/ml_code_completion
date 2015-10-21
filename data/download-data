@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+
+# fetch Linux
+if [ -d linux ]; then
+  echo "Linux directory already exists!"
+  echo "Will skip fetching Linux source."
+else
+  echo "Fetching Linux source ..."
+  wget https://cdn.kernel.org/pub/linux/kernel/v4.x/linux-4.2.3.tar.xz
+  tar -xf linux-4.2.3.tar.xz
+  rm -rf linux-4.2.3.tar.xz
+  mv linux-4.2.3 linux
+fi
+
+# fetch Legion
+if [ -d legion ]; then
+  echo "Legion directory already exists!"
+  echo "Will skip fetching Legion source."
+else
+  echo "Fetching Legion source ..."
+  git clone https://github.com/StanfordLegion/legion
+fi

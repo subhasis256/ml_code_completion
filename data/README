@@ -1,6 +1,8 @@
-In this directory we will put various data sources: Linux, Legion etc. We should
-probably have a directory for each project and common code that "parses" any
-project from this directory.
+Use the script download-data to download source code for various projects into
+this directory. Usage: ./download-data
+The script currently downloads following codes:
+  * Linux
+  * Legion
 
-For the time being... let us start with Linux and Legion. I have put in an empty
-directory for Linux and Legion. I don't know how to get Legion.
+These codes are used as inputs for key word extraction and for training/ testing
+code completion.
