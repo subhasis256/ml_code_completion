@@ -10,22 +10,21 @@ class Model(object):
     """
     def __init__(self, keywords):
         """
-        keywords: list of keywords for this instance
+        @keywords: list of keywords for this instance
         store the list of keywords in self.keywordList
         and a corresponding frozenset in self.keywordSet
         """
         self.keywordList = keywords
         self.keywordSet = frozenset(keywords)
 
-    def train(self, keywords, filesAndTokens):
+    def train(self, filesAndTokens):
         """
-        keywords: list of keywords for this training instance
-        filesAndTokens: list of tuples of the form 
+        @filesAndTokens: list of tuples of the form 
         (fileName, list of tokens in file)
         """
         raise NotImplementedError, "Implement me!"
 
-    def predict(self, keywords, fileTillNow):
+    def predict(self, fileTillNow):
         """
         Same as above, only this time predict the next token, or a list of
         tokens or anything model specific, but only given a list of file tokens
