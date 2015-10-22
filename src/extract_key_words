@@ -5,47 +5,54 @@
 # Usage:
 # ./extract_key_words -s <comma separated suffix list> -o <outfile>
 
-import fnmatch as fn
-import optparse as op
+import key_word_extractor as ke
 import os
-import re
 
-# command line options
-def get_comma_separated_args(option, opt, value, parser):
-  setattr(parser.values, option.dest, value.split(','))
+# root data directory
+root_dir=os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+root_data_dir=os.path.join(root_dir, 'data')
+key_word_dir=os.path.join(root_dir, 'key_words')
+if not os.path.exists(key_word_dir):
+  os.makedirs(key_word_dir)
+# number of keywords to extract
+max_key_words=50
+percentile_key_words=95
 
-parser = op.OptionParser()
-parser.add_option('-s', '--suffix', dest='suffixes',
-                  type='string', action='callback',
-                  callback=get_comma_separated_args,
-                  help='include files with this suffix (eg: c,h) from data '
-                  'directory')
-parser.add_option('-o', '--outfile', dest='outfile',
-                  type='string',
-                  help='dave key words to this file')
+# list of languages, corresponding file suffixes, a flag indicating whether
+# to parse or skip, a list of data directories to read
+suffixes  = 'suffixes'
+parse     = 'parse'
+data_dirs = 'data_dirs'
+outfile   = 'outfile'
+languages = {
+    'h'      : { suffixes  : ['h'],
+                 parse     : True,
+                 data_dirs : [ root_data_dir ],
+                 outfile   : os.path.join(key_word_dir, "h")
+               },
+    'c'      : { suffixes  : ['c', 'cc', 'cpp'],
+                 parse     : True,
+                 data_dirs : [ root_data_dir ],
+                 outfile   : os.path.join(key_word_dir, "c")
+               },
+    'python' : { suffixes  : ['py'],
+                 parse     : True,
+                 data_dirs : [ root_data_dir ],
+                 outfile   : os.path.join(key_word_dir, "python")
+               }
+    }
 
-(options, args) = parser.parse_args()
-
-# check option validity
-if not (options.suffixes and options.outfile):
-  print('Please pass a list of suffixes for filenames, and an output file'\
-        'name to save key words to.')
-  print('Try ./extract_key_words -h for a list of all options.')
-  exit(1)
-
-# check suffix validity
-for suffix in options.suffixes:
-  if re.match(r'[\W0-9]+', suffix):
-    print('Suffixes must consist of alphabets only.')
-globs = map(lambda x : '*.' + x, options.suffixes)
-
-# list of files to read
-data_dir = '../data'
-matches = []
-for glob in globs:
-  for root, dirnames, filenames in os.walk(data_dir):
-    for filename in fn.filter(filenames, glob):
-      matches.append(os.path.join(root, filename))
-
-# parse files and build dictionary of words
-# (TODO)
+# Extract key words and save them
+for lang, val in languages.items():
+  val = languages[lang]
+  if not val[parse]:
+    print("Skipping language %s" % lang)
+    continue
+  print("Extracting key words for language %s ..." % lang)
+  words = ke.FrequentWords(data_dirs=val[data_dirs], suffixes=val[suffixes],
+                           max_key_words=max_key_words,
+                           percentile_key_words=percentile_key_words)
+  with open(val[outfile], 'w') as out:
+    for key_word, count in words:
+      out.write("%s %d\n" % (key_word, count))
+  print("Completed extracting key words for language %s" % lang)
