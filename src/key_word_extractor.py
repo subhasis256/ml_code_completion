@@ -37,7 +37,7 @@ def FrequentWords(data_dirs, suffixes, max_key_words, percentile_key_words):
             token_count[token] = 0
     files_done += 1
     if (files_done % 5000 == 0):
-      print("Completed parsing %d files ...", files_done)
+      print("Completed parsing %d files ..." % files_done)
 
   num_key_words = min(max_key_words,
                       math.ceil(percentile_key_words * len(token_count)))
