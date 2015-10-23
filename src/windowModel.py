@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 
 from model import Model
+import random
+import numpy as np
+import updates
 
 class WindowModel(Model):
     """
@@ -20,6 +23,14 @@ class WindowModel(Model):
         # initialize wordToID with keyword IDs
         for i,k in enumerate(self.keywordList):
             self.wordToID[k] = i
+        self.params = {}
+#        self.opt = MomentumOptimizer(0.003, 0.9)
+        self.opt = updates.AdagradOptimizer(0.03)
+
+    def add_param(self, pname, pdim, scale=0.01):
+        param = scale * np.random.randn(*pdim)
+        self.params[pname] = param
+        setattr(self, pname, param)
 
     def convertToTokenIDs(self, tokens):
         """
@@ -36,7 +47,7 @@ class WindowModel(Model):
             ids.append(self.wordToID[token])
         return ids
 
-    def makeWindow(self, tokenIDWindow, isoPosition=False):
+    def makeWindow(self, tokenIDWindow, target, isoPosition=False):
         """
         converts the integer tokenIDs in @tokenIDWindow to be of the following
         form:
@@ -49,6 +60,7 @@ class WindowModel(Model):
         So, for example, if K=3, and the window is [0,2,1,5,7,10,2], the
         transformed window will be [0,2,1,3,4,5,2] if @isoPosition=False, else
         it will be [0,2,1,6,7,8,2].
+        converts @target using the same dictionary
         """
         nonKeywordMap = {}
         convertedTokens = [t for t in tokenIDWindow]
@@ -62,7 +74,20 @@ class WindowModel(Model):
                                          len(nonKeywordMap))
                     nonKeywordMap[token] = windowTokenID
                 convertedTokens[i] = nonKeywordMap[token]
-        return convertedTokens
+        if target < len(self.keywordList):
+            convertedTarget = target
+        else:
+            if target not in nonKeywordMap:
+                convertedTarget = len(self.keywordList) + self.winSize
+            else:
+                convertedTarget = nonKeywordMap[target]
+        return convertedTokens, convertedTarget
+
+    def computeAccuracy(self, targets, preds):
+        abs_acc = np.mean(targets == preds)
+        non_unks = targets != (len(self.keywordList) + self.winSize)
+        known_acc = np.mean(targets[non_unks] == preds[non_unks])
+        return abs_acc, known_acc
 
     def train(self, filesAndTokens):
         """
@@ -77,6 +102,51 @@ class WindowModel(Model):
                             for name,tokens in filesAndTokens]
         # TODO: do minibatch based SGD using loss and gradient function defined
         # by class
+        nepochs = 5
+        batchSize = 32
+        totalTokens = sum([len(tokens) for name,tokens in filesAndTokens])
+        batches = totalTokens / batchSize
+        Nfiles = len(filesAndTokens)
+        print totalTokens, batches
+
+        smooth_loss = None
+        smooth_acc = None
+
+        for epoch in range(nepochs):
+            for b in range(batches):
+                # get a range of random batchSize sized beginning indexes
+                fileIDs = [random.randrange(Nfiles) for _ in range(batchSize)]
+                filtFileIDs = [fid for fid in fileIDs
+                               if len(filesAndTokens[fid][1]) > self.winSize+1]
+                begins = [random.randrange(len(filesAndTokens[fid][1])-self.winSize-1)
+                          for fid in filtFileIDs]
+                batch = [filesAndTokenIDs[fid][1][begin:begin+self.winSize]
+                         for fid,begin in zip(filtFileIDs,begins)]
+                targets = [filesAndTokenIDs[fid][1][begin+self.winSize+1]
+                           for fid,begin in zip(filtFileIDs,begins)]
+                batchAndTargets = [self.makeWindow(tokenIDs,target,True)
+                                   for tokenIDs,target in zip(batch,targets)]
+                knownBatch = [(toks,tgt) for toks,tgt in batchAndTargets
+                              if tgt != len(self.keywordList) + self.winSize]
+#                preds, loss, grads = self.lossAndGrads(batchAndTargets)
+                preds, loss, grads = self.lossAndGrads(knownBatch)
+                for k in grads:
+                    self.opt.update(self.params[k], grads[k])
+
+                tokTgts = np.array([tgt for toks,tgt in knownBatch])
+                abs_acc, known_acc = self.computeAccuracy(tokTgts, preds)
+
+                if smooth_loss is None:
+                    smooth_loss = loss
+                    smooth_acc = known_acc
+                else:
+                    smooth_loss = 0.99*smooth_loss + 0.01*loss
+                    smooth_acc = 0.99*smooth_acc + 0.01*known_acc
+
+                if b % 1 == 0:
+                    print 'Epoch %d batch %d smooth_loss %f smooth_acc %.2f%%' % (epoch, b,
+                                                                                  smooth_loss,
+                                                                                  smooth_acc*100)
 
 
 if __name__ == '__main__':
