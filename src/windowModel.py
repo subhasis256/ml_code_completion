@@ -4,6 +4,9 @@ from model import Model
 import random
 import numpy as np
 import updates
+import cPickle as pkl
+from utils import colorPrint
+import sys
 
 class WindowModel(Model):
     """
@@ -20,17 +23,25 @@ class WindowModel(Model):
         super(WindowModel, self).__init__(keywords)
         self.winSize = winSize
         self.wordToID = {}
+        self.IDToWord = {}
         # initialize wordToID with keyword IDs
         for i,k in enumerate(self.keywordList):
             self.wordToID[k] = i
+            self.IDToWord[i] = k
         self.params = {}
 #        self.opt = MomentumOptimizer(0.003, 0.9)
-        self.opt = updates.AdagradOptimizer(0.03)
+        self.stepsize = 0.05
+        self.opt = updates.AdagradOptimizer(self.stepsize)
 
     def add_param(self, pname, pdim, scale=0.01):
         param = scale * np.random.randn(*pdim)
         self.params[pname] = param
         setattr(self, pname, param)
+
+    def restoreFrom(self, savedFile):
+        saved_model = pkl.load(open(savedFile))
+        for k in self.params:
+            np.copyto(self.params[k], saved_model.params[k])
 
     def convertToTokenIDs(self, tokens):
         """
@@ -43,6 +54,7 @@ class WindowModel(Model):
         ids = []
         for token in tokens:
             if token not in self.wordToID:
+                self.IDToWord[len(self.wordToID)] = token
                 self.wordToID[token] = len(self.wordToID)
             ids.append(self.wordToID[token])
         return ids
@@ -122,7 +134,7 @@ class WindowModel(Model):
                           for fid in filtFileIDs]
                 batch = [filesAndTokenIDs[fid][1][begin:begin+self.winSize]
                          for fid,begin in zip(filtFileIDs,begins)]
-                targets = [filesAndTokenIDs[fid][1][begin+self.winSize+1]
+                targets = [filesAndTokenIDs[fid][1][begin+self.winSize]
                            for fid,begin in zip(filtFileIDs,begins)]
                 batchAndTargets = [self.makeWindow(tokenIDs,target,True)
                                    for tokenIDs,target in zip(batch,targets)]
@@ -143,10 +155,98 @@ class WindowModel(Model):
                     smooth_loss = 0.99*smooth_loss + 0.01*loss
                     smooth_acc = 0.99*smooth_acc + 0.01*known_acc
 
-                if b % 1 == 0:
-                    print 'Epoch %d batch %d smooth_loss %f smooth_acc %.2f%%' % (epoch, b,
+                if b % 10 == 0:
+                    print 'Epoch %d batch %d/%d smooth_loss %f smooth_acc %.2f%%' % (epoch, b, batches,
                                                                                   smooth_loss,
                                                                                   smooth_acc*100)
+                if b % 100000 == 0:
+                    pkl.dump(self, open('%d-%d.p' % (epoch, b), 'w'))
+
+    def printPreds(self, XyIDs, XyWinIDs, preds):
+        assert len(XyWinIDs) == len(XyIDs)
+        for i in range(len(XyIDs)):
+            XID, yID = XyIDs[i]
+            XWinID, yWinID = XyWinIDs[i]
+            pred = preds[i]
+
+            words = [self.IDToWord[x] for x in XID]
+            yWord = self.IDToWord[yID]
+
+            predWord = "<UNKUNK>"
+            if pred < len(self.keywordList):
+                predWord = self.keywordList[pred]
+            elif pred < len(self.keywordList) + self.winSize:
+                # search among the list of XWinIDs
+                for ix,x in enumerate(XWinID):
+                    if x == pred:
+                        predWord = self.IDToWord[XID[ix]]
+                        break
+            colorPrint(' '.join(words))
+            if pred == yWinID:
+                colorPrint(yWord, predWord, color='green')
+            else:
+                colorPrint(yWord, predWord, color='red')
+            sys.stdout.write('\n')
+
+    def test(self, filesAndTokens):
+        """
+        @filesAndTokens: as defined in Model
+        """
+        # in here, we assume that we are always minimizing some loss function
+        # using an sgd algorithm (may be more advanced sgd algorithms such as
+        # sgd with momentum, Adam etc.) but not second order in general
+
+        # first let us create tokenIDs corresponding to the tokens
+        filesAndTokenIDs = [(name,self.convertToTokenIDs(tokens))
+                            for name,tokens in filesAndTokens]
+        # TODO: do minibatch based SGD using loss and gradient function defined
+        # by class
+        batchSize = 32
+        totalTokens = sum([len(tokens) for name,tokens in filesAndTokens])
+        batches = totalTokens / batchSize
+        Nfiles = len(filesAndTokens)
+        print totalTokens, batches
+
+        total_loss = 0
+        total_acc = 0
+        total_tgts = 0
+
+        for b in range(batches):
+            # get a range of random batchSize sized beginning indexes
+            fileIDs = [random.randrange(Nfiles) for _ in range(batchSize)]
+            filtFileIDs = [fid for fid in fileIDs
+                           if len(filesAndTokens[fid][1]) > self.winSize+1]
+            begins = [random.randrange(len(filesAndTokens[fid][1])-self.winSize-1)
+                      for fid in filtFileIDs]
+            XIDs = [filesAndTokenIDs[fid][1][begin:begin+self.winSize]
+                    for fid,begin in zip(filtFileIDs,begins)]
+            yIDs = [filesAndTokenIDs[fid][1][begin+self.winSize]
+                    for fid,begin in zip(filtFileIDs,begins)]
+
+            XyWinIDs = [self.makeWindow(XID,yID,True)
+                        for XID,yID in zip(XIDs,yIDs)]
+            filtXyWinIDs = [(XWinID,yWinID) for XWinID,yWinID in XyWinIDs
+                            if yWinID != len(self.keywordList) + self.winSize]
+            filtXyIDs = [(XID,yID)
+                         for XID,yID,(XWinID,yWinID) in zip(XIDs,yIDs,XyWinIDs)
+                         if yWinID != len(self.keywordList) + self.winSize]
+            preds, loss, grads = self.lossAndGrads(filtXyWinIDs)
+
+            yWinIDs = np.array([yWinID for XWinID,yWinID in filtXyWinIDs])
+            abs_acc, known_acc = self.computeAccuracy(yWinIDs, preds)
+
+#            self.printPreds(filtXyIDs, filtXyWinIDs, preds)
+
+            total_tgts += preds.shape[0]
+            total_loss += loss * preds.shape[0]
+            total_acc += known_acc * preds.shape[0]
+
+            if b % 10 == 0:
+                print 'Batch %d/%d loss %f acc %.2f%%' % (b, batches,
+                                                          total_loss/total_tgts,
+                                                          total_acc/total_tgts*100)
+#                if b % 100000 == 0:
+#                    pkl.dump(self, open('%d-%d.p' % (epoch, b), 'w'))
 
 
 if __name__ == '__main__':

@@ -22,9 +22,13 @@ def tokenize(fileName):
     return allTokens
 
 if __name__ == '__main__':
+    import cPickle as pkl
+    import sys
+
     files = matchingFiles(['../data/linux'], ['c', 'h'])
     filesAndTokens = []
-    for i,name in enumerate(files[:5000]):
+#    for i,name in enumerate(files[:20000]):
+    for i,name in enumerate(files[20000:22000]):
         if i % 1000 == 0:
             print '%d files done' % i
         filesAndTokens.append((name,tokenize(name)))
@@ -36,5 +40,7 @@ if __name__ == '__main__':
         for line in fp:
             keywords.append(line.strip().split()[0])
     print keywords
-    model = PositionDependentVectorModel(keywords, winSize=100, wdim=48)
-    model.train(filesAndTokens)
+    model = PositionDependentVectorModel(keywords, winSize=20, wdim=48)
+    model.restoreFrom(sys.argv[1])
+    model.test(filesAndTokens)
+#    model.train(filesAndTokens)

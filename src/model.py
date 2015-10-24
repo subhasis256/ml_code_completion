@@ -24,6 +24,13 @@ class Model(object):
         """
         raise NotImplementedError, "Implement me!"
 
+    def test(self, filesAndTokens):
+        """
+        @filesAndTokens: list of tuples of the form 
+        (fileName, list of tokens in file)
+        """
+        raise NotImplementedError, "Implement me!"
+
     def predict(self, fileTillNow):
         """
         Same as above, only this time predict the next token, or a list of
