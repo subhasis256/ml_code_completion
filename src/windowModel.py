@@ -7,6 +7,7 @@ import updates
 import cPickle as pkl
 from utils import colorPrint
 import sys
+import collections
 
 class WindowModel(Model):
     """
@@ -96,10 +97,7 @@ class WindowModel(Model):
         return convertedTokens, convertedTarget
 
     def computeAccuracy(self, targets, preds):
-        abs_acc = np.mean(targets == preds)
-        non_unks = targets != (len(self.keywordList) + self.winSize)
-        known_acc = np.mean(targets[non_unks] == preds[non_unks])
-        return abs_acc, known_acc
+        return np.mean(targets == preds)
 
     def train(self, filesAndTokens):
         """
@@ -122,7 +120,8 @@ class WindowModel(Model):
         print totalTokens, batches
 
         smooth_loss = None
-        smooth_acc = None
+        smooth_known_acc = None
+        smooth_abs_acc = None
 
         for epoch in range(nepochs):
             for b in range(batches):
@@ -140,29 +139,31 @@ class WindowModel(Model):
                                    for tokenIDs,target in zip(batch,targets)]
                 knownBatch = [(toks,tgt) for toks,tgt in batchAndTargets
                               if tgt != len(self.keywordList) + self.winSize]
-#                preds, loss, grads = self.lossAndGrads(batchAndTargets)
-                preds, loss, grads = self.lossAndGrads(knownBatch)
+                preds, probs, loss, grads = self.lossAndGrads(knownBatch)
                 for k in grads:
                     self.opt.update(self.params[k], grads[k])
 
                 tokTgts = np.array([tgt for toks,tgt in knownBatch])
-                abs_acc, known_acc = self.computeAccuracy(tokTgts, preds)
+                acc = self.computeAccuracy(tokTgts, preds)
 
                 if smooth_loss is None:
                     smooth_loss = loss
-                    smooth_acc = known_acc
+                    smooth_known_acc = acc
+                    smooth_abs_acc = acc * tokTgts.shape[0]/float(batchSize)
                 else:
                     smooth_loss = 0.99*smooth_loss + 0.01*loss
-                    smooth_acc = 0.99*smooth_acc + 0.01*known_acc
+                    smooth_known_acc = 0.99*smooth_known_acc + 0.01*acc
+                    smooth_abs_acc = 0.99*smooth_abs_acc + 0.01*acc*tokTgts.shape[0]/float(batchSize)
 
                 if b % 10 == 0:
-                    print 'Epoch %d batch %d/%d smooth_loss %f smooth_acc %.2f%%' % (epoch, b, batches,
+                    print 'Epoch %d batch %d/%d smooth_loss %f smooth_acc %.2f%% smooth_abs_acc %.2f%%' % (epoch, b, batches,
                                                                                   smooth_loss,
-                                                                                  smooth_acc*100)
+                                                                                  smooth_known_acc*100,
+                                                                                  smooth_abs_acc*100)
                 if b % 100000 == 0:
                     pkl.dump(self, open('%d-%d.p' % (epoch, b), 'w'))
 
-    def printPreds(self, XyIDs, XyWinIDs, preds):
+    def printPreds(self, XyIDs, XyWinIDs, preds, probs):
         assert len(XyWinIDs) == len(XyIDs)
         for i in range(len(XyIDs)):
             XID, yID = XyIDs[i]
@@ -174,19 +175,34 @@ class WindowModel(Model):
 
             predWord = "<UNKUNK>"
             if pred < len(self.keywordList):
-                predWord = self.keywordList[pred]
+                predWord = self.IDToWord[pred]
             elif pred < len(self.keywordList) + self.winSize:
                 # search among the list of XWinIDs
                 for ix,x in enumerate(XWinID):
                     if x == pred:
                         predWord = self.IDToWord[XID[ix]]
                         break
+
+            if not all([c.isalpha() or c.isdigit() or c == '_' for c in yWord]):
+                continue
+
             colorPrint(' '.join(words))
+            colorPrint(XID)
             if pred == yWinID:
-                colorPrint(yWord, predWord, color='green')
+                color = 'green'
+                rank = 1
+            elif np.any(yWinID == np.argsort(-probs[i])[:5]):
+                color = 'yellow'
+                rank = np.where(yWinID == np.argsort(-probs[i])[:5])[0][0]+1
             else:
-                colorPrint(yWord, predWord, color='red')
+                color = 'red'
+                rank = 'INF'
+            colorPrint(yWord, '   ', predWord, ' rank:', rank, 'p:', probs[i,yWinID], color=color)
             sys.stdout.write('\n')
+            if pred == yWinID and predWord != yWord:
+                print XID, yID, XWinID, yWinID, pred
+                print self.keywordList[pred], self.IDToWord[pred]
+                raise AssertionError, "somethings not right"
 
     def test(self, filesAndTokens):
         """
@@ -210,6 +226,7 @@ class WindowModel(Model):
         total_loss = 0
         total_acc = 0
         total_tgts = 0
+        abs_tgts = 0
 
         for b in range(batches):
             # get a range of random batchSize sized beginning indexes
@@ -230,24 +247,51 @@ class WindowModel(Model):
             filtXyIDs = [(XID,yID)
                          for XID,yID,(XWinID,yWinID) in zip(XIDs,yIDs,XyWinIDs)
                          if yWinID != len(self.keywordList) + self.winSize]
-            preds, loss, grads = self.lossAndGrads(filtXyWinIDs)
+            preds, probs, loss, grads = self.lossAndGrads(filtXyWinIDs)
 
             yWinIDs = np.array([yWinID for XWinID,yWinID in filtXyWinIDs])
-            abs_acc, known_acc = self.computeAccuracy(yWinIDs, preds)
+            acc = self.computeAccuracy(yWinIDs, preds)
 
-#            self.printPreds(filtXyIDs, filtXyWinIDs, preds)
+            self.printPreds(filtXyIDs, filtXyWinIDs, preds, probs)
 
             total_tgts += preds.shape[0]
+            abs_tgts += batchSize
             total_loss += loss * preds.shape[0]
-            total_acc += known_acc * preds.shape[0]
+            total_acc += acc * preds.shape[0]
 
             if b % 10 == 0:
-                print 'Batch %d/%d loss %f acc %.2f%%' % (b, batches,
-                                                          total_loss/total_tgts,
-                                                          total_acc/total_tgts*100)
-#                if b % 100000 == 0:
-#                    pkl.dump(self, open('%d-%d.p' % (epoch, b), 'w'))
+                print 'Batch %d/%d loss %f acc %.2f%% abs_acc %.2f%%' % (b, batches,
+                                                                         total_loss/total_tgts,
+                                                                         total_acc/total_tgts*100,
+                                                                         total_acc/abs_tgts*100)
 
+
+    def word(self, ID):
+        return self.IDToWord[ID] if ID in self.IDToWord else "<UNKUNK>"
+
+    def multiPredict(self, XID):
+        nsteps = 20
+        beam = 100
+
+        paths = [self.makeWindow(XID,0,True)]
+        pathProbs = np.array([1.])
+        print paths[0][0]
+        for step in range(nsteps):
+            preds, probs, _, _ = self.lossAndGrads(paths)
+            newPathProbs = probs[:,:-1] * pathProbs[:,None]
+            highestProbIdxs = np.argsort(newPathProbs, axis=None)[-beam:]
+            highestProbPathEnds = np.unravel_index(highestProbIdxs,
+                                                   newPathProbs.shape)
+            highestProbs = newPathProbs.flatten()[highestProbIdxs]
+            highestProbs /= np.sum(highestProbs)
+            newBestPaths = [paths[xid][0][1:] + [e]
+                            for xid,e in zip(*highestProbPathEnds)]
+            paths = [(p,0) for p in newBestPaths]
+            pathProbs = highestProbs
+            endProbs = collections.defaultdict(float)
+            for prob,path in zip(pathProbs,newBestPaths):
+                endProbs[path[-1]] += prob
+            print max([(p,self.word(e)) for e,p in endProbs.items()])
 
 if __name__ == '__main__':
     model = WindowModel(['for', 'int', '=', '<', '>', ';', '(', ')', '{', '}'])

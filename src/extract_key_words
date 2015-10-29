@@ -15,7 +15,7 @@ key_word_dir=os.path.join(root_dir, 'key_words')
 if not os.path.exists(key_word_dir):
   os.makedirs(key_word_dir)
 # number of keywords to extract
-max_key_words=50
+max_key_words=1000
 percentile_key_words=95
 
 # list of languages, corresponding file suffixes, a flag indicating whether
@@ -26,17 +26,17 @@ data_dirs = 'data_dirs'
 outfile   = 'outfile'
 languages = {
     'h'      : { suffixes  : ['h'],
-                 parse     : True,
+                 parse     : False,
                  data_dirs : [ root_data_dir ],
                  outfile   : os.path.join(key_word_dir, "h")
                },
-    'c'      : { suffixes  : ['c', 'cc', 'cpp'],
+    'c'      : { suffixes  : ['h', 'c', 'cc', 'cpp'],
                  parse     : True,
                  data_dirs : [ root_data_dir ],
                  outfile   : os.path.join(key_word_dir, "c")
                },
     'python' : { suffixes  : ['py'],
-                 parse     : True,
+                 parse     : False,
                  data_dirs : [ root_data_dir ],
                  outfile   : os.path.join(key_word_dir, "python")
                }

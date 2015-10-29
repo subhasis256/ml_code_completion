@@ -20,7 +20,7 @@ class PositionDependentVectorModel(WindowModel):
         scores = np.dot(context, self.W)
         preds = np.argmax(scores, axis=1)
 
-        loss, dscores = softmaxLossAndGrads(scores, tgts)
+        loss, probs, dscores = softmaxLossAndGrads(scores, tgts)
         dW = np.dot(context.T, dscores)
         dcontext = np.dot(dscores, self.W.T).reshape((nb,-1,self.wdim))
         dwvec = np.zeros_like(self.wvec)
@@ -31,6 +31,6 @@ class PositionDependentVectorModel(WindowModel):
         grads['W'] = dW
         grads['wvec'] = dwvec
 
-        return preds, loss, grads
+        return preds, probs, loss, grads
 
 
