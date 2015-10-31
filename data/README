@@ -1,8 +1,13 @@
 Use the script download-data to download source code for various projects into
 this directory. Usage: ./download-data
 The script currently downloads following codes:
-  * Linux
-  * Legion
+C/C++
+  * linux
+  * legion
+Python
+  * django
+  * twisted
+  * sphinx
 
 These codes are used as inputs for key word extraction and for training/ testing
 code completion.

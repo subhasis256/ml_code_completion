@@ -1,22 +1,52 @@
 #!/usr/bin/env bash
 
-# fetch Linux
+# fetch Linux (C/C++)
 if [ -d linux ]; then
-  echo "Linux directory already exists!"
-  echo "Will skip fetching Linux source."
+  echo "linux directory already exists!"
+  echo "Will skip fetching linux source."
 else
-  echo "Fetching Linux source ..."
+  echo "Fetching linux source ..."
   wget https://cdn.kernel.org/pub/linux/kernel/v4.x/linux-4.2.3.tar.xz
   tar -xf linux-4.2.3.tar.xz
   rm -rf linux-4.2.3.tar.xz
   mv linux-4.2.3 linux
 fi
 
-# fetch Legion
+# fetch Legion (C/C++)
 if [ -d legion ]; then
-  echo "Legion directory already exists!"
-  echo "Will skip fetching Legion source."
+  echo "legion directory already exists!"
+  echo "Will skip fetching legion source."
 else
-  echo "Fetching Legion source ..."
+  echo "Fetching legion source ..."
   git clone https://github.com/StanfordLegion/legion
+fi
+
+# fetch django (python)
+if [ -d django ]; then
+  echo "django directory already exists!"
+  echo "Will skip fetching django source."
+else
+  echo "Fetching django source ..."
+  git clone https://github.com/django/django.git
+fi
+
+# fetch twisted (python)
+if [ -d twisted ]; then
+  echo "twisted directory already exists!"
+  echo "Will skip fetching twisted source."
+else
+  echo "Fetching twisted source ..."
+  git clone https://github.com/twisted/twisted.git
+fi
+
+# fetch Sphinx (python)
+if [ -d sphinx ]; then
+  echo "sphinx directory already exists!"
+  echo "Will skip fetching sphinx source."
+else
+  echo "Fetching sphinx source ..."
+  wget https://pypi.python.org/packages/source/S/Sphinx/Sphinx-1.3.1.tar.gz
+  tar -xf Sphinx-1.3.1.tar.gz
+  rm -rf Sphinx-1.3.1.tar.gz
+  mv Sphinx-1.3.1 sphinx
 fi
