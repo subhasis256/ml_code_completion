@@ -8,10 +8,43 @@ if __name__ == '__main__':
     import cPickle as pkl
     import sys
 
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('command',
+                        choices=['train', 'test'],
+                        help='train or test')
+    parser.add_argument('--restore',
+                        help='file from which to restore parameters for testing')
+    parser.add_argument('--ckpt',
+                        default='',
+                        help='prefix of checkpoint files')
+    parser.add_argument('--win', type=int,
+                        default=40,
+                        help='window size')
+    parser.add_argument('--dim', type=int,
+                        default=32,
+                        help='word vector dimensions')
+    parser.add_argument('--keywords',
+                        default='../key_words/c',
+                        help='file containing key words and their frequencies')
+    parser.add_argument('--lr',
+                        default=0.05,
+                        help='learning rate')
+    parser.add_argument('--batch',
+                        default=32,
+                        help='batch size')
+    args = parser.parse_args()
+
     files = matchingFiles(['../data/linux'], ['c', 'h'])
     filesAndTokens = []
-#    for i,name in enumerate(files[:20000]):
-    for i,name in enumerate(files[20000:22000]):
+
+    if args.command == 'train':
+        fileSubset = files[:20000]
+    else:
+        fileSubset = files[20000:22000]
+
+    for i,name in enumerate(fileSubset):
         if i % 1000 == 0:
             print '%d files done' % i
         filesAndTokens.append((name,tokenize(name)))
@@ -19,16 +52,20 @@ if __name__ == '__main__':
     print sum([len(tokens) for name,tokens in filesAndTokens])
 
     keywords = []
-    with open('../key_words/c') as fp:
+    with open(args.keywords) as fp:
         for line in fp:
             kw = re.sub(' [0-9]*$', '', line.strip())
             keywords.append(kw)
     print keywords
 
-    model = PositionDependentVectorModel(keywords, winSize=40, wdim=32)
-    model.restoreFrom(sys.argv[1])
-    model.test(filesAndTokens)
-#    model.train(filesAndTokens)
+    model = PositionDependentVectorModel(keywords, winSize=args.win,
+                                         wdim=args.dim, stepsize=args.lr,
+                                         batchsize=args.batch)
+    if args.command == 'test':
+        model.restoreFrom(args.restore)
+        model.test(filesAndTokens)
+    else:
+        model.train(filesAndTokens, ckpt_prefix=args.ckpt)
 #    model.multiPredict([34532, 7, 99142, 93, 99142, 3, 105902, 2, 98774, 7, 233,
 #                        4, 103368, 2, 13, 1, 99142, 3, 105902, 7, 93610, 11,
 #                        99142, 3, 105902, 7, 93610, 27, 98774, 0, 99142, 3,

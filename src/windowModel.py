@@ -8,6 +8,7 @@ import cPickle as pkl
 from utils import colorPrint
 import sys
 import collections
+import time
 
 class WindowModel(Model):
     """
@@ -16,7 +17,7 @@ class WindowModel(Model):
     current window. this only contains boilerplate code useful for all such
     models.
     """
-    def __init__(self, keywords, winSize=100):
+    def __init__(self, keywords, winSize=100, stepsize=0.05, batchsize=32):
         """
         @keywords: same as Model
         @winSize: length of window to consider for each word
@@ -30,12 +31,12 @@ class WindowModel(Model):
             self.wordToID[k] = i
             self.IDToWord[i] = k
         self.params = {}
-#        self.opt = MomentumOptimizer(0.003, 0.9)
-        self.stepsize = 0.05
+        self.stepsize = stepsize
+        self.batchsize = batchsize
         self.opt = updates.AdagradOptimizer(self.stepsize)
 
     def add_param(self, pname, pdim, scale=0.01):
-        param = scale * np.random.randn(*pdim)
+        param = scale * np.random.randn(*pdim).astype(np.float32)
         self.params[pname] = param
         setattr(self, pname, param)
 
@@ -99,7 +100,7 @@ class WindowModel(Model):
     def computeAccuracy(self, targets, preds):
         return np.mean(targets == preds)
 
-    def train(self, filesAndTokens):
+    def train(self, filesAndTokens, ckpt_prefix=''):
         """
         @filesAndTokens: as defined in Model
         """
@@ -113,9 +114,8 @@ class WindowModel(Model):
         # TODO: do minibatch based SGD using loss and gradient function defined
         # by class
         nepochs = 5
-        batchSize = 32
         totalTokens = sum([len(tokens) for name,tokens in filesAndTokens])
-        batches = totalTokens / batchSize
+        batches = totalTokens / self.batchsize
         Nfiles = len(filesAndTokens)
         print totalTokens, batches
 
@@ -123,10 +123,12 @@ class WindowModel(Model):
         smooth_known_acc = None
         smooth_abs_acc = None
 
+        startTime = time.time()
+
         for epoch in range(nepochs):
             for b in range(batches):
-                # get a range of random batchSize sized beginning indexes
-                fileIDs = [random.randrange(Nfiles) for _ in range(batchSize)]
+                # get a range of random self.batchsize sized beginning indexes
+                fileIDs = [random.randrange(Nfiles) for _ in range(self.batchsize)]
                 filtFileIDs = [fid for fid in fileIDs
                                if len(filesAndTokens[fid][1]) > self.winSize+1]
                 begins = [random.randrange(len(filesAndTokens[fid][1])-self.winSize-1)
@@ -149,19 +151,21 @@ class WindowModel(Model):
                 if smooth_loss is None:
                     smooth_loss = loss
                     smooth_known_acc = acc
-                    smooth_abs_acc = acc * tokTgts.shape[0]/float(batchSize)
+                    smooth_abs_acc = acc * tokTgts.shape[0]/float(self.batchsize)
                 else:
                     smooth_loss = 0.99*smooth_loss + 0.01*loss
                     smooth_known_acc = 0.99*smooth_known_acc + 0.01*acc
-                    smooth_abs_acc = 0.99*smooth_abs_acc + 0.01*acc*tokTgts.shape[0]/float(batchSize)
+                    smooth_abs_acc = 0.99*smooth_abs_acc + 0.01*acc*tokTgts.shape[0]/float(self.batchsize)
 
                 if b % 10 == 0:
-                    print 'Epoch %d batch %d/%d smooth_loss %f smooth_acc %.2f%% smooth_abs_acc %.2f%%' % (epoch, b, batches,
-                                                                                  smooth_loss,
-                                                                                  smooth_known_acc*100,
-                                                                                  smooth_abs_acc*100)
+                    currentTime = time.time()
+                    print '[%.3fs] Epoch %d batch %d/%d smooth_loss %f smooth_acc %.2f%% smooth_abs_acc %.2f%%' % (currentTime-startTime, 
+                                                                                                                   epoch, b, batches,
+                                                                                                                   smooth_loss,
+                                                                                                                   smooth_known_acc*100,
+                                                                                                                   smooth_abs_acc*100)
                 if b % 100000 == 0:
-                    pkl.dump(self, open('%d-%d.p' % (epoch, b), 'w'))
+                    pkl.dump(self, open('%s-%d-%d.p' % (ckpt_prefix, epoch, b), 'w'))
 
     def printPreds(self, XyIDs, XyWinIDs, preds, probs):
         assert len(XyWinIDs) == len(XyIDs)
@@ -217,9 +221,9 @@ class WindowModel(Model):
                             for name,tokens in filesAndTokens]
         # TODO: do minibatch based SGD using loss and gradient function defined
         # by class
-        batchSize = 32
+        self.batchsize = 32
         totalTokens = sum([len(tokens) for name,tokens in filesAndTokens])
-        batches = totalTokens / batchSize
+        batches = totalTokens / self.batchsize
         Nfiles = len(filesAndTokens)
         print totalTokens, batches
 
@@ -228,9 +232,17 @@ class WindowModel(Model):
         total_tgts = 0
         abs_tgts = 0
 
+        kw_correct = 0
+        total_kw = 0
+
+        total_non_kw = 0
+        num_non_kw = 0
+        non_kw_correct = 0
+        non_kw_correct_rand = 0
+
         for b in range(batches):
-            # get a range of random batchSize sized beginning indexes
-            fileIDs = [random.randrange(Nfiles) for _ in range(batchSize)]
+            # get a range of random self.batchsize sized beginning indexes
+            fileIDs = [random.randrange(Nfiles) for _ in range(self.batchsize)]
             filtFileIDs = [fid for fid in fileIDs
                            if len(filesAndTokens[fid][1]) > self.winSize+1]
             begins = [random.randrange(len(filesAndTokens[fid][1])-self.winSize-1)
@@ -250,20 +262,42 @@ class WindowModel(Model):
             preds, probs, loss, grads = self.lossAndGrads(filtXyWinIDs)
 
             yWinIDs = np.array([yWinID for XWinID,yWinID in filtXyWinIDs])
+            XWinIDs = np.array([XWinID for XWinID,yWinID in filtXyWinIDs])
             acc = self.computeAccuracy(yWinIDs, preds)
 
-            self.printPreds(filtXyIDs, filtXyWinIDs, preds, probs)
+#            self.printPreds(filtXyIDs, filtXyWinIDs, preds, probs)
+
+            kw_targets = yWinIDs < self.winSize
+            kw_preds = preds[kw_targets]
+
+            kw_correct += np.sum(kw_preds == yWinIDs[kw_targets])
+            total_kw += np.sum(kw_targets)
+
+            non_kw_targets = np.logical_and(yWinIDs >= self.winSize,
+                                            yWinIDs < self.winSize + len(self.keywordList))
+            non_kw_preds = preds[non_kw_targets]
+            non_kw_correct += np.sum(non_kw_preds == yWinIDs[non_kw_targets])
+            total_non_kw += np.sum(non_kw_targets)
+
+            non_kw_X = XWinIDs[non_kw_targets,:]
+            num_non_kw += np.sum(np.logical_and(non_kw_X >= self.winSize,
+                                                non_kw_X < self.winSize + len(self.keywordList)))
+            non_kw_correct_rand += np.sum(non_kw_X == non_kw_preds[:,None])
 
             total_tgts += preds.shape[0]
-            abs_tgts += batchSize
+            abs_tgts += self.batchsize
             total_loss += loss * preds.shape[0]
             total_acc += acc * preds.shape[0]
 
             if b % 10 == 0:
-                print 'Batch %d/%d loss %f acc %.2f%% abs_acc %.2f%%' % (b, batches,
-                                                                         total_loss/total_tgts,
-                                                                         total_acc/total_tgts*100,
-                                                                         total_acc/abs_tgts*100)
+                print 'Batch %d/%d loss %f acc %.2f%% abs_acc %.2f%% kw_frac %.2f%% kw_acc %.2f%% non_kw_acc %.2f%% rand_non_kw_acc %.2f%%' % (b, batches,
+                                                                                                                           total_loss/total_tgts,
+                                                                                                                           total_acc/total_tgts*100,
+                                                                                                                           total_acc/abs_tgts*100,
+                                                                                                                           total_kw/float(total_tgts)*100,
+                                                                                                                           kw_correct/float(total_kw)*100,
+                                                                                                                           non_kw_correct/float(total_non_kw)*100,
+                                                                                                                           non_kw_correct_rand/float(num_non_kw)*100)
 
 
     def word(self, ID):

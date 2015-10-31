@@ -15,7 +15,7 @@ key_word_dir=os.path.join(root_dir, 'key_words')
 if not os.path.exists(key_word_dir):
   os.makedirs(key_word_dir)
 # number of keywords to extract
-max_key_words=1000
+max_key_words=2000
 percentile_key_words=95
 
 # list of languages, corresponding file suffixes, a flag indicating whether

@@ -3,8 +3,10 @@ from windowModel import WindowModel
 from utils import softmaxLossAndGrads
 
 class PositionDependentVectorModel(WindowModel):
-    def __init__(self, keywords, winSize=100, wdim=32):
-        super(PositionDependentVectorModel, self).__init__(keywords, winSize)
+    def __init__(self, keywords, winSize=100, stepsize=0.05, batchsize=32,
+                 wdim=32):
+        super(PositionDependentVectorModel, self).__init__(keywords, winSize,
+                                                           stepsize, batchsize)
         # dimension of each wordvector
         self.wdim = wdim
         # initialize random parameters for weights
