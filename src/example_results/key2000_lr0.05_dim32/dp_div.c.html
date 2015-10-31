@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+
+<span class="w">#include</span> <span class="w">"ieee754dp.h"</span>
+
+<span class="w">union</span> <span class="w">ieee754dp</span> <span class="w">ieee754dp_div(union</span> <span class="w">ieee754dp</span> <span class="w">x,</span> <span class="w">union</span> <span class="w">ieee754dp</span> <span class="w">y)</span>
+<span class="w">{</span>
+	<span class="w">u64</span> <span class="w">rm;</span>
+	<span class="w">int</span> <span class="w">re;</span>
+	<span class="w">u64</span> <span class="w">bm;</span>
+
+	<span class="w">COMPXDP;</span>
+	<span class="w">COMPYDP;</span>
+
+	<span class="w">EXPLODEXDP;</span>
+	<span class="w">EXPLODEYDP;</span>
+
+	<span class="w">ieee754_clearcx();</span>
+
+	<span class="w">FLUSHXDP;</span>
+	<span class="w">FLUSHYDP;</span>
+
+	<span class="w">sw</span><span class="c">itch</span> <span class="c">(</span><span class="w">CLPAIR</span><span class="pc">(</span><span class="w">xc</span><span class="c">,</span> <span class="w">yc</span><span class="pc">))</span><span class="c"> {</span>
+	<span class="c">case</span> <span class="w">C</span><span class="pc">L</span><span class="c">PAIR</span><span class="w">(IEEE754_CLASS_QNAN</span><span class="pc">,</span> <span class="w">IEEE754_CLASS_SNAN):</span>
+	<span class="w">c</span><span class="c">ase</span> <span class="w">C</span><span class="c">LPAIR</span><span class="w">(IEEE754_CLASS_ZERO</span><span class="pc">,</span> <span class="w">I</span><span class="pc">EEE754_CLASS_S</span><span class="c">NAN</span><span class="w">):</span>
+	<span class="w">c</span><span class="pc">a</span><span class="c">se</span> <span class="w">C</span><span class="pc">L</span><span class="c">PAIR</span><span class="w">(IEEE754_CLASS_NORM</span><span class="pc">,</span> <span class="w">I</span><span class="pc">EEE754_CLASS_S</span><span class="c">NAN</span><span class="w">):</span>
+	<span class="w">c</span><span class="c">ase</span> <span class="c">CLPAIR</span><span class="pc">(</span><span class="w">IEEE754_CLASS_DNORM</span><span class="c">,</span> <span class="w">I</span><span class="pc">EEE754_CLASS_S</span><span class="c">NAN</span><span class="w">):</span>
+	<span class="w">c</span><span class="c">ase</span> <span class="c">CLPAIR</span><span class="pc">(</span><span class="w">IEEE754_CLASS_INF</span><span class="c">,</span> <span class="pc">I</span><span class="c">EEE754_CLASS_SNAN</span><span class="w">):</span>
+		<span class="w">r</span><span class="c">eturn</span> <span class="w">ieee754dp_nanxcpt</span><span class="c">(</span><span class="w">y</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">C</span><span class="c">LPAIR</span><span class="pc">(IEEE754_CLASS_S</span><span class="c">NAN</span><span class="pc">,</span> <span class="pc">IEEE754_CLASS_S</span><span class="c">NAN</span><span class="w">):</span>
+	<span class="w">c</span><span class="c">ase</span> <span class="w">C</span><span class="c">LPAIR</span><span class="pc">(IEEE754_CLASS_S</span><span class="c">NAN</span><span class="pc">,</span> <span class="w">IEEE754_CLASS_QNAN):</span>
+	<span class="w">c</span><span class="c">ase</span> <span class="w">C</span><span class="c">LPAIR</span><span class="pc">(IEEE754_CLASS_S</span><span class="c">NAN</span><span class="pc">,</span> <span class="w">IEEE754_CLASS_ZERO):</span>
+	<span class="w">c</span><span class="c">ase</span> <span class="w">C</span><span class="c">LPAIR</span><span class="pc">(IEEE754_CLASS_S</span><span class="c">NAN</span><span class="pc">,</span> <span class="w">IEEE754_CLASS_NORM):</span>
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">C</span><span class="c">LPAIR</span><span class="pc">(IEEE754_CLASS_S</span><span class="c">NAN,</span> <span class="w">IEEE754_CLASS_DNORM):</span>
+	<span class="pc">c</span><span class="c">ase</span> <span class="c">CLPAIR</span><span class="pc">(</span><span class="c">IEEE754_CLASS_SNAN,</span> <span class="w">IEEE754_CLASS_INF):</span>
+		<span class="w">r</span><span class="c">eturn</span> <span class="w">ieee754dp_nanxcpt</span><span class="c">(</span><span class="w">x</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">C</span><span class="c">LPAIR</span><span class="pc">(</span><span class="w">I</span><span class="pc">EEE754_CLASS_Z</span><span class="c">ERO</span><span class="pc">,</span> <span class="pc">IEEE754_CLASS_Q</span><span class="c">NAN</span><span class="w">):</span>
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">C</span><span class="c">LPAIR</span><span class="pc">(IEEE754_CLASS_N</span><span class="c">ORM</span><span class="pc">,</span> <span class="w">IEEE754_CLASS_Q</span><span class="c">NAN</span><span class="w">):</span>
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">C</span><span class="c">LPAIR</span><span class="pc">(</span><span class="w">I</span><span class="pc">EEE754_CLASS_D</span><span class="c">NORM</span><span class="pc">,</span> <span class="c">IEEE754_CLASS_QNAN</span><span class="w">):</span>
+	<span class="w">c</span><span class="c">ase</span> <span class="w">C</span><span class="c">LPAIR</span><span class="pc">(IEEE754_CLASS_I</span><span class="c">NF</span><span class="pc">,</span> <span class="pc">IEEE754_CLASS_Q</span><span class="c">NAN</span><span class="w">):</span>
+		<span class="w">r</span><span class="c">eturn</span> <span class="w">y</span><span class="c">;</span>
+
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">C</span><span class="c">LPAIR</span><span class="pc">(IEEE754_CLASS_Q</span><span class="c">NAN,</span> <span class="pc">IEEE754_CLASS_Q</span><span class="c">NAN</span><span class="w">):</span>
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">C</span><span class="c">LPAIR</span><span class="pc">(IEEE754_CLASS_Q</span><span class="c">NAN,</span> <span class="pc">IEEE754_CLASS_Z</span><span class="c">ERO</span><span class="w">)</span><span class="pc">:</span>
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">C</span><span class="c">LPAIR</span><span class="pc">(</span><span class="c">IEEE754_CLASS_QNAN,</span> <span class="pc">IEEE754_CLASS_N</span><span class="c">ORM</span><span class="w">)</span><span class="pc">:</span>
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">C</span><span class="c">LPAIR</span><span class="pc">(</span><span class="c">IEEE754_CLASS_QNAN,</span> <span class="c">IEEE754_CLASS_DNORM</span><span class="w">)</span><span class="pc">:</span>
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">C</span><span class="c">LPAIR</span><span class="pc">(IEEE754_CLASS_Q</span><span class="c">NAN,</span> <span class="c">IEEE754_CLASS_INF</span><span class="w">):</span>
+		<span class="w">r</span><span class="c">eturn</span> <span class="w">x</span><span class="c">;</span>
+
+
+	
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">C</span><span class="c">LPAIR</span><span class="pc">(</span><span class="w">I</span><span class="pc">EEE754_CLASS_I</span><span class="c">NF,</span> <span class="pc">IEEE754_CLASS_I</span><span class="c">NF</span><span class="w">)</span><span class="pc">:</span>
+		<span class="w">ieee754_setcx</span><span class="c">(</span><span class="w">IEEE754_INVALID_OPERATION</span><span class="pc">)</span><span class="c">;</span>
+		<span class="w">r</span><span class="c">eturn</span> <span class="w">ieee754dp_indef(</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">C</span><span class="c">LPAIR</span><span class="pc">(</span><span class="w">I</span><span class="pc">EEE754_CLASS_N</span><span class="c">ORM</span><span class="pc">,</span> <span class="pc">IEEE754_CLASS_I</span><span class="c">NF</span><span class="w">)</span><span class="pc">:</span>
+	<span class="w">c</span><span class="c">ase</span> <span class="w">C</span><span class="c">LPAIR</span><span class="pc">(</span><span class="w">IEEE754_CLASS_ZERO</span><span class="c">,</span> <span class="pc">IEEE754_CLASS_I</span><span class="c">NF</span><span class="w">):</span>
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">C</span><span class="c">LPAIR</span><span class="pc">(</span><span class="w">IEEE754_CLASS_DNORM</span><span class="pc">,</span> <span class="pc">IEEE754_CLASS_I</span><span class="c">NF</span><span class="w">):</span>
+		<span class="w">r</span><span class="c">eturn</span> <span class="w">ieee754dp_zero</span><span class="c">(</span><span class="w">xs</span> <span class="w">^</span> <span class="w">ys</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">C</span><span class="c">LPAIR</span><span class="pc">(IEEE754_CLASS_I</span><span class="c">NF,</span> <span class="pc">IEEE754_CLASS_Z</span><span class="c">ERO</span><span class="w">):</span>
+	<span class="w">c</span><span class="c">ase</span> <span class="w">C</span><span class="c">LPAIR</span><span class="pc">(</span><span class="w">I</span><span class="pc">EEE754_CLASS_I</span><span class="c">NF,</span> <span class="pc">IEEE754_CLASS_N</span><span class="c">ORM</span><span class="w">):</span>
+	<span class="w">c</span><span class="c">ase</span> <span class="w">C</span><span class="c">LPAIR</span><span class="pc">(</span><span class="c">IEEE754_CLASS_INF,</span> <span class="c">IEEE754_CLASS_DNORM</span><span class="w">):</span>
+		<span class="w">r</span><span class="c">eturn</span> <span class="w">ieee754dp_inf</span><span class="c">(xs</span> <span class="w">^</span> <span class="c">ys</span><span class="pc">)</span><span class="c">;</span>
+
+	
+	<span class="pc">c</span><span class="c">ase</span> <span class="pc">C</span><span class="c">LPAIR(</span><span class="w">I</span><span class="pc">EEE754_CLASS_Z</span><span class="c">ERO</span><span class="pc">,</span> <span class="w">I</span><span class="pc">EEE754_CLASS_Z</span><span class="c">ERO</span><span class="w">):</span>
+		<span class="w">ieee754_setcx</span><span class="c">(</span><span class="w">IEEE754_INVALID_OPERATION</span><span class="pc">)</span><span class="c">;</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="w">ieee754dp_indef(</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="pc">c</span><span class="c">ase</span> <span class="pc">C</span><span class="c">LPAIR</span><span class="pc">(</span><span class="w">I</span><span class="pc">EEE754_CLASS_N</span><span class="c">ORM</span><span class="pc">,</span> <span class="pc">IEEE754_C</span><span class="c">LASS_ZERO</span><span class="w">):</span>
+	<span class="w">c</span><span class="c">ase</span> <span class="w">C</span><span class="c">LPAIR</span><span class="pc">(IEEE754_CLASS_D</span><span class="c">NORM</span><span class="pc">,</span> <span class="pc">IEEE754_CLASS_Z</span><span class="c">ERO</span><span class="w">):</span>
+		<span class="w">i</span><span class="pc">eee754_</span><span class="c">setcx(</span><span class="w">IEEE754_ZERO_DIVIDE</span><span class="c">);</span>
+		<span class="w">r</span><span class="c">eturn</span> <span class="w">i</span><span class="c">eee754dp_inf(</span><span class="pc">x</span><span class="c">s</span> <span class="w">^</span> <span class="pc">y</span><span class="c">s);</span>
+
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">C</span><span class="c">LPAIR</span><span class="pc">(</span><span class="c">IEEE754_CLASS_ZERO</span><span class="pc">,</span> <span class="pc">IEEE754_C</span><span class="c">LASS_NORM</span><span class="w">):</span>
+	<span class="w">c</span><span class="c">ase</span> <span class="w">C</span><span class="c">LPAIR</span><span class="pc">(</span><span class="w">I</span><span class="pc">EEE754_CLASS_Z</span><span class="c">ERO</span><span class="pc">,</span> <span class="pc">I</span><span class="c">EEE754_CLASS_DNORM</span><span class="w">):</span>
+		<span class="w">r</span><span class="c">eturn</span> <span class="w">ieee754dp_zero</span><span class="c">(</span><span class="pc">x</span><span class="c">s</span> <span class="w">=</span><span class="c">=</span> <span class="w">y</span><span class="c">s</span> <span class="pc">?</span> <span class="pc">0</span> <span class="c">:</span> <span class="pc">1</span><span class="c">);</span>
+
+	<span class="w">c</span><span class="c">ase</span> <span class="w">C</span><span class="c">LPAIR</span><span class="pc">(</span><span class="w">I</span><span class="pc">EEE754_CLASS_D</span><span class="c">NORM</span><span class="pc">,</span> <span class="pc">IEEE754_CLASS_D</span><span class="c">NORM</span><span class="w">):</span>
+		<span class="w">DPDNORMX;</span>
+
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">C</span><span class="c">LPAIR</span><span class="pc">(IEEE754_CLASS_N</span><span class="c">ORM,</span> <span class="c">IEEE754_CLASS_DNORM</span><span class="w">):</span>
+		<span class="w">DPDNORMY;</span>
+		<span class="c">break;</span>
+
+	<span class="c">case</span> <span class="w">C</span><span class="c">LPAIR</span><span class="pc">(</span><span class="c">IEEE754_CLASS_DNORM</span><span class="pc">,</span> <span class="w">I</span><span class="pc">EEE754_CLASS_N</span><span class="c">ORM</span><span class="w">)</span><span class="pc">:</span>
+		<span class="pc">DPDNORMX</span><span class="w">;</span>
+		<span class="c">break;</span>
+
+	<span class="c">case</span> <span class="w">C</span><span class="c">LPAIR</span><span class="w">(</span><span class="c">IEEE754_CLASS_NORM</span><span class="pc">,</span> <span class="pc">IEEE754_CLASS_N</span><span class="c">ORM</span><span class="w">)</span><span class="pc">:</span>
+		<span class="pc">b</span><span class="c">reak;</span>
+	<span class="pc">}</span>
+	<span class="w">as</span><span class="c">sert(</span><span class="w">xm</span> <span class="w">&amp;</span> <span class="w">DP_HIDDEN_BIT</span><span class="pc">);</span>
+	<span class="w">as</span><span class="pc">s</span><span class="c">ert(</span><span class="w">ym</span> <span class="w">&amp;</span> <span class="w">D</span><span class="pc">P_</span><span class="c">HIDDEN_BIT</span><span class="w">)</span><span class="pc">;</span>
+
+	
+	<span class="pc">x</span><span class="c">m</span> <span class="w">&lt;</span><span class="pc">&lt;</span><span class="c">=</span> <span class="w">3</span><span class="c">;</span>
+	<span class="w">y</span><span class="c">m</span> <span class="w">&lt;</span><span class="pc">&lt;</span><span class="c">=</span> <span class="w">3</span><span class="c">;</span>
+
+	
+
+	<span class="w">rm</span> <span class="pc">=</span> <span class="pc">0</span><span class="c">;</span>
+	<span class="w">re</span> <span class="pc">=</span> <span class="w">xe</span> <span class="w">-</span> <span class="w">ye</span><span class="c">;</span>
+
+	<span class="w">f</span><span class="c">or</span> <span class="c">(</span><span class="w">bm</span> <span class="c">=</span> <span class="w">DP_MBIT</span><span class="pc">(</span><span class="w">DP_FBITS</span> <span class="pc">+</span> <span class="w">2</span><span class="c">);</span> <span class="pc">b</span><span class="c">m</span><span class="w">;</span> <span class="pc">b</span><span class="c">m</span> <span class="w">&gt;</span><span class="c">&gt;=</span> <span class="c">1</span><span class="pc">)</span><span class="c"> {</span>
+		<span class="c">if</span> <span class="c">(</span><span class="w">x</span><span class="pc">m</span> <span class="w">&gt;</span><span class="c">=</span> <span class="w">y</span><span class="pc">m)</span><span class="c"> {</span>
+			<span class="w">x</span><span class="pc">m</span> <span class="w">-</span><span class="pc">=</span> <span class="w">y</span><span class="c">m;</span>
+			<span class="w">r</span><span class="pc">m</span> <span class="w">|</span><span class="c">=</span> <span class="pc">b</span><span class="c">m;</span>
+			<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="pc">x</span><span class="c">m</span> <span class="pc">=</span><span class="c">=</span> <span class="pc">0</span><span class="c">)</span>
+				<span class="pc">br</span><span class="c">eak;</span>
+		<span class="c">}</span>
+		<span class="w">x</span><span class="c">m</span> <span class="w">&lt;</span><span class="c">&lt;=</span> <span class="c">1;</span>
+	<span class="c">}</span>
+
+	<span class="w">r</span><span class="pc">m</span> <span class="w">&lt;</span><span class="c">&lt;=</span> <span class="c">1;</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(xm</span><span class="pc">)</span>
+		<span class="pc">rm</span> <span class="w">|</span><span class="c">=</span> <span class="pc">1</span><span class="c">;</span>	
+
+	<span class="w">as</span><span class="pc">s</span><span class="c">ert(rm</span><span class="w">)</span><span class="pc">;</span>
+
+	
+	<span class="w">w</span><span class="pc">h</span><span class="c">ile</span> <span class="pc">((rm</span> <span class="w">&gt;</span><span class="pc">&gt; </span><span class="c">(</span><span class="w">DP_FBITS</span> <span class="w">+</span> <span class="w">3)) </span><span class="pc">=</span><span class="c">=</span> <span class="c">0</span><span class="pc">) </span><span class="c">{</span>
+		<span class="pc">r</span><span class="c">m</span> <span class="w">&lt;</span><span class="pc">&lt;</span><span class="c">=</span> <span class="c">1;</span>
+		<span class="w">re-</span><span class="pc">-</span><span class="c">;</span>
+	<span class="c">}</span>
+
+	<span class="w">r</span><span class="pc">e</span><span class="c">turn</span> <span class="w">ieee754dp_format</span><span class="pc">(</span><span class="w">xs</span> <span class="w">=</span><span class="c">=</span> <span class="w">ys</span> <span class="w">?</span> <span class="pc">0</span> <span class="c">:</span> <span class="c">1,</span> <span class="pc">re</span><span class="c">,</span> <span class="pc">r</span><span class="c">m</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">}</span>
+
+</pre>
+</body>
+</html>
+

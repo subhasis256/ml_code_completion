@@ -13,10 +13,10 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('command',
-                        choices=['train', 'test'],
-                        help='train or test')
+                        choices=['train', 'test', 'predict'],
+                        help='train/test/predict')
     parser.add_argument('--restore',
-                        help='file from which to restore parameters for testing')
+                        help='file from which to restore parameters for testing or resuming training')
     parser.add_argument('--ckpt',
                         default='',
                         help='prefix of checkpoint files')
@@ -42,15 +42,18 @@ if __name__ == '__main__':
 
     if args.command == 'train':
         fileSubset = files[:20000]
+    elif args.command == 'test':
+        fileSubset = random.sample(files[20000:], 2000)
     else:
         fileSubset = files[20000:]
 
-#    for i,name in enumerate(fileSubset):
-#        if i % 1000 == 0:
-#            print '%d files done' % i
-#        filesAndTokens.append((name,utils.tokenize(name)))
-#    print len(filesAndTokens)
-#    print sum([len(tokens) for name,tokens in filesAndTokens])
+    if args.command == 'train' or args.command == 'test':
+        for i,name in enumerate(fileSubset):
+            if i % 1000 == 0:
+                print '%d files done' % i
+            filesAndTokens.append((name,utils.tokenize(name)))
+        print len(filesAndTokens)
+        print sum([len(tokens) for name,tokens in filesAndTokens])
 
     keywords = []
     with open(args.keywords) as fp:
@@ -62,10 +65,14 @@ if __name__ == '__main__':
     model = PositionDependentVectorModel(keywords, winSize=args.win,
                                          wdim=args.dim, stepsize=args.lr,
                                          batchsize=args.batch)
-    if args.command == 'test':
+    if args.restore is not None:
         model.restoreFrom(args.restore)
         print 'Restored model from %s' % args.restore
-#        model.test(filesAndTokens)
+
+    if args.command == 'test':
+        model.test(filesAndTokens)
+
+    elif args.command == 'predict':
         for _ in range(100):
             randomFile = random.choice(fileSubset)
             outputFile = os.path.basename(randomFile) + '.html'
@@ -85,5 +92,6 @@ if __name__ == '__main__':
                 print >> fp, utils.HTMLHeader()
                 print >> fp, utils.colorizedHTML(content, contentAnns)
                 print >> fp, utils.HTMLFooter()
+
     else:
         model.train(filesAndTokens, ckpt_prefix=args.ckpt)

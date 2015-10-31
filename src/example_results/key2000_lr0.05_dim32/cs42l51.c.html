@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+<span class="w">#include</span> <span class="w">&lt;linux/module.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/slab.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;sound/core.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;sound/soc.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;sound</span><span class="c">/</span><span class="w">t</span><span class="pc">l</span><span class="c">v.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;sound/</span><span class="w">initval</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;sound/</span><span class="w">pcm_params</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;sound/</span><span class="w">p</span><span class="pc">cm</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;</span><span class="pc">l</span><span class="c">inux/</span><span class="w">r</span><span class="c">egmap.h&gt;</span>
+
+<span class="c">#include</span> <span class="pc">"</span><span class="w">cs42l51</span><span class="c">.h"</span>
+
+<span class="w">e</span><span class="pc">n</span><span class="c">um</span> <span class="w">master_slave_mode</span> <span class="c">{</span>
+	<span class="w">MODE_SLAVE</span><span class="pc">,</span>
+	<span class="w">MODE_SLAVE_AUTO</span><span class="c">,</span>
+	<span class="w">MODE_MASTER</span><span class="c">,</span>
+<span class="c">};</span>
+
+<span class="pc">str</span><span class="c">uct</span> <span class="w">cs42l51_private</span> <span class="c">{</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="c">int</span> <span class="w">mclk</span><span class="c">;</span>
+	<span class="c">unsigned</span> <span class="c">int</span> <span class="w">audio_mode</span><span class="c">;</span>	
+	<span class="pc">e</span><span class="c">num</span> <span class="pc">m</span><span class="c">aster_slave_mode</span> <span class="w">f</span><span class="pc">u</span><span class="c">nc;</span>
+<span class="c">};</span>
+
+<span class="c">#define</span> <span class="w">CS42L51_FORMATS</span> <span class="w">( \</span>
+		<span class="w">SNDRV_PCM_FMTBIT_S16_LE</span>  <span class="w">|</span> <span class="w">SNDRV_PCM_FMTBIT_S16_BE</span>  <span class="w">|</span><span class="pc"> </span><span class="c">\</span>
+		<span class="w">SNDRV_PCM_FMTBIT_S18_3LE</span> <span class="c">|</span> <span class="w">SNDRV_PCM_FMTBIT_S18_3BE</span> <span class="w">|</span><span class="pc"> </span><span class="c">\</span>
+		<span class="w">SNDRV_PCM_FMTBIT_S20_3LE</span> <span class="c">|</span> <span class="w">SNDRV_PCM_FMTBIT_S20_3BE</span> <span class="pc">| </span><span class="c">\</span>
+		<span class="w">SNDRV_PCM_FMTBIT_S24_LE</span>  <span class="pc">|</span> <span class="w">SNDRV_PCM_FMTBIT_S24_BE</span><span class="pc">)</span>
+
+<span class="pc">sta</span><span class="c">tic</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">cs42l51_get_chan_mix</span><span class="c">(struct</span> <span class="w">sn</span><span class="pc">d_k</span><span class="c">control</span> <span class="c">*</span><span class="w">k</span><span class="c">control,</span>
+			<span class="c">struct</span> <span class="w">sn</span><span class="c">d_ctl_elem_value</span> <span class="c">*</span><span class="w">uc</span><span class="c">ontrol)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">snd</span><span class="pc">_s</span><span class="c">oc_codec</span> <span class="c">*</span><span class="w">cod</span><span class="pc">ec</span> <span class="c">=</span> <span class="w">snd_soc_kcontrol_codec</span><span class="c">(</span><span class="w">kc</span><span class="c">ontrol</span><span class="pc">)</span><span class="c">;</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">v</span><span class="pc">alu</span><span class="c">e</span> <span class="pc">=</span> <span class="w">snd_soc_read</span><span class="c">(</span><span class="w">cod</span><span class="pc">ec,</span> <span class="w">CS42L51_PCM_MIXER)&amp;3;</span>
+
+	<span class="w">s</span><span class="c">witch</span> <span class="c">(</span><span class="w">v</span><span class="c">alue) {</span>
+	<span class="w">d</span><span class="pc">ef</span><span class="c">ault:</span>
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">0</span><span class="c">:</span>
+		<span class="w">uc</span><span class="c">ontrol-&gt;</span><span class="w">v</span><span class="c">alue</span><span class="pc">.i</span><span class="c">nteger.value</span><span class="w">[0</span><span class="pc">] =</span> <span class="pc">0</span><span class="c">;</span>
+		<span class="pc">b</span><span class="c">reak;</span>
+	
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">1</span><span class="c">:</span>
+	<span class="pc">c</span><span class="c">ase</span> <span class="pc">2</span><span class="c">:</span>
+		<span class="w">uc</span><span class="c">ontrol-&gt;</span><span class="pc">v</span><span class="c">alue</span><span class="pc">.i</span><span class="c">nteger.value</span><span class="pc">[</span><span class="w">0</span><span class="c">] =</span> <span class="pc">1</span><span class="c">;</span>
+		<span class="pc">b</span><span class="c">reak;</span>
+	<span class="c">case</span> <span class="pc">3</span><span class="c">:</span>
+		<span class="w">uc</span><span class="c">ontrol-&gt;value</span><span class="pc">.</span><span class="w">i</span><span class="c">nteger.value</span><span class="pc">[0</span><span class="c">] =</span> <span class="w">2</span><span class="c">;</span>
+		<span class="c">break;</span>
+	<span class="pc">}</span>
+
+	<span class="w">r</span><span class="pc">et</span><span class="c">urn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="w">#</span><span class="c">define</span> <span class="w">CHAN_MIX_NORMAL</span>	<span class="w">0</span><span class="pc">x00</span>
+<span class="c">#define</span> <span class="w">CHAN_MIX_BOTH</span>	<span class="w">0x5</span><span class="pc">5</span>
+<span class="c">#define</span> <span class="w">CHAN_MIX_SWAP</span>	<span class="w">0xF</span><span class="c">F</span>
+
+<span class="pc">sta</span><span class="c">tic</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">cs42l51_set_chan_mix</span><span class="c">(struct</span> <span class="w">sn</span><span class="pc">d_k</span><span class="c">control</span> <span class="c">*kcontrol,</span>
+			<span class="c">struct</span> <span class="w">sn</span><span class="c">d_ctl_elem_value</span> <span class="c">*</span><span class="w">u</span><span class="c">control)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">snd</span><span class="pc">_s</span><span class="c">oc_codec</span> <span class="c">*</span><span class="w">cod</span><span class="pc">ec</span> <span class="pc">=</span> <span class="w">snd_soc_kcontrol_codec</span><span class="c">(</span><span class="w">kc</span><span class="c">ontrol);</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">har</span> <span class="pc">v</span><span class="c">al;</span>
+
+	<span class="w">s</span><span class="pc">w</span><span class="c">itch</span> <span class="c">(</span><span class="w">uc</span><span class="c">ontrol-&gt;</span><span class="w">v</span><span class="pc">a</span><span class="c">lue</span><span class="w">.i</span><span class="pc">nt</span><span class="c">eger</span><span class="pc">.</span><span class="c">value</span><span class="w">[</span><span class="pc">0</span><span class="w">])</span><span class="pc"> </span><span class="c">{</span>
+	<span class="w">def</span><span class="c">ault:</span>
+	<span class="w">ca</span><span class="pc">s</span><span class="c">e</span> <span class="w">0</span><span class="c">:</span>
+		<span class="w">v</span><span class="pc">al</span> <span class="c">=</span> <span class="w">CHAN_MIX_NORMAL</span><span class="pc">;</span>
+		<span class="c">break;</span>
+	<span class="c">case</span> <span class="pc">1</span><span class="c">:</span>
+		<span class="pc">v</span><span class="c">al</span> <span class="c">=</span> <span class="w">CHAN_MIX_BOTH</span><span class="pc">;</span>
+		<span class="c">break;</span>
+	<span class="c">case</span> <span class="pc">2</span><span class="c">:</span>
+		<span class="c">val</span> <span class="c">=</span> <span class="w">CHAN_MIX_SWAP</span><span class="c">;</span>
+		<span class="c">break;</span>
+	<span class="pc">}</span>
+
+	<span class="w">snd_soc_write</span><span class="c">(</span><span class="w">cod</span><span class="pc">ec,</span> <span class="w">CS42L51_PCM_MIXER</span><span class="c">,</span> <span class="c">val</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="w">r</span><span class="c">eturn</span> <span class="pc">1</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">c</span><span class="c">onst</span> <span class="w">DECLARE_TLV_DB_SCALE</span><span class="pc">(</span><span class="w">adc_pcm_tlv, -5150</span><span class="c">,</span> <span class="w">5</span><span class="pc">0</span><span class="c">,</span> <span class="c">0</span><span class="pc">);</span>
+<span class="pc">s</span><span class="c">tatic</span> <span class="pc">c</span><span class="c">onst</span> <span class="w">D</span><span class="c">ECLARE_TLV_DB_SCALE</span><span class="pc">(</span><span class="w">tone_tlv,</span><span class="pc"> -</span><span class="w">1050</span><span class="c">,</span> <span class="w">150</span><span class="c">,</span> <span class="c">0</span><span class="pc">)</span><span class="c">;</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="pc">c</span><span class="c">onst</span> <span class="w">D</span><span class="c">ECLARE_TLV_DB_SCALE</span><span class="pc">(</span><span class="w">aout_tlv,</span><span class="pc"> -</span><span class="w">10200</span><span class="c">,</span> <span class="w">5</span><span class="pc">0</span><span class="c">,</span> <span class="c">0</span><span class="pc">)</span><span class="c">;</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="pc">c</span><span class="c">onst</span> <span class="w">D</span><span class="c">ECLARE_TLV_DB_SCALE(</span><span class="w">boost_tlv</span><span class="c">,</span> <span class="w">1600</span><span class="c">,</span> <span class="w">1</span><span class="pc">6</span><span class="c">00,</span> <span class="pc">0)</span><span class="c">;</span>
+<span class="pc">s</span><span class="c">tatic</span> <span class="c">const</span> <span class="pc">c</span><span class="c">har</span> <span class="c">*</span><span class="w">chan_mix</span><span class="c">[] = {</span>
+	<span class="w">"L</span> <span class="w">R</span><span class="c">",</span>
+	<span class="c">"</span><span class="w">L+R</span><span class="pc">"</span><span class="c">,</span>
+	<span class="w">"R</span> <span class="w">L</span><span class="c">",</span>
+<span class="w">}</span><span class="c">;</span>
+
+<span class="c">static</span> <span class="w">SOC_ENUM_SINGLE_EXT_DECL</span><span class="c">(</span><span class="w">cs42l51_chan_mix</span><span class="c">,</span> <span class="w">c</span><span class="pc">h</span><span class="c">an_mix</span><span class="pc">)</span><span class="c">;</span>
+
+<span class="c">static</span> <span class="pc">c</span><span class="c">onst</span> <span class="c">struct</span> <span class="w">sn</span><span class="c">d_kcontrol_new</span> <span class="w">cs42l51_snd_controls</span><span class="c">[] = {</span>
+	<span class="w">SOC_DOUBLE_R_SX_TLV</span><span class="pc">("</span><span class="w">PCM</span> <span class="w">Pl</span><span class="c">ayback</span> <span class="w">V</span><span class="c">olume",</span>
+			<span class="w">CS42L51_PCMA_VOL</span><span class="c">,</span> <span class="w">CS42L51_PCMB_VOL</span><span class="c">,</span>
+			<span class="w">0</span><span class="c">,</span> <span class="w">0x19</span><span class="c">,</span> <span class="w">0x7F</span><span class="c">,</span> <span class="w">adc_pcm_tlv</span><span class="pc">),</span>
+	<span class="w">SOC_DOUBLE_R</span><span class="pc">("</span><span class="w">P</span><span class="c">CM</span> <span class="w">Pl</span><span class="c">ayback</span> <span class="w">Sw</span><span class="c">itch",</span>
+			<span class="pc">C</span><span class="c">S42L51_PCMA_VOL,</span> <span class="c">CS42L51_PCMB_VOL,</span> <span class="w">7</span><span class="c">,</span> <span class="w">1</span><span class="pc">,</span> <span class="pc">1</span><span class="c">),</span>
+	<span class="w">S</span><span class="c">OC_DOUBLE_R_SX_TLV("</span><span class="w">Analog</span> <span class="w">Pl</span><span class="c">ayback</span> <span class="w">V</span><span class="c">olume",</span>
+			<span class="w">CS42L51_AOUTA_VOL</span><span class="c">,</span> <span class="w">CS42L51_AOUTB_VOL</span><span class="c">,</span>
+			<span class="c">0,</span> <span class="w">0x34</span><span class="c">,</span> <span class="w">0xE4</span><span class="c">,</span> <span class="w">aout_tlv</span><span class="pc">)</span><span class="c">,</span>
+	<span class="w">S</span><span class="pc">OC_DOUBLE_R_</span><span class="c">SX_TLV</span><span class="pc">("</span><span class="w">A</span><span class="pc">D</span><span class="c">C</span> <span class="w">Mi</span><span class="c">xer</span> <span class="w">V</span><span class="c">olume",</span>
+			<span class="w">CS42L51_ADCA_VOL</span><span class="c">,</span> <span class="w">CS42L51_ADCB_VOL</span><span class="c">,</span>
+			<span class="c">0,</span> <span class="w">0x19</span><span class="c">,</span> <span class="w">0x7F</span><span class="c">,</span> <span class="w">adc_pcm_tlv</span><span class="pc">)</span><span class="c">,</span>
+	<span class="w">SOC_DOUBLE_R</span><span class="pc">(</span><span class="c">"</span><span class="w">A</span><span class="pc">D</span><span class="c">C</span> <span class="w">Mi</span><span class="c">xer</span> <span class="w">Sw</span><span class="c">itch",</span>
+			<span class="pc">CS42L51_AD</span><span class="c">CA_VOL,</span> <span class="c">CS42L51_ADCB_VOL,</span> <span class="w">7</span><span class="c">,</span> <span class="w">1</span><span class="pc">,</span> <span class="w">1</span><span class="pc">)</span><span class="c">,</span>
+	<span class="w">SOC_SINGLE</span><span class="c">("</span><span class="w">Pl</span><span class="c">ayback</span> <span class="w">Deemphasis</span> <span class="w">Sw</span><span class="c">itch",</span> <span class="w">CS42L51_DAC_CTL</span><span class="c">,</span> <span class="w">3</span><span class="c">,</span> <span class="w">1</span><span class="c">,</span> <span class="c">0</span><span class="pc">)</span><span class="c">,</span>
+	<span class="w">S</span><span class="pc">OC_S</span><span class="c">INGLE("</span><span class="w">Auto</span><span class="pc">-</span><span class="w">Mute</span> <span class="w">Sw</span><span class="c">itch",</span> <span class="w">C</span><span class="pc">S42L51_D</span><span class="c">AC_CTL,</span> <span class="w">2</span><span class="c">,</span> <span class="pc">1</span><span class="c">,</span> <span class="c">0</span><span class="pc">)</span><span class="c">,</span>
+	<span class="pc">S</span><span class="c">OC_SINGLE</span><span class="pc">("</span><span class="w">Soft</span> <span class="w">Ramp</span> <span class="w">Sw</span><span class="c">itch",</span> <span class="c">CS42L51_DAC_CTL,</span> <span class="pc">1</span><span class="c">,</span> <span class="pc">1,</span> <span class="pc">0</span><span class="c">),</span>
+	<span class="w">S</span><span class="pc">O</span><span class="c">C_SINGLE("</span><span class="w">Zero</span> <span class="w">Cross</span> <span class="w">Sw</span><span class="c">itch",</span> <span class="c">CS42L51_DAC_CTL,</span> <span class="pc">0</span><span class="c">,</span> <span class="c">0</span><span class="pc">,</span> <span class="c">0),</span>
+	<span class="w">SOC_DOUBLE_TLV</span><span class="c">("</span><span class="w">Mic</span> <span class="w">Boost</span> <span class="w">V</span><span class="c">olume",</span>
+			<span class="w">CS42L51_MIC_CTL</span><span class="c">,</span> <span class="c">0,</span> <span class="pc">1,</span> <span class="pc">1,</span> <span class="c">0,</span> <span class="w">boost_tlv</span><span class="pc">)</span><span class="c">,</span>
+	<span class="w">SOC_SINGLE_TLV</span><span class="pc">("</span><span class="w">Bass</span> <span class="w">V</span><span class="c">olume",</span> <span class="w">CS42L51_TONE_CTL</span><span class="c">,</span> <span class="c">0,</span> <span class="w">0xf</span><span class="c">,</span> <span class="pc">1</span><span class="c">,</span> <span class="w">tone_tlv</span><span class="pc">),</span>
+	<span class="w">S</span><span class="pc">OC_S</span><span class="c">INGLE_TLV</span><span class="pc">("</span><span class="w">Treble</span> <span class="w">V</span><span class="c">olume",</span> <span class="pc">CS42L51_T</span><span class="c">ONE_CTL,</span> <span class="w">4</span><span class="c">,</span> <span class="w">0xf</span><span class="c">,</span> <span class="pc">1</span><span class="c">,</span> <span class="w">t</span><span class="c">one_tlv</span><span class="pc">)</span><span class="c">,</span>
+	<span class="w">SOC_ENUM_EXT</span><span class="pc">("</span><span class="w">PCM</span> <span class="w">ch</span><span class="pc">an</span><span class="c">nel</span> <span class="w">mixer</span><span class="pc">"</span><span class="c">,</span>
+			<span class="w">cs42l51_chan_mix</span><span class="c">,</span>
+			<span class="w">cs42l51_get_chan_mix</span><span class="c">,</span> <span class="w">cs42l51_set_chan_mix</span><span class="pc">),</span>
+<span class="c">};</span>
+
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">cs42l51_pdn_event</span><span class="c">(struct</span> <span class="w">snd_soc_dapm_widget</span> <span class="c">*</span><span class="w">w</span><span class="c">,</span>
+		<span class="c">struct</span> <span class="w">sn</span><span class="pc">d_k</span><span class="c">control</span> <span class="c">*</span><span class="w">k</span><span class="c">control,</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">e</span><span class="pc">v</span><span class="c">ent)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">snd</span><span class="pc">_soc_c</span><span class="c">odec</span> <span class="c">*</span><span class="w">cod</span><span class="c">ec</span> <span class="c">=</span> <span class="w">snd_soc_dapm_to_codec</span><span class="c">(</span><span class="w">w</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">dapm</span><span class="pc">);</span>
+
+	<span class="w">s</span><span class="pc">w</span><span class="c">itch</span> <span class="c">(</span><span class="w">e</span><span class="c">vent) {</span>
+	<span class="c">case</span> <span class="w">SND_SOC_DAPM_PRE_PMD</span><span class="c">:</span>
+		<span class="w">snd_soc_update_bits</span><span class="c">(</span><span class="w">co</span><span class="pc">d</span><span class="c">ec,</span> <span class="w">CS42L51_POWER_CTL1</span><span class="c">,</span>
+				    <span class="w">CS42L51_POWER_CTL1_PDN</span><span class="pc">,</span>
+				    <span class="w">C</span><span class="pc">S42L51_POWER_CTL1_</span><span class="c">PDN);</span>
+		<span class="pc">b</span><span class="c">reak;</span>
+	<span class="pc">d</span><span class="c">efault:</span>
+	<span class="w">c</span><span class="c">ase</span> <span class="w">SND_SOC_DAPM_POST_PMD</span><span class="c">:</span>
+		<span class="pc">s</span><span class="c">nd_soc_update_bits(</span><span class="w">co</span><span class="pc">dec,</span> <span class="pc">CS42L51_POWER_CTL1</span><span class="c">,</span>
+				    <span class="c">CS42L51_POWER_CTL1_PDN</span><span class="pc">,</span> <span class="w">0</span><span class="c">);</span>
+		<span class="pc">b</span><span class="c">reak;</span>
+	<span class="pc">}</span>
+
+	<span class="w">r</span><span class="pc">et</span><span class="c">urn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">c</span><span class="c">onst</span> <span class="pc">c</span><span class="c">har</span> <span class="c">*</span><span class="w">cs42l51_dac_names[] = {"Direct</span> <span class="w">PCM</span><span class="pc">"</span><span class="c">,</span>
+	<span class="pc">"</span><span class="w">DSP</span> <span class="w">P</span><span class="c">CM</span><span class="w">"</span><span class="pc">, </span><span class="c">"</span><span class="w">A</span><span class="pc">D</span><span class="c">C</span><span class="w">"};</span>
+<span class="w">s</span><span class="pc">t</span><span class="c">atic</span> <span class="w">SOC_ENUM_SINGLE_DECL</span><span class="pc">(</span><span class="w">cs42l51_dac_mux_enum</span><span class="c">,</span>
+			    <span class="w">CS42L51_DAC_CTL</span><span class="c">,</span> <span class="w">6</span><span class="c">,</span> <span class="w">c</span><span class="c">s42l51_dac_names</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">static</span> <span class="w">c</span><span class="c">onst</span> <span class="c">struct</span> <span class="w">sn</span><span class="pc">d_kcontrol_</span><span class="c">new</span> <span class="w">cs42l51_dac_mux_controls</span> <span class="w">=</span>
+	<span class="w">SOC_DAPM_ENUM(</span><span class="pc">"</span><span class="w">Route</span><span class="c">",</span> <span class="w">c</span><span class="c">s42l51_dac_mux_enum</span><span class="pc">)</span><span class="c">;</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="pc">c</span><span class="c">onst</span> <span class="pc">c</span><span class="c">har</span> <span class="c">*</span><span class="w">cs42l51_adcl_names[</span><span class="pc">] = {"</span><span class="w">AIN1</span> <span class="w">L</span><span class="pc">e</span><span class="c">ft</span><span class="w">"</span><span class="pc">, </span><span class="c">"</span><span class="w">AIN2</span> <span class="w">L</span><span class="pc">e</span><span class="c">ft</span><span class="w">"</span><span class="c">,</span>
+	<span class="pc">"</span><span class="w">MIC</span> <span class="w">L</span><span class="pc">e</span><span class="c">ft</span><span class="w">"</span><span class="pc">, </span><span class="c">"</span><span class="w">M</span><span class="pc">I</span><span class="c">C</span><span class="w">+preamp</span> <span class="w">L</span><span class="pc">e</span><span class="c">ft</span><span class="w">"};</span>
+<span class="w">s</span><span class="c">tatic</span> <span class="w">SOC_ENUM_SINGLE_DECL</span><span class="c">(</span><span class="w">cs42l51_adcl_mux_enum</span><span class="pc">,</span>
+			    <span class="w">CS42L51_ADC_INPUT</span><span class="c">,</span> <span class="w">4</span><span class="c">,</span> <span class="w">c</span><span class="pc">s42l51_adcl_n</span><span class="c">ames</span><span class="pc">)</span><span class="c">;</span>
+<span class="pc">s</span><span class="c">tatic</span> <span class="pc">c</span><span class="c">onst</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">sn</span><span class="pc">d_k</span><span class="c">control_new</span> <span class="w">cs42l51_adcl_mux_controls</span> <span class="w">=</span>
+	<span class="w">SOC_DAPM_ENUM(</span><span class="pc">"</span><span class="w">Route</span><span class="c">",</span> <span class="w">c</span><span class="pc">s42l51_adcl_m</span><span class="c">ux_enum</span><span class="pc">)</span><span class="c">;</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="pc">c</span><span class="c">onst</span> <span class="c">char</span> <span class="c">*</span><span class="w">cs42l51_adcr_names[] = {"AIN1</span> <span class="w">Ri</span><span class="c">ght</span><span class="w">"</span><span class="pc">, </span><span class="c">"</span><span class="w">AIN2</span> <span class="w">Ri</span><span class="c">ght</span><span class="pc">"</span><span class="c">,</span>
+	<span class="c">"</span><span class="w">MIC</span> <span class="w">Ri</span><span class="c">ght</span><span class="w">"</span><span class="pc">, </span><span class="c">"</span><span class="w">M</span><span class="pc">I</span><span class="c">C</span><span class="w">+preamp</span> <span class="w">Ri</span><span class="c">ght</span><span class="w">"};</span>
+<span class="w">s</span><span class="c">tatic</span> <span class="w">SOC_ENUM_SINGLE_DECL</span><span class="c">(</span><span class="w">cs42l51_adcr_mux_enum</span><span class="pc">,</span>
+			    <span class="w">CS42L51_ADC_INPUT</span><span class="c">,</span> <span class="w">6</span><span class="c">,</span> <span class="w">c</span><span class="pc">s42l51_adcr_n</span><span class="c">ames</span><span class="pc">)</span><span class="c">;</span>
+<span class="pc">s</span><span class="c">tatic</span> <span class="pc">c</span><span class="c">onst</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">sn</span><span class="pc">d_k</span><span class="c">control_new</span> <span class="w">cs42l51_adcr_mux_controls</span> <span class="w">=</span>
+	<span class="w">SOC_DAPM_ENUM(</span><span class="pc">"</span><span class="w">Route</span><span class="c">",</span> <span class="w">c</span><span class="pc">s42l51_adcr_m</span><span class="c">ux_enum</span><span class="pc">)</span><span class="c">;</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="pc">c</span><span class="c">onst</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">snd_soc_dapm_widget</span> <span class="w">cs42l51_dapm_widgets</span><span class="pc">[</span><span class="c">] = {</span>
+	<span class="w">SND_SOC_DAPM_MICBIAS(</span><span class="pc">"</span><span class="w">Mic</span> <span class="w">Bias</span><span class="c">",</span> <span class="w">CS42L51_MIC_POWER_CTL</span><span class="c">,</span> <span class="w">1</span><span class="pc">,</span> <span class="w">1</span><span class="pc">)</span><span class="c">,</span>
+	<span class="w">SND_SOC_DAPM_PGA_E(</span><span class="pc">"</span><span class="w">L</span><span class="pc">e</span><span class="c">ft</span> <span class="w">PGA</span><span class="c">",</span> <span class="w">CS42L51_POWER_CTL1</span><span class="c">,</span> <span class="w">3</span><span class="c">,</span> <span class="w">1</span><span class="c">,</span> <span class="w">N</span><span class="c">ULL,</span> <span class="c">0,</span>
+		<span class="w">cs42l51_pdn_event</span><span class="c">,</span> <span class="w">SND_SOC_DAPM_PRE_POST_PMD</span><span class="pc">),</span>
+	<span class="w">S</span><span class="c">ND_SOC_DAPM_PGA_E</span><span class="pc">("</span><span class="w">R</span><span class="pc">i</span><span class="c">ght</span> <span class="w">P</span><span class="c">GA",</span> <span class="w">C</span><span class="pc">S42L51_P</span><span class="c">OWER_CTL1,</span> <span class="w">4</span><span class="c">,</span> <span class="pc">1</span><span class="c">,</span> <span class="w">N</span><span class="c">ULL,</span> <span class="c">0,</span>
+		<span class="w">c</span><span class="c">s42l51_pdn_event,</span> <span class="w">S</span><span class="c">ND_SOC_DAPM_PRE_POST_PMD</span><span class="w">)</span><span class="pc">,</span>
+	<span class="w">SND_SOC_DAPM_ADC_E</span><span class="pc">("</span><span class="w">L</span><span class="pc">e</span><span class="c">ft</span> <span class="w">A</span><span class="pc">D</span><span class="c">C</span><span class="w">"</span><span class="pc">, </span><span class="c">"</span><span class="w">L</span><span class="pc">e</span><span class="c">ft</span> <span class="w">HiFi</span> <span class="w">Ca</span><span class="pc">p</span><span class="c">ture",</span>
+		<span class="pc">C</span><span class="c">S42L51_POWER_CTL1,</span> <span class="pc">1</span><span class="c">,</span> <span class="pc">1</span><span class="c">,</span>
+		<span class="w">c</span><span class="c">s42l51_pdn_event,</span> <span class="pc">S</span><span class="c">ND_SOC_DAPM_PRE_POST_PMD</span><span class="w">)</span><span class="pc">,</span>
+	<span class="w">S</span><span class="pc">ND_SOC_DAPM_A</span><span class="c">DC_E</span><span class="pc">("</span><span class="w">R</span><span class="pc">i</span><span class="c">ght</span> <span class="w">A</span><span class="pc">D</span><span class="c">C</span><span class="w">"</span><span class="pc">, </span><span class="c">"</span><span class="w">R</span><span class="pc">i</span><span class="c">ght</span> <span class="pc">H</span><span class="c">iFi</span> <span class="w">Ca</span><span class="pc">p</span><span class="c">ture</span><span class="pc">"</span><span class="c">,</span>
+		<span class="pc">C</span><span class="c">S42L51_POWER_CTL1,</span> <span class="w">2</span><span class="c">,</span> <span class="w">1</span><span class="c">,</span>
+		<span class="w">c</span><span class="c">s42l51_pdn_event,</span> <span class="c">SND_SOC_DAPM_PRE_POST_PMD</span><span class="w">)</span><span class="pc">,</span>
+	<span class="w">SND_SOC_DAPM_DAC_E</span><span class="pc">("</span><span class="w">L</span><span class="pc">e</span><span class="c">ft</span> <span class="w">DA</span><span class="c">C</span><span class="w">"</span><span class="pc">, </span><span class="c">"</span><span class="w">L</span><span class="pc">e</span><span class="c">ft</span> <span class="c">HiFi</span> <span class="w">Pl</span><span class="c">ayback</span><span class="w">"</span><span class="pc">,</span>
+		<span class="c">CS42L51_POWER_CTL1,</span> <span class="w">5</span><span class="c">,</span> <span class="w">1</span><span class="c">,</span>
+		<span class="w">c</span><span class="c">s42l51_pdn_event,</span> <span class="c">SND_SOC_DAPM_PRE_POST_PMD</span><span class="w">)</span><span class="pc">,</span>
+	<span class="w">S</span><span class="pc">ND_SOC_DAPM_D</span><span class="c">AC_E("</span><span class="w">R</span><span class="pc">i</span><span class="c">ght</span> <span class="w">DA</span><span class="c">C</span><span class="w">"</span><span class="pc">, </span><span class="c">"</span><span class="w">R</span><span class="pc">i</span><span class="c">ght</span> <span class="pc">H</span><span class="c">iFi</span> <span class="w">Pl</span><span class="c">ayback</span><span class="w">"</span><span class="pc">,</span>
+		<span class="c">CS42L51_POWER_CTL1,</span> <span class="w">6</span><span class="c">,</span> <span class="w">1</span><span class="c">,</span>
+		<span class="w">c</span><span class="c">s42l51_pdn_event,</span> <span class="c">SND_SOC_DAPM_PRE_POST_PMD</span><span class="w">)</span><span class="pc">,</span>
+
+	
+	<span class="w">SND_SOC_DAPM_INPUT</span><span class="c">("</span><span class="w">AIN1L")</span><span class="pc">,</span>
+	<span class="w">S</span><span class="pc">ND_SOC_DAPM_I</span><span class="c">NPUT</span><span class="pc">("</span><span class="w">AIN1R"</span><span class="pc">),</span>
+	<span class="pc">S</span><span class="c">ND_SOC_DAPM_INPUT</span><span class="pc">("</span><span class="w">AIN2L"</span><span class="pc">),</span>
+	<span class="c">SND_SOC_DAPM_INPUT</span><span class="pc">("</span><span class="w">AIN2R"</span><span class="pc">),</span>
+	<span class="c">SND_SOC_DAPM_INPUT("</span><span class="w">MICL</span><span class="pc">")</span><span class="c">,</span>
+	<span class="pc">S</span><span class="c">ND_SOC_DAPM_INPUT</span><span class="pc">("</span><span class="w">MICR</span><span class="c">"),</span>
+
+	<span class="w">SND_SOC_DAPM_MIXER</span><span class="pc">("</span><span class="w">Mic</span> <span class="w">Preamp</span> <span class="w">L</span><span class="pc">e</span><span class="c">ft</span><span class="pc">",</span>
+		<span class="w">CS42L51_MIC_POWER_CTL</span><span class="pc">,</span> <span class="w">2</span><span class="pc">,</span> <span class="w">1</span><span class="pc">,</span> <span class="w">N</span><span class="c">ULL</span><span class="pc">,</span> <span class="w">0</span><span class="c">),</span>
+	<span class="w">S</span><span class="pc">ND_SOC_DAPM_M</span><span class="c">IXER("</span><span class="w">M</span><span class="c">ic</span> <span class="w">P</span><span class="c">reamp</span> <span class="w">R</span><span class="pc">i</span><span class="c">ght",</span>
+		<span class="pc">C</span><span class="c">S42L51_MIC_POWER_CTL,</span> <span class="w">3</span><span class="c">,</span> <span class="pc">1,</span> <span class="w">N</span><span class="c">ULL</span><span class="pc">,</span> <span class="c">0</span><span class="pc">)</span><span class="c">,</span>
+
+	
+	<span class="w">SND_SOC_DAPM_OUTPUT</span><span class="c">("</span><span class="w">HPL"</span><span class="pc">),</span>
+	<span class="w">S</span><span class="pc">ND_SOC_DAPM_O</span><span class="c">UTPUT("</span><span class="w">HPR"</span><span class="pc">),</span>
+
+	
+	<span class="w">SND_SOC_DAPM_MUX</span><span class="pc">("</span><span class="w">DA</span><span class="c">C</span> <span class="w">Mu</span><span class="c">x</span><span class="pc">"</span><span class="c">,</span> <span class="w">SND_SOC_NOPM</span><span class="c">,</span> <span class="pc">0</span><span class="c">,</span> <span class="c">0</span><span class="pc">,</span>
+		<span class="w">&amp;cs42l51_dac_mux_controls</span><span class="pc">),</span>
+	<span class="w">S</span><span class="pc">ND_SOC_DAPM_MU</span><span class="c">X("</span><span class="w">PGA</span><span class="pc">-</span><span class="w">A</span><span class="pc">D</span><span class="c">C</span> <span class="w">Mu</span><span class="c">x</span> <span class="w">L</span><span class="pc">e</span><span class="c">ft",</span> <span class="c">SND_SOC_NOPM,</span> <span class="c">0,</span> <span class="c">0</span><span class="pc">,</span>
+		<span class="w">&amp;cs42l51_adcl_mux_controls</span><span class="pc">),</span>
+	<span class="w">S</span><span class="pc">ND_SOC_DAPM_M</span><span class="c">UX</span><span class="pc">(</span><span class="c">"</span><span class="w">P</span><span class="c">GA</span><span class="pc">-</span><span class="w">A</span><span class="pc">D</span><span class="c">C</span> <span class="w">Mu</span><span class="c">x</span> <span class="w">R</span><span class="pc">i</span><span class="c">ght",</span> <span class="c">SND_SOC_NOPM,</span> <span class="pc">0</span><span class="c">,</span> <span class="pc">0</span><span class="c">,</span>
+		<span class="w">&amp;cs42l51_adcr_mux_controls)</span><span class="pc">,</span>
+<span class="c">};</span>
+
+<span class="c">static</span> <span class="c">const</span> <span class="c">struct</span> <span class="w">snd_soc_dapm_route</span> <span class="w">cs42l51_routes</span><span class="pc">[</span><span class="c">] = {</span>
+	<span class="w">{</span><span class="pc">"</span><span class="w">HPL</span><span class="c">",</span> <span class="w">N</span><span class="c">ULL</span><span class="w">,</span><span class="pc"> "</span><span class="w">L</span><span class="pc">e</span><span class="c">ft</span> <span class="w">DA</span><span class="c">C</span><span class="w">"}</span><span class="c">,</span>
+	<span class="pc">{"</span><span class="w">HPR</span><span class="c">",</span> <span class="w">N</span><span class="c">ULL</span><span class="w">,</span><span class="pc"> </span><span class="c">"</span><span class="w">R</span><span class="pc">i</span><span class="c">ght</span> <span class="w">DA</span><span class="c">C</span><span class="w">"</span><span class="pc">}</span><span class="c">,</span>
+
+	<span class="w">{</span><span class="pc">"</span><span class="w">L</span><span class="pc">e</span><span class="c">ft</span> <span class="w">A</span><span class="pc">D</span><span class="c">C",</span> <span class="pc">N</span><span class="c">ULL</span><span class="pc">, </span><span class="c">"</span><span class="w">L</span><span class="pc">e</span><span class="c">ft</span> <span class="w">PGA"</span><span class="pc">}</span><span class="c">,</span>
+	<span class="w">{</span><span class="pc">"</span><span class="w">R</span><span class="pc">i</span><span class="c">ght</span> <span class="w">A</span><span class="pc">D</span><span class="c">C</span><span class="pc">"</span><span class="c">,</span> <span class="c">NULL, "</span><span class="w">R</span><span class="pc">i</span><span class="c">ght</span> <span class="w">P</span><span class="c">GA</span><span class="w">"}</span><span class="c">,</span>
+
+	<span class="pc">{"</span><span class="w">Mic</span> <span class="w">Preamp</span> <span class="w">L</span><span class="pc">e</span><span class="c">ft",</span>  <span class="c">NULL</span><span class="w">,  "MICL"</span><span class="pc">}</span><span class="c">,</span>
+	<span class="pc">{"</span><span class="w">M</span><span class="c">ic</span> <span class="w">P</span><span class="c">reamp</span> <span class="w">R</span><span class="pc">i</span><span class="c">ght</span><span class="pc">"</span><span class="c">,</span> <span class="c">NULL</span><span class="w">, </span><span class="pc"> </span><span class="c">"</span><span class="w">MICR"</span><span class="pc">}</span><span class="c">,</span>
+
+	<span class="pc">{"P</span><span class="c">GA</span><span class="w">-A</span><span class="pc">D</span><span class="c">C</span> <span class="w">Mu</span><span class="c">x</span> <span class="w">L</span><span class="pc">e</span><span class="c">ft</span><span class="w">",  "AIN1</span> <span class="w">L</span><span class="pc">e</span><span class="c">ft</span><span class="w">",        "AIN1L" </span><span class="c">},</span>
+	<span class="pc">{"</span><span class="w">P</span><span class="pc">G</span><span class="c">A</span><span class="w">-AD</span><span class="c">C</span> <span class="w">Mu</span><span class="c">x</span> <span class="w">L</span><span class="pc">e</span><span class="c">ft</span><span class="pc">"</span><span class="c">,  "</span><span class="w">AIN2</span> <span class="w">L</span><span class="pc">e</span><span class="c">ft</span><span class="pc">"</span><span class="c">,        "</span><span class="w">AIN2L"</span><span class="pc"> </span><span class="c">},</span>
+	<span class="w">{</span><span class="pc">"P</span><span class="c">GA</span><span class="w">-AD</span><span class="c">C</span> <span class="w">Mu</span><span class="c">x</span> <span class="w">L</span><span class="pc">e</span><span class="c">ft",  "</span><span class="w">MIC</span> <span class="w">L</span><span class="pc">e</span><span class="c">ft</span><span class="w">",         "MICL"  },</span>
+	<span class="w">{</span><span class="pc">"</span><span class="c">PGA</span><span class="w">-AD</span><span class="c">C</span> <span class="w">Mu</span><span class="c">x</span> <span class="w">L</span><span class="pc">e</span><span class="c">ft</span><span class="pc">",</span><span class="c">  "</span><span class="pc">M</span><span class="c">IC</span><span class="w">+preamp</span> <span class="w">L</span><span class="pc">e</span><span class="c">ft</span><span class="w">"</span><span class="pc">,  "</span><span class="w">Mic</span> <span class="w">Preamp</span> <span class="w">L</span><span class="pc">e</span><span class="c">ft</span><span class="w">" </span><span class="pc">}</span><span class="c">,</span>
+	<span class="w">{</span><span class="pc">"</span><span class="c">PGA</span><span class="w">-AD</span><span class="c">C</span> <span class="w">Mu</span><span class="c">x</span> <span class="w">R</span><span class="pc">i</span><span class="c">ght</span><span class="w">", </span><span class="pc">"</span><span class="w">AIN1</span> <span class="w">R</span><span class="pc">i</span><span class="c">ght</span><span class="w">",       "AIN1R" </span><span class="pc">}</span><span class="c">,</span>
+	<span class="w">{</span><span class="pc">"</span><span class="c">PGA</span><span class="w">-AD</span><span class="c">C</span> <span class="w">Mu</span><span class="c">x</span> <span class="w">R</span><span class="pc">i</span><span class="c">ght</span><span class="w">",</span><span class="pc"> "</span><span class="w">AIN2</span> <span class="w">R</span><span class="pc">i</span><span class="c">ght</span><span class="pc">"</span><span class="c">,       "</span><span class="w">AIN2R</span><span class="pc">" </span><span class="c">},</span>
+	<span class="w">{</span><span class="pc">"</span><span class="c">PGA</span><span class="w">-AD</span><span class="c">C</span> <span class="w">Mu</span><span class="c">x</span> <span class="w">R</span><span class="pc">i</span><span class="c">ght</span><span class="w">"</span><span class="pc">,</span><span class="c"> "</span><span class="w">M</span><span class="c">IC</span> <span class="w">R</span><span class="pc">i</span><span class="c">ght</span><span class="w">",        "MICR</span><span class="pc">" </span><span class="c">},</span>
+	<span class="w">{</span><span class="pc">"</span><span class="c">PGA</span><span class="w">-AD</span><span class="c">C</span> <span class="w">Mu</span><span class="c">x</span> <span class="w">R</span><span class="pc">i</span><span class="c">ght</span><span class="w">"</span><span class="pc">, "M</span><span class="c">IC</span><span class="w">+preamp</span> <span class="w">R</span><span class="pc">i</span><span class="c">ght</span><span class="w">",</span><span class="pc"> "</span><span class="w">Mic</span> <span class="w">Preamp</span> <span class="w">R</span><span class="pc">i</span><span class="c">ght</span><span class="w">" </span><span class="c">},</span>
+
+	<span class="w">{"L</span><span class="pc">e</span><span class="c">ft</span> <span class="pc">P</span><span class="c">GA</span><span class="w">"</span><span class="pc">,</span> <span class="pc">N</span><span class="c">ULL</span><span class="pc">, </span><span class="c">"</span><span class="pc">P</span><span class="c">GA</span><span class="pc">-</span><span class="w">A</span><span class="pc">D</span><span class="c">C</span> <span class="w">Mu</span><span class="c">x</span> <span class="w">L</span><span class="pc">e</span><span class="c">ft</span><span class="w">"}</span><span class="c">,</span>
+	<span class="w">{</span><span class="pc">"</span><span class="w">R</span><span class="pc">i</span><span class="c">ght</span> <span class="pc">P</span><span class="c">GA</span><span class="w">"</span><span class="pc">,</span> <span class="pc">N</span><span class="c">ULL</span><span class="pc">, </span><span class="c">"PGA</span><span class="pc">-</span><span class="w">A</span><span class="pc">D</span><span class="c">C</span> <span class="w">Mu</span><span class="c">x</span> <span class="w">R</span><span class="pc">i</span><span class="c">ght</span><span class="w">"}</span><span class="c">,</span>
+<span class="w">}</span><span class="pc">;</span>
+
+<span class="c">static</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">cs42l51_set_dai_fmt</span><span class="c">(struct</span> <span class="w">snd_soc_dai</span> <span class="c">*</span><span class="w">codec_dai</span><span class="pc">,</span>
+		<span class="pc">u</span><span class="c">nsigned</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">fo</span><span class="c">rmat</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">snd_s</span><span class="pc">oc_c</span><span class="c">odec</span> <span class="c">*</span><span class="w">cod</span><span class="pc">ec</span> <span class="c">=</span> <span class="pc">cod</span><span class="c">ec_dai</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">cod</span><span class="pc">ec</span><span class="c">;</span>
+	<span class="c">struct</span> <span class="w">cs42l51_private</span> <span class="c">*</span><span class="w">cs42l51</span> <span class="c">=</span> <span class="w">snd_soc_codec_get_drvdata</span><span class="c">(</span><span class="w">cod</span><span class="pc">ec</span><span class="c">);</span>
+
+	<span class="w">s</span><span class="pc">w</span><span class="c">itch</span> <span class="c">(</span><span class="w">fo</span><span class="c">rmat</span> <span class="pc">&amp;</span> <span class="w">SND_SOC_DAIFMT_FORMAT_MASK</span><span class="c">) {</span>
+	<span class="c">case</span> <span class="w">SND_SOC_DAIFMT_I2S</span><span class="c">:</span>
+	<span class="c">case</span> <span class="w">SND_SOC_DAIFMT_LEFT_J</span><span class="c">:</span>
+	<span class="c">case</span> <span class="w">SND_SOC_DAIFMT_RIGHT_J</span><span class="c">:</span>
+		<span class="pc">cs</span><span class="c">42l51-&gt;</span><span class="w">audio_mode</span> <span class="c">=</span> <span class="w">fo</span><span class="pc">r</span><span class="c">mat</span> <span class="w">&amp;</span> <span class="w">S</span><span class="c">ND_SOC_DAIFMT_FORMAT_MASK;</span>
+		<span class="c">break;</span>
+	<span class="pc">d</span><span class="c">efault:</span>
+		<span class="pc">d</span><span class="c">ev_err(</span><span class="w">cod</span><span class="pc">ec</span><span class="c">-&gt;dev, "</span><span class="w">i</span><span class="c">nvalid</span> <span class="w">DAI</span> <span class="w">f</span><span class="c">ormat</span><span class="w">\</span><span class="c">n");</span>
+		<span class="c">return</span> <span class="c">-EINVAL;</span>
+	<span class="c">}</span>
+
+	<span class="w">s</span><span class="pc">w</span><span class="c">itch</span> <span class="c">(</span><span class="w">f</span><span class="c">ormat</span> <span class="pc">&amp;</span> <span class="w">SND_SOC_DAIFMT_MASTER_MASK</span><span class="c">) {</span>
+	<span class="c">case</span> <span class="w">SND_SOC_DAIFMT_CBM_CFM</span><span class="c">:</span>
+		<span class="pc">cs</span><span class="c">42l51-&gt;</span><span class="w">fu</span><span class="c">nc</span> <span class="c">=</span> <span class="w">MODE_MASTER</span><span class="c">;</span>
+		<span class="c">break;</span>
+	<span class="c">case</span> <span class="w">SND_SOC_DAIFMT_CBS_CFS</span><span class="c">:</span>
+		<span class="pc">cs</span><span class="c">42l51-&gt;</span><span class="w">fu</span><span class="c">nc</span> <span class="c">=</span> <span class="w">MODE_SLAVE_AUTO</span><span class="c">;</span>
+		<span class="c">break;</span>
+	<span class="pc">d</span><span class="c">efault:</span>
+		<span class="w">d</span><span class="c">ev_err(</span><span class="w">cod</span><span class="pc">ec</span><span class="c">-&gt;dev, "Unknown</span> <span class="w">mas</span><span class="pc">t</span><span class="c">er</span><span class="w">/sl</span><span class="c">ave</span> <span class="w">configuration</span><span class="c">\n");</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="c">-EINVAL;</span>
+	<span class="c">}</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="pc">str</span><span class="c">uct</span> <span class="w">cs42l51_ratios</span> <span class="c">{</span>
+	<span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">ratio</span><span class="c">;</span>
+	<span class="c">unsigned</span> <span class="pc">c</span><span class="c">har</span> <span class="w">speed_mode</span><span class="pc">;</span>
+	<span class="c">unsigned</span> <span class="c">char</span> <span class="w">mclk</span><span class="c">;</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="pc">sta</span><span class="c">tic</span> <span class="w">s</span><span class="pc">t</span><span class="c">ruct</span> <span class="c">cs42l51_ratios</span> <span class="w">slave_ratios</span><span class="c">[] = {</span>
+	<span class="c">{</span>  <span class="w">5</span><span class="c">12,</span> <span class="w">CS42L51_QSM_MODE</span><span class="c">,</span> <span class="w">0</span> <span class="w">}</span><span class="pc">, </span><span class="c">{</span>  <span class="w">768</span><span class="c">,</span> <span class="w">C</span><span class="c">S42L51_QSM_MODE,</span> <span class="pc">0</span> <span class="w">}</span><span class="pc">,</span>
+	<span class="c">{</span> <span class="w">10</span><span class="c">24,</span> <span class="w">C</span><span class="c">S42L51_QSM_MODE,</span> <span class="w">0</span> <span class="w">}</span><span class="pc">, </span><span class="c">{</span> <span class="w">1536</span><span class="c">,</span> <span class="w">C</span><span class="c">S42L51_QSM_MODE</span><span class="pc">,</span> <span class="c">0</span> <span class="pc">}</span><span class="c">,</span>
+	<span class="c">{</span> <span class="w">2</span><span class="pc">0</span><span class="c">48,</span> <span class="c">CS42L51_QSM_MODE,</span> <span class="pc">0</span> <span class="pc">}, </span><span class="c">{</span> <span class="w">3072</span><span class="c">,</span> <span class="w">C</span><span class="c">S42L51_QSM_MODE,</span> <span class="pc">0</span> <span class="pc">}</span><span class="c">,</span>
+	<span class="c">{</span>  <span class="w">25</span><span class="pc">6</span><span class="c">,</span> <span class="w">CS42L51_HSM_MODE</span><span class="c">,</span> <span class="pc">0</span> <span class="pc">}, </span><span class="c">{</span>  <span class="w">384</span><span class="c">,</span> <span class="w">C</span><span class="pc">S42L51_H</span><span class="c">SM_MODE,</span> <span class="pc">0</span> <span class="pc">}</span><span class="c">,</span>
+	<span class="c">{</span>  <span class="w">5</span><span class="pc">1</span><span class="c">2,</span> <span class="w">C</span><span class="pc">S42L51_H</span><span class="c">SM_MODE,</span> <span class="pc">0</span> <span class="pc">}, </span><span class="c">{</span>  <span class="w">768</span><span class="c">,</span> <span class="w">C</span><span class="pc">S42L51_H</span><span class="c">SM_MODE,</span> <span class="c">0</span> <span class="pc">}</span><span class="c">,</span>
+	<span class="c">{</span> <span class="w">10</span><span class="pc">2</span><span class="c">4,</span> <span class="pc">C</span><span class="c">S42L51_HSM_MODE,</span> <span class="pc">0</span> <span class="pc">}, </span><span class="c">{</span> <span class="w">1536</span><span class="c">,</span> <span class="w">C</span><span class="c">S42L51_HSM_MODE,</span> <span class="c">0</span> <span class="pc">}</span><span class="c">,</span>
+	<span class="c">{</span>  <span class="w">12</span><span class="pc">8</span><span class="c">,</span> <span class="w">CS42L51_SSM_MODE</span><span class="c">,</span> <span class="pc">0</span> <span class="pc">}, </span><span class="c">{</span>  <span class="w">192</span><span class="c">,</span> <span class="w">C</span><span class="pc">S42L51_S</span><span class="c">SM_MODE,</span> <span class="pc">0</span> <span class="pc">}</span><span class="c">,</span>
+	<span class="c">{</span>  <span class="w">25</span><span class="pc">6</span><span class="c">,</span> <span class="w">C</span><span class="pc">S42L51_S</span><span class="c">SM_MODE,</span> <span class="pc">0</span> <span class="pc">}, </span><span class="c">{</span>  <span class="w">384</span><span class="c">,</span> <span class="w">C</span><span class="pc">S42L51_S</span><span class="c">SM_MODE,</span> <span class="c">0</span> <span class="pc">}</span><span class="c">,</span>
+	<span class="c">{</span>  <span class="w">5</span><span class="pc">1</span><span class="c">2,</span> <span class="pc">C</span><span class="c">S42L51_SSM_MODE,</span> <span class="c">0</span> <span class="pc">}, </span><span class="c">{</span>  <span class="w">768</span><span class="c">,</span> <span class="w">C</span><span class="c">S42L51_SSM_MODE,</span> <span class="c">0</span> <span class="pc">}</span><span class="c">,</span>
+	<span class="c">{</span>  <span class="w">12</span><span class="pc">8</span><span class="c">,</span> <span class="w">CS42L51_DSM_MODE</span><span class="c">,</span> <span class="pc">0</span> <span class="pc">}, </span><span class="c">{</span>  <span class="w">1</span><span class="pc">9</span><span class="c">2,</span> <span class="w">C</span><span class="pc">S42L51_D</span><span class="c">SM_MODE,</span> <span class="pc">0</span> <span class="pc">}</span><span class="c">,</span>
+	<span class="c">{</span>  <span class="w">25</span><span class="pc">6</span><span class="c">,</span> <span class="w">C</span><span class="pc">S42L51_D</span><span class="c">SM_MODE,</span> <span class="pc">0</span> <span class="pc">}, </span><span class="c">{</span>  <span class="w">3</span><span class="pc">8</span><span class="c">4,</span> <span class="w">C</span><span class="pc">S42L51_D</span><span class="c">SM_MODE,</span> <span class="c">0</span> <span class="pc">}</span><span class="c">,</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="c">static</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">cs42l51_ratios</span> <span class="w">slave_auto_ratios</span><span class="c">[] = {</span>
+	<span class="c">{</span> <span class="w">10</span><span class="pc">2</span><span class="c">4</span><span class="pc">,</span> <span class="w">CS42L51_QSM_MODE</span><span class="c">,</span> <span class="w">0</span> <span class="w">}</span><span class="pc">, </span><span class="c">{</span> <span class="w">1536</span><span class="c">,</span> <span class="w">C</span><span class="pc">S42L51_Q</span><span class="c">SM_MODE</span><span class="pc">,</span> <span class="pc">0</span> <span class="pc">}</span><span class="c">,</span>
+	<span class="c">{</span> <span class="w">20</span><span class="pc">4</span><span class="c">8,</span> <span class="w">C</span><span class="pc">S42L51_Q</span><span class="c">SM_MODE,</span> <span class="c">1</span> <span class="w">}</span><span class="pc">, </span><span class="c">{</span> <span class="w">3072</span><span class="c">,</span> <span class="w">C</span><span class="pc">S42L51_Q</span><span class="c">SM_MODE</span><span class="pc">,</span> <span class="c">1</span> <span class="pc">},</span>
+	<span class="c">{</span>  <span class="w">5</span><span class="pc">1</span><span class="c">2,</span> <span class="w">CS42L51_HSM_MODE</span><span class="c">,</span> <span class="pc">0</span> <span class="pc">}, </span><span class="c">{</span>  <span class="w">768</span><span class="c">,</span> <span class="w">C</span><span class="pc">S42L51_H</span><span class="c">SM_MODE,</span> <span class="pc">0</span> <span class="pc">}</span><span class="c">,</span>
+	<span class="c">{</span> <span class="w">10</span><span class="pc">2</span><span class="c">4,</span> <span class="w">C</span><span class="pc">S42L51_H</span><span class="c">SM_MODE,</span> <span class="w">1</span> <span class="pc">}, </span><span class="c">{</span> <span class="w">1</span><span class="pc">5</span><span class="c">36,</span> <span class="w">C</span><span class="pc">S42L51_H</span><span class="c">SM_MODE,</span> <span class="c">1</span> <span class="pc">}</span><span class="c">,</span>
+	<span class="c">{</span>  <span class="w">25</span><span class="pc">6</span><span class="c">,</span> <span class="w">CS42L51_SSM_MODE</span><span class="c">,</span> <span class="pc">0</span> <span class="pc">}, </span><span class="c">{</span>  <span class="w">384</span><span class="c">,</span> <span class="w">C</span><span class="c">S42L51_SSM_MODE,</span> <span class="pc">0</span> <span class="pc">}</span><span class="c">,</span>
+	<span class="c">{</span>  <span class="w">5</span><span class="pc">1</span><span class="c">2,</span> <span class="w">C</span><span class="pc">S42L51_S</span><span class="c">SM_MODE,</span> <span class="pc">1</span> <span class="pc">}, </span><span class="c">{</span>  <span class="w">7</span><span class="c">68,</span> <span class="w">C</span><span class="pc">S42L51_S</span><span class="c">SM_MODE,</span> <span class="c">1</span> <span class="pc">}</span><span class="c">,</span>
+	<span class="c">{</span>  <span class="w">1</span><span class="pc">2</span><span class="c">8,</span> <span class="w">CS42L51_DSM_MODE</span><span class="c">,</span> <span class="pc">0</span> <span class="pc">}, </span><span class="c">{</span>  <span class="w">192</span><span class="c">,</span> <span class="w">C</span><span class="pc">S42L51_D</span><span class="c">SM_MODE,</span> <span class="pc">0</span> <span class="pc">}</span><span class="c">,</span>
+	<span class="c">{</span>  <span class="w">25</span><span class="pc">6</span><span class="c">,</span> <span class="w">C</span><span class="pc">S42L51_D</span><span class="c">SM_MODE,</span> <span class="pc">1</span> <span class="pc">}, </span><span class="c">{</span>  <span class="w">3</span><span class="pc">8</span><span class="c">4,</span> <span class="w">C</span><span class="pc">S42L51_D</span><span class="c">SM_MODE,</span> <span class="c">1</span> <span class="pc">}</span><span class="c">,</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">cs42l51_set_dai_sysclk</span><span class="c">(struct</span> <span class="w">snd_soc_dai</span> <span class="c">*</span><span class="w">codec_dai</span><span class="c">,</span>
+		<span class="pc">i</span><span class="c">nt</span> <span class="w">clk_id</span><span class="c">,</span> <span class="pc">u</span><span class="c">nsigned</span> <span class="c">int</span> <span class="w">f</span><span class="c">req,</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">d</span><span class="pc">i</span><span class="c">r</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">snd</span><span class="pc">_soc_c</span><span class="c">odec</span> <span class="c">*</span><span class="w">cod</span><span class="pc">ec</span> <span class="c">=</span> <span class="c">codec_dai</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">cod</span><span class="pc">ec</span><span class="c">;</span>
+	<span class="c">struct</span> <span class="w">cs42l51_private</span> <span class="c">*</span><span class="w">cs42l51</span> <span class="c">=</span> <span class="w">snd_soc_codec_get_drvdata</span><span class="c">(</span><span class="w">cod</span><span class="pc">ec</span><span class="c">);</span>
+
+	<span class="w">c</span><span class="c">s42l51</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">mclk</span> <span class="c">=</span> <span class="w">fr</span><span class="c">eq;</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">0</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">cs42l51_hw_params</span><span class="c">(struct</span> <span class="pc">s</span><span class="c">nd_pcm_substream</span> <span class="c">*substream</span><span class="pc">,</span>
+		<span class="c">struct</span> <span class="w">snd_pcm_hw_params</span> <span class="c">*</span><span class="w">p</span><span class="c">arams,</span>
+		<span class="c">struct</span> <span class="w">snd_soc_dai</span> <span class="c">*</span><span class="w">da</span><span class="pc">i)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">snd_s</span><span class="pc">oc_codec</span> <span class="c">*</span><span class="w">cod</span><span class="pc">ec</span> <span class="c">=</span> <span class="w">da</span><span class="pc">i</span><span class="c">-&gt;</span><span class="w">cod</span><span class="pc">ec</span><span class="c">;</span>
+	<span class="c">struct</span> <span class="w">cs42l51_private</span> <span class="c">*</span><span class="w">cs42l51</span> <span class="c">=</span> <span class="w">snd_soc_codec_get_drvdata</span><span class="c">(</span><span class="w">cod</span><span class="pc">ec)</span><span class="c">;</span>
+	<span class="pc">in</span><span class="c">t</span> <span class="pc">r</span><span class="c">et</span><span class="pc">;</span>
+	<span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="c">int</span> <span class="pc">i;</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="c">int</span> <span class="w">ra</span><span class="c">te;</span>
+	<span class="c">unsigned</span> <span class="c">int</span> <span class="w">ratio</span><span class="c">;</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">cs42l51_ratios</span> <span class="c">*</span><span class="w">ratios</span> <span class="pc">=</span> <span class="w">N</span><span class="c">ULL;</span>
+	<span class="c">int</span> <span class="w">nr_ratios</span> <span class="pc">=</span> <span class="c">0;</span>
+	<span class="c">int</span> <span class="w">intf_ctl</span><span class="pc">,</span> <span class="w">power_ctl</span><span class="pc">,</span> <span class="w">f</span><span class="pc">m</span><span class="c">t</span><span class="w">;</span>
+
+	<span class="w">s</span><span class="pc">w</span><span class="c">itch</span> <span class="c">(</span><span class="w">cs42l51</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">f</span><span class="pc">u</span><span class="c">nc) {</span>
+	<span class="c">case</span> <span class="w">MODE_MASTER</span><span class="c">:</span>
+		<span class="pc">re</span><span class="c">turn</span> <span class="c">-EINVAL;</span>
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">MODE_SLAVE</span><span class="c">:</span>
+		<span class="pc">r</span><span class="c">atios</span> <span class="c">=</span> <span class="w">slave_ratios</span><span class="pc">;</span>
+		<span class="w">n</span><span class="c">r_ratios</span> <span class="c">=</span> <span class="w">A</span><span class="c">RRAY_SIZE(</span><span class="pc">s</span><span class="c">lave_ratios);</span>
+		<span class="c">break;</span>
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">MODE_SLAVE_AUTO</span><span class="c">:</span>
+		<span class="pc">r</span><span class="c">atios</span> <span class="c">=</span> <span class="w">slave_auto_ratios</span><span class="pc">;</span>
+		<span class="pc">n</span><span class="c">r_ratios</span> <span class="c">=</span> <span class="w">A</span><span class="c">RRAY_SIZE(</span><span class="pc">s</span><span class="c">lave_auto_ratios);</span>
+		<span class="c">break;</span>
+	<span class="pc">}</span>
+
+	
+	<span class="w">ra</span><span class="pc">te</span> <span class="pc">=</span> <span class="w">params_rate</span><span class="c">(</span><span class="w">par</span><span class="pc">ams)</span><span class="c">;</span>     
+	<span class="w">ratio</span> <span class="c">=</span> <span class="w">cs42l51</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">mclk</span> <span class="w">/</span> <span class="w">ra</span><span class="pc">te</span><span class="c">;</span>    
+	<span class="pc">f</span><span class="c">or</span> <span class="c">(i</span> <span class="c">=</span> <span class="c">0;</span> <span class="c">i</span> <span class="c">&lt;</span> <span class="w">n</span><span class="c">r_ratios</span><span class="pc">;</span> <span class="c">i++) {</span>
+		<span class="c">if</span> <span class="c">(</span><span class="w">ratios</span><span class="pc">[</span><span class="c">i].</span><span class="pc">r</span><span class="c">atio</span> <span class="c">==</span> <span class="w">r</span><span class="pc">atio)</span>
+			<span class="pc">b</span><span class="c">reak;</span>
+	<span class="c">}</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(i</span> <span class="c">==</span> <span class="w">n</span><span class="c">r_ratios</span><span class="pc">) </span><span class="c">{</span>
+		
+		<span class="pc">d</span><span class="c">ev_err(</span><span class="w">cod</span><span class="pc">ec</span><span class="c">-&gt;dev, "</span><span class="w">c</span><span class="pc">o</span><span class="c">uld</span> <span class="c">not</span> <span class="pc">f</span><span class="c">ind</span> <span class="w">matching</span> <span class="w">ra</span><span class="pc">tio</span><span class="c">\n");</span>
+		<span class="c">return</span> <span class="c">-EINVAL;</span>
+	<span class="c">}</span>
+
+	<span class="w">intf_ctl</span> <span class="pc">=</span> <span class="w">snd_soc_read</span><span class="c">(</span><span class="w">cod</span><span class="pc">ec,</span> <span class="w">CS42L51_INTF_CTL</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">power_ctl</span> <span class="pc">=</span> <span class="w">s</span><span class="c">nd_soc_read(</span><span class="w">cod</span><span class="c">ec,</span> <span class="w">CS42L51_MIC_POWER_CTL</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="pc">in</span><span class="c">tf_ctl</span> <span class="w">&amp;</span><span class="c">= ~(</span><span class="w">CS42L51_INTF_CTL_MASTER</span> <span class="c">|</span> <span class="w">CS42L51_INTF_CTL_ADC_I2S</span>
+			<span class="c">|</span> <span class="w">CS42L51_INTF_CTL_DAC_FORMAT</span><span class="pc">(</span><span class="w">7</span><span class="pc">))</span><span class="c">;</span>
+	<span class="pc">p</span><span class="c">ower_ctl</span> <span class="w">&amp;</span><span class="pc">= ~(</span><span class="w">CS42L51_MIC_POWER_CTL_SPEED</span><span class="pc">(</span><span class="w">3)</span>
+			<span class="w">|</span> <span class="w">CS42L51_MIC_POWER_CTL_MCLK_DIV2)</span><span class="c">;</span>
+
+	<span class="w">s</span><span class="pc">w</span><span class="c">itch</span> <span class="c">(</span><span class="w">cs42l51</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">f</span><span class="pc">u</span><span class="c">nc) {</span>
+	<span class="c">case</span> <span class="w">MODE_MASTER</span><span class="c">:</span>
+		<span class="w">i</span><span class="pc">n</span><span class="c">tf_ctl</span> <span class="pc">|</span><span class="c">=</span> <span class="pc">C</span><span class="c">S42L51_INTF_CTL_MASTER;</span>
+		<span class="pc">p</span><span class="c">ower_ctl</span> <span class="pc">|</span><span class="c">=</span> <span class="w">C</span><span class="pc">S42L51_MIC_POWER_CTL_S</span><span class="c">PEED</span><span class="pc">(</span><span class="w">ratios[</span><span class="pc">i].</span><span class="w">speed_mode</span><span class="pc">)</span><span class="c">;</span>
+		<span class="c">break;</span>
+	<span class="c">case</span> <span class="w">MODE_SLAVE</span><span class="c">:</span>
+		<span class="w">p</span><span class="c">ower_ctl</span> <span class="pc">|</span><span class="c">=</span> <span class="w">C</span><span class="pc">S42L51_MIC_POWER_CTL_S</span><span class="c">PEED</span><span class="pc">(</span><span class="w">r</span><span class="c">atios</span><span class="w">[i</span><span class="c">].</span><span class="pc">s</span><span class="c">peed_mode);</span>
+		<span class="c">break;</span>
+	<span class="c">case</span> <span class="w">MODE_SLAVE_AUTO</span><span class="c">:</span>
+		<span class="c">power_ctl</span> <span class="w">|</span><span class="c">=</span> <span class="w">CS42L51_MIC_POWER_CTL_AUTO</span><span class="c">;</span>
+		<span class="pc">b</span><span class="c">reak;</span>
+	<span class="pc">}</span>
+
+	<span class="w">sw</span><span class="c">itch</span> <span class="c">(</span><span class="w">cs42l51</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">audio_mode</span><span class="c">) {</span>
+	<span class="c">case</span> <span class="w">SND_SOC_DAIFMT_I2S</span><span class="c">:</span>
+		<span class="w">intf_ctl</span> <span class="pc">|</span><span class="c">=</span> <span class="w">CS42L51_INTF_CTL_ADC_I2S</span><span class="c">;</span>
+		<span class="w">i</span><span class="pc">ntf</span><span class="c">_ctl</span> <span class="pc">|</span><span class="c">=</span> <span class="w">CS42L51_INTF_CTL_DAC_FORMAT</span><span class="pc">(</span><span class="w">CS42L51_DAC_DIF_I2S</span><span class="pc">)</span><span class="c">;</span>
+		<span class="c">break;</span>
+	<span class="c">case</span> <span class="w">SND_SOC_DAIFMT_LEFT_J</span><span class="c">:</span>
+		<span class="w">i</span><span class="pc">n</span><span class="c">tf_ctl</span> <span class="pc">|</span><span class="c">=</span> <span class="w">C</span><span class="pc">S42L51_INTF_CTL_D</span><span class="c">AC_FORMAT</span><span class="pc">(</span><span class="w">CS42L51_DAC_DIF_LJ24</span><span class="c">);</span>
+		<span class="c">break;</span>
+	<span class="c">case</span> <span class="w">SND_SOC_DAIFMT_RIGHT_J</span><span class="c">:</span>
+		<span class="w">s</span><span class="pc">w</span><span class="c">itch</span> <span class="c">(</span><span class="w">params_width</span><span class="pc">(</span><span class="w">par</span><span class="pc">ams</span><span class="w">)</span><span class="pc">)</span><span class="c"> {</span>
+		<span class="c">case</span> <span class="w">1</span><span class="pc">6</span><span class="c">:</span>
+			<span class="w">fm</span><span class="c">t</span> <span class="pc">=</span> <span class="w">CS42L51_DAC_DIF_RJ16</span><span class="pc">;</span>
+			<span class="c">break;</span>
+		<span class="c">case</span> <span class="w">18</span><span class="c">:</span>
+			<span class="w">fm</span><span class="c">t</span> <span class="pc">=</span> <span class="w">CS42L51_DAC_DIF_RJ18</span><span class="c">;</span>
+			<span class="c">break;</span>
+		<span class="c">case</span> <span class="w">2</span><span class="pc">0</span><span class="c">:</span>
+			<span class="w">fm</span><span class="c">t</span> <span class="pc">=</span> <span class="w">CS42L51_DAC_DIF_RJ20</span><span class="c">;</span>
+			<span class="c">break;</span>
+		<span class="pc">c</span><span class="c">ase</span> <span class="w">2</span><span class="pc">4</span><span class="c">:</span>
+			<span class="w">fm</span><span class="c">t</span> <span class="pc">=</span> <span class="w">CS42L51_DAC_DIF_RJ24</span><span class="c">;</span>
+			<span class="c">break;</span>
+		<span class="pc">d</span><span class="c">efault:</span>
+			<span class="w">d</span><span class="pc">e</span><span class="c">v_err(</span><span class="w">cod</span><span class="pc">ec</span><span class="c">-&gt;dev, "unknown</span> <span class="w">f</span><span class="pc">orm</span><span class="c">at\n");</span>
+			<span class="pc">r</span><span class="c">eturn</span> <span class="c">-EINVAL;</span>
+		<span class="c">}</span>
+		<span class="w">intf_ctl</span> <span class="w">|</span><span class="pc">=</span> <span class="w">CS42L51_INTF_CTL_DAC_FORMAT</span><span class="pc">(</span><span class="w">fm</span><span class="c">t</span><span class="pc">)</span><span class="c">;</span>
+		<span class="w">b</span><span class="c">reak;</span>
+	<span class="pc">d</span><span class="c">efault:</span>
+		<span class="pc">d</span><span class="c">ev_err(</span><span class="w">cod</span><span class="pc">ec</span><span class="c">-&gt;</span><span class="pc">d</span><span class="c">ev, "</span><span class="pc">u</span><span class="c">nknown</span> <span class="w">fo</span><span class="pc">rm</span><span class="c">at</span><span class="w">\</span><span class="c">n");</span>
+		<span class="c">return</span> <span class="c">-EINVAL;</span>
+	<span class="c">}</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">ratios[</span><span class="pc">i].</span><span class="w">mclk</span><span class="c">)</span>
+		<span class="w">power_ctl</span> <span class="w">|</span><span class="c">=</span> <span class="w">CS42L51_MIC_POWER_CTL_MCLK_DIV2</span><span class="c">;</span>
+
+	<span class="w">r</span><span class="pc">et</span> <span class="c">=</span> <span class="w">snd_soc_write</span><span class="c">(</span><span class="w">cod</span><span class="pc">ec,</span> <span class="w">CS42L51_INTF_CTL</span><span class="c">,</span> <span class="w">intf_ctl</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">if</span> <span class="c">(ret</span> <span class="pc">&lt;</span> <span class="c">0)</span>
+		<span class="c">return</span> <span class="c">ret;</span>
+
+	<span class="pc">ret</span> <span class="c">=</span> <span class="w">s</span><span class="c">nd_soc_write(</span><span class="w">cod</span><span class="pc">ec</span><span class="c">,</span> <span class="w">CS42L51_MIC_POWER_CTL</span><span class="c">,</span> <span class="pc">p</span><span class="c">ower_ctl</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">if</span> <span class="c">(ret</span> <span class="c">&lt;</span> <span class="c">0)</span>
+		<span class="c">return</span> <span class="c">ret;</span>
+
+	<span class="pc">retu</span><span class="c">rn</span> <span class="pc">0</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">cs42l51_dai_mute</span><span class="c">(struct</span> <span class="w">snd_soc_dai</span> <span class="c">*</span><span class="w">da</span><span class="pc">i</span><span class="c">,</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">mute</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">snd_s</span><span class="pc">oc_c</span><span class="c">odec</span> <span class="c">*</span><span class="w">cod</span><span class="pc">ec</span> <span class="c">=</span> <span class="w">da</span><span class="pc">i</span><span class="c">-&gt;</span><span class="w">cod</span><span class="pc">ec</span><span class="c">;</span>
+	<span class="pc">in</span><span class="c">t</span> <span class="w">r</span><span class="pc">eg;</span>
+	<span class="c">int</span> <span class="w">m</span><span class="pc">a</span><span class="c">sk</span> <span class="pc">=</span> <span class="w">CS42L51_DAC_OUT_CTL_DACA_MUTE</span><span class="pc">|</span><span class="w">CS42L51_DAC_OUT_CTL_DACB_MUTE</span><span class="c">;</span>
+
+	<span class="w">r</span><span class="pc">eg</span> <span class="c">=</span> <span class="w">snd_soc_read</span><span class="c">(</span><span class="w">cod</span><span class="pc">ec,</span> <span class="w">CS42L51_DAC_OUT_CTL</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="c">if</span> <span class="c">(</span><span class="pc">m</span><span class="c">ute</span><span class="pc">)</span>
+		<span class="w">r</span><span class="pc">eg</span> <span class="pc">|</span><span class="c">=</span> <span class="w">m</span><span class="pc">a</span><span class="c">sk;</span>
+	<span class="w">e</span><span class="c">lse</span>
+		<span class="w">r</span><span class="pc">eg</span> <span class="c">&amp;= ~mask;</span>
+
+	<span class="w">r</span><span class="c">eturn</span> <span class="w">snd_soc_write</span><span class="pc">(</span><span class="w">cod</span><span class="pc">ec,</span> <span class="w">C</span><span class="pc">S42L51_DAC_OUT_CTL</span><span class="c">,</span> <span class="c">reg</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="pc">c</span><span class="c">onst</span> <span class="c">struct</span> <span class="w">snd_soc_dai_ops</span> <span class="w">cs42l51_dai_ops</span> <span class="c">= {</span>
+	<span class="c">.</span><span class="w">hw_params</span>      <span class="c">=</span> <span class="w">cs42l51_hw_params</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">set_sysclk</span>     <span class="c">=</span> <span class="w">cs42l51_set_dai_sysclk</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">set_fmt</span>        <span class="c">=</span> <span class="w">cs42l51_set_dai_fmt</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">digital_mute</span>   <span class="c">=</span> <span class="w">cs42l51_dai_mute</span><span class="c">,</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="c">static</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">snd_soc_dai_driver</span> <span class="w">cs42l51_dai</span> <span class="c">= {</span>
+	<span class="c">.name</span> <span class="c">= "</span><span class="w">cs42l51</span><span class="pc">-</span><span class="w">hifi</span><span class="c">",</span>
+	<span class="c">.</span><span class="w">playback</span> <span class="w">=</span><span class="pc"> {</span>
+		<span class="c">.</span><span class="w">stream_name</span> <span class="pc">= </span><span class="c">"</span><span class="w">Pl</span><span class="c">ayback</span><span class="pc">"</span><span class="c">,</span>
+		<span class="c">.</span><span class="w">channels_min</span> <span class="c">=</span> <span class="c">1,</span>
+		<span class="c">.</span><span class="w">channels_max</span> <span class="c">=</span> <span class="pc">2</span><span class="c">,</span>
+		<span class="c">.</span><span class="w">ra</span><span class="pc">tes</span> <span class="c">=</span> <span class="w">SNDRV_PCM_RATE_8000_96000</span><span class="c">,</span>
+		<span class="c">.</span><span class="w">formats</span> <span class="c">=</span> <span class="w">CS42L51_FORMATS</span><span class="c">,</span>
+	<span class="pc">},</span>
+	<span class="pc">.</span><span class="w">capture</span> <span class="pc">= </span><span class="c">{</span>
+		<span class="c">.</span><span class="w">s</span><span class="c">tream_name</span> <span class="pc">= </span><span class="c">"</span><span class="w">Ca</span><span class="pc">p</span><span class="c">ture",</span>
+		<span class="c">.</span><span class="w">c</span><span class="pc">hannels_mi</span><span class="c">n</span> <span class="c">=</span> <span class="pc">1</span><span class="c">,</span>
+		<span class="c">.channels_max</span> <span class="c">=</span> <span class="w">2</span><span class="c">,</span>
+		<span class="pc">.</span><span class="w">ra</span><span class="pc">tes</span> <span class="c">=</span> <span class="pc">S</span><span class="c">NDRV_PCM_RATE_8000_96000,</span>
+		<span class="c">.formats</span> <span class="c">=</span> <span class="c">CS42L51_FORMATS,</span>
+	<span class="c">},</span>
+	<span class="c">.</span><span class="w">o</span><span class="pc">p</span><span class="c">s</span> <span class="pc">= &amp;</span><span class="w">cs42l51_dai_ops</span><span class="c">,</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="c">static</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">cs42l51_codec_probe</span><span class="c">(struct</span> <span class="w">snd</span><span class="pc">_s</span><span class="c">oc_codec</span> <span class="c">*</span><span class="w">cod</span><span class="c">ec</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">in</span><span class="c">t</span> <span class="c">ret</span><span class="pc">,</span> <span class="w">r</span><span class="pc">eg;</span>
+
+	
+	<span class="w">re</span><span class="pc">g</span> <span class="c">=</span> <span class="w">CS42L51_DAC_CTL_DATA_SEL</span><span class="c">(</span><span class="w">1</span><span class="pc">)</span>
+		<span class="w">|</span> <span class="w">CS42L51_DAC_CTL_AMUTE</span> <span class="c">|</span> <span class="w">CS42L51_DAC_CTL_DACSZ</span><span class="pc">(</span><span class="w">0</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">r</span><span class="pc">et</span> <span class="c">=</span> <span class="w">snd_soc_write</span><span class="c">(</span><span class="w">cod</span><span class="pc">ec</span><span class="c">,</span> <span class="w">CS42L51_DAC_CTL</span><span class="c">,</span> <span class="pc">r</span><span class="c">eg</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">if</span> <span class="c">(ret</span> <span class="pc">&lt;</span> <span class="c">0)</span>
+		<span class="c">return</span> <span class="c">ret;</span>
+
+	<span class="c">return</span> <span class="pc">0</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">snd_soc_codec_driver</span> <span class="w">soc_codec_device_cs42l51</span> <span class="c">= {</span>
+	<span class="c">.</span><span class="w">p</span><span class="c">robe</span> <span class="c">=</span> <span class="w">cs42l51_codec_probe</span><span class="c">,</span>
+
+	<span class="c">.</span><span class="w">controls</span> <span class="c">=</span> <span class="w">cs42l51_snd_controls</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">num_controls</span> <span class="c">=</span> <span class="pc">A</span><span class="c">RRAY_SIZE(cs42l51_snd_controls),</span>
+	<span class="c">.</span><span class="w">dapm_widgets</span> <span class="c">=</span> <span class="w">cs42l51_dapm_widgets</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">num_dapm_widgets</span> <span class="c">=</span> <span class="pc">A</span><span class="c">RRAY_SIZE(cs42l51_dapm_widgets),</span>
+	<span class="c">.</span><span class="w">dapm_routes</span> <span class="c">=</span> <span class="w">cs42l51_routes</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">num_dapm_routes</span> <span class="c">=</span> <span class="c">ARRAY_SIZE(cs42l51_routes),</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="w">c</span><span class="c">onst</span> <span class="c">struct</span> <span class="w">regmap_config</span> <span class="w">cs42l51_regmap</span> <span class="c">= {</span>
+	<span class="c">.</span><span class="w">max_register</span> <span class="c">=</span> <span class="w">CS42L51_CHARGE_FREQ</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">cache_type</span> <span class="c">=</span> <span class="w">REGCACHE_RBTREE</span><span class="c">,</span>
+<span class="pc">}</span><span class="c">;</span>
+<span class="pc">E</span><span class="c">XPORT_SYMBOL_GPL(cs42l51_regmap);</span>
+
+<span class="pc">i</span><span class="c">nt</span> <span class="w">cs42l51_probe</span><span class="c">(struct</span> <span class="w">d</span><span class="pc">e</span><span class="c">vice</span> <span class="c">*dev,</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">r</span><span class="pc">egmap</span> <span class="c">*regmap</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">cs42l51_private</span> <span class="c">*</span><span class="w">cs42l51</span><span class="pc">;</span>
+	<span class="w">u</span><span class="c">nsigned</span> <span class="c">int</span> <span class="w">v</span><span class="pc">al</span><span class="c">;</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="c">ret;</span>
+
+	<span class="pc">if</span> <span class="c">(</span><span class="w">I</span><span class="c">S_ERR(</span><span class="pc">r</span><span class="c">egmap))</span>
+		<span class="c">return</span> <span class="pc">P</span><span class="c">TR_ERR(</span><span class="pc">regm</span><span class="c">ap);</span>
+
+	<span class="pc">c</span><span class="c">s42l51</span> <span class="pc">=</span> <span class="c">devm_kzalloc(dev,</span> <span class="c">sizeof</span><span class="pc">(st</span><span class="c">ruct</span> <span class="pc">cs42l51_</span><span class="c">private),</span>
+			       <span class="c">GFP_KERNEL);</span>
+	<span class="c">if</span> <span class="c">(!cs42l51)</span>
+		<span class="c">return</span> <span class="c">-ENOMEM;</span>
+
+	<span class="w">dev_set_drvdata</span><span class="pc">(</span><span class="c">dev,</span> <span class="c">cs42l51</span><span class="pc">)</span><span class="c">;</span>
+
+	
+	<span class="w">r</span><span class="pc">et</span> <span class="c">=</span> <span class="w">regmap_read</span><span class="c">(</span><span class="w">reg</span><span class="pc">map</span><span class="c">,</span> <span class="w">CS42L51_CHIP_REV_ID</span><span class="pc">, </span><span class="c">&amp;</span><span class="pc">v</span><span class="c">al);</span>
+	<span class="c">if</span> <span class="c">(ret</span> <span class="c">&lt;</span> <span class="c">0</span><span class="pc">) </span><span class="c">{</span>
+		<span class="c">dev_err(dev, "failed</span> <span class="c">to</span> <span class="pc">r</span><span class="c">ead</span> <span class="w">I2C</span><span class="c">\n");</span>
+		<span class="pc">g</span><span class="c">oto</span> <span class="c">error;</span>
+	<span class="c">}</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="pc">((v</span><span class="c">al</span> <span class="w">!</span><span class="c">=</span> <span class="w">CS42L51_MK_CHIP_REV</span><span class="pc">(</span><span class="w">CS42L51_CHIP_ID</span><span class="pc">,</span> <span class="w">CS42L51_CHIP_REV_A)) &amp;&amp;</span>
+	    <span class="w">(v</span><span class="pc">a</span><span class="c">l</span> <span class="w">!</span><span class="c">=</span> <span class="w">C</span><span class="pc">S42L51_M</span><span class="c">K_CHIP_REV</span><span class="w">(</span><span class="pc">CS42L51_CHIP_I</span><span class="c">D</span><span class="pc">,</span> <span class="w">CS42L51_CHIP_REV_B)))</span><span class="pc"> </span><span class="c">{</span>
+		<span class="pc">d</span><span class="c">ev_err(dev, "</span><span class="w">I</span><span class="c">nvalid</span> <span class="w">ch</span><span class="pc">i</span><span class="c">p</span> <span class="w">id:</span><span class="c"> %</span><span class="pc">x</span><span class="c">\n",</span> <span class="w">v</span><span class="pc">al</span><span class="c">);</span>
+		<span class="w">r</span><span class="pc">et</span> <span class="pc">= </span><span class="c">-</span><span class="w">E</span><span class="pc">NOD</span><span class="c">EV;</span>
+		<span class="c">goto</span> <span class="pc">erro</span><span class="c">r;</span>
+	<span class="c">}</span>
+	<span class="w">d</span><span class="pc">ev_i</span><span class="c">nfo(dev, "</span><span class="w">Cirrus</span> <span class="w">Logic</span> <span class="w">CS42L51,</span> <span class="w">Revision</span><span class="pc">:</span><span class="c"> %</span><span class="w">0</span><span class="pc">2X</span><span class="c">\n",</span>
+		 <span class="w">v</span><span class="c">al</span> <span class="w">&amp;</span> <span class="w">CS42L51_CHIP_REV_MASK</span><span class="c">);</span>
+
+	<span class="pc">r</span><span class="c">et</span> <span class="c">=</span>  <span class="w">snd_soc_register_codec</span><span class="c">(dev,</span>
+			<span class="w">&amp;soc_codec_device_cs42l51</span><span class="pc">, </span><span class="c">&amp;</span><span class="w">cs42l51_dai</span><span class="pc">,</span> <span class="w">1</span><span class="c">);</span>
+<span class="w">e</span><span class="pc">rro</span><span class="c">r</span><span class="pc">:</span>
+	<span class="pc">retu</span><span class="c">rn</span> <span class="pc">r</span><span class="c">et;</span>
+<span class="c">}</span>
+<span class="w">E</span><span class="pc">XPORT_SYMBOL_</span><span class="c">GPL(</span><span class="w">cs42l51_probe</span><span class="c">);</span>
+
+<span class="w">c</span><span class="c">onst</span> <span class="c">struct</span> <span class="w">o</span><span class="c">f_device_id</span> <span class="w">cs42l51_of_match</span><span class="c">[] = {</span>
+	<span class="c">{ .compatible</span> <span class="c">= "</span><span class="w">cirrus</span><span class="c">,</span><span class="w">cs42l51", },</span>
+	<span class="w">{</span><span class="pc"> }</span>
+<span class="c">};</span>
+<span class="c">MODULE_DEVICE_TABLE(of,</span> <span class="c">cs42l51_of_match);</span>
+<span class="w">E</span><span class="pc">XPORT_SYMBOL_</span><span class="c">GPL(cs42l51_of_match);</span>
+
+<span class="w">M</span><span class="pc">ODULE_A</span><span class="c">UTHOR("</span><span class="w">Arnaud</span> <span class="w">Patard</span> <span class="c">&lt;</span><span class="w">arnaud</span><span class="pc">.</span><span class="w">patard</span><span class="pc">@</span><span class="w">rtp</span><span class="pc">-</span><span class="c">net.</span><span class="w">org</span><span class="pc">&gt;</span><span class="c">");</span>
+<span class="c">MODULE_DESCRIPTION("</span><span class="w">Cirrus</span> <span class="w">Logic</span> <span class="w">CS42L51</span> <span class="w">ALSA</span> <span class="w">SoC</span> <span class="w">Codec</span> <span class="w">D</span><span class="c">river");</span>
+<span class="c">MODULE_LICENSE("GPL");</span>
+
+</pre>
+</body>
+</html>
+

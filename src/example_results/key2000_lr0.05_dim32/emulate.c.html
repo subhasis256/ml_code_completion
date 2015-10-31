@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+<span class="w">#include</span> <span class="w">&lt;linux/mm.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/kvm_host.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;asm/kvm_arm.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;asm/kvm_emulate.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;asm</span><span class="c">/</span><span class="w">opcodes</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;</span><span class="w">t</span><span class="pc">r</span><span class="c">ace/</span><span class="pc">e</span><span class="c">vents</span><span class="pc">/</span><span class="w">kv</span><span class="pc">m</span><span class="c">.h&gt;</span>
+
+<span class="c">#include</span> <span class="pc">"</span><span class="w">t</span><span class="pc">r</span><span class="c">ace</span><span class="pc">.</span><span class="c">h"</span>
+
+<span class="c">#</span><span class="pc">d</span><span class="c">efine</span> <span class="w">VCPU_NR_MODES</span>		<span class="w">6</span>
+<span class="c">#define</span> <span class="w">VCPU_REG_OFFSET_USR</span>	<span class="pc">0</span>
+<span class="c">#define</span> <span class="w">VCPU_REG_OFFSET_FIQ</span>	<span class="pc">1</span>
+<span class="c">#define</span> <span class="w">VCPU_REG_OFFSET_IRQ</span>	<span class="c">2</span>
+<span class="c">#define</span> <span class="w">VCPU_REG_OFFSET_SVC</span>	<span class="c">3</span>
+<span class="c">#define</span> <span class="w">VCPU_REG_OFFSET_ABT</span>	<span class="c">4</span>
+<span class="c">#define</span> <span class="w">VCPU_REG_OFFSET_UND</span>	<span class="c">5</span>
+<span class="c">#define</span> <span class="w">REG_OFFSET(_reg)</span><span class="pc"> \</span>
+	<span class="w">(of</span><span class="pc">fseto</span><span class="c">f(struct</span> <span class="w">kvm_regs</span><span class="c">,</span> <span class="pc">_</span><span class="c">reg</span><span class="w">) /</span> <span class="pc">s</span><span class="c">izeof(</span><span class="pc">u</span><span class="c">32</span><span class="pc">))</span>
+
+<span class="c">#define</span> <span class="w">USR_REG_OFFSET</span><span class="c">(</span><span class="w">_num</span><span class="pc">)</span> <span class="w">R</span><span class="c">EG_OFFSET(</span><span class="w">usr_regs.uregs[</span><span class="pc">_</span><span class="c">num</span><span class="pc">])</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="pc">c</span><span class="c">onst</span> <span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">vcpu_reg_offsets[VCPU_NR_MODES]</span><span class="pc">[</span><span class="w">15</span><span class="pc">] </span><span class="c">= {</span>
+	
+	<span class="pc">[</span><span class="w">VCPU_REG_OFFSET_USR]</span><span class="pc"> = </span><span class="c">{</span>
+		<span class="w">U</span><span class="c">SR_REG_OFFSET</span><span class="w">(0</span><span class="pc">)</span><span class="c">,</span> <span class="w">U</span><span class="c">SR_REG_OFFSET</span><span class="pc">(1)</span><span class="c">,</span> <span class="w">U</span><span class="c">SR_REG_OFFSET(</span><span class="pc">2</span><span class="c">),</span>
+		<span class="w">U</span><span class="c">SR_REG_OFFSET(</span><span class="pc">3</span><span class="c">),</span> <span class="c">USR_REG_OFFSET(4),</span> <span class="c">USR_REG_OFFSET(5),</span>
+		<span class="c">USR_REG_OFFSET(6),</span> <span class="c">USR_REG_OFFSET(7),</span> <span class="c">USR_REG_OFFSET(8),</span>
+		<span class="c">USR_REG_OFFSET(9),</span> <span class="c">USR_REG_OFFSET(10),</span> <span class="c">USR_REG_OFFSET(11),</span>
+		<span class="c">USR_REG_OFFSET(12),</span> <span class="c">USR_REG_OFFSET(13),</span>	<span class="c">USR_REG_OFFSET(14),</span>
+	<span class="w">}</span><span class="pc">,</span>
+
+	
+	<span class="w">[VCPU_REG_OFFSET_FIQ</span><span class="pc">]</span><span class="c"> = {</span>
+		<span class="c">USR_REG_OFFSET</span><span class="pc">(0</span><span class="c">),</span> <span class="c">USR_REG_OFFSET(</span><span class="w">1</span><span class="c">),</span> <span class="c">USR_REG_OFFSET(2),</span>
+		<span class="c">USR_REG_OFFSET(3),</span> <span class="c">USR_REG_OFFSET(4),</span> <span class="c">USR_REG_OFFSET(5),</span>
+		<span class="c">USR_REG_OFFSET(6),</span> <span class="c">USR_REG_OFFSET(7),</span>
+		<span class="w">REG_OFFSET</span><span class="c">(</span><span class="w">fiq_regs[</span><span class="pc">0]),</span> 
+		<span class="w">R</span><span class="c">EG_OFFSET</span><span class="pc">(</span><span class="w">f</span><span class="c">iq_regs</span><span class="w">[</span><span class="c">1</span><span class="pc">]),</span> 
+		<span class="pc">R</span><span class="c">EG_OFFSET(fiq_regs</span><span class="w">[</span><span class="c">2</span><span class="pc">]),</span> 
+		<span class="c">REG_OFFSET(fiq_regs</span><span class="pc">[</span><span class="c">3</span><span class="pc">]),</span> 
+		<span class="c">REG_OFFSET(fiq_regs</span><span class="pc">[4]),</span> 
+		<span class="pc">R</span><span class="c">EG_OFFSET(fiq_regs</span><span class="pc">[</span><span class="c">5</span><span class="pc">]),</span> 
+		<span class="c">REG_OFFSET(fiq_regs</span><span class="pc">[</span><span class="c">6</span><span class="pc">]),</span> 
+	<span class="w">}</span><span class="c">,</span>
+
+	
+	<span class="pc">[</span><span class="w">VCPU_REG_OFFSET_IRQ</span><span class="pc">] = </span><span class="c">{</span>
+		<span class="w">USR_REG_OFFSET</span><span class="pc">(0)</span><span class="c">,</span> <span class="w">U</span><span class="c">SR_REG_OFFSET</span><span class="pc">(1)</span><span class="c">,</span> <span class="pc">U</span><span class="c">SR_REG_OFFSET(</span><span class="pc">2)</span><span class="c">,</span>
+		<span class="c">USR_REG_OFFSET(3),</span> <span class="c">USR_REG_OFFSET(4),</span> <span class="c">USR_REG_OFFSET(5),</span>
+		<span class="c">USR_REG_OFFSET(6),</span> <span class="c">USR_REG_OFFSET(7),</span> <span class="c">USR_REG_OFFSET(8),</span>
+		<span class="c">USR_REG_OFFSET(9),</span> <span class="c">USR_REG_OFFSET(10),</span> <span class="c">USR_REG_OFFSET(11),</span>
+		<span class="c">USR_REG_OFFSET(12),</span>
+		<span class="w">REG_OFFSET</span><span class="c">(</span><span class="w">irq_regs[</span><span class="pc">0]),</span> 
+		<span class="w">R</span><span class="pc">E</span><span class="c">G_OFFSET</span><span class="pc">(</span><span class="w">i</span><span class="c">rq_regs</span><span class="w">[</span><span class="pc">1]),</span> 
+	<span class="w">}</span><span class="pc">,</span>
+
+	
+	<span class="pc">[</span><span class="w">VCPU_REG_OFFSET_SVC</span><span class="pc">] = </span><span class="c">{</span>
+		<span class="c">USR_REG_OFFSET</span><span class="pc">(0</span><span class="c">),</span> <span class="pc">U</span><span class="c">SR_REG_OFFSET(</span><span class="pc">1</span><span class="c">),</span> <span class="pc">U</span><span class="c">SR_REG_OFFSET(2),</span>
+		<span class="pc">U</span><span class="c">SR_REG_OFFSET(3),</span> <span class="pc">U</span><span class="c">SR_REG_OFFSET(4),</span> <span class="c">USR_REG_OFFSET(5),</span>
+		<span class="c">USR_REG_OFFSET(6),</span> <span class="c">USR_REG_OFFSET(7),</span> <span class="c">USR_REG_OFFSET(8),</span>
+		<span class="c">USR_REG_OFFSET(9),</span> <span class="c">USR_REG_OFFSET(10),</span> <span class="c">USR_REG_OFFSET(11),</span>
+		<span class="c">USR_REG_OFFSET(12),</span>
+		<span class="w">REG_OFFSET</span><span class="c">(</span><span class="w">svc_regs[</span><span class="pc">0]),</span> 
+		<span class="w">R</span><span class="pc">E</span><span class="c">G_OFFSET</span><span class="pc">(</span><span class="w">s</span><span class="c">vc_regs</span><span class="w">[</span><span class="pc">1]),</span> 
+	<span class="w">}</span><span class="pc">,</span>
+
+	
+	<span class="pc">[</span><span class="w">VCPU_REG_OFFSET_ABT</span><span class="pc">] = </span><span class="c">{</span>
+		<span class="c">USR_REG_OFFSET</span><span class="pc">(0</span><span class="c">),</span> <span class="pc">U</span><span class="c">SR_REG_OFFSET(</span><span class="pc">1</span><span class="c">),</span> <span class="pc">U</span><span class="c">SR_REG_OFFSET(2),</span>
+		<span class="pc">U</span><span class="c">SR_REG_OFFSET(3),</span> <span class="pc">U</span><span class="c">SR_REG_OFFSET(4),</span> <span class="c">USR_REG_OFFSET(5),</span>
+		<span class="c">USR_REG_OFFSET(6),</span> <span class="c">USR_REG_OFFSET(7),</span> <span class="c">USR_REG_OFFSET(8),</span>
+		<span class="c">USR_REG_OFFSET(9),</span> <span class="c">USR_REG_OFFSET(10),</span> <span class="c">USR_REG_OFFSET(11),</span>
+		<span class="c">USR_REG_OFFSET(12),</span>
+		<span class="w">REG_OFFSET</span><span class="c">(</span><span class="w">abt_regs[</span><span class="pc">0]),</span> 
+		<span class="w">R</span><span class="pc">E</span><span class="c">G_OFFSET</span><span class="pc">(</span><span class="w">a</span><span class="c">bt_regs</span><span class="w">[</span><span class="pc">1]),</span> 
+	<span class="w">}</span><span class="pc">,</span>
+
+	
+	<span class="pc">[</span><span class="w">VCPU_REG_OFFSET_UND</span><span class="pc">] = </span><span class="c">{</span>
+		<span class="c">USR_REG_OFFSET</span><span class="pc">(0</span><span class="c">),</span> <span class="pc">U</span><span class="c">SR_REG_OFFSET(</span><span class="pc">1</span><span class="c">),</span> <span class="pc">U</span><span class="c">SR_REG_OFFSET(2),</span>
+		<span class="pc">U</span><span class="c">SR_REG_OFFSET(3),</span> <span class="pc">U</span><span class="c">SR_REG_OFFSET(4),</span> <span class="c">USR_REG_OFFSET(5),</span>
+		<span class="c">USR_REG_OFFSET(6),</span> <span class="c">USR_REG_OFFSET(7),</span> <span class="c">USR_REG_OFFSET(8),</span>
+		<span class="c">USR_REG_OFFSET(9),</span> <span class="c">USR_REG_OFFSET(10),</span> <span class="c">USR_REG_OFFSET(11),</span>
+		<span class="c">USR_REG_OFFSET(12),</span>
+		<span class="w">REG_OFFSET</span><span class="c">(</span><span class="w">und_regs[</span><span class="pc">0]),</span> 
+		<span class="w">R</span><span class="pc">E</span><span class="c">G_OFFSET</span><span class="pc">(</span><span class="w">u</span><span class="c">nd_regs</span><span class="w">[</span><span class="pc">1]),</span> 
+	<span class="w">}</span><span class="pc">,</span>
+<span class="w">}</span><span class="c">;</span>
+
+
+<span class="w">u</span><span class="pc">ns</span><span class="c">igned</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">*vcpu_reg</span><span class="c">(</span><span class="pc">s</span><span class="c">truct</span> <span class="w">k</span><span class="pc">vm_</span><span class="c">vcpu</span> <span class="c">*</span><span class="w">v</span><span class="c">cpu</span><span class="pc">,</span> <span class="w">u</span><span class="pc">8</span> <span class="w">reg_num</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">un</span><span class="c">signed</span> <span class="c">long</span> <span class="w">*reg_array</span> <span class="pc">= </span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">*</span><span class="pc">)&amp;</span><span class="w">vc</span><span class="pc">pu</span><span class="c">-&gt;</span><span class="w">arc</span><span class="c">h</span><span class="w">.r</span><span class="pc">egs</span><span class="w">;</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">m</span><span class="pc">o</span><span class="c">de</span> <span class="w">= </span><span class="pc">*</span><span class="w">vcpu_cpsr</span><span class="pc">(</span><span class="w">vc</span><span class="pc">pu</span><span class="w">) &amp;</span> <span class="w">MODE_MASK</span><span class="pc">;</span>
+
+	<span class="w">s</span><span class="pc">w</span><span class="c">itch</span> <span class="c">(</span><span class="w">m</span><span class="pc">o</span><span class="c">de</span><span class="pc">)</span><span class="c"> {</span>
+	<span class="c">case</span> <span class="w">USR_MODE...SVC_MODE</span><span class="pc">:</span>
+		<span class="w">m</span><span class="pc">o</span><span class="c">de</span> <span class="w">&amp;</span><span class="pc">= </span><span class="c">~</span><span class="w">MODE32_BIT</span><span class="c">;</span> 
+		<span class="c">break;</span>
+
+	<span class="c">case</span> <span class="w">ABT_MODE</span><span class="c">:</span>
+		<span class="w">m</span><span class="c">ode</span> <span class="c">=</span> <span class="w">VCPU_REG_OFFSET_ABT</span><span class="pc">;</span>
+		<span class="c">break;</span>
+
+	<span class="c">case</span> <span class="w">UND_MODE</span><span class="c">:</span>
+		<span class="c">mode</span> <span class="c">=</span> <span class="w">VCPU_REG_OFFSET_UND</span><span class="c">;</span>
+		<span class="c">break;</span>
+
+	<span class="c">case</span> <span class="w">SYSTEM_MODE</span><span class="c">:</span>
+		<span class="c">mode</span> <span class="c">=</span> <span class="w">VCPU_REG_OFFSET_USR</span><span class="c">;</span>
+		<span class="c">break;</span>
+
+	<span class="pc">d</span><span class="c">efault:</span>
+		<span class="pc">B</span><span class="c">UG();</span>
+	<span class="pc">}</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">reg_array</span> <span class="w">+</span> <span class="w">vcpu_reg_offsets[m</span><span class="c">ode</span><span class="w">][reg_num</span><span class="pc">];</span>
+<span class="pc">}</span>
+
+
+<span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">*vcpu_spsr</span><span class="pc">(s</span><span class="c">truct</span> <span class="w">kv</span><span class="pc">m_</span><span class="c">vcpu</span> <span class="c">*</span><span class="w">vc</span><span class="pc">pu)</span>
+<span class="c">{</span>
+	<span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">m</span><span class="pc">o</span><span class="c">de</span> <span class="w">= </span><span class="pc">*</span><span class="w">vcpu_cpsr</span><span class="pc">(</span><span class="w">vcp</span><span class="pc">u</span><span class="w">) &amp;</span> <span class="w">MODE_MASK</span><span class="pc">;</span>
+	<span class="w">s</span><span class="pc">w</span><span class="c">itch</span> <span class="c">(</span><span class="w">m</span><span class="c">ode) {</span>
+	<span class="c">case</span> <span class="w">SVC_MODE</span><span class="c">:</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="w">&amp;vcp</span><span class="pc">u</span><span class="c">-&gt;</span><span class="w">arc</span><span class="c">h</span><span class="pc">.</span><span class="w">r</span><span class="pc">egs.</span><span class="w">KVM_ARM_SVC_spsr</span><span class="pc">;</span>
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">ABT_MODE</span><span class="c">:</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="w">&amp;vc</span><span class="pc">pu</span><span class="c">-&gt;</span><span class="w">arc</span><span class="c">h</span><span class="pc">.</span><span class="w">r</span><span class="pc">egs</span><span class="c">.</span><span class="w">KVM_ARM_ABT_spsr</span><span class="pc">;</span>
+	<span class="w">c</span><span class="c">ase</span> <span class="w">UND_MODE</span><span class="c">:</span>
+		<span class="c">return</span> <span class="w">&amp;vc</span><span class="pc">p</span><span class="c">u-&gt;</span><span class="w">arc</span><span class="c">h.</span><span class="w">r</span><span class="pc">egs</span><span class="c">.</span><span class="w">KVM_ARM_UND_spsr</span><span class="pc">;</span>
+	<span class="w">c</span><span class="c">ase</span> <span class="w">IRQ_MODE</span><span class="c">:</span>
+		<span class="c">return</span> <span class="w">&amp;vc</span><span class="pc">p</span><span class="c">u-&gt;</span><span class="w">arc</span><span class="c">h.</span><span class="w">r</span><span class="pc">egs</span><span class="c">.</span><span class="w">KVM_ARM_IRQ_spsr</span><span class="pc">;</span>
+	<span class="w">c</span><span class="c">ase</span> <span class="w">FIQ_MODE</span><span class="c">:</span>
+		<span class="c">return</span> <span class="w">&amp;vc</span><span class="pc">p</span><span class="c">u-&gt;</span><span class="w">arc</span><span class="c">h.</span><span class="w">r</span><span class="pc">egs</span><span class="c">.</span><span class="w">KVM_ARM_FIQ_spsr</span><span class="pc">;</span>
+	<span class="w">d</span><span class="c">efault:</span>
+		<span class="w">B</span><span class="c">UG();</span>
+	<span class="c">}</span>
+<span class="w">}</span>
+
+
+<span class="w">b</span><span class="pc">o</span><span class="c">ol</span> <span class="w">kvm_condition_valid</span><span class="c">(struct</span> <span class="w">k</span><span class="pc">v</span><span class="c">m_vcpu</span> <span class="c">*vcpu</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">u</span><span class="pc">ns</span><span class="c">igned</span> <span class="c">long</span> <span class="w">cpsr</span><span class="pc">,</span> <span class="w">cond</span><span class="pc">,</span> <span class="w">ins</span><span class="pc">n</span><span class="w">;</span>
+
+	
+	<span class="w">B</span><span class="c">UG_ON</span><span class="pc">(!</span><span class="w">kvm_vcpu_trap_get_class</span><span class="pc">(</span><span class="w">vc</span><span class="pc">p</span><span class="c">u));</span>
+
+	
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">kvm_vcpu_get_hsr</span><span class="c">(</span><span class="w">vc</span><span class="pc">p</span><span class="c">u</span><span class="w">) &gt;</span><span class="pc">&gt;</span> <span class="w">3</span><span class="pc">0)</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="pc">t</span><span class="c">rue;</span>
+
+	<span class="w">c</span><span class="pc">p</span><span class="c">sr</span> <span class="w">=</span><span class="pc"> *</span><span class="w">vcpu_cpsr</span><span class="c">(</span><span class="w">vc</span><span class="pc">pu</span><span class="c">);</span>
+
+	
+	<span class="pc">i</span><span class="c">f</span> <span class="pc">((</span><span class="w">k</span><span class="pc">vm_vcpu_g</span><span class="c">et_hsr(</span><span class="w">vc</span><span class="pc">pu) &amp;</span> <span class="w">HSR_CV</span><span class="pc">) &gt;</span><span class="c">&gt;</span> <span class="w">HSR_CV_SHIFT</span><span class="c">)</span>
+		<span class="w">c</span><span class="pc">o</span><span class="c">nd</span> <span class="w">=</span><span class="pc"> </span><span class="c">(</span><span class="w">k</span><span class="c">vm_vcpu_get_hsr(</span><span class="w">vc</span><span class="pc">pu</span><span class="w">) </span><span class="pc">&amp;</span> <span class="w">HSR_COND</span><span class="pc">) </span><span class="c">&gt;&gt;</span> <span class="w">HSR_COND_SHIFT</span><span class="c">;</span>
+	<span class="c">else</span> <span class="c">{</span>
+		
+		<span class="w">un</span><span class="c">signed</span> <span class="c">long</span> <span class="w">it</span><span class="pc">;</span>
+
+		<span class="w">it</span> <span class="w">=</span><span class="pc"> ((cp</span><span class="c">sr</span> <span class="pc">&gt;</span><span class="c">&gt;</span> <span class="pc">8</span><span class="c">) &amp;</span> <span class="w">0xFC) | ((</span><span class="pc">cp</span><span class="c">sr</span> <span class="w">&gt;</span><span class="c">&gt;</span> <span class="w">2</span><span class="pc">5</span><span class="c">) &amp;</span> <span class="w">0x3</span><span class="pc">)</span><span class="c">;</span>
+
+		
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">it</span> <span class="c">==</span> <span class="c">0)</span>
+			<span class="c">return</span> <span class="w">t</span><span class="c">rue;</span>
+
+		
+		<span class="pc">c</span><span class="c">ond</span> <span class="pc">= </span><span class="c">(</span><span class="w">it</span> <span class="w">&gt;</span><span class="c">&gt;</span> <span class="w">4)</span><span class="pc">;</span>
+	<span class="c">}</span>
+
+	
+	<span class="w">ins</span><span class="pc">n</span> <span class="pc">=</span> <span class="w">c</span><span class="pc">o</span><span class="c">nd</span> <span class="w">&lt;</span><span class="pc">&lt;</span> <span class="w">28</span><span class="c">;</span>
+	<span class="w">r</span><span class="c">eturn</span> <span class="w">arm_check_condition</span><span class="pc">(</span><span class="w">in</span><span class="pc">s</span><span class="c">n,</span> <span class="pc">cp</span><span class="c">sr</span><span class="w">)</span><span class="pc"> !</span><span class="c">=</span> <span class="w">ARM_OPCODE_CONDTEST_FAIL;</span>
+<span class="c">}</span>
+
+
+<span class="c">static</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">kvm_adjust_itstate</span><span class="c">(struct</span> <span class="w">kv</span><span class="pc">m_v</span><span class="c">cpu</span> <span class="c">*</span><span class="w">vc</span><span class="pc">p</span><span class="c">u</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="c">long</span> <span class="w">itbits</span><span class="pc">,</span> <span class="w">c</span><span class="pc">ond</span><span class="c">;</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">c</span><span class="c">psr</span> <span class="w">= </span><span class="pc">*</span><span class="w">vcpu_cpsr</span><span class="pc">(</span><span class="w">vc</span><span class="pc">pu</span><span class="c">);</span>
+	<span class="w">b</span><span class="pc">o</span><span class="c">ol</span> <span class="w">is_arm</span> <span class="w">= !(c</span><span class="pc">p</span><span class="c">sr</span> <span class="w">&amp;</span> <span class="w">PSR_T_BIT</span><span class="c">);</span>
+
+	<span class="w">B</span><span class="c">UG_ON(</span><span class="pc">i</span><span class="c">s_arm</span> <span class="w">&amp;&amp;</span><span class="pc"> (</span><span class="c">cpsr</span> <span class="c">&amp;</span> <span class="w">PSR_IT_MASK))</span><span class="pc">;</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="pc">(!(</span><span class="w">c</span><span class="c">psr</span> <span class="c">&amp;</span> <span class="w">P</span><span class="c">SR_IT_MASK))</span>
+		<span class="c">return;</span>
+
+	<span class="w">c</span><span class="pc">o</span><span class="c">nd</span> <span class="w">=</span><span class="pc"> </span><span class="c">(cpsr</span> <span class="pc">&amp;</span> <span class="w">0xe000</span><span class="c">) &gt;&gt;</span> <span class="w">13</span><span class="c">;</span>
+	<span class="w">itbits</span> <span class="w">=</span><span class="pc"> </span><span class="c">(cpsr</span> <span class="c">&amp;</span> <span class="w">0x1c00) &gt;&gt; (10</span> <span class="w">-</span> <span class="pc">2</span><span class="w">);</span>
+	<span class="w">i</span><span class="pc">t</span><span class="c">bits</span> <span class="w">|</span><span class="pc">= </span><span class="c">(</span><span class="pc">c</span><span class="c">psr</span> <span class="w">&amp;</span><span class="pc"> (</span><span class="w">0x3</span> <span class="c">&lt;&lt;</span> <span class="w">25)) &gt;&gt;</span> <span class="w">25;</span>
+
+	
+	<span class="pc">i</span><span class="c">f</span> <span class="pc">((</span><span class="c">itbits</span> <span class="c">&amp;</span> <span class="w">0x7</span><span class="pc">) =</span><span class="c">=</span> <span class="c">0)</span>
+		<span class="pc">i</span><span class="c">tbits</span> <span class="pc">=</span> <span class="pc">co</span><span class="c">nd</span> <span class="w">=</span> <span class="pc">0</span><span class="c">;</span>
+	<span class="pc">e</span><span class="c">lse</span>
+		<span class="pc">it</span><span class="c">bits</span> <span class="w">=</span><span class="pc"> </span><span class="c">(</span><span class="pc">i</span><span class="c">tbits</span> <span class="pc">&lt;</span><span class="c">&lt;</span> <span class="w">1) &amp;</span> <span class="w">0</span><span class="pc">x1f</span><span class="c">;</span>
+
+	<span class="w">c</span><span class="pc">p</span><span class="c">sr</span> <span class="w">&amp;</span><span class="pc">= </span><span class="c">~</span><span class="w">PSR_IT_MASK</span><span class="c">;</span>
+	<span class="w">c</span><span class="pc">p</span><span class="c">sr</span> <span class="pc">|=</span> <span class="pc">c</span><span class="c">ond</span> <span class="pc">&lt;</span><span class="c">&lt;</span> <span class="w">1</span><span class="pc">3</span><span class="c">;</span>
+	<span class="c">cpsr</span> <span class="w">|</span><span class="pc">= </span><span class="c">(</span><span class="pc">i</span><span class="c">tbits</span> <span class="pc">&amp;</span> <span class="w">0x1c) &lt;&lt; (10</span> <span class="w">-</span> <span class="pc">2</span><span class="w">)</span><span class="pc">;</span>
+	<span class="pc">c</span><span class="c">psr</span> <span class="pc">|= </span><span class="c">(</span><span class="pc">i</span><span class="c">tbits</span> <span class="pc">&amp;</span> <span class="w">0x3</span><span class="c">) &lt;&lt;</span> <span class="w">25</span><span class="c">;</span>
+	<span class="w">*vcpu_cpsr(vc</span><span class="pc">pu</span><span class="w">) =</span> <span class="pc">c</span><span class="c">psr</span><span class="pc">;</span>
+<span class="c">}</span>
+
+
+<span class="w">v</span><span class="c">oid</span> <span class="w">kvm_skip_instr</span><span class="c">(struct</span> <span class="w">k</span><span class="pc">v</span><span class="c">m_vcpu</span> <span class="c">*</span><span class="w">v</span><span class="c">cpu,</span> <span class="w">b</span><span class="c">ool</span> <span class="w">is_wide_instr</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">b</span><span class="c">ool</span> <span class="w">is_thumb</span><span class="c">;</span>
+
+	<span class="w">i</span><span class="pc">s</span><span class="c">_thumb</span> <span class="w">= !!(*v</span><span class="c">cpu_cpsr(</span><span class="w">vc</span><span class="pc">pu</span><span class="w">)</span><span class="pc"> &amp;</span> <span class="w">PSR_T_BIT</span><span class="c">);</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(is_thumb</span> <span class="w">&amp;</span><span class="pc">&amp; </span><span class="c">!is_wide_instr</span><span class="pc">)</span>
+		<span class="w">*vcpu_pc</span><span class="c">(</span><span class="w">vc</span><span class="pc">pu</span><span class="w">) +=</span> <span class="w">2;</span>
+	<span class="w">e</span><span class="c">lse</span>
+		<span class="w">*</span><span class="pc">v</span><span class="c">cpu_pc</span><span class="pc">(</span><span class="w">vc</span><span class="pc">pu</span><span class="w">) +</span><span class="pc">=</span> <span class="w">4</span><span class="pc">;</span>
+	<span class="w">kvm_adjust_itstate</span><span class="c">(</span><span class="w">vc</span><span class="pc">pu</span><span class="c">);</span>
+<span class="c">}</span>
+
+
+
+
+<span class="c">static</span> <span class="w">u</span><span class="pc">3</span><span class="c">2</span> <span class="w">exc_vector_base</span><span class="c">(struct</span> <span class="w">k</span><span class="pc">vm_v</span><span class="c">cpu</span> <span class="c">*</span><span class="w">v</span><span class="pc">cpu)</span>
+<span class="c">{</span>
+	<span class="pc">u</span><span class="c">32</span> <span class="w">sctlr</span> <span class="pc">=</span> <span class="w">vc</span><span class="pc">pu-</span><span class="c">&gt;</span><span class="w">arc</span><span class="c">h</span><span class="w">.cp15[c1_SCTLR</span><span class="c">];</span>
+	<span class="w">u</span><span class="pc">3</span><span class="c">2</span> <span class="w">vbar</span> <span class="pc">=</span> <span class="w">vc</span><span class="pc">pu-</span><span class="c">&gt;</span><span class="w">arc</span><span class="c">h</span><span class="pc">.c</span><span class="c">p15</span><span class="pc">[</span><span class="w">c12_VBAR</span><span class="c">];</span>
+
+	<span class="w">i</span><span class="pc">f</span> <span class="c">(</span><span class="pc">s</span><span class="c">ctlr</span> <span class="pc">&amp;</span> <span class="w">SCTLR_V</span><span class="pc">)</span>
+		<span class="c">return</span> <span class="w">0xff</span><span class="pc">ff0</span><span class="c">000;</span>
+	<span class="w">e</span><span class="pc">l</span><span class="c">se</span> 
+		<span class="pc">r</span><span class="c">eturn</span> <span class="pc">v</span><span class="c">bar;</span>
+<span class="c">}</span>
+
+
+<span class="pc">v</span><span class="c">oid</span> <span class="w">kvm_inject_undefined</span><span class="c">(struct</span> <span class="w">kv</span><span class="pc">m_v</span><span class="c">cpu</span> <span class="c">*</span><span class="w">v</span><span class="pc">cp</span><span class="c">u</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="c">long</span> <span class="w">new_lr_value</span><span class="c">;</span>
+	<span class="pc">uns</span><span class="c">igned</span> <span class="c">long</span> <span class="w">new_spsr_value</span><span class="c">;</span>
+	<span class="c">unsigned</span> <span class="c">long</span> <span class="w">cpsr</span> <span class="w">=</span><span class="pc"> *</span><span class="w">vcpu_cpsr</span><span class="pc">(</span><span class="w">vc</span><span class="pc">pu</span><span class="c">);</span>
+	<span class="w">u</span><span class="pc">3</span><span class="c">2</span> <span class="pc">s</span><span class="c">ctlr</span> <span class="pc">=</span> <span class="w">vc</span><span class="pc">pu</span><span class="c">-&gt;</span><span class="w">arc</span><span class="c">h</span><span class="pc">.</span><span class="w">cp15[c1_SCTLR</span><span class="c">];</span>
+	<span class="w">b</span><span class="c">ool</span> <span class="w">is_thumb</span> <span class="pc">= </span><span class="c">(</span><span class="w">c</span><span class="pc">p</span><span class="c">sr</span> <span class="c">&amp;</span> <span class="w">PSR_T_BIT</span><span class="pc">);</span>
+	<span class="pc">u</span><span class="c">32</span> <span class="w">vect_offset</span> <span class="pc">=</span> <span class="w">4</span><span class="c">;</span>
+	<span class="pc">u</span><span class="c">32</span> <span class="w">return_offset</span> <span class="w">=</span><span class="pc"> </span><span class="c">(</span><span class="w">i</span><span class="c">s_thumb</span><span class="w">)</span><span class="pc"> ?</span> <span class="pc">2</span> <span class="c">:</span> <span class="w">4</span><span class="c">;</span>
+
+	<span class="w">new_spsr_value</span> <span class="pc">=</span> <span class="c">cpsr</span><span class="pc">;</span>
+	<span class="w">new_lr_value</span> <span class="w">= </span><span class="pc">*</span><span class="w">vcpu_pc</span><span class="pc">(</span><span class="w">vc</span><span class="pc">pu</span><span class="w">) -</span> <span class="w">r</span><span class="c">eturn_offset</span><span class="pc">;</span>
+
+	<span class="w">*vcpu_cpsr</span><span class="pc">(</span><span class="w">vc</span><span class="pc">pu</span><span class="w">) = (</span><span class="pc">c</span><span class="c">psr</span> <span class="w">&amp;</span><span class="pc"> </span><span class="c">~</span><span class="w">MODE_MASK</span><span class="pc">) </span><span class="c">|</span> <span class="w">UND_MODE</span><span class="pc">;</span>
+	<span class="w">*v</span><span class="pc">c</span><span class="c">pu_cpsr</span><span class="w">(vc</span><span class="pc">pu</span><span class="w">) |=</span> <span class="w">PSR_I_BIT;</span>
+	<span class="w">*</span><span class="pc">v</span><span class="c">cpu_cpsr</span><span class="w">(vc</span><span class="pc">pu</span><span class="w">) &amp;= ~(PSR_IT_MASK</span> <span class="w">|</span> <span class="w">PSR_J_BIT</span> <span class="pc">|</span> <span class="w">PSR_E_BIT</span> <span class="c">|</span> <span class="w">PSR_T_BIT</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="c">if</span> <span class="c">(</span><span class="w">sctlr</span> <span class="w">&amp;</span> <span class="w">SCTLR_TE</span><span class="pc">)</span>
+		<span class="w">*v</span><span class="c">cpu_cpsr</span><span class="pc">(</span><span class="w">vc</span><span class="pc">pu</span><span class="w">)</span><span class="pc"> |</span><span class="c">=</span> <span class="w">P</span><span class="pc">SR_T</span><span class="c">_BIT</span><span class="w">;</span>
+	<span class="c">if</span> <span class="c">(sctlr</span> <span class="pc">&amp;</span> <span class="w">SCTLR_EE</span><span class="pc">)</span>
+		<span class="w">*</span><span class="pc">v</span><span class="c">cpu_cpsr</span><span class="pc">(</span><span class="w">vc</span><span class="pc">pu</span><span class="c">) |=</span> <span class="pc">P</span><span class="c">SR_E_BIT</span><span class="w">;</span>
+
+	
+	<span class="w">*vcpu_spsr</span><span class="pc">(</span><span class="w">vc</span><span class="pc">pu</span><span class="w">) =</span> <span class="w">cpsr</span><span class="pc">;</span>
+	<span class="w">*vcpu_reg</span><span class="pc">(</span><span class="w">vcp</span><span class="pc">u,</span> <span class="w">14) </span><span class="pc">=</span> <span class="w">new_lr_value</span><span class="pc">;</span>
+
+	
+	<span class="w">*vcpu_pc</span><span class="pc">(</span><span class="w">vcp</span><span class="pc">u</span><span class="w">) =</span> <span class="w">exc_vector_base</span><span class="pc">(</span><span class="w">vcp</span><span class="pc">u</span><span class="w">) </span><span class="pc">+</span> <span class="w">vect_offset</span><span class="pc">;</span>
+<span class="c">}</span>
+
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">inject_abt</span><span class="c">(struct</span> <span class="w">k</span><span class="pc">vm_</span><span class="c">vcpu</span> <span class="c">*</span><span class="w">v</span><span class="pc">cpu</span><span class="c">,</span> <span class="w">b</span><span class="c">ool</span> <span class="w">is_pabt</span><span class="pc">,</span> <span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="c">long</span> <span class="w">a</span><span class="pc">d</span><span class="c">dr)</span>
+<span class="c">{</span>
+	<span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="c">long</span> <span class="w">n</span><span class="c">ew_lr_value</span><span class="pc">;</span>
+	<span class="c">unsigned</span> <span class="c">long</span> <span class="w">new_spsr_value</span><span class="c">;</span>
+	<span class="c">unsigned</span> <span class="c">long</span> <span class="w">cpsr</span> <span class="w">=</span><span class="pc"> *</span><span class="w">vcpu_cpsr</span><span class="pc">(</span><span class="w">vc</span><span class="pc">pu</span><span class="c">);</span>
+	<span class="w">u</span><span class="pc">3</span><span class="c">2</span> <span class="w">sctlr</span> <span class="pc">=</span> <span class="w">vc</span><span class="pc">pu</span><span class="c">-&gt;</span><span class="w">arc</span><span class="c">h</span><span class="pc">.</span><span class="w">cp15[c1_SCTLR</span><span class="c">];</span>
+	<span class="w">b</span><span class="c">ool</span> <span class="w">is_thumb</span> <span class="pc">= </span><span class="c">(</span><span class="w">c</span><span class="pc">p</span><span class="c">sr</span> <span class="c">&amp;</span> <span class="w">PSR_T_BIT)</span><span class="pc">;</span>
+	<span class="w">u</span><span class="c">32</span> <span class="w">vect_offset</span><span class="c">;</span>
+	<span class="c">u32</span> <span class="w">return_offset</span> <span class="w">=</span><span class="pc"> </span><span class="c">(</span><span class="w">i</span><span class="pc">s</span><span class="c">_thumb</span><span class="w">) ?</span> <span class="w">4</span> <span class="c">:</span> <span class="c">0;</span>
+	<span class="w">b</span><span class="c">ool</span> <span class="w">is_lpae</span><span class="c">;</span>
+
+	<span class="w">new_spsr_value</span> <span class="c">=</span> <span class="c">cpsr;</span>
+	<span class="w">new_lr_value</span> <span class="w">=</span><span class="pc"> *</span><span class="w">vcpu_pc</span><span class="pc">(</span><span class="w">vc</span><span class="pc">pu</span><span class="w">)</span><span class="pc"> </span><span class="c">+</span> <span class="pc">r</span><span class="c">eturn_offset</span><span class="pc">;</span>
+
+	<span class="w">*vcpu_cpsr</span><span class="pc">(</span><span class="w">vc</span><span class="pc">pu</span><span class="w">) = (c</span><span class="c">psr</span> <span class="w">&amp;</span><span class="pc"> ~</span><span class="w">MODE_MASK) </span><span class="pc">|</span> <span class="w">ABT_MODE</span><span class="pc">;</span>
+	<span class="w">*</span><span class="c">vcpu_cpsr</span><span class="w">(vc</span><span class="pc">pu</span><span class="w">) |=</span> <span class="w">PSR_I_BIT</span> <span class="w">|</span> <span class="w">PSR_A_BIT;</span>
+	<span class="w">*v</span><span class="c">cpu_cpsr</span><span class="pc">(</span><span class="w">vc</span><span class="pc">pu</span><span class="w">) &amp;= ~(PSR_IT_MASK</span> <span class="pc">|</span> <span class="w">PSR_J_BIT</span> <span class="pc">|</span> <span class="w">PSR_E_BIT</span> <span class="c">|</span> <span class="w">PSR_T_BIT</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">sctlr</span> <span class="w">&amp;</span> <span class="w">SCTLR_TE</span><span class="pc">)</span>
+		<span class="w">*</span><span class="c">vcpu_cpsr</span><span class="pc">(</span><span class="w">vc</span><span class="pc">pu)</span><span class="c"> |=</span> <span class="w">P</span><span class="pc">SR_T</span><span class="c">_BIT</span><span class="w">;</span>
+	<span class="c">if</span> <span class="c">(</span><span class="pc">s</span><span class="c">ctlr</span> <span class="w">&amp;</span> <span class="w">SCTLR_EE</span><span class="c">)</span>
+		<span class="w">*v</span><span class="pc">c</span><span class="c">pu_cpsr</span><span class="pc">(</span><span class="w">vc</span><span class="pc">pu</span><span class="w">) |</span><span class="pc">=</span> <span class="w">P</span><span class="pc">SR_E</span><span class="c">_BIT</span><span class="w">;</span>
+
+	
+	<span class="w">*vcpu_spsr</span><span class="pc">(</span><span class="w">vc</span><span class="pc">pu</span><span class="w">) =</span> <span class="w">cpsr</span><span class="pc">;</span>
+	<span class="w">*vcpu_reg</span><span class="pc">(</span><span class="w">vcp</span><span class="pc">u,</span> <span class="w">14) </span><span class="pc">=</span> <span class="w">new_lr_value</span><span class="pc">;</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">is_pabt</span><span class="pc">)</span>
+		<span class="w">vect_offset</span> <span class="pc">=</span> <span class="w">12</span><span class="c">;</span>
+	<span class="pc">e</span><span class="c">lse</span>
+		<span class="pc">v</span><span class="c">ect_offset</span> <span class="c">=</span> <span class="w">1</span><span class="pc">6</span><span class="c">;</span>
+
+	
+	<span class="w">*vcpu_pc</span><span class="pc">(</span><span class="w">vcp</span><span class="pc">u</span><span class="w">) =</span> <span class="w">exc_vector_base</span><span class="pc">(</span><span class="w">vcp</span><span class="pc">u</span><span class="w">)</span><span class="pc"> +</span> <span class="w">v</span><span class="pc">e</span><span class="c">ct_offset</span><span class="pc">;</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="pc">i</span><span class="c">s_pabt</span><span class="w">)</span><span class="pc"> </span><span class="c">{</span>
+		
+		<span class="w">vc</span><span class="pc">pu-</span><span class="c">&gt;</span><span class="w">arc</span><span class="c">h</span><span class="pc">.</span><span class="w">cp15[c6_IFAR</span><span class="c">] =</span> <span class="w">a</span><span class="c">ddr;</span>
+		<span class="w">is_lpae</span> <span class="w">=</span><span class="pc"> </span><span class="c">(</span><span class="w">vc</span><span class="pc">pu</span><span class="c">-&gt;</span><span class="w">ar</span><span class="pc">c</span><span class="c">h.</span><span class="pc">cp</span><span class="c">15</span><span class="pc">[</span><span class="w">c2_TTBCR] &gt;</span><span class="c">&gt;</span> <span class="w">3</span><span class="pc">1</span><span class="w">)</span><span class="pc">;</span>
+		
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(is_lpae</span><span class="w">)</span>
+			<span class="w">vc</span><span class="pc">pu</span><span class="c">-&gt;</span><span class="w">arc</span><span class="c">h</span><span class="pc">.</span><span class="c">cp15</span><span class="pc">[</span><span class="w">c5_IFSR</span><span class="pc">] </span><span class="c">=</span> <span class="w">1</span> <span class="pc">&lt;</span><span class="c">&lt;</span> <span class="w">9</span> <span class="w">|</span> <span class="w">0x22</span><span class="c">;</span>
+		<span class="w">e</span><span class="c">lse</span>
+			<span class="w">vc</span><span class="pc">p</span><span class="c">u-&gt;</span><span class="w">arc</span><span class="c">h</span><span class="pc">.</span><span class="w">c</span><span class="pc">p</span><span class="c">15</span><span class="pc">[c</span><span class="c">5_IFSR</span><span class="pc">] </span><span class="c">=</span> <span class="w">2</span><span class="c">;</span>
+	<span class="c">}</span> <span class="w">e</span><span class="c">lse</span> <span class="c">{</span> 
+		
+		<span class="w">vc</span><span class="c">pu</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">arc</span><span class="c">h</span><span class="pc">.</span><span class="c">cp15</span><span class="pc">[</span><span class="w">c6_DFAR</span><span class="pc">] </span><span class="c">=</span> <span class="w">a</span><span class="pc">ddr</span><span class="c">;</span>
+		<span class="pc">i</span><span class="c">s_lpae</span> <span class="w">=</span><span class="pc"> (</span><span class="w">vc</span><span class="pc">p</span><span class="c">u-&gt;</span><span class="w">arc</span><span class="c">h.</span><span class="pc">cp</span><span class="c">15[</span><span class="w">c2_TTBCR] &gt;</span><span class="c">&gt;</span> <span class="w">31</span><span class="pc">)</span><span class="c">;</span>
+		
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="pc">i</span><span class="c">s_lpae</span><span class="w">)</span>
+			<span class="w">vc</span><span class="pc">p</span><span class="c">u-&gt;</span><span class="w">arc</span><span class="c">h</span><span class="pc">.</span><span class="c">cp15</span><span class="pc">[</span><span class="w">c5_DFSR</span><span class="pc">] </span><span class="c">=</span> <span class="w">1</span> <span class="pc">&lt;</span><span class="c">&lt;</span> <span class="w">9</span> <span class="w">|</span> <span class="w">0x22</span><span class="c">;</span>
+		<span class="w">e</span><span class="c">lse</span>
+			<span class="w">vc</span><span class="pc">p</span><span class="c">u-&gt;</span><span class="w">arc</span><span class="c">h</span><span class="pc">.</span><span class="w">c</span><span class="pc">p</span><span class="c">15</span><span class="pc">[c</span><span class="c">5_DFSR</span><span class="pc">] </span><span class="c">=</span> <span class="w">2</span><span class="c">;</span>
+	<span class="c">}</span>
+
+<span class="pc">}</span>
+
+
+<span class="pc">v</span><span class="c">oid</span> <span class="w">kvm_inject_dabt</span><span class="c">(struct</span> <span class="w">kv</span><span class="pc">m_v</span><span class="c">cpu</span> <span class="c">*</span><span class="w">v</span><span class="c">cpu,</span> <span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">a</span><span class="pc">ddr)</span>
+<span class="c">{</span>
+	<span class="w">inject_abt</span><span class="c">(</span><span class="w">vc</span><span class="pc">p</span><span class="c">u,</span> <span class="w">f</span><span class="pc">a</span><span class="c">lse,</span> <span class="w">a</span><span class="c">ddr);</span>
+<span class="c">}</span>
+
+
+<span class="pc">v</span><span class="c">oid</span> <span class="w">kvm_inject_pabt</span><span class="c">(struct</span> <span class="pc">k</span><span class="c">vm_vcpu</span> <span class="c">*vcpu,</span> <span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="pc">l</span><span class="c">ong</span> <span class="c">addr</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">i</span><span class="pc">nj</span><span class="c">ect_abt(</span><span class="w">vc</span><span class="c">pu,</span> <span class="w">tr</span><span class="c">ue,</span> <span class="c">addr);</span>
+<span class="c">}</span>
+
+</pre>
+</body>
+</html>
+

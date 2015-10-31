@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+<span class="w">#include</span> <span class="w">&lt;linux/module.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/kernel.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/errno.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/delay.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux</span><span class="c">/</span><span class="w">t</span><span class="pc">t</span><span class="c">y.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">tty_flip</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">ma</span><span class="c">jor.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">s</span><span class="pc">t</span><span class="c">ring.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">ptrace</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">ioport</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/slab.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">circ_buf</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">se</span><span class="pc">ria</span><span class="c">l.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">sysrq</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">console</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">s</span><span class="pc">p</span><span class="c">inlock.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">i</span><span class="c">nit.h&gt;</span>
+
+<span class="c">#include</span> <span class="c">&lt;</span><span class="pc">a</span><span class="c">sm/io.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">i</span><span class="pc">r</span><span class="c">q.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">sgialib</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">sgi</span><span class="pc">/</span><span class="w">io</span><span class="pc">c</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/sgi/</span><span class="w">hpc3</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/sgi/</span><span class="w">ip22</span><span class="c">.h&gt;</span>
+
+<span class="c">#</span><span class="w">i</span><span class="pc">f</span> <span class="pc">d</span><span class="c">efined(</span><span class="w">CONFIG_SERIAL_IP22_ZILOG_CONSOLE</span><span class="pc">) </span><span class="c">&amp;&amp;</span> <span class="c">defined(</span><span class="w">CONFIG_MAGIC_SYSRQ</span><span class="c">)</span>
+<span class="c">#define</span> <span class="w">SUPPORT_SYSRQ</span>
+<span class="w">#</span><span class="pc">e</span><span class="c">ndif</span>
+
+<span class="c">#</span><span class="w">i</span><span class="pc">n</span><span class="c">clude</span> <span class="pc">&lt;l</span><span class="c">inux/</span><span class="w">serial_core</span><span class="pc">.</span><span class="c">h&gt;</span>
+
+<span class="c">#include</span> <span class="pc">"</span><span class="w">ip22zilog</span><span class="c">.h"</span>
+
+
+<span class="c">#</span><span class="pc">d</span><span class="c">efine</span> <span class="w">ZSDELAY(</span><span class="pc">)</span>		<span class="w">ud</span><span class="pc">el</span><span class="c">ay(</span><span class="w">5</span><span class="pc">)</span>
+<span class="c">#define</span> <span class="w">ZSDELAY_LONG</span><span class="pc">()</span>		<span class="w">ud</span><span class="pc">el</span><span class="c">ay(</span><span class="w">2</span><span class="pc">0</span><span class="c">)</span>
+<span class="c">#define</span> <span class="w">ZS_WSYNC</span><span class="c">(</span><span class="w">cha</span><span class="pc">nn</span><span class="c">el)</span>	<span class="pc">d</span><span class="c">o</span> <span class="pc">{ </span><span class="c">}</span> <span class="c">while</span> <span class="c">(0)</span>
+
+<span class="c">#define</span> <span class="w">NUM_IP22ZILOG</span>		<span class="w">1</span>
+<span class="c">#define</span> <span class="w">NUM_CHANNELS</span>		<span class="c">(</span><span class="w">N</span><span class="c">UM_IP22ZILOG</span> <span class="w">*</span> <span class="pc">2</span><span class="c">)</span>
+
+<span class="c">#define</span> <span class="w">ZS_CLOCK</span>		<span class="w">3672000</span>	
+<span class="c">#define</span> <span class="w">ZS_CLOCK_DIVISOR</span>	<span class="w">1</span><span class="pc">6</span>      
+
+
+<span class="pc">s</span><span class="c">truct</span> <span class="w">uart_ip22zilog_port</span> <span class="c">{</span>
+	<span class="c">struct</span> <span class="w">ua</span><span class="pc">rt_p</span><span class="c">ort</span>		<span class="w">p</span><span class="c">ort;</span>
+
+	
+	<span class="c">struct</span> <span class="w">u</span><span class="pc">a</span><span class="c">rt_ip22zilog_port</span>	<span class="c">*</span><span class="w">n</span><span class="pc">e</span><span class="c">xt;</span>
+
+	
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">har</span>			<span class="w">curregs</span><span class="pc">[</span><span class="w">NUM_ZSREGS</span><span class="c">];</span>
+
+	<span class="c">unsigned</span> <span class="pc">i</span><span class="c">nt</span>			<span class="c">flags;</span>
+<span class="w">#</span><span class="c">define</span> <span class="w">IP22ZILOG_FLAG_IS_CONS</span>		<span class="w">0x0000000</span><span class="pc">4</span>
+<span class="c">#define</span> <span class="w">IP22ZILOG_FLAG_IS_KGDB</span>		<span class="pc">0x00000008</span>
+<span class="c">#define</span> <span class="w">IP22ZILOG_FLAG_MODEM_STATUS</span>	<span class="c">0x00000010</span>
+<span class="c">#define</span> <span class="w">IP22ZILOG_FLAG_IS_CHANNEL_A</span>	<span class="c">0x00000020</span>
+<span class="c">#define</span> <span class="w">IP22ZILOG_FLAG_REGS_HELD</span>	<span class="c">0x00000040</span>
+<span class="c">#define</span> <span class="w">IP22ZILOG_FLAG_TX_STOPPED</span>	<span class="w">0x00000080</span>
+<span class="c">#define</span> <span class="w">IP22ZILOG_FLAG_TX_ACTIVE</span>	<span class="c">0x00000100</span>
+<span class="c">#define</span> <span class="w">IP22ZILOG_FLAG_RESET_DONE</span>	<span class="w">0x00000200</span>
+
+	<span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="c">int</span>			<span class="w">tty_break</span><span class="pc">;</span>
+
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">har</span>			<span class="w">parity_mask</span><span class="pc">;</span>
+	<span class="c">unsigned</span> <span class="c">char</span>			<span class="w">prev_status</span><span class="c">;</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="c">#define</span> <span class="w">ZILOG_CHANNEL_FROM_PORT</span><span class="c">(</span><span class="w">PORT)	(</span><span class="pc">(s</span><span class="c">truct</span> <span class="w">zilog_channel</span> <span class="w">*)((P</span><span class="c">ORT</span><span class="pc">)-</span><span class="c">&gt;</span><span class="w">me</span><span class="pc">mb</span><span class="c">ase</span><span class="w">)</span><span class="pc">)</span>
+<span class="c">#define</span> <span class="w">UART_ZILOG</span><span class="c">(PORT</span><span class="w">)	</span><span class="pc">	</span><span class="c">((</span><span class="w">s</span><span class="pc">t</span><span class="c">ruct</span> <span class="w">uart_ip22zilog_port</span> <span class="pc">*)</span><span class="c">(</span><span class="w">P</span><span class="c">ORT</span><span class="w">)</span><span class="pc">)</span>
+<span class="c">#define</span> <span class="w">IP22ZILOG_GET_CURR_REG</span><span class="c">(</span><span class="pc">P</span><span class="c">ORT,</span> <span class="w">REGNUM)	</span><span class="pc">	\</span>
+	<span class="w">(U</span><span class="c">ART_ZILOG</span><span class="pc">(P</span><span class="c">ORT</span><span class="pc">)-</span><span class="c">&gt;</span><span class="w">curregs[</span><span class="pc">R</span><span class="c">EGNUM</span><span class="pc">])</span>
+<span class="c">#define</span> <span class="w">IP22ZILOG_SET_CURR_REG</span><span class="c">(PORT,</span> <span class="w">R</span><span class="c">EGNUM,</span> <span class="w">REGVAL)	</span><span class="pc">\</span>
+	<span class="pc">(</span><span class="c">(</span><span class="w">U</span><span class="c">ART_ZILOG</span><span class="w">(</span><span class="c">PORT)-&gt;</span><span class="pc">c</span><span class="c">urregs</span><span class="w">[R</span><span class="c">EGNUM</span><span class="w">]) = (</span><span class="pc">R</span><span class="c">EGVAL</span><span class="w">)</span><span class="pc">)</span>
+<span class="c">#define</span> <span class="w">ZS_IS_CONS</span><span class="c">(</span><span class="w">UP)	</span><span class="pc">(</span><span class="c">(</span><span class="pc">U</span><span class="c">P)-&gt;</span><span class="w">f</span><span class="pc">l</span><span class="c">ags</span> <span class="c">&amp;</span> <span class="w">IP22ZILOG_FLAG_IS_CONS</span><span class="c">)</span>
+<span class="c">#define</span> <span class="w">ZS_IS_KGDB</span><span class="c">(UP</span><span class="pc">)	</span><span class="c">((UP)-&gt;</span><span class="w">f</span><span class="pc">l</span><span class="c">ags</span> <span class="c">&amp;</span> <span class="w">IP22ZILOG_FLAG_IS_KGDB</span><span class="c">)</span>
+<span class="c">#define</span> <span class="w">ZS_WANTS_MODEM_STATUS</span><span class="c">(UP</span><span class="pc">)	(</span><span class="c">(</span><span class="pc">U</span><span class="c">P)-&gt;</span><span class="w">f</span><span class="c">lags</span> <span class="c">&amp;</span> <span class="w">IP22ZILOG_FLAG_MODEM_STATUS</span><span class="c">)</span>
+<span class="c">#define</span> <span class="w">ZS_IS_CHANNEL_A</span><span class="c">(UP)	((UP)-&gt;</span><span class="w">f</span><span class="c">lags</span> <span class="c">&amp;</span> <span class="w">IP22ZILOG_FLAG_IS_CHANNEL_A</span><span class="c">)</span>
+<span class="c">#define</span> <span class="w">ZS_REGS_HELD</span><span class="c">(UP)	((UP)-&gt;</span><span class="w">f</span><span class="c">lags</span> <span class="c">&amp;</span> <span class="w">IP22ZILOG_FLAG_REGS_HELD</span><span class="c">)</span>
+<span class="c">#define</span> <span class="w">ZS_TX_STOPPED</span><span class="c">(UP)	((UP)-&gt;</span><span class="w">f</span><span class="c">lags</span> <span class="c">&amp;</span> <span class="w">IP22ZILOG_FLAG_TX_STOPPED</span><span class="c">)</span>
+<span class="c">#define</span> <span class="w">ZS_TX_ACTIVE</span><span class="c">(UP)	((UP)-&gt;</span><span class="w">f</span><span class="c">lags</span> <span class="c">&amp;</span> <span class="w">IP22ZILOG_FLAG_TX_ACTIVE</span><span class="c">)</span>
+
+
+<span class="w">s</span><span class="pc">ta</span><span class="c">tic</span> <span class="w">u</span><span class="pc">ns</span><span class="c">igned</span> <span class="pc">c</span><span class="c">har</span> <span class="w">read_zsreg</span><span class="c">(</span><span class="pc">s</span><span class="c">truct</span> <span class="w">zilog_channel</span> <span class="c">*</span><span class="w">c</span><span class="pc">ha</span><span class="c">nnel</span><span class="pc">,</span>
+				<span class="pc">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">har</span> <span class="w">r</span><span class="c">eg</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">har</span> <span class="w">ret</span><span class="pc">v</span><span class="c">al;</span>
+
+	<span class="w">wr</span><span class="pc">iteb</span><span class="c">(</span><span class="w">r</span><span class="pc">eg, </span><span class="c">&amp;</span><span class="w">ch</span><span class="pc">an</span><span class="c">nel-&gt;</span><span class="w">co</span><span class="pc">nt</span><span class="c">rol);</span>
+	<span class="w">ZSDELAY</span><span class="pc">()</span><span class="c">;</span>
+	<span class="w">ret</span><span class="pc">v</span><span class="c">al</span> <span class="c">=</span> <span class="w">r</span><span class="pc">eadb(&amp;</span><span class="w">ch</span><span class="pc">a</span><span class="c">nnel-&gt;</span><span class="w">con</span><span class="pc">trol</span><span class="c">);</span>
+	<span class="pc">Z</span><span class="c">SDELAY</span><span class="pc">()</span><span class="c">;</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">ret</span><span class="pc">v</span><span class="c">al;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">write_zsreg</span><span class="c">(struct</span> <span class="w">zilog_channel</span> <span class="c">*</span><span class="w">ch</span><span class="pc">a</span><span class="c">nnel</span><span class="pc">,</span>
+			<span class="pc">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">har</span> <span class="w">r</span><span class="pc">eg,</span> <span class="c">unsigned</span> <span class="pc">c</span><span class="c">har</span> <span class="w">v</span><span class="pc">alu</span><span class="c">e)</span>
+<span class="c">{</span>
+	<span class="w">w</span><span class="pc">riteb</span><span class="c">(</span><span class="w">r</span><span class="pc">eg, </span><span class="c">&amp;</span><span class="w">ch</span><span class="pc">a</span><span class="c">nnel</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">c</span><span class="pc">o</span><span class="c">ntrol);</span>
+	<span class="pc">Z</span><span class="c">SDELAY</span><span class="pc">()</span><span class="c">;</span>
+	<span class="w">wr</span><span class="pc">iteb</span><span class="c">(</span><span class="w">v</span><span class="pc">alu</span><span class="c">e</span><span class="pc">,</span><span class="c"> &amp;</span><span class="w">ch</span><span class="pc">a</span><span class="c">nnel</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">co</span><span class="pc">ntrol</span><span class="c">);</span>
+	<span class="pc">Z</span><span class="c">SDELAY</span><span class="pc">()</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">void</span> <span class="w">ip22zilog_clear_fifo</span><span class="c">(struct</span> <span class="pc">z</span><span class="c">ilog_channel</span> <span class="c">*</span><span class="w">c</span><span class="pc">ha</span><span class="c">nnel)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="c">i;</span>
+
+	<span class="c">for</span> <span class="c">(i</span> <span class="c">=</span> <span class="c">0;</span> <span class="c">i</span> <span class="c">&lt;</span> <span class="w">3</span><span class="pc">2</span><span class="c">;</span> <span class="c">i++) {</span>
+		<span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="w">c</span><span class="c">har</span> <span class="w">reg</span><span class="pc">v</span><span class="c">al</span><span class="pc">;</span>
+
+		<span class="w">regv</span><span class="c">al</span> <span class="pc">=</span> <span class="w">r</span><span class="pc">eadb(&amp;</span><span class="w">c</span><span class="pc">ha</span><span class="c">nnel-&gt;</span><span class="w">con</span><span class="pc">trol)</span><span class="c">;</span>
+		<span class="pc">Z</span><span class="c">SDELAY</span><span class="pc">()</span><span class="c">;</span>
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">reg</span><span class="pc">v</span><span class="c">al</span> <span class="c">&amp;</span> <span class="w">Rx_CH_AV</span><span class="pc">)</span>
+			<span class="pc">b</span><span class="c">reak;</span>
+
+		<span class="w">re</span><span class="pc">g</span><span class="c">val</span> <span class="c">=</span> <span class="w">read_zsreg</span><span class="c">(</span><span class="w">ch</span><span class="pc">a</span><span class="c">nnel</span><span class="pc">,</span> <span class="w">R1</span><span class="c">);</span>
+		<span class="w">rea</span><span class="pc">db(&amp;</span><span class="w">ch</span><span class="pc">a</span><span class="c">nnel-&gt;</span><span class="w">d</span><span class="pc">a</span><span class="c">ta</span><span class="pc">)</span><span class="c">;</span>
+		<span class="pc">Z</span><span class="c">SDELAY</span><span class="w">(</span><span class="pc">)</span><span class="c">;</span>
+
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">regv</span><span class="c">al</span> <span class="w">&amp;</span><span class="pc"> </span><span class="c">(</span><span class="w">PAR_ERR</span> <span class="c">|</span> <span class="w">Rx_OVR</span> <span class="c">|</span> <span class="w">CRC_ERR)</span><span class="pc">) </span><span class="c">{</span>
+			<span class="w">w</span><span class="pc">riteb</span><span class="c">(</span><span class="w">ERR_RES,</span><span class="pc"> &amp;</span><span class="w">ch</span><span class="pc">a</span><span class="c">nnel</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">co</span><span class="c">ntrol);</span>
+			<span class="w">Z</span><span class="c">SDELAY</span><span class="w">(</span><span class="pc">)</span><span class="c">;</span>
+			<span class="w">ZS_WSYNC</span><span class="c">(</span><span class="w">c</span><span class="pc">ha</span><span class="c">nnel);</span>
+		<span class="c">}</span>
+	<span class="c">}</span>
+<span class="c">}</span>
+
+
+<span class="c">static</span> <span class="c">void</span> <span class="w">__load_zsregs</span><span class="c">(struct</span> <span class="w">zilog_channel</span> <span class="c">*</span><span class="w">c</span><span class="pc">ha</span><span class="c">nnel</span><span class="pc">,</span> <span class="pc">un</span><span class="c">signed</span> <span class="pc">c</span><span class="c">har</span> <span class="c">*</span><span class="w">r</span><span class="pc">egs)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="c">i;</span>
+
+	
+	<span class="c">for</span> <span class="c">(i</span> <span class="c">=</span> <span class="c">0;</span> <span class="c">i</span> <span class="c">&lt;</span> <span class="w">10</span><span class="pc">00</span><span class="c">;</span> <span class="c">i++) {</span>
+		<span class="w">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">har</span> <span class="w">sta</span><span class="pc">t</span> <span class="pc">=</span> <span class="w">read_zsreg</span><span class="c">(</span><span class="w">ch</span><span class="pc">ann</span><span class="c">el</span><span class="pc">,</span> <span class="w">R1</span><span class="pc">)</span><span class="c">;</span>
+		<span class="c">if</span> <span class="c">(</span><span class="w">s</span><span class="c">tat</span> <span class="c">&amp;</span> <span class="w">ALL_SNT</span><span class="pc">)</span>
+			<span class="pc">b</span><span class="c">reak;</span>
+		<span class="pc">u</span><span class="c">delay(</span><span class="pc">100</span><span class="c">);</span>
+	<span class="c">}</span>
+
+	<span class="w">w</span><span class="pc">riteb</span><span class="c">(</span><span class="w">ERR_RES,</span><span class="pc"> &amp;</span><span class="w">ch</span><span class="c">annel-&gt;</span><span class="w">co</span><span class="pc">ntr</span><span class="c">ol</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">ZSDELAY</span><span class="pc">()</span><span class="c">;</span>
+	<span class="w">ZS_WSYNC</span><span class="c">(</span><span class="w">c</span><span class="pc">h</span><span class="c">annel</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="w">ip22zilog_clear_fifo</span><span class="c">(</span><span class="w">ch</span><span class="pc">a</span><span class="c">nnel</span><span class="pc">)</span><span class="c">;</span>
+
+	
+	<span class="w">write_zsreg</span><span class="c">(</span><span class="w">c</span><span class="pc">h</span><span class="c">annel</span><span class="pc">,</span> <span class="w">R</span><span class="c">1</span><span class="pc">,</span>
+		    <span class="w">r</span><span class="pc">eg</span><span class="c">s</span><span class="w">[R</span><span class="c">1</span><span class="w">] &amp; ~(RxINT_MASK</span> <span class="pc">|</span> <span class="w">TxINT_ENAB</span> <span class="c">|</span> <span class="w">EXT_INT_ENAB)</span><span class="pc">)</span><span class="c">;</span>
+
+	
+	<span class="w">w</span><span class="pc">rite_</span><span class="c">zsreg(</span><span class="w">ch</span><span class="pc">a</span><span class="c">nnel,</span> <span class="w">R4</span><span class="c">,</span> <span class="w">r</span><span class="c">egs</span><span class="pc">[</span><span class="w">R</span><span class="pc">4</span><span class="c">]);</span>
+
+	
+	<span class="w">w</span><span class="pc">rite_</span><span class="c">zsreg(</span><span class="w">c</span><span class="pc">ha</span><span class="c">nnel,</span> <span class="w">R10</span><span class="c">,</span> <span class="w">r</span><span class="c">egs</span><span class="pc">[</span><span class="w">R</span><span class="pc">1</span><span class="c">0]);</span>
+
+	
+	<span class="w">w</span><span class="c">rite_zsreg(</span><span class="w">c</span><span class="pc">ha</span><span class="c">nnel,</span> <span class="w">R3</span><span class="c">,</span> <span class="c">regs</span><span class="pc">[R</span><span class="c">3</span><span class="w">] &amp; ~RxENAB</span><span class="pc">)</span><span class="c">;</span>
+	<span class="pc">w</span><span class="c">rite_zsreg(</span><span class="w">ch</span><span class="pc">a</span><span class="c">nnel,</span> <span class="w">R5</span><span class="c">,</span> <span class="pc">r</span><span class="c">egs</span><span class="pc">[R</span><span class="c">5</span><span class="w">] &amp;</span><span class="pc"> </span><span class="c">~</span><span class="w">TxENAB</span><span class="pc">)</span><span class="c">;</span>
+
+	
+	<span class="w">w</span><span class="c">rite_zsreg(</span><span class="w">ch</span><span class="pc">a</span><span class="c">nnel,</span> <span class="w">R6</span><span class="c">,</span> <span class="w">r</span><span class="c">egs</span><span class="pc">[R</span><span class="c">6</span><span class="pc">])</span><span class="c">;</span>
+	<span class="pc">w</span><span class="c">rite_zsreg(</span><span class="w">ch</span><span class="pc">a</span><span class="c">nnel,</span> <span class="w">R7</span><span class="c">,</span> <span class="w">r</span><span class="pc">egs[R7</span><span class="c">]);</span>
+
+	
+
+	
+	<span class="pc">w</span><span class="c">rite_zsreg(</span><span class="w">ch</span><span class="pc">a</span><span class="c">nnel,</span> <span class="w">R14</span><span class="c">,</span> <span class="c">regs</span><span class="pc">[R1</span><span class="c">4</span><span class="w">] &amp;</span><span class="pc"> </span><span class="c">~</span><span class="w">BRENAB)</span><span class="c">;</span>
+
+	
+	<span class="c">write_zsreg(</span><span class="w">ch</span><span class="pc">a</span><span class="c">nnel,</span> <span class="w">R11</span><span class="c">,</span> <span class="pc">r</span><span class="c">egs</span><span class="pc">[R</span><span class="c">11</span><span class="pc">])</span><span class="c">;</span>
+
+	
+	<span class="pc">w</span><span class="c">rite_zsreg(</span><span class="w">ch</span><span class="pc">a</span><span class="c">nnel,</span> <span class="w">R12</span><span class="c">,</span> <span class="pc">r</span><span class="c">egs</span><span class="pc">[R</span><span class="c">12]);</span>
+	<span class="pc">w</span><span class="c">rite_zsreg(</span><span class="w">ch</span><span class="pc">a</span><span class="c">nnel,</span> <span class="w">R13</span><span class="c">,</span> <span class="c">regs</span><span class="pc">[R13</span><span class="c">]);</span>
+
+	
+	<span class="pc">w</span><span class="c">rite_zsreg(</span><span class="w">ch</span><span class="pc">a</span><span class="c">nnel,</span> <span class="w">R</span><span class="pc">14</span><span class="c">,</span> <span class="pc">r</span><span class="c">egs</span><span class="pc">[R14</span><span class="c">]);</span>
+
+	
+	<span class="c">write_zsreg(</span><span class="w">ch</span><span class="pc">a</span><span class="c">nnel,</span> <span class="w">R15</span><span class="c">,</span> <span class="c">regs</span><span class="pc">[R</span><span class="c">15]);</span>
+
+	
+	<span class="c">write_zsreg(</span><span class="w">ch</span><span class="pc">a</span><span class="c">nnel,</span> <span class="w">R0</span><span class="c">,</span> <span class="w">RES_EXT_INT</span><span class="pc">)</span><span class="c">;</span>
+	<span class="pc">w</span><span class="c">rite_zsreg(</span><span class="w">ch</span><span class="pc">a</span><span class="c">nnel,</span> <span class="w">R</span><span class="pc">0</span><span class="c">,</span> <span class="pc">RE</span><span class="c">S_EXT_INT</span><span class="pc">)</span><span class="c">;</span>
+
+	
+	<span class="pc">w</span><span class="c">rite_zsreg(</span><span class="w">ch</span><span class="pc">a</span><span class="c">nnel,</span> <span class="w">R3</span><span class="c">,</span> <span class="w">r</span><span class="c">egs</span><span class="pc">[R3</span><span class="c">]);</span>
+	<span class="c">write_zsreg(</span><span class="w">c</span><span class="pc">ha</span><span class="c">nnel,</span> <span class="w">R5</span><span class="c">,</span> <span class="w">r</span><span class="c">egs</span><span class="pc">[R5</span><span class="c">]);</span>
+
+	
+	<span class="w">w</span><span class="c">rite_zsreg(</span><span class="w">c</span><span class="pc">ha</span><span class="c">nnel,</span> <span class="w">R1</span><span class="c">,</span> <span class="w">r</span><span class="c">egs</span><span class="pc">[R</span><span class="c">1]);</span>
+<span class="c">}</span>
+
+
+<span class="c">static</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">ip22zilog_maybe_update_regs</span><span class="c">(struct</span> <span class="w">uart_ip22zilog_port</span> <span class="c">*</span><span class="w">up</span><span class="c">,</span>
+				       <span class="pc">s</span><span class="c">truct</span> <span class="w">zilog_channel</span> <span class="c">*</span><span class="w">ch</span><span class="pc">ann</span><span class="c">el)</span>
+<span class="c">{</span>
+	<span class="w">i</span><span class="pc">f</span> <span class="pc">(!</span><span class="w">ZS_REGS_HELD</span><span class="c">(</span><span class="w">u</span><span class="pc">p</span><span class="w">)</span><span class="pc">) </span><span class="c">{</span>
+		<span class="w">i</span><span class="c">f</span> <span class="c">(</span><span class="w">ZS_TX_ACTIVE</span><span class="c">(</span><span class="w">up</span><span class="pc">)) </span><span class="c">{</span>
+			<span class="w">u</span><span class="pc">p</span><span class="c">-&gt;</span><span class="w">f</span><span class="c">lags</span> <span class="pc">|</span><span class="c">=</span> <span class="w">IP22ZILOG_FLAG_REGS_HELD</span><span class="c">;</span>
+		<span class="c">}</span> <span class="c">else</span> <span class="pc">{</span>
+			<span class="w">__load_zsregs</span><span class="c">(</span><span class="w">c</span><span class="pc">h</span><span class="c">annel,</span> <span class="w">up</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">curregs</span><span class="c">);</span>
+		<span class="c">}</span>
+	<span class="c">}</span>
+<span class="pc">}</span>
+
+<span class="pc">#</span><span class="c">define</span> <span class="w">Rx_BRK</span> <span class="w">0x01</span><span class="pc">0</span><span class="c">0</span>                   
+<span class="c">#define</span> <span class="w">Rx_SYS</span> <span class="w">0x02</span><span class="pc">0</span><span class="c">0</span>                   
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="w">b</span><span class="c">ool</span> <span class="w">ip22zilog_receive_chars</span><span class="c">(struct</span> <span class="w">uart_ip22zilog_port</span> <span class="c">*</span><span class="w">up</span><span class="pc">,</span>
+						  <span class="c">struct</span> <span class="w">zilog_channel</span> <span class="c">*</span><span class="w">ch</span><span class="pc">a</span><span class="c">nnel)</span>
+<span class="c">{</span>
+	<span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="pc">c</span><span class="c">har</span> <span class="w">ch</span><span class="pc">,</span> <span class="w">fl</span><span class="pc">ag;</span>
+	<span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="c">int</span> <span class="w">r1</span><span class="pc">;</span>
+	<span class="w">b</span><span class="c">ool</span> <span class="w">push</span> <span class="pc">=</span> <span class="w">up</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">po</span><span class="c">rt</span><span class="pc">.</span><span class="w">s</span><span class="pc">tat</span><span class="c">e</span> <span class="w">!</span><span class="c">=</span> <span class="pc">N</span><span class="c">ULL;</span>
+
+	<span class="w">f</span><span class="c">or</span> <span class="w">(;;) {</span>
+		<span class="w">ch</span> <span class="c">=</span> <span class="w">r</span><span class="pc">eadb(&amp;</span><span class="w">ch</span><span class="pc">ann</span><span class="c">el-&gt;</span><span class="w">co</span><span class="pc">ntr</span><span class="c">ol</span><span class="pc">)</span><span class="c">;</span>
+		<span class="w">ZSDELAY(</span><span class="pc">)</span><span class="c">;</span>
+		<span class="c">if</span> <span class="pc">(!(</span><span class="w">c</span><span class="pc">h</span> <span class="pc">&amp;</span> <span class="w">Rx_CH_AV</span><span class="pc">))</span>
+			<span class="pc">b</span><span class="c">reak;</span>
+
+		<span class="w">r1</span> <span class="c">=</span> <span class="w">read_zsreg</span><span class="c">(</span><span class="w">ch</span><span class="pc">a</span><span class="c">nnel</span><span class="pc">,</span> <span class="w">R1</span><span class="pc">)</span><span class="c">;</span>
+		<span class="c">if</span> <span class="c">(</span><span class="w">r1</span> <span class="w">&amp;</span><span class="pc"> </span><span class="c">(</span><span class="w">PAR_ERR</span> <span class="c">|</span> <span class="w">Rx_OVR</span> <span class="c">|</span> <span class="w">CRC_ERR</span><span class="pc">))</span><span class="c"> {</span>
+			<span class="w">w</span><span class="pc">riteb</span><span class="c">(</span><span class="w">ERR_RES,</span><span class="pc"> &amp;</span><span class="w">ch</span><span class="pc">annel</span><span class="c">-&gt;</span><span class="w">c</span><span class="pc">o</span><span class="c">ntrol);</span>
+			<span class="w">Z</span><span class="c">SDELAY</span><span class="w">(</span><span class="pc">)</span><span class="c">;</span>
+			<span class="w">ZS_WSYNC</span><span class="pc">(</span><span class="w">ch</span><span class="pc">a</span><span class="c">nnel);</span>
+		<span class="c">}</span>
+
+		<span class="w">ch</span> <span class="pc">=</span> <span class="w">r</span><span class="pc">eadb(&amp;</span><span class="w">c</span><span class="pc">h</span><span class="c">annel-&gt;</span><span class="w">da</span><span class="c">ta</span><span class="pc">)</span><span class="c">;</span>
+		<span class="w">Z</span><span class="pc">SD</span><span class="c">ELAY</span><span class="w">(</span><span class="pc">)</span><span class="c">;</span>
+
+		<span class="w">c</span><span class="pc">h</span> <span class="w">&amp;</span><span class="pc">=</span> <span class="w">u</span><span class="pc">p</span><span class="c">-&gt;</span><span class="w">parity_mask</span><span class="c">;</span>
+
+		
+		<span class="pc">i</span><span class="c">f</span> <span class="pc">(!c</span><span class="c">h</span><span class="pc">)</span>
+			<span class="w">r1</span> <span class="pc">|</span><span class="c">=</span> <span class="w">u</span><span class="pc">p-</span><span class="c">&gt;</span><span class="w">tty_break</span><span class="c">;</span>
+
+		
+		<span class="w">fl</span><span class="pc">ag</span> <span class="pc">=</span> <span class="w">TTY_NORMAL</span><span class="pc">;</span>
+		<span class="w">up</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">po</span><span class="pc">r</span><span class="c">t</span><span class="pc">.</span><span class="w">icount.rx+</span><span class="pc">+</span><span class="c">;</span>
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">r1</span> <span class="w">&amp;</span><span class="pc"> </span><span class="c">(</span><span class="w">PAR_ERR</span> <span class="c">|</span> <span class="w">Rx_OVR</span> <span class="c">|</span> <span class="w">CRC_ERR</span> <span class="c">|</span> <span class="w">Rx_SYS</span> <span class="c">|</span> <span class="w">Rx_BRK</span><span class="pc">))</span><span class="c"> {</span>
+			<span class="w">up</span><span class="pc">-</span><span class="c">&gt;</span><span class="pc">t</span><span class="c">ty_break</span> <span class="c">=</span> <span class="w">0</span><span class="c">;</span>
+
+			<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">r1</span> <span class="w">&amp;</span><span class="pc"> </span><span class="c">(</span><span class="pc">R</span><span class="c">x_SYS</span> <span class="c">|</span> <span class="pc">R</span><span class="c">x_BRK</span><span class="pc">)</span><span class="c">) {</span>
+				<span class="w">up</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">p</span><span class="c">ort</span><span class="pc">.</span><span class="w">i</span><span class="c">count</span><span class="pc">.</span><span class="w">brk+</span><span class="c">+;</span>
+				<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">r1</span> <span class="w">&amp;</span> <span class="pc">R</span><span class="c">x_SYS</span><span class="pc">)</span>
+					<span class="pc">c</span><span class="c">ontinue;</span>
+				<span class="w">r1</span> <span class="w">&amp;</span><span class="c">= ~(</span><span class="w">PAR_ERR</span> <span class="c">|</span> <span class="pc">C</span><span class="c">RC_ERR</span><span class="pc">)</span><span class="c">;</span>
+			<span class="pc">}</span>
+			<span class="c">else</span> <span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">r1</span> <span class="w">&amp;</span> <span class="w">P</span><span class="c">AR_ERR</span><span class="pc">)</span>
+				<span class="w">u</span><span class="pc">p-</span><span class="c">&gt;</span><span class="w">po</span><span class="c">rt</span><span class="pc">.i</span><span class="c">count</span><span class="pc">.</span><span class="w">parity+</span><span class="pc">+</span><span class="c">;</span>
+			<span class="pc">e</span><span class="c">lse</span> <span class="c">if</span> <span class="c">(</span><span class="w">r1</span> <span class="w">&amp;</span> <span class="pc">C</span><span class="c">RC_ERR</span><span class="pc">)</span>
+				<span class="w">u</span><span class="pc">p</span><span class="c">-&gt;</span><span class="w">po</span><span class="c">rt.</span><span class="pc">i</span><span class="c">count</span><span class="pc">.</span><span class="w">fr</span><span class="pc">a</span><span class="c">me</span><span class="pc">+</span><span class="c">+;</span>
+			<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">r1</span> <span class="w">&amp;</span> <span class="w">Rx_OVR</span><span class="c">)</span>
+				<span class="w">u</span><span class="c">p-&gt;</span><span class="w">p</span><span class="pc">o</span><span class="c">rt.</span><span class="pc">i</span><span class="c">count.</span><span class="w">overrun+</span><span class="c">+;</span>
+			<span class="w">r1</span> <span class="w">&amp;</span><span class="c">=</span> <span class="w">u</span><span class="pc">p</span><span class="c">-&gt;</span><span class="pc">p</span><span class="c">ort.</span><span class="w">read_status_mask</span><span class="pc">;</span>
+			<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">r1</span> <span class="w">&amp;</span> <span class="w">Rx_BRK</span><span class="c">)</span>
+				<span class="w">fl</span><span class="pc">ag</span> <span class="pc">=</span> <span class="w">TTY_BREAK</span><span class="pc">;</span>
+			<span class="c">else</span> <span class="c">if</span> <span class="c">(</span><span class="w">r1</span> <span class="w">&amp;</span> <span class="w">PAR_ERR</span><span class="c">)</span>
+				<span class="w">fl</span><span class="pc">ag</span> <span class="pc">=</span> <span class="w">TTY_PARITY</span><span class="pc">;</span>
+			<span class="c">else</span> <span class="c">if</span> <span class="c">(</span><span class="w">r1</span> <span class="w">&amp;</span> <span class="w">CRC_ERR</span><span class="c">)</span>
+				<span class="w">fl</span><span class="pc">ag</span> <span class="pc">=</span> <span class="w">TTY_FRAME</span><span class="c">;</span>
+		<span class="w">}</span>
+
+		<span class="c">if</span> <span class="c">(</span><span class="w">uart_handle_sysrq_char(</span><span class="pc">&amp;</span><span class="w">up</span><span class="c">-&gt;</span><span class="w">po</span><span class="pc">rt,</span> <span class="w">ch</span><span class="c">))</span>
+			<span class="w">c</span><span class="c">ontinue;</span>
+
+		<span class="c">if</span> <span class="c">(</span><span class="w">push</span><span class="pc">)</span>
+			<span class="w">uart_insert_char</span><span class="pc">(&amp;</span><span class="w">u</span><span class="pc">p</span><span class="c">-&gt;</span><span class="w">p</span><span class="pc">o</span><span class="c">rt,</span> <span class="w">r1</span><span class="c">,</span> <span class="w">Rx_OVR</span><span class="c">,</span> <span class="w">c</span><span class="pc">h</span><span class="c">,</span> <span class="w">fl</span><span class="pc">ag)</span><span class="c">;</span>
+	<span class="pc">}</span>
+	<span class="w">r</span><span class="c">eturn</span> <span class="w">p</span><span class="c">ush</span><span class="pc">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">ip22zilog_status_handle</span><span class="c">(struct</span> <span class="w">uart_ip22zilog_port</span> <span class="c">*</span><span class="w">up</span><span class="pc">,</span>
+				   <span class="c">struct</span> <span class="w">zilog_channel</span> <span class="c">*</span><span class="w">ch</span><span class="pc">a</span><span class="c">nnel)</span>
+<span class="c">{</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">har</span> <span class="w">s</span><span class="c">tatus;</span>
+
+	<span class="w">st</span><span class="pc">atu</span><span class="c">s</span> <span class="c">=</span> <span class="w">r</span><span class="pc">eadb(&amp;</span><span class="w">ch</span><span class="pc">a</span><span class="c">nnel-&gt;</span><span class="w">con</span><span class="pc">trol</span><span class="c">);</span>
+	<span class="w">ZSDELAY(</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="w">wr</span><span class="pc">iteb</span><span class="c">(</span><span class="w">RES_EXT_INT</span><span class="pc">, </span><span class="c">&amp;</span><span class="w">c</span><span class="pc">ha</span><span class="c">nnel</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">co</span><span class="pc">ntr</span><span class="c">ol);</span>
+	<span class="pc">Z</span><span class="c">SDELAY</span><span class="pc">()</span><span class="c">;</span>
+	<span class="w">ZS_WSYNC</span><span class="pc">(</span><span class="w">c</span><span class="c">hannel);</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">up</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">curregs[R15] </span><span class="pc">&amp;</span> <span class="w">BRKIE</span><span class="pc">) </span><span class="c">{</span>
+		<span class="pc">i</span><span class="c">f</span> <span class="pc">((</span><span class="w">s</span><span class="c">tatus</span> <span class="c">&amp;</span> <span class="w">BRK_ABRT) &amp;&amp; !(u</span><span class="pc">p-</span><span class="c">&gt;</span><span class="w">prev_status</span> <span class="pc">&amp;</span> <span class="w">B</span><span class="c">RK_ABRT</span><span class="pc">))</span><span class="c"> {</span>
+			<span class="c">if</span> <span class="c">(</span><span class="w">uart_handle_break</span><span class="pc">(&amp;</span><span class="w">u</span><span class="pc">p</span><span class="c">-&gt;</span><span class="w">p</span><span class="pc">o</span><span class="c">rt</span><span class="pc">))</span>
+				<span class="w">u</span><span class="pc">p</span><span class="c">-&gt;</span><span class="w">tty_break</span> <span class="pc">=</span> <span class="w">Rx_SYS</span><span class="pc">;</span>
+			<span class="pc">e</span><span class="c">lse</span>
+				<span class="w">u</span><span class="pc">p</span><span class="c">-&gt;tty_break</span> <span class="pc">=</span> <span class="w">Rx_BRK</span><span class="c">;</span>
+		<span class="c">}</span>
+	<span class="pc">}</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">ZS_WANTS_MODEM_STATUS</span><span class="c">(</span><span class="w">up</span><span class="pc">))</span><span class="c"> {</span>
+		<span class="c">if</span> <span class="c">(</span><span class="w">s</span><span class="pc">ta</span><span class="c">tus</span> <span class="pc">&amp;</span> <span class="w">SYNC</span><span class="pc">)</span>
+			<span class="w">u</span><span class="pc">p</span><span class="c">-&gt;</span><span class="w">p</span><span class="c">ort</span><span class="pc">.</span><span class="w">icount.dsr+</span><span class="c">+;</span>
+
+		
+		<span class="c">if</span> <span class="pc">((</span><span class="c">status</span> <span class="w">^</span> <span class="w">u</span><span class="pc">p</span><span class="c">-&gt;</span><span class="w">prev_status) ^</span> <span class="w">DCD</span><span class="pc">)</span>
+			<span class="w">uart_handle_dcd_change</span><span class="pc">(&amp;</span><span class="w">up</span><span class="c">-&gt;</span><span class="w">p</span><span class="pc">or</span><span class="c">t</span><span class="pc">,</span>
+					       <span class="w">(s</span><span class="c">tatus</span> <span class="pc">&amp;</span> <span class="pc">D</span><span class="c">CD));</span>
+		<span class="pc">i</span><span class="c">f</span> <span class="pc">((</span><span class="c">status</span> <span class="w">^</span> <span class="w">u</span><span class="pc">p</span><span class="c">-&gt;</span><span class="pc">p</span><span class="c">rev_status</span><span class="w">) ^</span> <span class="w">CTS</span><span class="pc">)</span>
+			<span class="w">uart_handle_cts_change</span><span class="pc">(&amp;</span><span class="w">u</span><span class="pc">p</span><span class="c">-&gt;</span><span class="w">p</span><span class="pc">o</span><span class="c">rt</span><span class="pc">,</span>
+					       <span class="w">(s</span><span class="c">tatus</span> <span class="pc">&amp;</span> <span class="pc">C</span><span class="c">TS));</span>
+
+		<span class="w">wake_up_interruptible</span><span class="pc">(&amp;</span><span class="w">up</span><span class="c">-&gt;</span><span class="w">p</span><span class="pc">o</span><span class="c">rt</span><span class="pc">.</span><span class="w">st</span><span class="pc">ate-</span><span class="c">&gt;</span><span class="pc">p</span><span class="c">ort</span><span class="w">.delta_msr_wait</span><span class="c">);</span>
+	<span class="c">}</span>
+
+	<span class="w">up</span><span class="c">-&gt;</span><span class="pc">pr</span><span class="c">ev_status</span> <span class="pc">=</span> <span class="w">s</span><span class="pc">t</span><span class="c">atus;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">ip22zilog_transmit_chars</span><span class="c">(struct</span> <span class="w">uart_ip22zilog_port</span> <span class="c">*</span><span class="w">up</span><span class="pc">,</span>
+				    <span class="c">struct</span> <span class="w">zilog_channel</span> <span class="c">*</span><span class="w">ch</span><span class="pc">a</span><span class="c">nnel)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">circ_buf</span> <span class="c">*</span><span class="w">xmit</span><span class="pc">;</span>
+
+	<span class="w">i</span><span class="pc">f</span> <span class="pc">(</span><span class="w">ZS_IS_CONS</span><span class="c">(</span><span class="w">up</span><span class="pc">))</span><span class="c"> {</span>
+		<span class="w">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">har</span> <span class="pc">s</span><span class="c">tatus</span> <span class="pc">=</span> <span class="w">r</span><span class="pc">eadb(&amp;</span><span class="w">ch</span><span class="pc">a</span><span class="c">nnel-&gt;</span><span class="w">con</span><span class="pc">tr</span><span class="c">ol);</span>
+		<span class="w">ZSDELAY</span><span class="pc">()</span><span class="c">;</span>
+
+		
+		<span class="pc">i</span><span class="c">f</span> <span class="pc">(!(</span><span class="c">status</span> <span class="c">&amp;</span> <span class="w">Tx_BUF_EMP</span><span class="c">))</span>
+			<span class="c">return</span><span class="pc">;</span>
+	<span class="pc">}</span>
+
+	<span class="w">up</span><span class="c">-&gt;</span><span class="w">f</span><span class="c">lags</span> <span class="pc">&amp;=</span><span class="c"> ~</span><span class="w">IP22ZILOG_FLAG_TX_ACTIVE</span><span class="c">;</span>
+
+	<span class="c">if</span> <span class="c">(</span><span class="w">ZS_REGS_HELD</span><span class="c">(</span><span class="w">u</span><span class="pc">p)) </span><span class="c">{</span>
+		<span class="w">__load_zsregs</span><span class="c">(</span><span class="w">ch</span><span class="pc">a</span><span class="c">nnel</span><span class="pc">,</span> <span class="w">up</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">curregs</span><span class="c">);</span>
+		<span class="w">u</span><span class="pc">p-</span><span class="c">&gt;</span><span class="pc">f</span><span class="c">lags</span> <span class="pc">&amp;=</span><span class="c"> ~</span><span class="w">IP22ZILOG_FLAG_REGS_HELD</span><span class="c">;</span>
+	<span class="c">}</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">ZS_TX_STOPPED</span><span class="c">(</span><span class="w">up</span><span class="pc">)</span><span class="c">) {</span>
+		<span class="w">up</span><span class="c">-&gt;</span><span class="w">f</span><span class="pc">lags</span> <span class="pc">&amp;=</span><span class="c"> ~</span><span class="w">IP22ZILOG_FLAG_TX_STOPPED</span><span class="c">;</span>
+		<span class="w">g</span><span class="c">oto</span> <span class="w">ack_tx_int</span><span class="c">;</span>
+	<span class="c">}</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">u</span><span class="pc">p</span><span class="c">-&gt;</span><span class="w">p</span><span class="c">ort</span><span class="pc">.</span><span class="w">x_char</span><span class="c">) {</span>
+		<span class="w">u</span><span class="pc">p</span><span class="c">-&gt;</span><span class="pc">f</span><span class="c">lags</span> <span class="pc">|</span><span class="c">=</span> <span class="w">IP22ZILOG_FLAG_TX_ACTIVE</span><span class="c">;</span>
+		<span class="w">w</span><span class="pc">riteb</span><span class="c">(</span><span class="w">u</span><span class="pc">p-</span><span class="c">&gt;</span><span class="pc">p</span><span class="c">ort</span><span class="pc">.</span><span class="c">x_char</span><span class="w">,</span><span class="pc"> </span><span class="c">&amp;</span><span class="w">ch</span><span class="pc">ann</span><span class="c">el-&gt;</span><span class="w">d</span><span class="pc">a</span><span class="c">ta</span><span class="pc">)</span><span class="c">;</span>
+		<span class="w">ZSDELAY(</span><span class="pc">)</span><span class="c">;</span>
+		<span class="w">ZS_WSYNC</span><span class="c">(</span><span class="w">ch</span><span class="pc">ann</span><span class="c">el);</span>
+
+		<span class="w">u</span><span class="pc">p-</span><span class="c">&gt;</span><span class="w">p</span><span class="c">ort</span><span class="pc">.</span><span class="w">icount</span><span class="pc">.</span><span class="w">tx+</span><span class="pc">+</span><span class="c">;</span>
+		<span class="w">up</span><span class="c">-&gt;port.</span><span class="w">x</span><span class="c">_char</span> <span class="w">=</span> <span class="c">0;</span>
+		<span class="w">r</span><span class="c">eturn</span><span class="w">;</span>
+	<span class="c">}</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">up</span><span class="c">-&gt;</span><span class="pc">p</span><span class="c">ort</span><span class="pc">.</span><span class="w">st</span><span class="pc">ate</span> <span class="c">==</span> <span class="pc">N</span><span class="c">ULL</span><span class="pc">)</span>
+		<span class="pc">g</span><span class="c">oto</span> <span class="w">ack_tx_int</span><span class="c">;</span>
+	<span class="w">xmit</span> <span class="w">=</span><span class="pc"> </span><span class="c">&amp;</span><span class="w">up</span><span class="c">-&gt;</span><span class="w">p</span><span class="c">ort.</span><span class="w">st</span><span class="pc">ate-</span><span class="c">&gt;xmit;</span>
+	<span class="c">if</span> <span class="c">(</span><span class="w">uart_circ_empty</span><span class="c">(</span><span class="pc">x</span><span class="c">mit</span><span class="pc">)</span><span class="c">)</span>
+		<span class="pc">g</span><span class="c">oto</span> <span class="w">a</span><span class="c">ck_tx_int;</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">uart_tx_stopped</span><span class="pc">(&amp;</span><span class="w">u</span><span class="pc">p</span><span class="c">-&gt;</span><span class="w">p</span><span class="c">ort</span><span class="w">)</span><span class="pc">)</span>
+		<span class="c">goto</span> <span class="pc">a</span><span class="c">ck_tx_int;</span>
+
+	<span class="w">up</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">f</span><span class="c">lags</span> <span class="c">|=</span> <span class="w">IP22ZILOG_FLAG_TX_ACTIVE</span><span class="c">;</span>
+	<span class="w">w</span><span class="pc">riteb</span><span class="c">(xmit-&gt;</span><span class="w">bu</span><span class="pc">f[x</span><span class="c">mit-&gt;</span><span class="w">ta</span><span class="pc">i</span><span class="c">l</span><span class="w">],</span><span class="pc"> </span><span class="c">&amp;</span><span class="w">c</span><span class="pc">h</span><span class="c">annel</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">d</span><span class="pc">a</span><span class="c">ta</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">ZSDELAY(</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">ZS_WSYNC</span><span class="c">(</span><span class="w">ch</span><span class="pc">ann</span><span class="c">el</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="pc">x</span><span class="c">mit-&gt;</span><span class="w">tai</span><span class="c">l</span> <span class="w">=</span><span class="pc"> </span><span class="c">(</span><span class="w">x</span><span class="c">mit-&gt;</span><span class="w">t</span><span class="c">ail</span> <span class="c">+</span> <span class="c">1</span><span class="w">) &amp;</span><span class="pc"> (</span><span class="w">UART_XMIT_SIZE</span> <span class="pc">-</span> <span class="c">1);</span>
+	<span class="w">u</span><span class="pc">p</span><span class="c">-&gt;</span><span class="w">p</span><span class="c">ort</span><span class="w">.icount.t</span><span class="pc">x</span><span class="w">+</span><span class="pc">+</span><span class="c">;</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">uart_circ_chars_pending</span><span class="c">(xmit</span><span class="w">) </span><span class="pc">&lt;</span> <span class="w">WAKEUP_CHARS</span><span class="c">)</span>
+		<span class="w">uart_write_wakeup</span><span class="pc">(&amp;</span><span class="w">up</span><span class="c">-&gt;</span><span class="w">p</span><span class="c">ort);</span>
+
+	<span class="pc">r</span><span class="c">eturn</span><span class="pc">;</span>
+
+<span class="w">ack_tx_int:</span>
+	<span class="w">w</span><span class="pc">riteb</span><span class="c">(</span><span class="w">RES_Tx_P,</span><span class="pc"> </span><span class="c">&amp;</span><span class="w">ch</span><span class="pc">an</span><span class="c">nel-&gt;</span><span class="w">c</span><span class="pc">o</span><span class="c">ntrol);</span>
+	<span class="w">ZSDELAY</span><span class="pc">()</span><span class="c">;</span>
+	<span class="w">ZS_WSYNC</span><span class="c">(</span><span class="w">ch</span><span class="pc">a</span><span class="c">nnel);</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="w">i</span><span class="pc">r</span><span class="c">qreturn_t</span> <span class="w">ip22zilog_interrupt</span><span class="c">(</span><span class="pc">i</span><span class="c">nt</span> <span class="c">irq,</span> <span class="c">void</span> <span class="c">*dev_id)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">uart_ip22zilog_port</span> <span class="c">*</span><span class="w">up</span> <span class="c">=</span> <span class="c">dev_id;</span>
+
+	<span class="w">w</span><span class="c">hile</span> <span class="c">(</span><span class="w">up)</span><span class="pc"> </span><span class="c">{</span>
+		<span class="c">struct</span> <span class="w">zilog_channel</span> <span class="c">*</span><span class="w">c</span><span class="pc">h</span><span class="c">annel</span>
+			<span class="c">=</span> <span class="w">ZILOG_CHANNEL_FROM_PORT</span><span class="pc">(&amp;</span><span class="w">up</span><span class="c">-&gt;</span><span class="w">p</span><span class="c">ort);</span>
+		<span class="w">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">har</span> <span class="w">r3</span><span class="c">;</span>
+		<span class="w">b</span><span class="pc">o</span><span class="c">ol</span> <span class="w">push</span> <span class="pc">=</span> <span class="pc">f</span><span class="c">alse;</span>
+
+		<span class="w">s</span><span class="pc">pin_lock</span><span class="c">(&amp;</span><span class="w">up</span><span class="c">-&gt;</span><span class="w">po</span><span class="pc">r</span><span class="c">t</span><span class="pc">.</span><span class="c">lock);</span>
+		<span class="w">r</span><span class="pc">3</span> <span class="c">=</span> <span class="w">read_zsreg</span><span class="c">(</span><span class="w">c</span><span class="pc">hann</span><span class="c">el</span><span class="pc">,</span> <span class="w">R3</span><span class="pc">)</span><span class="c">;</span>
+
+		
+		<span class="c">if</span> <span class="c">(r3</span> <span class="w">&amp;</span><span class="pc"> </span><span class="c">(</span><span class="w">CHAEXT</span> <span class="c">|</span> <span class="w">CHATxIP</span> <span class="pc">|</span> <span class="w">CHARxIP</span><span class="pc">))</span><span class="c"> {</span>
+			<span class="w">w</span><span class="pc">riteb</span><span class="c">(</span><span class="w">RES_H_IUS,</span><span class="pc"> &amp;</span><span class="w">ch</span><span class="pc">a</span><span class="c">nnel-&gt;</span><span class="w">c</span><span class="c">ontrol);</span>
+			<span class="w">ZSDELAY</span><span class="pc">()</span><span class="c">;</span>
+			<span class="w">ZS_WSYNC</span><span class="pc">(</span><span class="w">c</span><span class="pc">ha</span><span class="c">nnel);</span>
+
+			<span class="pc">i</span><span class="c">f</span> <span class="c">(r3</span> <span class="pc">&amp;</span> <span class="pc">C</span><span class="c">HARxIP</span><span class="pc">)</span>
+				<span class="w">push</span> <span class="pc">=</span> <span class="w">ip22zilog_receive_chars</span><span class="c">(</span><span class="w">up</span><span class="c">,</span> <span class="w">c</span><span class="c">hannel);</span>
+			<span class="c">if</span> <span class="c">(</span><span class="pc">r3</span> <span class="c">&amp;</span> <span class="c">CHAEXT</span><span class="pc">)</span>
+				<span class="w">ip22zilog_status_handle</span><span class="c">(</span><span class="w">up</span><span class="c">,</span> <span class="w">c</span><span class="pc">h</span><span class="c">annel);</span>
+			<span class="c">if</span> <span class="c">(</span><span class="pc">r</span><span class="c">3</span> <span class="c">&amp;</span> <span class="w">CHATxIP</span><span class="c">)</span>
+				<span class="w">ip22zilog_transmit_chars</span><span class="c">(</span><span class="w">up</span><span class="c">,</span> <span class="w">c</span><span class="pc">h</span><span class="c">annel);</span>
+		<span class="pc">}</span>
+		<span class="w">s</span><span class="pc">pin_unlock</span><span class="c">(&amp;</span><span class="w">up</span><span class="c">-&gt;</span><span class="w">p</span><span class="pc">o</span><span class="c">rt</span><span class="pc">.</span><span class="c">lock);</span>
+
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">push</span><span class="pc">)</span>
+			<span class="w">tty_flip_buffer_push</span><span class="pc">(&amp;</span><span class="w">u</span><span class="pc">p</span><span class="c">-&gt;</span><span class="w">p</span><span class="pc">o</span><span class="c">rt</span><span class="pc">.</span><span class="w">st</span><span class="pc">ate-</span><span class="c">&gt;</span><span class="pc">po</span><span class="c">rt</span><span class="pc">)</span><span class="c">;</span>
+
+		
+		<span class="w">u</span><span class="pc">p</span> <span class="w">=</span> <span class="w">u</span><span class="pc">p-</span><span class="c">&gt;</span><span class="w">n</span><span class="c">ext;</span>
+		<span class="w">ch</span><span class="pc">ann</span><span class="c">el</span> <span class="pc">=</span> <span class="w">ZILOG_CHANNEL_FROM_PORT</span><span class="pc">(&amp;</span><span class="w">u</span><span class="pc">p</span><span class="c">-&gt;</span><span class="pc">p</span><span class="c">ort);</span>
+		<span class="w">p</span><span class="pc">u</span><span class="c">sh</span> <span class="pc">=</span> <span class="w">f</span><span class="pc">a</span><span class="c">lse;</span>
+
+		<span class="w">s</span><span class="pc">pin_lock</span><span class="c">(&amp;</span><span class="w">u</span><span class="pc">p</span><span class="c">-&gt;</span><span class="pc">po</span><span class="c">rt</span><span class="pc">.</span><span class="c">lock);</span>
+		<span class="c">if</span> <span class="c">(</span><span class="w">r3</span> <span class="w">&amp;</span><span class="pc"> </span><span class="c">(</span><span class="w">CHBEXT</span> <span class="c">|</span> <span class="w">CHBTxIP</span> <span class="pc">|</span> <span class="w">CHBRxIP</span><span class="c">)) {</span>
+			<span class="w">w</span><span class="pc">riteb</span><span class="c">(</span><span class="w">RES_H_IUS</span><span class="pc">, &amp;</span><span class="w">ch</span><span class="pc">annel</span><span class="c">-&gt;</span><span class="w">co</span><span class="pc">nt</span><span class="c">rol);</span>
+			<span class="w">ZSDELAY</span><span class="pc">()</span><span class="c">;</span>
+			<span class="w">ZS_WSYNC</span><span class="pc">(</span><span class="w">ch</span><span class="pc">a</span><span class="c">nnel);</span>
+
+			<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">r</span><span class="pc">3</span> <span class="pc">&amp;</span> <span class="c">CHBRxIP</span><span class="pc">)</span>
+				<span class="w">push</span> <span class="pc">=</span> <span class="w">ip22zilog_receive_chars</span><span class="c">(</span><span class="w">up</span><span class="c">,</span> <span class="w">c</span><span class="c">hannel);</span>
+			<span class="c">if</span> <span class="c">(</span><span class="pc">r3</span> <span class="c">&amp;</span> <span class="c">CHBEXT</span><span class="pc">)</span>
+				<span class="w">ip22zilog_status_handle</span><span class="c">(</span><span class="w">up</span><span class="c">,</span> <span class="w">c</span><span class="pc">h</span><span class="c">annel);</span>
+			<span class="c">if</span> <span class="c">(</span><span class="pc">r</span><span class="c">3</span> <span class="c">&amp;</span> <span class="w">CHBTxIP</span><span class="c">)</span>
+				<span class="w">ip22zilog_transmit_chars</span><span class="c">(</span><span class="w">up</span><span class="c">,</span> <span class="w">c</span><span class="pc">h</span><span class="c">annel);</span>
+		<span class="pc">}</span>
+		<span class="w">s</span><span class="pc">pin_unlock</span><span class="c">(&amp;</span><span class="w">up</span><span class="c">-&gt;</span><span class="w">p</span><span class="pc">o</span><span class="c">rt</span><span class="pc">.</span><span class="c">lock);</span>
+
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">push</span><span class="pc">)</span>
+			<span class="w">tty_flip_buffer_push</span><span class="pc">(&amp;</span><span class="w">u</span><span class="pc">p</span><span class="c">-&gt;</span><span class="w">p</span><span class="pc">o</span><span class="c">rt</span><span class="pc">.</span><span class="w">st</span><span class="pc">ate-</span><span class="c">&gt;</span><span class="pc">po</span><span class="c">rt</span><span class="pc">)</span><span class="c">;</span>
+
+		<span class="w">u</span><span class="pc">p</span> <span class="w">=</span> <span class="w">u</span><span class="pc">p-</span><span class="c">&gt;</span><span class="w">n</span><span class="c">ext;</span>
+	<span class="c">}</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">I</span><span class="c">RQ_HANDLED;</span>
+<span class="c">}</span>
+
+
+<span class="c">static</span> <span class="w">__inline__</span> <span class="w">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">har</span> <span class="w">ip22zilog_read_channel_status</span><span class="pc">(</span><span class="c">struct</span> <span class="w">ua</span><span class="c">rt_port</span> <span class="c">*</span><span class="pc">po</span><span class="c">rt</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">zilog_channel</span> <span class="c">*</span><span class="w">ch</span><span class="pc">a</span><span class="c">nnel</span><span class="pc">;</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">har</span> <span class="w">s</span><span class="pc">t</span><span class="c">atus;</span>
+
+	<span class="w">ch</span><span class="pc">an</span><span class="c">nel</span> <span class="pc">=</span> <span class="w">ZILOG_CHANNEL_FROM_PORT</span><span class="c">(</span><span class="pc">p</span><span class="c">ort</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">st</span><span class="pc">atu</span><span class="c">s</span> <span class="c">=</span> <span class="w">rea</span><span class="pc">db(&amp;</span><span class="w">ch</span><span class="pc">a</span><span class="c">nnel-&gt;</span><span class="w">con</span><span class="pc">tr</span><span class="c">ol);</span>
+	<span class="w">ZSDELAY(</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">s</span><span class="c">tatus;</span>
+<span class="c">}</span>
+
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="w">u</span><span class="c">nsigned</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">ip22zilog_tx_empty</span><span class="c">(struct</span> <span class="w">u</span><span class="pc">a</span><span class="c">rt_port</span> <span class="c">*</span><span class="w">p</span><span class="c">ort</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="c">flags;</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">har</span> <span class="pc">s</span><span class="c">tatus;</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">ret</span><span class="c">;</span>
+
+	<span class="pc">s</span><span class="c">pin_lock_irqsave(&amp;</span><span class="w">p</span><span class="c">ort-&gt;lock,</span> <span class="c">flags);</span>
+
+	<span class="pc">st</span><span class="c">atus</span> <span class="c">=</span> <span class="w">ip22zilog_read_channel_status</span><span class="c">(port</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="pc">s</span><span class="c">pin_unlock_irqrestore(&amp;port-&gt;lock,</span> <span class="c">flags);</span>
+
+	<span class="c">if</span> <span class="c">(</span><span class="pc">s</span><span class="c">tatus</span> <span class="pc">&amp;</span> <span class="w">Tx_BUF_EMP</span><span class="pc">)</span>
+		<span class="w">ret</span> <span class="c">=</span> <span class="w">TIOCSER_TEMT</span><span class="pc">;</span>
+	<span class="pc">e</span><span class="c">lse</span>
+		<span class="w">r</span><span class="pc">et</span> <span class="c">=</span> <span class="c">0;</span>
+
+	<span class="w">r</span><span class="c">eturn</span> <span class="pc">r</span><span class="c">et;</span>
+<span class="c">}</span>
+
+
+<span class="pc">st</span><span class="c">atic</span> <span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="c">int</span> <span class="w">ip22zilog_get_mctrl</span><span class="c">(struct</span> <span class="w">ua</span><span class="c">rt_port</span> <span class="c">*</span><span class="w">p</span><span class="pc">o</span><span class="c">rt</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">har</span> <span class="w">s</span><span class="c">tatus;</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="c">int</span> <span class="pc">r</span><span class="c">et;</span>
+
+	<span class="w">s</span><span class="pc">ta</span><span class="c">tus</span> <span class="c">=</span> <span class="w">ip22zilog_read_channel_status</span><span class="c">(</span><span class="pc">p</span><span class="c">ort);</span>
+
+	<span class="pc">ret</span> <span class="c">=</span> <span class="c">0;</span>
+	<span class="c">if</span> <span class="c">(</span><span class="w">s</span><span class="c">tatus</span> <span class="pc">&amp;</span> <span class="w">DCD</span><span class="pc">)</span>
+		<span class="pc">ret</span> <span class="pc">|</span><span class="c">=</span> <span class="w">TIOCM_CAR</span><span class="pc">;</span>
+	<span class="c">if</span> <span class="c">(</span><span class="pc">s</span><span class="c">tatus</span> <span class="c">&amp;</span> <span class="w">SYNC</span><span class="pc">)</span>
+		<span class="pc">ret</span> <span class="c">|=</span> <span class="w">TIOCM_DSR</span><span class="c">;</span>
+	<span class="c">if</span> <span class="c">(status</span> <span class="c">&amp;</span> <span class="w">CTS</span><span class="pc">)</span>
+		<span class="c">ret</span> <span class="c">|=</span> <span class="w">TIOCM_CTS</span><span class="c">;</span>
+
+	<span class="w">r</span><span class="pc">etu</span><span class="c">rn</span> <span class="c">ret;</span>
+<span class="c">}</span>
+
+
+<span class="pc">stati</span><span class="c">c</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">ip22zilog_set_mctrl</span><span class="c">(struct</span> <span class="w">ua</span><span class="c">rt_port</span> <span class="c">*</span><span class="w">po</span><span class="c">rt,</span> <span class="pc">u</span><span class="c">nsigned</span> <span class="c">int</span> <span class="w">mctrl</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">uart_ip22zilog_port</span> <span class="c">*</span><span class="w">up</span> <span class="c">=</span>
+		<span class="w">c</span><span class="c">ontainer_of(</span><span class="w">p</span><span class="c">ort,</span> <span class="c">struct</span> <span class="c">uart_ip22zilog_port,</span> <span class="w">p</span><span class="c">ort);</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">zilog_channel</span> <span class="c">*</span><span class="w">ch</span><span class="pc">ann</span><span class="c">el</span> <span class="c">=</span> <span class="w">ZILOG_CHANNEL_FROM_PORT</span><span class="c">(</span><span class="pc">p</span><span class="c">ort</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">har</span> <span class="w">set_bits</span><span class="pc">,</span> <span class="w">clear_bits;</span>
+
+	<span class="w">se</span><span class="c">t_bits</span> <span class="pc">=</span> <span class="w">c</span><span class="pc">l</span><span class="c">ear_bits</span> <span class="w">=</span> <span class="pc">0</span><span class="c">;</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">m</span><span class="c">ctrl</span> <span class="pc">&amp;</span> <span class="w">TIOCM_RTS</span><span class="pc">)</span>
+		<span class="pc">s</span><span class="c">et_bits</span> <span class="pc">|</span><span class="c">=</span> <span class="w">RTS</span><span class="c">;</span>
+	<span class="pc">e</span><span class="c">lse</span>
+		<span class="pc">c</span><span class="c">lear_bits</span> <span class="w">|</span><span class="c">=</span> <span class="pc">R</span><span class="c">TS;</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="pc">m</span><span class="c">ctrl</span> <span class="pc">&amp;</span> <span class="w">TIOCM_DTR</span><span class="c">)</span>
+		<span class="c">set_bits</span> <span class="c">|=</span> <span class="w">DTR</span><span class="c">;</span>
+	<span class="c">else</span>
+		<span class="pc">c</span><span class="c">lear_bits</span> <span class="pc">|</span><span class="c">=</span> <span class="c">DTR;</span>
+
+	
+	<span class="w">up</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">curregs</span><span class="pc">[</span><span class="w">R5] |</span><span class="c">=</span> <span class="c">set_bits;</span>
+	<span class="w">up</span><span class="c">-&gt;curregs[</span><span class="pc">R</span><span class="c">5</span><span class="w">] &amp;= ~</span><span class="pc">cl</span><span class="c">ear_bits</span><span class="pc">;</span>
+	<span class="w">write_zsreg</span><span class="pc">(</span><span class="w">ch</span><span class="pc">ann</span><span class="c">el</span><span class="pc">,</span> <span class="pc">R</span><span class="c">5,</span> <span class="w">up</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">c</span><span class="pc">u</span><span class="c">rregs[</span><span class="w">R</span><span class="c">5]);</span>
+<span class="c">}</span>
+
+
+<span class="c">static</span> <span class="c">void</span> <span class="w">ip22zilog_stop_tx</span><span class="c">(struct</span> <span class="w">u</span><span class="pc">a</span><span class="c">rt_port</span> <span class="c">*</span><span class="w">p</span><span class="c">ort</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">uart_ip22zilog_port</span> <span class="c">*</span><span class="w">u</span><span class="pc">p</span> <span class="c">=</span>
+		<span class="c">container_of(</span><span class="pc">p</span><span class="c">ort,</span> <span class="c">struct</span> <span class="c">uart_ip22zilog_port,</span> <span class="w">p</span><span class="c">ort);</span>
+
+	<span class="w">up</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">f</span><span class="c">lags</span> <span class="pc">|</span><span class="c">=</span> <span class="w">IP22ZILOG_FLAG_TX_STOPPED</span><span class="c">;</span>
+<span class="c">}</span>
+
+
+<span class="c">static</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">ip22zilog_start_tx</span><span class="c">(struct</span> <span class="w">ua</span><span class="pc">rt_p</span><span class="c">ort</span> <span class="c">*port</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="pc">u</span><span class="c">art_ip22zilog_port</span> <span class="c">*</span><span class="w">up</span> <span class="c">=</span>
+		<span class="pc">c</span><span class="c">ontainer_of(</span><span class="pc">p</span><span class="c">ort,</span> <span class="c">struct</span> <span class="c">uart_ip22zilog_port,</span> <span class="w">p</span><span class="c">ort</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">s</span><span class="pc">tr</span><span class="c">uct</span> <span class="w">zilog_channel</span> <span class="c">*</span><span class="w">ch</span><span class="pc">a</span><span class="c">nnel</span> <span class="c">=</span> <span class="w">ZILOG_CHANNEL_FROM_PORT</span><span class="c">(</span><span class="pc">p</span><span class="c">ort</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">har</span> <span class="w">s</span><span class="c">tatus</span><span class="pc">;</span>
+
+	<span class="w">up</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">f</span><span class="c">lags</span> <span class="w">|</span><span class="c">=</span> <span class="w">IP22ZILOG_FLAG_TX_ACTIVE</span><span class="c">;</span>
+	<span class="w">up</span><span class="c">-&gt;</span><span class="w">f</span><span class="c">lags</span> <span class="pc">&amp;</span><span class="c">= ~</span><span class="w">IP22ZILOG_FLAG_TX_STOPPED</span><span class="c">;</span>
+
+	<span class="w">s</span><span class="pc">ta</span><span class="c">tus</span> <span class="pc">=</span> <span class="w">rea</span><span class="pc">db(&amp;</span><span class="w">ch</span><span class="pc">ann</span><span class="c">el-&gt;</span><span class="w">con</span><span class="pc">tr</span><span class="c">ol);</span>
+	<span class="w">ZSDELAY</span><span class="pc">()</span><span class="c">;</span>
+
+	
+	<span class="c">if</span> <span class="pc">(!(</span><span class="c">status</span> <span class="c">&amp;</span> <span class="w">Tx_BUF_EMP</span><span class="pc">))</span>
+		<span class="c">return</span><span class="pc">;</span>
+
+	
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">p</span><span class="pc">o</span><span class="c">rt-&gt;</span><span class="w">x_char</span><span class="c">) {</span>
+		<span class="w">w</span><span class="pc">riteb</span><span class="c">(</span><span class="w">p</span><span class="pc">o</span><span class="c">rt-&gt;x_char</span><span class="w">,</span><span class="pc"> </span><span class="c">&amp;</span><span class="w">ch</span><span class="pc">a</span><span class="c">nnel-&gt;</span><span class="w">d</span><span class="pc">a</span><span class="c">ta);</span>
+		<span class="w">Z</span><span class="c">SDELAY</span><span class="w">(</span><span class="pc">)</span><span class="c">;</span>
+		<span class="w">ZS_WSYNC</span><span class="c">(</span><span class="w">ch</span><span class="pc">a</span><span class="c">nnel);</span>
+
+		<span class="w">p</span><span class="c">ort-&gt;</span><span class="w">icount.tx</span><span class="pc">+</span><span class="c">+;</span>
+		<span class="w">p</span><span class="c">ort-&gt;</span><span class="w">x</span><span class="c">_char</span> <span class="pc">=</span> <span class="pc">0</span><span class="c">;</span>
+	<span class="c">}</span> <span class="pc">e</span><span class="c">lse</span> <span class="c">{</span>
+		<span class="w">s</span><span class="c">truct</span> <span class="w">circ_buf</span> <span class="c">*</span><span class="w">xmit</span> <span class="pc">= &amp;</span><span class="c">port-&gt;</span><span class="w">st</span><span class="pc">ate-</span><span class="c">&gt;xmit;</span>
+
+		<span class="c">if</span> <span class="c">(</span><span class="w">uart_circ_empty</span><span class="c">(xmit</span><span class="pc">))</span>
+			<span class="c">return</span><span class="pc">;</span>
+		<span class="w">w</span><span class="pc">riteb</span><span class="c">(xmit-&gt;</span><span class="w">b</span><span class="pc">uf</span><span class="c">[</span><span class="w">x</span><span class="c">mit-&gt;</span><span class="w">t</span><span class="pc">a</span><span class="c">il</span><span class="w">],</span><span class="pc"> </span><span class="c">&amp;</span><span class="w">ch</span><span class="pc">a</span><span class="c">nnel</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">d</span><span class="pc">a</span><span class="c">ta</span><span class="pc">)</span><span class="c">;</span>
+		<span class="w">ZSDELAY(</span><span class="pc">)</span><span class="c">;</span>
+		<span class="w">ZS_WSYNC</span><span class="c">(</span><span class="w">ch</span><span class="pc">ann</span><span class="c">el);</span>
+
+		<span class="pc">x</span><span class="c">mit-&gt;</span><span class="w">ta</span><span class="pc">i</span><span class="c">l</span> <span class="w">=</span><span class="pc"> </span><span class="c">(</span><span class="pc">x</span><span class="c">mit-&gt;</span><span class="w">t</span><span class="pc">a</span><span class="c">il</span> <span class="c">+</span> <span class="c">1</span><span class="w">) &amp;</span><span class="pc"> (</span><span class="w">UART_XMIT_SIZE</span> <span class="w">-</span> <span class="c">1);</span>
+		<span class="w">po</span><span class="pc">r</span><span class="c">t-&gt;</span><span class="w">icount.tx+</span><span class="c">+;</span>
+
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">uart_circ_chars_pending</span><span class="pc">(</span><span class="c">xmit</span><span class="w">) &lt;</span> <span class="w">WAKEUP_CHARS</span><span class="pc">)</span>
+			<span class="w">uart_write_wakeup</span><span class="pc">(&amp;</span><span class="w">up</span><span class="c">-&gt;</span><span class="w">p</span><span class="pc">o</span><span class="c">rt);</span>
+	<span class="pc">}</span>
+<span class="pc">}</span>
+
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="c">void</span> <span class="w">ip22zilog_stop_rx</span><span class="c">(struct</span> <span class="w">u</span><span class="pc">art_p</span><span class="c">ort</span> <span class="c">*</span><span class="pc">p</span><span class="c">ort</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">uart_ip22zilog_port</span> <span class="c">*</span><span class="w">up</span> <span class="c">=</span> <span class="w">UART_ZILOG</span><span class="c">(port);</span>
+	<span class="c">struct</span> <span class="w">zilog_channel</span> <span class="c">*</span><span class="w">cha</span><span class="pc">nnel;</span>
+
+	<span class="pc">if</span> <span class="pc">(</span><span class="w">ZS_IS_CONS</span><span class="c">(</span><span class="w">up</span><span class="pc">)</span><span class="c">)</span>
+		<span class="c">return</span><span class="w">;</span>
+
+	<span class="w">cha</span><span class="pc">n</span><span class="c">nel</span> <span class="pc">=</span> <span class="w">ZILOG_CHANNEL_FROM_PORT</span><span class="c">(port</span><span class="pc">)</span><span class="c">;</span>
+
+	
+	<span class="w">up</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">curregs</span><span class="pc">[</span><span class="w">R1] &amp;= ~RxINT_MASK</span><span class="pc">;</span>
+	<span class="w">ip22zilog_maybe_update_regs</span><span class="c">(</span><span class="w">u</span><span class="pc">p</span><span class="c">,</span> <span class="w">c</span><span class="pc">h</span><span class="c">annel);</span>
+<span class="pc">}</span>
+
+
+<span class="c">static</span> <span class="c">void</span> <span class="w">ip22zilog_enable_ms</span><span class="c">(struct</span> <span class="w">u</span><span class="pc">a</span><span class="c">rt_port</span> <span class="c">*</span><span class="pc">p</span><span class="c">ort</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">uart_ip22zilog_port</span> <span class="c">*</span><span class="w">u</span><span class="pc">p</span> <span class="c">=</span>
+		<span class="c">container_of(</span><span class="pc">p</span><span class="c">ort,</span> <span class="c">struct</span> <span class="c">uart_ip22zilog_port,</span> <span class="w">p</span><span class="pc">o</span><span class="c">rt);</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">zilog_channel</span> <span class="c">*</span><span class="w">ch</span><span class="pc">a</span><span class="c">nnel</span> <span class="c">=</span> <span class="w">ZILOG_CHANNEL_FROM_PORT</span><span class="c">(</span><span class="pc">p</span><span class="c">ort</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">har</span> <span class="w">new_reg</span><span class="pc">;</span>
+
+	<span class="w">n</span><span class="c">ew_reg</span> <span class="c">=</span> <span class="w">up</span><span class="c">-&gt;</span><span class="w">curregs</span><span class="pc">[</span><span class="w">R15] | (DCDIE</span> <span class="w">|</span> <span class="w">SYNCIE</span> <span class="c">|</span> <span class="w">CTSIE</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">if</span> <span class="c">(</span><span class="pc">n</span><span class="c">ew_reg</span> <span class="w">!</span><span class="c">=</span> <span class="w">up</span><span class="c">-&gt;</span><span class="pc">c</span><span class="c">urregs</span><span class="pc">[</span><span class="w">R</span><span class="c">15</span><span class="w">]</span><span class="pc">) </span><span class="c">{</span>
+		<span class="w">u</span><span class="c">p-&gt;</span><span class="pc">c</span><span class="c">urregs[R15] =</span> <span class="pc">n</span><span class="c">ew_reg;</span>
+
+		
+		<span class="w">write_zsreg</span><span class="c">(</span><span class="w">cha</span><span class="pc">nn</span><span class="c">el</span><span class="pc">,</span> <span class="pc">R</span><span class="c">15,</span> <span class="w">up</span><span class="pc">-</span><span class="c">&gt;</span><span class="pc">c</span><span class="c">urregs[</span><span class="pc">R</span><span class="c">15</span><span class="pc">])</span><span class="c">;</span>
+	<span class="c">}</span>
+<span class="pc">}</span>
+
+
+<span class="c">static</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">ip22zilog_break_ctl</span><span class="c">(struct</span> <span class="w">ua</span><span class="c">rt_port</span> <span class="c">*</span><span class="w">p</span><span class="c">ort,</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">break_state</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">uart_ip22zilog_port</span> <span class="c">*</span><span class="w">up</span> <span class="c">=</span>
+		<span class="c">container_of(</span><span class="w">p</span><span class="c">ort,</span> <span class="c">struct</span> <span class="c">uart_ip22zilog_port,</span> <span class="w">p</span><span class="pc">o</span><span class="c">rt);</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">zilog_channel</span> <span class="c">*</span><span class="w">ch</span><span class="pc">ann</span><span class="c">el</span> <span class="c">=</span> <span class="w">ZILOG_CHANNEL_FROM_PORT</span><span class="c">(</span><span class="pc">p</span><span class="c">ort</span><span class="pc">)</span><span class="c">;</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">har</span> <span class="w">set_bits</span><span class="pc">,</span> <span class="w">clear_bits</span><span class="pc">,</span> <span class="w">new_reg;</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="pc">l</span><span class="c">ong</span> <span class="c">flags</span><span class="pc">;</span>
+
+	<span class="w">s</span><span class="pc">e</span><span class="c">t_bits</span> <span class="c">=</span> <span class="pc">c</span><span class="c">lear_bits</span> <span class="w">=</span> <span class="c">0;</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">break_state</span><span class="pc">)</span>
+		<span class="c">set_bits</span> <span class="pc">|</span><span class="c">=</span> <span class="w">SND_BRK</span><span class="c">;</span>
+	<span class="w">e</span><span class="c">lse</span>
+		<span class="w">c</span><span class="c">lear_bits</span> <span class="pc">|</span><span class="c">=</span> <span class="c">SND_BRK;</span>
+
+	<span class="w">sp</span><span class="pc">in_lock_</span><span class="c">irqsave(&amp;</span><span class="w">p</span><span class="pc">o</span><span class="c">rt-&gt;lock,</span> <span class="c">flags);</span>
+
+	<span class="w">n</span><span class="c">ew_reg</span> <span class="w">=</span><span class="pc"> </span><span class="c">(</span><span class="w">up</span><span class="c">-&gt;</span><span class="w">curregs</span><span class="pc">[</span><span class="w">R5] |</span> <span class="w">s</span><span class="c">et_bits</span><span class="w">) &amp;</span><span class="pc"> </span><span class="c">~</span><span class="pc">cl</span><span class="c">ear_bits;</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="pc">n</span><span class="c">ew_reg</span> <span class="w">!</span><span class="c">=</span> <span class="w">u</span><span class="c">p</span><span class="pc">-</span><span class="c">&gt;curregs[</span><span class="pc">R</span><span class="c">5</span><span class="w">]</span><span class="pc">) </span><span class="c">{</span>
+		<span class="w">u</span><span class="pc">p</span><span class="c">-&gt;</span><span class="pc">c</span><span class="c">urregs[</span><span class="pc">R</span><span class="c">5</span><span class="pc">] </span><span class="c">=</span> <span class="c">new_reg;</span>
+
+		
+		<span class="w">write_zsreg</span><span class="c">(</span><span class="w">ch</span><span class="pc">ann</span><span class="c">el</span><span class="pc">,</span> <span class="pc">R</span><span class="c">5,</span> <span class="w">up</span><span class="pc">-</span><span class="c">&gt;</span><span class="pc">cu</span><span class="c">rregs</span><span class="pc">[R</span><span class="c">5]);</span>
+	<span class="pc">}</span>
+
+	<span class="w">s</span><span class="pc">p</span><span class="c">in_unlock_irqrestore(&amp;</span><span class="w">po</span><span class="c">rt-&gt;lock,</span> <span class="c">flags);</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">void</span> <span class="w">__ip22zilog_reset</span><span class="c">(struct</span> <span class="w">uart_ip22zilog_port</span> <span class="c">*</span><span class="w">up</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">zilog_channel</span> <span class="c">*</span><span class="w">ch</span><span class="pc">ann</span><span class="c">el</span><span class="pc">;</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="c">i;</span>
+
+	<span class="pc">if</span> <span class="c">(</span><span class="w">up</span><span class="c">-&gt;flags</span> <span class="c">&amp;</span> <span class="w">IP22ZILOG_FLAG_RESET_DONE</span><span class="pc">)</span>
+		<span class="c">return</span><span class="pc">;</span>
+
+	
+	<span class="w">ch</span><span class="pc">an</span><span class="c">nel</span> <span class="pc">=</span> <span class="w">ZILOG_CHANNEL_FROM_PORT</span><span class="pc">(&amp;</span><span class="w">up</span><span class="c">-&gt;</span><span class="w">p</span><span class="pc">o</span><span class="c">rt);</span>
+	<span class="w">f</span><span class="c">or</span> <span class="c">(i</span> <span class="c">=</span> <span class="c">0;</span> <span class="c">i</span> <span class="c">&lt;</span> <span class="w">1</span><span class="pc">00</span><span class="c">0;</span> <span class="c">i++) {</span>
+		<span class="w">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">har</span> <span class="w">st</span><span class="pc">at</span> <span class="pc">=</span> <span class="w">read_zsreg</span><span class="c">(</span><span class="w">ch</span><span class="pc">a</span><span class="c">nnel</span><span class="pc">,</span> <span class="w">R1</span><span class="pc">)</span><span class="c">;</span>
+		<span class="c">if</span> <span class="c">(</span><span class="pc">s</span><span class="c">tat</span> <span class="c">&amp;</span> <span class="w">ALL_SNT</span><span class="pc">)</span>
+			<span class="pc">b</span><span class="c">reak;</span>
+		<span class="w">u</span><span class="c">delay(</span><span class="pc">100</span><span class="c">);</span>
+	<span class="c">}</span>
+
+	<span class="c">if</span> <span class="pc">(!</span><span class="w">ZS_IS_CHANNEL_A</span><span class="c">(</span><span class="w">up</span><span class="pc">)) </span><span class="c">{</span>
+		<span class="w">up+</span><span class="c">+;</span>
+		<span class="w">ch</span><span class="pc">a</span><span class="c">nnel</span> <span class="c">=</span> <span class="w">ZILOG_CHANNEL_FROM_PORT</span><span class="pc">(&amp;</span><span class="w">up</span><span class="c">-&gt;</span><span class="w">po</span><span class="pc">r</span><span class="c">t);</span>
+	<span class="pc">}</span>
+	<span class="w">write_zsreg</span><span class="c">(</span><span class="w">cha</span><span class="pc">nn</span><span class="c">el</span><span class="pc">,</span> <span class="w">R9</span><span class="c">,</span> <span class="w">FHWRES</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">ZSDELAY_LONG</span><span class="pc">()</span><span class="c">;</span>
+	<span class="w">(</span><span class="pc">v</span><span class="c">oid</span><span class="pc">)</span> <span class="w">read_zsreg</span><span class="c">(</span><span class="w">ch</span><span class="pc">an</span><span class="c">nel</span><span class="pc">,</span> <span class="w">R0</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="w">u</span><span class="pc">p-</span><span class="c">&gt;</span><span class="pc">f</span><span class="c">lags</span> <span class="w">|</span><span class="c">=</span> <span class="w">IP22ZILOG_FLAG_RESET_DONE</span><span class="c">;</span>
+	<span class="w">up</span><span class="c">-&gt;</span><span class="w">n</span><span class="pc">e</span><span class="c">xt</span><span class="pc">-</span><span class="c">&gt;</span><span class="pc">f</span><span class="c">lags</span> <span class="pc">|</span><span class="c">=</span> <span class="w">I</span><span class="c">P22ZILOG_FLAG_RESET_DONE;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">__ip22zilog_startup</span><span class="c">(struct</span> <span class="w">uart_ip22zilog_port</span> <span class="c">*</span><span class="w">up</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">zilog_channel</span> <span class="c">*</span><span class="w">ch</span><span class="pc">ann</span><span class="c">el</span><span class="pc">;</span>
+
+	<span class="w">c</span><span class="pc">han</span><span class="c">nel</span> <span class="pc">=</span> <span class="w">ZILOG_CHANNEL_FROM_PORT</span><span class="pc">(&amp;</span><span class="w">up</span><span class="c">-&gt;</span><span class="w">p</span><span class="c">ort);</span>
+
+	<span class="w">__ip22zilog_reset</span><span class="c">(</span><span class="w">u</span><span class="pc">p)</span><span class="c">;</span>
+
+	<span class="w">__load_zsregs</span><span class="c">(</span><span class="w">ch</span><span class="pc">a</span><span class="c">nnel</span><span class="pc">,</span> <span class="w">up</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">curregs</span><span class="c">);</span>
+	
+	<span class="w">write_zsreg</span><span class="c">(</span><span class="w">ch</span><span class="pc">ann</span><span class="c">el</span><span class="pc">,</span> <span class="w">R9</span><span class="c">,</span> <span class="w">up</span><span class="pc">-</span><span class="c">&gt;</span><span class="pc">c</span><span class="c">urregs</span><span class="w">[</span><span class="pc">R</span><span class="c">9]);</span>
+	<span class="w">u</span><span class="pc">p</span><span class="c">-&gt;</span><span class="w">prev_status</span> <span class="c">=</span> <span class="w">rea</span><span class="pc">db(&amp;</span><span class="w">ch</span><span class="pc">a</span><span class="c">nnel-&gt;</span><span class="w">con</span><span class="c">trol);</span>
+
+	
+	<span class="w">u</span><span class="pc">p</span><span class="c">-&gt;</span><span class="pc">c</span><span class="c">urregs</span><span class="pc">[</span><span class="w">R3] |</span><span class="c">=</span> <span class="w">RxENAB</span><span class="c">;</span>
+	<span class="w">up</span><span class="c">-&gt;</span><span class="pc">c</span><span class="c">urregs</span><span class="pc">[</span><span class="w">R5] |</span><span class="c">=</span> <span class="w">TxENAB</span><span class="c">;</span>
+
+	<span class="w">up</span><span class="c">-&gt;</span><span class="pc">c</span><span class="c">urregs[</span><span class="w">R1] |</span><span class="c">=</span> <span class="w">EXT_INT_ENAB</span> <span class="pc">|</span> <span class="w">INT_ALL_Rx</span> <span class="pc">|</span> <span class="w">TxINT_ENAB</span><span class="c">;</span>
+	<span class="w">ip22zilog_maybe_update_regs</span><span class="pc">(</span><span class="w">up</span><span class="c">,</span> <span class="w">ch</span><span class="pc">a</span><span class="c">nnel);</span>
+<span class="pc">}</span>
+
+<span class="c">static</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">ip22zilog_startup</span><span class="c">(struct</span> <span class="w">u</span><span class="pc">a</span><span class="c">rt_port</span> <span class="c">*</span><span class="w">p</span><span class="c">ort</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">uart_ip22zilog_port</span> <span class="c">*</span><span class="w">u</span><span class="pc">p</span> <span class="c">=</span> <span class="w">UART_ZILOG</span><span class="c">(</span><span class="pc">p</span><span class="c">ort);</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="pc">l</span><span class="c">ong</span> <span class="c">flags;</span>
+
+	<span class="pc">if</span> <span class="c">(</span><span class="w">ZS_IS_CONS</span><span class="c">(</span><span class="w">up</span><span class="pc">))</span>
+		<span class="c">return</span> <span class="pc">0</span><span class="c">;</span>
+
+	<span class="w">s</span><span class="pc">p</span><span class="c">in_lock_irqsave(&amp;port-&gt;lock,</span> <span class="c">flags);</span>
+	<span class="w">__ip22zilog_startup</span><span class="c">(</span><span class="w">up</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">spin_unlock_irqrestore(&amp;port-&gt;lock,</span> <span class="c">flags);</span>
+	<span class="c">return</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+
+<span class="pc">st</span><span class="c">atic</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">ip22zilog_shutdown</span><span class="c">(struct</span> <span class="w">u</span><span class="pc">a</span><span class="c">rt_port</span> <span class="c">*port</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">uart_ip22zilog_port</span> <span class="c">*</span><span class="w">u</span><span class="pc">p</span> <span class="c">=</span> <span class="w">UART_ZILOG</span><span class="c">(port);</span>
+	<span class="c">struct</span> <span class="w">zilog_channel</span> <span class="c">*</span><span class="w">ch</span><span class="pc">ann</span><span class="c">el</span><span class="pc">;</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="c">flags;</span>
+
+	<span class="w">i</span><span class="pc">f</span> <span class="c">(</span><span class="w">ZS_IS_CONS</span><span class="c">(</span><span class="w">up</span><span class="pc">))</span>
+		<span class="c">return</span><span class="pc">;</span>
+
+	<span class="w">s</span><span class="pc">p</span><span class="c">in_lock_irqsave(&amp;</span><span class="pc">p</span><span class="c">ort-&gt;lock,</span> <span class="c">flags);</span>
+
+	<span class="w">ch</span><span class="pc">a</span><span class="c">nnel</span> <span class="pc">=</span> <span class="w">ZILOG_CHANNEL_FROM_PORT</span><span class="c">(port</span><span class="pc">)</span><span class="c">;</span>
+
+	
+	<span class="w">up</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">curregs</span><span class="pc">[</span><span class="w">R3] &amp;= ~RxENAB</span><span class="pc">;</span>
+	<span class="w">u</span><span class="pc">p</span><span class="c">-&gt;</span><span class="pc">c</span><span class="c">urregs[</span><span class="w">R5] &amp;</span><span class="pc">=</span><span class="c"> ~</span><span class="w">TxENAB</span><span class="c">;</span>
+
+	
+	<span class="w">up</span><span class="c">-&gt;curregs[</span><span class="w">R1] &amp;= ~(EXT_INT_ENAB</span> <span class="w">|</span> <span class="w">TxINT_ENAB</span> <span class="c">|</span> <span class="w">RxINT_MASK</span><span class="c">);</span>
+	<span class="w">u</span><span class="pc">p</span><span class="c">-&gt;curregs[</span><span class="w">R</span><span class="pc">5</span><span class="w">] </span><span class="pc">&amp;</span><span class="c">= ~</span><span class="w">SND_BRK</span><span class="pc">;</span>
+	<span class="w">ip22zilog_maybe_update_regs</span><span class="pc">(</span><span class="w">up</span><span class="c">,</span> <span class="w">ch</span><span class="pc">an</span><span class="c">nel);</span>
+
+	<span class="w">s</span><span class="c">pin_unlock_irqrestore(&amp;</span><span class="w">p</span><span class="pc">o</span><span class="c">rt-&gt;lock,</span> <span class="c">flags);</span>
+<span class="c">}</span>
+
+
+<span class="c">static</span> <span class="c">void</span>
+<span class="w">ip22zilog_convert_to_zs</span><span class="c">(struct</span> <span class="w">uart_ip22zilog_port</span> <span class="c">*</span><span class="w">up</span><span class="c">,</span> <span class="pc">u</span><span class="c">nsigned</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">cflag</span><span class="c">,</span>
+		       <span class="c">unsigned</span> <span class="c">int</span> <span class="w">iflag</span><span class="c">,</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">brg</span><span class="pc">)</span>
+<span class="c">{</span>
+
+	<span class="w">up</span><span class="c">-&gt;</span><span class="w">curregs</span><span class="pc">[</span><span class="w">R10</span><span class="pc">] </span><span class="c">=</span> <span class="w">NRZ</span><span class="c">;</span>
+	<span class="w">up</span><span class="c">-&gt;curregs[</span><span class="w">R11</span><span class="c">] =</span> <span class="w">TCBR</span> <span class="w">|</span> <span class="w">RCBR</span><span class="c">;</span>
+
+	
+	<span class="w">up</span><span class="c">-&gt;</span><span class="pc">c</span><span class="c">urregs[</span><span class="w">R4] &amp;= ~XCLK_MASK</span><span class="c">;</span>
+	<span class="w">up</span><span class="c">-&gt;</span><span class="pc">c</span><span class="c">urregs</span><span class="pc">[R4</span><span class="w">] </span><span class="pc">|</span><span class="c">=</span> <span class="w">X16CLK</span><span class="c">;</span>
+	<span class="w">up</span><span class="c">-&gt;</span><span class="pc">c</span><span class="c">urregs[</span><span class="w">R12</span><span class="c">] =</span> <span class="w">brg</span> <span class="w">&amp;</span> <span class="pc">0xf</span><span class="c">f;</span>
+	<span class="w">up</span><span class="c">-&gt;curregs[</span><span class="w">R13] </span><span class="pc">= </span><span class="c">(</span><span class="w">b</span><span class="c">rg</span> <span class="pc">&gt;</span><span class="c">&gt;</span> <span class="c">8) &amp;</span> <span class="c">0xff;</span>
+	<span class="w">up</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">c</span><span class="c">urregs[</span><span class="w">R14</span><span class="pc">] </span><span class="c">=</span> <span class="w">BRENAB</span><span class="c">;</span>
+
+	
+	<span class="w">up</span><span class="c">-&gt;</span><span class="pc">c</span><span class="c">urregs[</span><span class="w">3] &amp;= ~RxN_MASK</span><span class="pc">;</span>
+	<span class="w">up</span><span class="c">-&gt;</span><span class="w">c</span><span class="c">urregs[</span><span class="pc">5</span><span class="w">] &amp;</span><span class="pc">=</span><span class="c"> ~</span><span class="w">TxN_MASK</span><span class="c">;</span>
+	<span class="w">s</span><span class="pc">w</span><span class="c">itch</span> <span class="c">(</span><span class="w">cflag</span> <span class="w">&amp;</span> <span class="w">CSIZE</span><span class="c">) {</span>
+	<span class="c">case</span> <span class="w">CS5</span><span class="c">:</span>
+		<span class="w">u</span><span class="pc">p</span><span class="c">-&gt;</span><span class="pc">c</span><span class="c">urregs</span><span class="pc">[</span><span class="w">3</span><span class="pc">] </span><span class="c">|=</span> <span class="w">Rx5</span><span class="c">;</span>
+		<span class="w">u</span><span class="c">p-&gt;curregs[</span><span class="w">5] </span><span class="pc">|</span><span class="c">=</span> <span class="w">Tx5</span><span class="c">;</span>
+		<span class="w">up</span><span class="c">-&gt;</span><span class="w">parity_mask</span> <span class="pc">=</span> <span class="w">0x1</span><span class="pc">f</span><span class="c">;</span>
+		<span class="pc">b</span><span class="c">reak;</span>
+	<span class="c">case</span> <span class="w">CS6</span><span class="c">:</span>
+		<span class="w">u</span><span class="c">p-&gt;</span><span class="pc">c</span><span class="c">urregs[</span><span class="pc">3</span><span class="c">] |=</span> <span class="w">Rx6</span><span class="c">;</span>
+		<span class="w">up</span><span class="c">-&gt;</span><span class="pc">cu</span><span class="c">rregs[</span><span class="pc">5] |</span><span class="c">=</span> <span class="w">Tx6</span><span class="c">;</span>
+		<span class="w">up</span><span class="c">-&gt;parity_mask</span> <span class="pc">=</span> <span class="w">0x3</span><span class="pc">f</span><span class="c">;</span>
+		<span class="pc">b</span><span class="c">reak;</span>
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">CS7</span><span class="c">:</span>
+		<span class="w">u</span><span class="c">p-&gt;</span><span class="pc">c</span><span class="c">urregs[</span><span class="pc">3</span><span class="c">] |=</span> <span class="w">Rx7</span><span class="c">;</span>
+		<span class="w">up</span><span class="c">-&gt;</span><span class="pc">c</span><span class="c">urregs[</span><span class="pc">5] |</span><span class="c">=</span> <span class="w">Tx7</span><span class="c">;</span>
+		<span class="w">up</span><span class="c">-&gt;parity_mask</span> <span class="pc">=</span> <span class="w">0x7</span><span class="pc">f</span><span class="c">;</span>
+		<span class="pc">b</span><span class="c">reak;</span>
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">CS8</span><span class="c">:</span>
+	<span class="w">d</span><span class="pc">ef</span><span class="c">ault:</span>
+		<span class="w">u</span><span class="pc">p</span><span class="c">-&gt;curregs[</span><span class="w">3] |</span><span class="c">=</span> <span class="w">Rx8</span><span class="c">;</span>
+		<span class="w">u</span><span class="c">p-&gt;curregs[</span><span class="w">5] </span><span class="pc">|</span><span class="c">=</span> <span class="w">Tx8</span><span class="c">;</span>
+		<span class="w">up</span><span class="c">-&gt;</span><span class="pc">p</span><span class="c">arity_mask</span> <span class="pc">=</span> <span class="w">0xf</span><span class="pc">f</span><span class="c">;</span>
+		<span class="pc">b</span><span class="c">reak;</span>
+	<span class="c">}</span>
+	<span class="w">up</span><span class="c">-&gt;curregs[</span><span class="w">4] &amp;= ~0x0c</span><span class="c">;</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">cflag</span> <span class="w">&amp;</span> <span class="w">CSTOPB</span><span class="pc">)</span>
+		<span class="w">u</span><span class="c">p-&gt;</span><span class="pc">c</span><span class="c">urregs[</span><span class="w">4</span><span class="c">] |=</span> <span class="w">SB2</span><span class="c">;</span>
+	<span class="c">else</span>
+		<span class="w">up</span><span class="pc">-</span><span class="c">&gt;</span><span class="pc">cu</span><span class="c">rregs[</span><span class="w">4] </span><span class="pc">|</span><span class="c">=</span> <span class="w">SB1</span><span class="c">;</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="pc">cf</span><span class="c">lag</span> <span class="w">&amp;</span> <span class="w">PARENB</span><span class="pc">)</span>
+		<span class="w">u</span><span class="c">p-&gt;</span><span class="pc">cu</span><span class="c">rregs[</span><span class="w">4</span><span class="c">] |=</span> <span class="w">PAR_ENAB</span><span class="c">;</span>
+	<span class="c">else</span>
+		<span class="w">up</span><span class="pc">-</span><span class="c">&gt;curregs[</span><span class="w">4] &amp;= ~</span><span class="pc">P</span><span class="c">AR_ENAB</span><span class="pc">;</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="pc">(!(cf</span><span class="c">lag</span> <span class="pc">&amp;</span> <span class="w">PARODD</span><span class="c">))</span>
+		<span class="w">u</span><span class="c">p</span><span class="pc">-</span><span class="c">&gt;</span><span class="pc">cu</span><span class="c">rregs[</span><span class="w">4</span><span class="c">] |=</span> <span class="w">PAR_EVEN</span><span class="c">;</span>
+	<span class="pc">e</span><span class="c">lse</span>
+		<span class="w">up</span><span class="pc">-</span><span class="c">&gt;curregs[</span><span class="w">4] &amp;</span><span class="pc">=</span><span class="c"> ~</span><span class="pc">PAR_EV</span><span class="c">EN;</span>
+
+	<span class="w">up</span><span class="c">-&gt;</span><span class="w">p</span><span class="pc">o</span><span class="c">rt</span><span class="pc">.</span><span class="w">read_status_mask</span> <span class="pc">=</span> <span class="w">Rx_OVR</span><span class="c">;</span>
+	<span class="w">i</span><span class="c">f</span> <span class="c">(</span><span class="w">iflag</span> <span class="w">&amp;</span> <span class="w">INPCK</span><span class="pc">)</span>
+		<span class="w">u</span><span class="c">p-&gt;</span><span class="w">p</span><span class="pc">o</span><span class="c">rt.</span><span class="w">r</span><span class="c">ead_status_mask</span> <span class="w">|</span><span class="c">=</span> <span class="w">CRC_ERR</span> <span class="pc">|</span> <span class="w">PAR_ERR</span><span class="c">;</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(iflag</span> <span class="w">&amp;</span><span class="pc"> </span><span class="c">(</span><span class="w">IGNBRK</span> <span class="c">|</span> <span class="w">BRKINT</span> <span class="c">|</span> <span class="w">PARMRK</span><span class="pc">))</span>
+		<span class="w">up</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">p</span><span class="c">ort</span><span class="w">.</span><span class="pc">r</span><span class="c">ead_status_mask</span> <span class="pc">|</span><span class="c">=</span> <span class="w">BRK_ABRT</span><span class="c">;</span>
+
+	<span class="w">up</span><span class="c">-&gt;</span><span class="w">p</span><span class="c">ort</span><span class="pc">.</span><span class="w">ignore_status_mask</span> <span class="c">=</span> <span class="c">0;</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">i</span><span class="c">flag</span> <span class="pc">&amp;</span> <span class="w">IGNPAR</span><span class="pc">)</span>
+		<span class="w">u</span><span class="c">p-&gt;</span><span class="w">p</span><span class="c">ort</span><span class="pc">.</span><span class="w">i</span><span class="c">gnore_status_mask</span> <span class="w">|</span><span class="c">=</span> <span class="w">CRC_ERR</span> <span class="pc">|</span> <span class="w">PAR_ERR</span><span class="c">;</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="pc">i</span><span class="c">flag</span> <span class="pc">&amp;</span> <span class="w">IGNBRK</span><span class="c">) {</span>
+		<span class="w">up</span><span class="c">-&gt;</span><span class="w">p</span><span class="c">ort</span><span class="pc">.ig</span><span class="c">nore_status_mask</span> <span class="pc">|</span><span class="c">=</span> <span class="w">B</span><span class="pc">R</span><span class="c">K_ABRT;</span>
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(iflag</span> <span class="pc">&amp;</span> <span class="c">IGNPAR</span><span class="pc">)</span>
+			<span class="w">u</span><span class="c">p-&gt;</span><span class="w">p</span><span class="c">ort</span><span class="pc">.i</span><span class="c">gnore_status_mask</span> <span class="pc">|</span><span class="c">=</span> <span class="w">Rx_OVR</span><span class="c">;</span>
+	<span class="c">}</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="pc">((</span><span class="w">cflag</span> <span class="c">&amp;</span> <span class="w">CREAD</span><span class="c">) ==</span> <span class="c">0)</span>
+		<span class="w">u</span><span class="pc">p</span><span class="c">-&gt;</span><span class="w">p</span><span class="c">ort</span><span class="pc">.</span><span class="w">i</span><span class="pc">g</span><span class="c">nore_status_mask</span> <span class="c">=</span> <span class="w">0xf</span><span class="pc">f</span><span class="c">;</span>
+<span class="pc">}</span>
+
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="pc">v</span><span class="c">oid</span>
+<span class="w">ip22zilog_set_termios</span><span class="c">(struct</span> <span class="w">ua</span><span class="c">rt_port</span> <span class="c">*</span><span class="w">p</span><span class="c">ort,</span> <span class="c">struct</span> <span class="w">ktermios</span> <span class="c">*</span><span class="w">te</span><span class="pc">r</span><span class="c">mios,</span>
+		      <span class="c">struct</span> <span class="pc">k</span><span class="c">termios</span> <span class="c">*</span><span class="w">o</span><span class="c">ld)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">uart_ip22zilog_port</span> <span class="c">*</span><span class="w">u</span><span class="pc">p</span> <span class="c">=</span>
+		<span class="c">container_of(</span><span class="w">p</span><span class="c">ort,</span> <span class="c">struct</span> <span class="c">uart_ip22zilog_port,</span> <span class="w">p</span><span class="c">ort);</span>
+	<span class="w">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="c">flags;</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">bau</span><span class="c">d</span><span class="pc">,</span> <span class="w">brg</span><span class="c">;</span>
+
+	<span class="w">ba</span><span class="pc">u</span><span class="c">d</span> <span class="c">=</span> <span class="w">uart_get_baud_rate</span><span class="c">(port,</span> <span class="w">te</span><span class="pc">r</span><span class="c">mios</span><span class="pc">,</span> <span class="w">o</span><span class="c">ld</span><span class="pc">,</span> <span class="w">1200</span><span class="c">,</span> <span class="w">76800</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="w">s</span><span class="pc">pin_l</span><span class="c">ock_irqsave(&amp;</span><span class="w">up</span><span class="pc">-</span><span class="c">&gt;</span><span class="pc">p</span><span class="c">ort</span><span class="w">.</span><span class="pc">l</span><span class="c">ock</span><span class="pc">,</span> <span class="c">flags);</span>
+
+	<span class="w">b</span><span class="pc">rg</span> <span class="pc">=</span> <span class="w">BPS_TO_BRG</span><span class="c">(</span><span class="w">ba</span><span class="pc">u</span><span class="c">d,</span> <span class="w">ZS_CLOCK</span> <span class="w">/</span> <span class="w">ZS_CLOCK_DIVISOR</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="w">ip22zilog_convert_to_zs</span><span class="c">(</span><span class="w">up</span><span class="c">,</span> <span class="w">te</span><span class="pc">r</span><span class="c">mios-&gt;</span><span class="w">c_cflag</span><span class="c">,</span> <span class="w">te</span><span class="pc">r</span><span class="c">mios-&gt;</span><span class="w">c_iflag</span><span class="c">,</span> <span class="c">brg</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="c">if</span> <span class="c">(</span><span class="w">UART_ENABLE_MS</span><span class="pc">(&amp;</span><span class="w">u</span><span class="c">p-&gt;</span><span class="w">p</span><span class="c">ort,</span> <span class="w">te</span><span class="pc">r</span><span class="c">mios-&gt;</span><span class="pc">c</span><span class="c">_cflag</span><span class="pc">))</span>
+		<span class="w">u</span><span class="pc">p-</span><span class="c">&gt;</span><span class="w">f</span><span class="c">lags</span> <span class="c">|=</span> <span class="w">IP22ZILOG_FLAG_MODEM_STATUS</span><span class="c">;</span>
+	<span class="pc">e</span><span class="c">lse</span>
+		<span class="w">up</span><span class="c">-&gt;</span><span class="w">f</span><span class="c">lags</span> <span class="pc">&amp;=</span><span class="c"> ~IP22ZILOG_FLAG_MODEM_STATUS;</span>
+
+	<span class="w">ip22zilog_maybe_update_regs</span><span class="c">(</span><span class="w">up</span><span class="c">,</span> <span class="w">ZILOG_CHANNEL_FROM_PORT</span><span class="pc">(</span><span class="w">p</span><span class="c">ort</span><span class="pc">))</span><span class="c">;</span>
+	<span class="w">uart_update_timeout</span><span class="c">(</span><span class="pc">p</span><span class="c">ort,</span> <span class="w">te</span><span class="pc">r</span><span class="c">mios-&gt;</span><span class="w">c</span><span class="c">_cflag</span><span class="pc">,</span> <span class="w">ba</span><span class="pc">u</span><span class="c">d);</span>
+
+	<span class="c">spin_unlock_irqrestore(&amp;</span><span class="w">up</span><span class="c">-&gt;</span><span class="pc">p</span><span class="c">ort</span><span class="pc">.l</span><span class="c">ock</span><span class="pc">,</span> <span class="c">flags);</span>
+<span class="c">}</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="w">c</span><span class="c">onst</span> <span class="pc">c</span><span class="c">har</span> <span class="c">*</span><span class="w">ip22zilog_type</span><span class="c">(struct</span> <span class="w">ua</span><span class="pc">rt_p</span><span class="c">ort</span> <span class="c">*port</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">return</span> <span class="w">"IP22</span><span class="pc">-</span><span class="w">Zilog"</span><span class="pc">;</span>
+<span class="pc">}</span>
+
+
+<span class="c">static</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">ip22zilog_release_port</span><span class="c">(struct</span> <span class="w">u</span><span class="pc">a</span><span class="c">rt_port</span> <span class="c">*</span><span class="w">p</span><span class="pc">o</span><span class="c">rt)</span>
+<span class="c">{</span>
+<span class="w">}</span>
+
+<span class="c">static</span> <span class="pc">int</span> <span class="w">ip22zilog_request_port</span><span class="c">(struct</span> <span class="w">u</span><span class="pc">a</span><span class="c">rt_port</span> <span class="c">*</span><span class="pc">po</span><span class="c">rt</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">0</span><span class="c">;</span>
+<span class="c">}</span>
+
+
+<span class="c">static</span> <span class="c">void</span> <span class="w">ip22zilog_config_port</span><span class="c">(struct</span> <span class="w">u</span><span class="pc">a</span><span class="c">rt_port</span> <span class="c">*port</span><span class="pc">,</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">f</span><span class="c">lags)</span>
+<span class="c">{</span>
+<span class="w">}</span>
+
+
+<span class="c">static</span> <span class="pc">int</span> <span class="w">ip22zilog_verify_port</span><span class="c">(struct</span> <span class="w">u</span><span class="pc">a</span><span class="c">rt_port</span> <span class="c">*port,</span> <span class="c">struct</span> <span class="w">serial_struct</span> <span class="c">*</span><span class="w">ser</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">-</span><span class="pc">EI</span><span class="c">NVAL;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">uart_ops</span> <span class="w">ip22zilog_pops</span> <span class="c">= {</span>
+	<span class="c">.</span><span class="w">tx_empty</span>	<span class="c">=</span>	<span class="w">ip22zilog_tx_empty</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">set_mctrl</span>	<span class="c">=</span>	<span class="w">ip22zilog_set_mctrl</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">get_mctrl</span>	<span class="c">=</span>	<span class="w">ip22zilog_get_mctrl</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">stop_tx</span>	<span class="c">=</span>	<span class="w">ip22zilog_stop_tx</span><span class="c">,</span>
+	<span class="pc">.</span><span class="w">start_tx</span>	<span class="c">=</span>	<span class="w">ip22zilog_start_tx</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">stop_rx</span>	<span class="c">=</span>	<span class="w">ip22zilog_stop_rx</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">enable_ms</span>	<span class="c">=</span>	<span class="w">ip22zilog_enable_ms</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">break_ctl</span>	<span class="c">=</span>	<span class="w">ip22zilog_break_ctl</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">startup</span>	<span class="c">=</span>	<span class="w">ip22zilog_startup</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">shutdown</span>	<span class="c">=</span>	<span class="w">ip22zilog_shutdown</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">set_termios</span>	<span class="c">=</span>	<span class="w">ip22zilog_set_termios</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">t</span><span class="c">ype</span>		<span class="c">=</span>	<span class="w">ip22zilog_type</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">release_port</span>	<span class="c">=</span>	<span class="w">ip22zilog_release_port</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">request_port</span>	<span class="c">=</span>	<span class="w">ip22zilog_request_port</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">config_port</span>	<span class="c">=</span>	<span class="w">ip22zilog_config_port</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">verify_port</span>	<span class="c">=</span>	<span class="w">ip22zilog_verify_port</span><span class="c">,</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="c">static</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">uart_ip22zilog_port</span> <span class="c">*</span><span class="w">ip22zilog_port_table;</span>
+<span class="pc">sta</span><span class="c">tic</span> <span class="c">struct</span> <span class="w">zilog_layout</span> <span class="pc">**</span><span class="w">ip22zilog_chip_regs</span><span class="pc">;</span>
+
+<span class="pc">sta</span><span class="c">tic</span> <span class="c">struct</span> <span class="pc">u</span><span class="c">art_ip22zilog_port</span> <span class="c">*</span><span class="w">ip22zilog_irq_chain</span><span class="pc">;</span>
+<span class="pc">sta</span><span class="c">tic</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">zilog_irq</span> <span class="w">=</span><span class="pc"> -</span><span class="c">1;</span>
+
+<span class="c">static</span> <span class="pc">v</span><span class="c">oid</span> <span class="c">*</span> <span class="w">_</span><span class="pc">_init</span> <span class="w">alloc_one_table</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">s</span><span class="c">ize)</span>
+<span class="c">{</span>
+	<span class="c">return</span> <span class="w">k</span><span class="c">zalloc(</span><span class="w">s</span><span class="pc">ize</span><span class="c">,</span> <span class="c">GFP_KERNEL);</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">v</span><span class="c">oid</span> <span class="c">__init</span> <span class="w">ip22zilog_alloc_tables</span><span class="c">(void)</span>
+<span class="c">{</span>
+	<span class="w">ip22zilog_port_table</span> <span class="w">=</span><span class="pc"> </span><span class="c">(</span><span class="pc">s</span><span class="c">truct</span> <span class="pc">u</span><span class="c">art_ip22zilog_port</span> <span class="c">*)</span>
+		<span class="pc">a</span><span class="c">lloc_one_table</span><span class="pc">(</span><span class="w">NUM_CHANNELS</span> <span class="w">*</span> <span class="w">s</span><span class="c">izeof(struct</span> <span class="c">uart_ip22zilog_port</span><span class="pc">));</span>
+	<span class="w">ip22zilog_chip_regs</span> <span class="pc">= </span><span class="c">(</span><span class="pc">s</span><span class="c">truct</span> <span class="w">zilog_layout</span> <span class="w">**)</span>
+		<span class="w">a</span><span class="c">lloc_one_table(</span><span class="w">NUM_IP22ZILOG</span> <span class="w">*</span> <span class="pc">s</span><span class="c">izeof(struct</span> <span class="w">z</span><span class="c">ilog_layout</span> <span class="w">*));</span>
+
+	<span class="w">if</span> <span class="c">(ip22zilog_port_table</span> <span class="w">=</span><span class="c">=</span> <span class="c">NULL</span> <span class="w">|</span><span class="c">|</span> <span class="pc">i</span><span class="c">p22zilog_chip_regs</span> <span class="c">==</span> <span class="c">NULL</span><span class="pc">) </span><span class="c">{</span>
+		<span class="w">panic(</span><span class="pc">"</span><span class="w">IP22-Zilog:</span> <span class="w">C</span><span class="pc">ann</span><span class="c">ot</span> <span class="c">allocate</span> <span class="w">I</span><span class="c">P22</span><span class="pc">-</span><span class="w">Z</span><span class="c">ilog</span> <span class="w">tables.</span><span class="pc">"</span><span class="c">);</span>
+	<span class="pc">}</span>
+<span class="pc">}</span>
+
+
+<span class="c">static</span> <span class="pc">s</span><span class="c">truct</span> <span class="pc">z</span><span class="c">ilog_layout</span> <span class="c">*</span> <span class="w">_</span><span class="pc">_i</span><span class="c">nit</span> <span class="w">get_zs</span><span class="c">(</span><span class="w">i</span><span class="c">nt</span> <span class="w">ch</span><span class="pc">ip</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="w">u</span><span class="c">nsigned</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">b</span><span class="pc">a</span><span class="c">se;</span>
+
+	<span class="pc">if</span> <span class="c">(</span><span class="w">ch</span><span class="c">ip</span> <span class="pc">&lt;</span> <span class="c">0</span> <span class="pc">|</span><span class="c">|</span> <span class="pc">c</span><span class="c">hip</span> <span class="pc">&gt;=</span> <span class="w">NUM_IP22ZILOG</span><span class="c">) {</span>
+		<span class="w">pa</span><span class="c">nic</span><span class="pc">("</span><span class="w">I</span><span class="pc">P</span><span class="c">22</span><span class="pc">-</span><span class="w">Z</span><span class="c">ilog</span><span class="w">:</span> <span class="w">Illegal</span> <span class="w">c</span><span class="pc">h</span><span class="c">ip</span> <span class="w">nu</span><span class="pc">mb</span><span class="c">er</span> <span class="w">%</span><span class="c">d</span> <span class="w">i</span><span class="pc">n</span> <span class="w">g</span><span class="c">et_zs</span><span class="w">.",</span> <span class="w">c</span><span class="c">hip</span><span class="w">)</span><span class="c">;</span>
+	<span class="pc">}</span>
+
+	
+	<span class="w">b</span><span class="pc">a</span><span class="c">se</span> <span class="pc">= </span><span class="c">(</span><span class="w">u</span><span class="c">nsigned</span> <span class="c">long</span><span class="w">) &amp;sgioc-</span><span class="c">&gt;</span><span class="w">ua</span><span class="c">rt</span><span class="pc">;</span>
+
+	<span class="w">zilog_irq</span> <span class="pc">=</span> <span class="w">SGI_SERIAL_IRQ</span><span class="pc">;</span>
+	<span class="w">request_mem_region</span><span class="pc">(</span><span class="w">b</span><span class="c">ase</span><span class="pc">,</span> <span class="w">8,</span><span class="pc"> "</span><span class="w">I</span><span class="pc">P</span><span class="c">22</span><span class="pc">-Z</span><span class="c">ilog</span><span class="w">"</span><span class="pc">);</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">(s</span><span class="pc">tr</span><span class="c">uct</span> <span class="w">zilog_layout</span> <span class="pc">*)</span> <span class="w">b</span><span class="pc">a</span><span class="c">se</span><span class="pc">;</span>
+<span class="c">}</span>
+
+<span class="pc">#</span><span class="c">define</span> <span class="w">ZS_PUT_CHAR_MAX_DELAY</span>	<span class="w">2000</span>	
+
+<span class="pc">#ifd</span><span class="c">ef</span> <span class="w">CONFIG_SERIAL_IP22_ZILOG_CONSOLE</span>
+<span class="pc">s</span><span class="c">tatic</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">ip22zilog_put_char</span><span class="c">(struct</span> <span class="w">ua</span><span class="c">rt_port</span> <span class="c">*</span><span class="w">po</span><span class="c">rt</span><span class="pc">,</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">ch</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">zilog_channel</span> <span class="c">*</span><span class="w">ch</span><span class="pc">ann</span><span class="c">el</span> <span class="c">=</span> <span class="w">ZILOG_CHANNEL_FROM_PORT</span><span class="c">(</span><span class="w">p</span><span class="pc">o</span><span class="c">rt);</span>
+	<span class="pc">in</span><span class="c">t</span> <span class="w">loops</span> <span class="pc">=</span> <span class="w">Z</span><span class="pc">S</span><span class="c">_PUT_CHAR_MAX_DELAY</span><span class="pc">;</span>
+
+	
+	<span class="w">d</span><span class="c">o</span> <span class="c">{</span>
+		<span class="pc">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">har</span> <span class="pc">v</span><span class="c">al</span> <span class="pc">=</span> <span class="w">re</span><span class="pc">adb(&amp;</span><span class="w">ch</span><span class="pc">a</span><span class="c">nnel-&gt;</span><span class="w">con</span><span class="pc">tr</span><span class="c">ol);</span>
+		<span class="c">if</span> <span class="c">(</span><span class="w">v</span><span class="c">al</span> <span class="pc">&amp;</span> <span class="w">Tx_BUF_EMP</span><span class="c">) {</span>
+			<span class="w">ZSDELAY(</span><span class="pc">)</span><span class="c">;</span>
+			<span class="w">b</span><span class="pc">r</span><span class="c">eak;</span>
+		<span class="c">}</span>
+		<span class="w">u</span><span class="pc">d</span><span class="c">elay(</span><span class="w">5</span><span class="c">);</span>
+	<span class="c">}</span> <span class="w">w</span><span class="c">hile</span> <span class="pc">(-</span><span class="c">-</span><span class="pc">l</span><span class="c">oops</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="w">w</span><span class="pc">riteb</span><span class="c">(</span><span class="w">c</span><span class="pc">h</span><span class="w">,</span><span class="pc"> </span><span class="c">&amp;</span><span class="w">ch</span><span class="pc">a</span><span class="c">nnel-&gt;</span><span class="w">d</span><span class="pc">a</span><span class="c">ta</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">Z</span><span class="c">SDELAY</span><span class="w">(</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">ZS_WSYNC</span><span class="pc">(</span><span class="w">ch</span><span class="pc">a</span><span class="c">nnel);</span>
+<span class="c">}</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="c">void</span>
+<span class="w">ip22zilog_console_write</span><span class="c">(struct</span> <span class="w">console</span> <span class="c">*</span><span class="w">con</span><span class="pc">,</span> <span class="w">c</span><span class="c">onst</span> <span class="pc">c</span><span class="c">har</span> <span class="c">*</span><span class="w">s</span><span class="c">,</span> <span class="pc">u</span><span class="c">nsigned</span> <span class="c">int</span> <span class="pc">c</span><span class="c">ount)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">uart_ip22zilog_port</span> <span class="c">*</span><span class="w">u</span><span class="pc">p</span> <span class="pc">= </span><span class="c">&amp;</span><span class="w">ip22zilog_port_table</span><span class="pc">[</span><span class="w">con</span><span class="pc">-</span><span class="c">&gt;index];</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="c">flags;</span>
+
+	<span class="pc">sp</span><span class="c">in_lock_irqsave(&amp;</span><span class="w">up</span><span class="c">-&gt;</span><span class="w">p</span><span class="c">ort</span><span class="w">.</span><span class="pc">l</span><span class="c">ock</span><span class="pc">,</span> <span class="c">flags);</span>
+	<span class="w">uart_console_write</span><span class="pc">(&amp;</span><span class="w">up</span><span class="c">-&gt;</span><span class="pc">p</span><span class="c">ort</span><span class="pc">,</span> <span class="w">s</span><span class="pc">,</span> <span class="w">c</span><span class="c">ount</span><span class="pc">,</span> <span class="w">ip22zilog_put_char</span><span class="c">);</span>
+	<span class="w">u</span><span class="pc">d</span><span class="c">elay(</span><span class="w">2</span><span class="c">);</span>
+	<span class="c">spin_unlock_irqrestore(&amp;</span><span class="w">up</span><span class="c">-&gt;</span><span class="pc">p</span><span class="c">ort</span><span class="pc">.</span><span class="c">lock</span><span class="pc">,</span> <span class="c">flags);</span>
+<span class="pc">}</span>
+
+<span class="c">static</span> <span class="pc">i</span><span class="c">nt</span> <span class="c">__init</span> <span class="w">ip22zilog_console_setup</span><span class="c">(</span><span class="pc">s</span><span class="c">truct</span> <span class="w">console</span> <span class="c">*</span><span class="w">con</span><span class="c">,</span> <span class="w">c</span><span class="pc">h</span><span class="c">ar</span> <span class="c">*</span><span class="w">op</span><span class="pc">tions)</span>
+<span class="c">{</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">uart_ip22zilog_port</span> <span class="c">*</span><span class="w">up</span> <span class="pc">= </span><span class="c">&amp;</span><span class="w">ip22zilog_port_table[con</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">i</span><span class="pc">n</span><span class="c">dex];</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="c">flags;</span>
+	<span class="pc">in</span><span class="c">t</span> <span class="w">bau</span><span class="c">d</span> <span class="pc">=</span> <span class="w">9600,</span> <span class="w">bi</span><span class="c">ts</span> <span class="pc">=</span> <span class="w">8</span><span class="c">;</span>
+	<span class="pc">in</span><span class="c">t</span> <span class="w">parity</span> <span class="w">= 'n'</span><span class="c">;</span>
+	<span class="pc">in</span><span class="c">t</span> <span class="w">flow</span> <span class="w">= 'n</span><span class="pc">'</span><span class="c">;</span>
+
+	<span class="w">up</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">f</span><span class="c">lags</span> <span class="pc">|</span><span class="c">=</span> <span class="w">IP22ZILOG_FLAG_IS_CONS</span><span class="c">;</span>
+
+	<span class="w">pri</span><span class="pc">ntk</span><span class="c">(KERN_INFO</span> <span class="pc">"</span><span class="w">Console</span><span class="c">:</span> <span class="w">ttyS</span><span class="c">%</span><span class="pc">d</span> <span class="w">(IP22-Zilog</span><span class="c">)\n",</span> <span class="w">con</span><span class="c">-&gt;</span><span class="w">i</span><span class="pc">n</span><span class="c">dex</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="w">s</span><span class="pc">p</span><span class="c">in_lock_irqsave(&amp;</span><span class="w">up</span><span class="c">-&gt;</span><span class="w">p</span><span class="pc">or</span><span class="c">t</span><span class="pc">.l</span><span class="c">ock</span><span class="pc">,</span> <span class="c">flags);</span>
+
+	<span class="w">u</span><span class="pc">p-</span><span class="c">&gt;</span><span class="w">curregs</span><span class="pc">[</span><span class="w">R15] </span><span class="pc">|</span><span class="c">=</span> <span class="w">BRKIE</span><span class="pc">;</span>
+
+	<span class="w">__ip22zilog_startup</span><span class="c">(</span><span class="w">up</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="pc">s</span><span class="c">pin_unlock_irqrestore(&amp;</span><span class="w">up</span><span class="c">-&gt;</span><span class="pc">p</span><span class="c">ort</span><span class="pc">.</span><span class="c">lock</span><span class="pc">,</span> <span class="c">flags);</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">opt</span><span class="pc">i</span><span class="c">ons</span><span class="w">)</span>
+		<span class="w">uart_parse_options</span><span class="c">(</span><span class="w">opt</span><span class="pc">ions, </span><span class="c">&amp;</span><span class="w">bau</span><span class="c">d</span><span class="pc">, </span><span class="c">&amp;</span><span class="w">parity</span><span class="pc">, </span><span class="c">&amp;</span><span class="w">bi</span><span class="pc">ts, </span><span class="c">&amp;</span><span class="w">flow</span><span class="c">);</span>
+	<span class="w">r</span><span class="c">eturn</span> <span class="w">uart_set_options</span><span class="pc">(&amp;</span><span class="w">up</span><span class="c">-&gt;</span><span class="w">p</span><span class="pc">o</span><span class="c">rt,</span> <span class="w">co</span><span class="pc">n,</span> <span class="w">ba</span><span class="pc">u</span><span class="c">d,</span> <span class="w">p</span><span class="c">arity,</span> <span class="w">bi</span><span class="pc">t</span><span class="c">s,</span> <span class="pc">f</span><span class="c">low</span><span class="pc">)</span><span class="c">;</span>
+<span class="pc">}</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">uart_driver</span> <span class="w">ip22zilog_reg</span><span class="pc">;</span>
+
+<span class="c">static</span> <span class="pc">st</span><span class="c">ruct</span> <span class="w">console</span> <span class="w">ip22zilog_console</span> <span class="c">= {</span>
+	<span class="c">.name</span>	<span class="w">=	"ttyS</span><span class="c">",</span>
+	<span class="c">.</span><span class="pc">w</span><span class="c">rite</span>	<span class="c">=</span>	<span class="w">ip22zilog_console_write</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">de</span><span class="pc">vi</span><span class="c">ce</span>	<span class="c">=</span>	<span class="w">uart_console_device</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">se</span><span class="pc">tu</span><span class="c">p</span>	<span class="c">=</span>	<span class="w">ip22zilog_console_setup</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">f</span><span class="c">lags</span>	<span class="c">=</span>	<span class="w">CON_PRINTBUFFER</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">in</span><span class="pc">d</span><span class="c">ex</span>	<span class="w">=	-</span><span class="pc">1</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">d</span><span class="pc">a</span><span class="c">ta</span>	<span class="w">=	&amp;i</span><span class="pc">p22zilog_r</span><span class="c">eg,</span>
+<span class="pc">}</span><span class="c">;</span>
+<span class="pc">#e</span><span class="c">ndif</span> 
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">uart_driver</span> <span class="w">ip</span><span class="pc">22zilog_r</span><span class="c">eg</span> <span class="c">= {</span>
+	<span class="c">.</span><span class="pc">o</span><span class="c">wner</span>		<span class="c">=</span> <span class="c">THIS_MODULE,</span>
+	<span class="c">.</span><span class="w">driver_name</span>	<span class="pc">= </span><span class="c">"</span><span class="w">ser</span><span class="pc">ia</span><span class="c">l",</span>
+	<span class="c">.</span><span class="w">dev</span><span class="pc">_n</span><span class="c">ame</span>	<span class="pc">= "</span><span class="w">ttyS</span><span class="c">",</span>
+	<span class="c">.</span><span class="w">m</span><span class="pc">aj</span><span class="c">or</span>		<span class="c">=</span> <span class="w">TTY_MAJOR</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">m</span><span class="pc">i</span><span class="c">nor</span>		<span class="c">=</span> <span class="w">6</span><span class="pc">4</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">n</span><span class="pc">r</span>		<span class="c">=</span> <span class="w">NUM_CHANNELS</span><span class="c">,</span>
+<span class="w">#</span><span class="c">ifdef</span> <span class="w">CONFIG_SERIAL_IP22_ZILOG_CONSOLE</span>
+	<span class="c">.</span><span class="w">cons</span>		<span class="pc">= </span><span class="c">&amp;</span><span class="w">ip22zilog_console</span><span class="c">,</span>
+<span class="w">#</span><span class="c">endif</span>
+<span class="c">};</span>
+
+<span class="c">static</span> <span class="pc">v</span><span class="c">oid</span> <span class="c">__init</span> <span class="w">ip22zilog_prepare</span><span class="c">(void)</span>
+<span class="c">{</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">uart_ip22zilog_port</span> <span class="c">*</span><span class="w">up</span><span class="c">;</span>
+	<span class="c">struct</span> <span class="w">zilog_layout</span> <span class="c">*</span><span class="w">rp</span><span class="c">;</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">ch</span><span class="pc">an</span><span class="c">nel</span><span class="pc">,</span> <span class="w">ch</span><span class="pc">i</span><span class="c">p</span><span class="pc">;</span>
+
+	
+	<span class="w">f</span><span class="c">or</span> <span class="c">(</span><span class="w">ch</span><span class="pc">an</span><span class="c">nel</span> <span class="c">=</span> <span class="c">0;</span> <span class="w">ch</span><span class="pc">an</span><span class="c">nel</span> <span class="c">&lt;</span> <span class="w">NUM_CHANNELS</span><span class="c">;</span> <span class="w">ch</span><span class="pc">an</span><span class="c">nel</span><span class="pc">++)</span>
+		<span class="w">sp</span><span class="pc">in_lock_in</span><span class="c">it(&amp;</span><span class="w">ip22zilog_port_table</span><span class="pc">[</span><span class="w">c</span><span class="pc">h</span><span class="c">annel</span><span class="pc">].</span><span class="w">po</span><span class="pc">r</span><span class="c">t</span><span class="pc">.</span><span class="w">lo</span><span class="c">ck);</span>
+
+	<span class="w">ip22zilog_irq_chain</span> <span class="w">=</span><span class="pc"> &amp;</span><span class="c">ip22zilog_port_table[</span><span class="w">N</span><span class="c">UM_CHANNELS</span> <span class="w">-</span> <span class="c">1];</span>
+        <span class="w">up</span> <span class="pc">= </span><span class="c">&amp;ip22zilog_port_table[0];</span>
+	<span class="w">f</span><span class="c">or</span> <span class="c">(</span><span class="w">ch</span><span class="pc">a</span><span class="c">nnel</span> <span class="c">=</span> <span class="w">N</span><span class="pc">UM</span><span class="c">_CHANNELS</span> <span class="w">-</span> <span class="c">1</span> <span class="c">;</span> <span class="w">ch</span><span class="pc">annel</span> <span class="w">&gt;</span> <span class="pc">0</span><span class="c">;</span> <span class="w">ch</span><span class="pc">an</span><span class="c">nel</span><span class="w">--)</span>
+		<span class="w">up</span><span class="pc">[</span><span class="w">c</span><span class="c">hannel].</span><span class="w">n</span><span class="pc">e</span><span class="c">xt</span> <span class="w">=</span><span class="pc"> </span><span class="c">&amp;</span><span class="w">u</span><span class="pc">p</span><span class="c">[</span><span class="w">c</span><span class="c">hannel</span> <span class="w">-</span> <span class="c">1];</span>
+	<span class="w">up</span><span class="pc">[</span><span class="w">c</span><span class="c">hannel].</span><span class="w">n</span><span class="pc">e</span><span class="c">xt</span> <span class="pc">=</span> <span class="pc">NUL</span><span class="c">L;</span>
+
+	<span class="pc">f</span><span class="c">or</span> <span class="c">(</span><span class="w">c</span><span class="c">hip</span> <span class="pc">=</span> <span class="c">0;</span> <span class="w">ch</span><span class="pc">ip</span> <span class="pc">&lt;</span> <span class="w">NUM_IP22ZILOG</span><span class="c">;</span> <span class="w">c</span><span class="c">hip++) {</span>
+		<span class="c">if</span> <span class="pc">(!</span><span class="w">ip22zilog_chip_regs</span><span class="c">[</span><span class="w">c</span><span class="pc">h</span><span class="c">ip</span><span class="w">])</span><span class="pc"> </span><span class="c">{</span>
+			<span class="w">ip</span><span class="c">22zilog_chip_regs</span><span class="pc">[</span><span class="c">chip</span><span class="pc">] </span><span class="c">=</span> <span class="w">rp</span> <span class="w">=</span> <span class="w">get_zs</span><span class="pc">(</span><span class="c">chip);</span>
+
+			<span class="w">up[</span><span class="pc">(</span><span class="c">chip</span> <span class="w">*</span> <span class="w">2)</span><span class="pc"> </span><span class="c">+</span> <span class="w">0]</span><span class="pc">.</span><span class="w">p</span><span class="pc">o</span><span class="c">rt</span><span class="w">.m</span><span class="pc">e</span><span class="c">mbase</span> <span class="pc">= </span><span class="c">(</span><span class="w">ch</span><span class="pc">a</span><span class="c">r</span> <span class="w">*</span><span class="pc">) </span><span class="c">&amp;</span><span class="w">rp</span><span class="c">-&gt;</span><span class="w">channelB</span><span class="pc">;</span>
+			<span class="w">up[</span><span class="pc">(</span><span class="c">chip</span> <span class="w">*</span> <span class="w">2) </span><span class="pc">+</span> <span class="c">1</span><span class="w">]</span><span class="pc">.</span><span class="w">p</span><span class="pc">o</span><span class="c">rt</span><span class="w">.me</span><span class="c">mbase</span> <span class="c">= (</span><span class="w">ch</span><span class="pc">ar</span> <span class="w">*</span><span class="pc">) </span><span class="c">&amp;</span><span class="w">rp</span><span class="c">-&gt;</span><span class="w">channelA</span><span class="pc">;</span>
+
+			
+			<span class="w">up[</span><span class="pc">(</span><span class="c">chip</span> <span class="w">*</span> <span class="w">2)</span><span class="pc"> +</span> <span class="pc">0]</span><span class="c">.</span><span class="w">p</span><span class="pc">o</span><span class="c">rt</span><span class="w">.mapbase</span> <span class="pc">=</span>
+				<span class="w">(u</span><span class="pc">n</span><span class="c">signed</span> <span class="c">long</span><span class="w">)</span> <span class="w">ior</span><span class="pc">em</span><span class="c">ap</span><span class="pc">((u</span><span class="c">nsigned</span> <span class="c">long</span><span class="w">) &amp;rp</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">channelB</span><span class="c">,</span> <span class="w">8</span><span class="c">);</span>
+			<span class="w">up[</span><span class="pc">(</span><span class="w">ch</span><span class="pc">i</span><span class="c">p</span> <span class="w">*</span> <span class="w">2)</span><span class="pc"> +</span> <span class="pc">1</span><span class="w">]</span><span class="pc">.</span><span class="w">p</span><span class="c">ort</span><span class="w">.</span><span class="pc">m</span><span class="c">apbase</span> <span class="pc">=</span>
+				<span class="w">(u</span><span class="c">nsigned</span> <span class="c">long</span><span class="w">)</span> <span class="w">ior</span><span class="pc">em</span><span class="c">ap</span><span class="pc">((</span><span class="c">unsigned</span> <span class="c">long</span><span class="w">) &amp;rp</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">channelA</span><span class="c">,</span> <span class="w">8</span><span class="pc">)</span><span class="c">;</span>
+		<span class="pc">}</span>
+
+		
+		<span class="w">up[</span><span class="pc">(</span><span class="w">ch</span><span class="pc">i</span><span class="c">p</span> <span class="w">*</span> <span class="w">2)</span><span class="pc"> </span><span class="c">+</span> <span class="pc">0</span><span class="w">]</span><span class="pc">.</span><span class="w">p</span><span class="c">ort</span><span class="w">.iotype</span> <span class="c">=</span> <span class="w">UPIO_MEM</span><span class="pc">;</span>
+		<span class="w">up[</span><span class="pc">(chi</span><span class="c">p</span> <span class="w">*</span> <span class="w">2)</span><span class="pc"> </span><span class="c">+</span> <span class="pc">0</span><span class="w">]</span><span class="pc">.</span><span class="w">p</span><span class="pc">o</span><span class="c">rt</span><span class="w">.i</span><span class="pc">r</span><span class="c">q</span> <span class="pc">=</span> <span class="w">zilog_irq</span><span class="pc">;</span>
+		<span class="w">up[</span><span class="pc">(</span><span class="c">chip</span> <span class="w">*</span> <span class="w">2)</span><span class="pc"> </span><span class="c">+</span> <span class="pc">0]</span><span class="c">.</span><span class="w">p</span><span class="c">ort</span><span class="w">.uartclk</span> <span class="pc">=</span> <span class="w">ZS_CLOCK</span><span class="pc">;</span>
+		<span class="w">up[</span><span class="pc">(</span><span class="c">chip</span> <span class="w">*</span> <span class="w">2</span><span class="pc">) </span><span class="c">+</span> <span class="pc">0]</span><span class="c">.</span><span class="w">p</span><span class="pc">o</span><span class="c">rt</span><span class="w">.fifosize</span> <span class="pc">=</span> <span class="pc">1</span><span class="c">;</span>
+		<span class="w">up[</span><span class="pc">(</span><span class="c">chip</span> <span class="w">*</span> <span class="w">2</span><span class="pc">) </span><span class="c">+</span> <span class="pc">0]</span><span class="c">.</span><span class="w">p</span><span class="c">ort</span><span class="w">.o</span><span class="pc">ps</span> <span class="pc">=</span><span class="c"> &amp;</span><span class="w">ip22zilog_pops</span><span class="c">;</span>
+		<span class="w">up[</span><span class="pc">(</span><span class="c">chip</span> <span class="w">*</span> <span class="w">2)</span><span class="pc"> +</span> <span class="pc">0]</span><span class="c">.</span><span class="w">p</span><span class="pc">o</span><span class="c">rt</span><span class="w">.t</span><span class="c">ype</span> <span class="c">=</span> <span class="w">PORT_IP22ZILOG</span><span class="c">;</span>
+		<span class="w">up[</span><span class="pc">(c</span><span class="c">hip</span> <span class="w">*</span> <span class="w">2)</span><span class="pc"> </span><span class="c">+</span> <span class="pc">0]</span><span class="c">.</span><span class="w">p</span><span class="pc">o</span><span class="c">rt</span><span class="w">.f</span><span class="pc">l</span><span class="c">ags</span> <span class="pc">=</span> <span class="c">0;</span>
+		<span class="w">up[</span><span class="pc">(</span><span class="c">chip</span> <span class="w">*</span> <span class="w">2)</span><span class="pc"> </span><span class="c">+</span> <span class="pc">0]</span><span class="c">.</span><span class="w">p</span><span class="c">ort</span><span class="w">.l</span><span class="pc">i</span><span class="c">ne</span> <span class="pc">= </span><span class="c">(</span><span class="w">c</span><span class="c">hip</span> <span class="w">*</span> <span class="w">2) </span><span class="pc">+</span> <span class="pc">0</span><span class="c">;</span>
+		<span class="w">up[</span><span class="pc">(</span><span class="c">chip</span> <span class="w">*</span> <span class="w">2)</span><span class="pc"> +</span> <span class="pc">0]</span><span class="c">.</span><span class="w">f</span><span class="pc">l</span><span class="c">ags</span> <span class="pc">=</span> <span class="c">0;</span>
+
+		
+		<span class="w">up[</span><span class="pc">(</span><span class="c">chip</span> <span class="w">*</span> <span class="w">2</span><span class="c">) +</span> <span class="c">1</span><span class="w">]</span><span class="pc">.</span><span class="w">p</span><span class="c">ort</span><span class="w">.iotype</span> <span class="pc">=</span> <span class="w">UPIO_MEM</span><span class="pc">;</span>
+		<span class="w">up[</span><span class="pc">(c</span><span class="c">hip</span> <span class="w">*</span> <span class="w">2</span><span class="pc">) </span><span class="c">+</span> <span class="c">1</span><span class="w">]</span><span class="c">.</span><span class="w">p</span><span class="pc">o</span><span class="c">rt</span><span class="w">.i</span><span class="pc">r</span><span class="c">q</span> <span class="c">=</span> <span class="w">zilog_irq</span><span class="pc">;</span>
+		<span class="w">up[</span><span class="pc">(</span><span class="c">chip</span> <span class="w">*</span> <span class="w">2</span><span class="pc">)</span><span class="c"> +</span> <span class="c">1</span><span class="pc">]</span><span class="c">.</span><span class="w">p</span><span class="c">ort</span><span class="w">.uartclk</span> <span class="pc">=</span> <span class="w">ZS_CLOCK</span><span class="c">;</span>
+		<span class="w">up[</span><span class="pc">(</span><span class="c">chip</span> <span class="w">*</span> <span class="w">2)</span><span class="pc"> </span><span class="c">+</span> <span class="c">1</span><span class="w">]</span><span class="c">.</span><span class="w">p</span><span class="pc">o</span><span class="c">rt</span><span class="w">.fifosize</span> <span class="pc">=</span> <span class="c">1;</span>
+		<span class="w">up[</span><span class="pc">(</span><span class="c">chip</span> <span class="w">*</span> <span class="w">2</span><span class="pc">) </span><span class="c">+</span> <span class="c">1</span><span class="pc">]</span><span class="c">.</span><span class="w">p</span><span class="c">ort</span><span class="w">.op</span><span class="pc">s</span> <span class="pc">=</span><span class="c"> &amp;</span><span class="w">ip22zilog_pops</span><span class="c">;</span>
+		<span class="w">up[</span><span class="pc">(</span><span class="c">chip</span> <span class="w">*</span> <span class="w">2)</span><span class="pc"> +</span> <span class="c">1</span><span class="w">]</span><span class="c">.</span><span class="w">p</span><span class="pc">o</span><span class="c">rt</span><span class="w">.</span><span class="pc">t</span><span class="c">ype</span> <span class="c">=</span> <span class="w">PORT_IP22ZILOG</span><span class="c">;</span>
+		<span class="w">up[</span><span class="pc">(c</span><span class="c">hip</span> <span class="w">*</span> <span class="w">2)</span><span class="pc"> </span><span class="c">+</span> <span class="c">1</span><span class="w">]</span><span class="c">.</span><span class="w">p</span><span class="pc">o</span><span class="c">rt</span><span class="w">.li</span><span class="c">ne</span> <span class="c">= (</span><span class="w">c</span><span class="pc">h</span><span class="c">ip</span> <span class="w">*</span> <span class="w">2) </span><span class="pc">+</span> <span class="c">1;</span>
+		<span class="w">up[</span><span class="pc">(</span><span class="c">chip</span> <span class="w">*</span> <span class="w">2)</span><span class="pc"> +</span> <span class="c">1</span><span class="w">]</span><span class="c">.</span><span class="w">f</span><span class="pc">l</span><span class="c">ags</span> <span class="w">|</span><span class="c">=</span> <span class="w">IP22ZILOG_FLAG_IS_CHANNEL_A</span><span class="c">;</span>
+	<span class="w">}</span>
+
+	<span class="w">f</span><span class="c">or</span> <span class="c">(</span><span class="w">ch</span><span class="pc">a</span><span class="c">nnel</span> <span class="c">=</span> <span class="c">0;</span> <span class="w">c</span><span class="pc">h</span><span class="c">annel</span> <span class="c">&lt;</span> <span class="w">NUM_CHANNELS</span><span class="c">;</span> <span class="w">c</span><span class="pc">ha</span><span class="c">nnel++) {</span>
+		<span class="pc">s</span><span class="c">truct</span> <span class="w">uart_ip22zilog_port</span> <span class="c">*</span><span class="w">up</span> <span class="c">= &amp;</span><span class="w">ip22zilog_port_table</span><span class="pc">[c</span><span class="c">hannel];</span>
+		<span class="pc">in</span><span class="c">t</span> <span class="w">brg</span><span class="c">;</span>
+
+		
+		<span class="w">up</span><span class="c">-&gt;</span><span class="w">parity_mask</span> <span class="c">=</span> <span class="w">0xf</span><span class="pc">f</span><span class="c">;</span>
+		<span class="w">up</span><span class="c">-&gt;</span><span class="w">curregs</span><span class="pc">[</span><span class="w">R1</span><span class="pc">] </span><span class="c">=</span> <span class="w">EXT_INT_ENAB</span> <span class="pc">|</span> <span class="w">INT_ALL_Rx</span> <span class="pc">|</span> <span class="w">TxINT_ENAB</span><span class="pc">;</span>
+		<span class="w">up</span><span class="c">-&gt;</span><span class="pc">c</span><span class="c">urregs[</span><span class="w">R4</span><span class="c">] =</span> <span class="w">PAR_EVEN</span> <span class="pc">|</span> <span class="w">X16CLK</span> <span class="pc">|</span> <span class="w">SB1</span><span class="pc">;</span>
+		<span class="w">up</span><span class="c">-&gt;curregs</span><span class="pc">[</span><span class="w">R3</span><span class="pc">] </span><span class="c">=</span> <span class="w">RxENAB</span> <span class="pc">|</span> <span class="w">Rx8</span><span class="pc">;</span>
+		<span class="w">up</span><span class="c">-&gt;curregs[</span><span class="w">R5</span><span class="c">] =</span> <span class="w">TxENAB</span> <span class="pc">|</span> <span class="w">Tx8</span><span class="c">;</span>
+		<span class="w">up</span><span class="c">-&gt;</span><span class="pc">c</span><span class="c">urregs[</span><span class="w">R9</span><span class="c">] =</span> <span class="w">NV</span> <span class="pc">|</span> <span class="w">MIE</span><span class="pc">;</span>
+		<span class="w">up</span><span class="c">-&gt;curregs[</span><span class="w">R10</span><span class="c">] =</span> <span class="w">NRZ</span><span class="c">;</span>
+		<span class="w">up</span><span class="c">-&gt;</span><span class="pc">c</span><span class="c">urregs[</span><span class="w">R11</span><span class="c">] =</span> <span class="w">TCBR</span> <span class="pc">|</span> <span class="w">RCBR</span><span class="c">;</span>
+		<span class="w">brg</span> <span class="c">=</span> <span class="w">BPS_TO_BRG</span><span class="c">(</span><span class="w">9600</span><span class="c">,</span> <span class="w">ZS_CLOCK</span> <span class="w">/</span> <span class="w">ZS_CLOCK_DIVISOR</span><span class="c">);</span>
+		<span class="w">up</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">c</span><span class="c">urregs</span><span class="pc">[</span><span class="w">R12] </span><span class="pc">= (b</span><span class="c">rg</span> <span class="pc">&amp;</span> <span class="w">0</span><span class="pc">xff);</span>
+		<span class="w">up</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">c</span><span class="c">urregs[</span><span class="w">R13] </span><span class="pc">= </span><span class="c">(brg</span> <span class="pc">&gt;</span><span class="c">&gt;</span> <span class="c">8) &amp;</span> <span class="c">0xff;</span>
+		<span class="w">up</span><span class="pc">-</span><span class="c">&gt;</span><span class="pc">c</span><span class="c">urregs[</span><span class="w">R14</span><span class="pc">] </span><span class="c">=</span> <span class="w">BRENAB</span><span class="c">;</span>
+	<span class="pc">}</span>
+<span class="w">}</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="c">int</span> <span class="c">__init</span> <span class="w">ip22zilog_ports_init</span><span class="c">(</span><span class="pc">v</span><span class="c">oid)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="pc">r</span><span class="c">et;</span>
+
+	<span class="w">pr</span><span class="pc">in</span><span class="c">tk(</span><span class="pc">KERN_I</span><span class="c">NFO</span> <span class="c">"</span><span class="w">Serial</span><span class="c">:</span> <span class="w">IP22</span> <span class="w">Zilog</span> <span class="w">d</span><span class="c">river</span> <span class="w">(</span><span class="c">%d</span> <span class="w">chips).\n</span><span class="c">",</span> <span class="w">NUM_IP22ZILOG</span><span class="c">);</span>
+
+	<span class="w">ip22zilog_prepare</span><span class="pc">()</span><span class="c">;</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">re</span><span class="pc">q</span><span class="c">uest_irq(</span><span class="w">zilog_irq</span><span class="pc">,</span> <span class="w">ip22zilog_interrupt</span><span class="c">,</span> <span class="c">0,</span>
+			<span class="pc">"</span><span class="w">I</span><span class="c">P22-</span><span class="w">Z</span><span class="c">ilog</span><span class="pc">"</span><span class="c">,</span> <span class="w">ip22zilog_irq_chain)</span><span class="pc">)</span><span class="c"> {</span>
+		<span class="w">panic</span><span class="pc">("</span><span class="c">IP22-</span><span class="w">Z</span><span class="c">ilog</span><span class="w">:</span> <span class="w">U</span><span class="pc">n</span><span class="c">able</span> <span class="c">to</span> <span class="w">r</span><span class="c">egister</span> <span class="w">zs</span> <span class="w">int</span><span class="pc">err</span><span class="c">upt</span> <span class="w">ha</span><span class="pc">n</span><span class="c">dler</span><span class="pc">.</span><span class="c">\n");</span>
+	<span class="pc">}</span>
+
+	<span class="w">r</span><span class="pc">et</span> <span class="c">=</span> <span class="w">uart_register_driver</span><span class="pc">(&amp;</span><span class="w">ip22zilog_reg</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">if</span> <span class="c">(ret</span> <span class="pc">=</span><span class="c">=</span> <span class="c">0</span><span class="pc">) </span><span class="c">{</span>
+		<span class="w">in</span><span class="c">t</span> <span class="pc">i;</span>
+
+		<span class="pc">f</span><span class="c">or</span> <span class="c">(i</span> <span class="c">=</span> <span class="c">0;</span> <span class="c">i</span> <span class="c">&lt;</span> <span class="w">NUM_CHANNELS</span><span class="c">;</span> <span class="c">i++) {</span>
+			<span class="w">s</span><span class="pc">tr</span><span class="c">uct</span> <span class="w">uart_ip22zilog_port</span> <span class="c">*</span><span class="w">u</span><span class="pc">p</span> <span class="c">= &amp;</span><span class="w">ip22zilog_port_table</span><span class="pc">[</span><span class="c">i];</span>
+
+			<span class="w">uart_add_one_port(</span><span class="pc">&amp;</span><span class="c">ip22zilog_reg</span><span class="w">,</span><span class="pc"> </span><span class="c">&amp;</span><span class="w">u</span><span class="pc">p-</span><span class="c">&gt;</span><span class="w">p</span><span class="pc">o</span><span class="c">rt);</span>
+		<span class="pc">}</span>
+	<span class="pc">}</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">r</span><span class="c">et;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="c">__init</span> <span class="w">ip22zilog_init</span><span class="c">(</span><span class="pc">v</span><span class="c">oid)</span>
+<span class="c">{</span>
+	
+	<span class="w">ip22zilog_alloc_tables</span><span class="pc">()</span><span class="c">;</span>
+	<span class="w">ip22zilog_ports_init</span><span class="c">();</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">v</span><span class="c">oid</span> <span class="c">__exit</span> <span class="w">ip22zilog_exit</span><span class="c">(void)</span>
+<span class="c">{</span>
+	<span class="c">int</span> <span class="c">i;</span>
+	<span class="w">s</span><span class="pc">tr</span><span class="c">uct</span> <span class="w">uart_ip22zilog_port</span> <span class="c">*</span><span class="w">up</span><span class="c">;</span>
+
+	<span class="w">f</span><span class="pc">o</span><span class="c">r</span> <span class="c">(i</span> <span class="c">=</span> <span class="c">0;</span> <span class="c">i</span> <span class="c">&lt;</span> <span class="w">NUM_CHANNELS</span><span class="c">;</span> <span class="c">i++) {</span>
+		<span class="w">up</span> <span class="w">=</span><span class="pc"> </span><span class="c">&amp;</span><span class="w">ip22zilog_port_table</span><span class="c">[i];</span>
+
+		<span class="w">uart_remove_one_port(</span><span class="pc">&amp;</span><span class="w">ip22zilog_reg,</span><span class="pc"> </span><span class="c">&amp;</span><span class="w">up</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">p</span><span class="pc">ort</span><span class="c">);</span>
+	<span class="pc">}</span>
+
+	
+	<span class="w">up</span> <span class="w">=</span><span class="pc"> </span><span class="c">&amp;</span><span class="pc">i</span><span class="c">p22zilog_port_table</span><span class="pc">[0</span><span class="c">];</span>
+	<span class="w">f</span><span class="c">or</span> <span class="c">(i</span> <span class="c">=</span> <span class="c">0;</span> <span class="c">i</span> <span class="c">&lt;</span> <span class="w">NUM_IP22ZILOG</span><span class="c">;</span> <span class="c">i++) {</span>
+		<span class="c">if</span> <span class="c">(</span><span class="w">u</span><span class="pc">p</span><span class="w">[</span><span class="pc">(</span><span class="c">i</span> <span class="w">*</span> <span class="w">2) </span><span class="pc">+</span> <span class="pc">0</span><span class="w">].p</span><span class="pc">o</span><span class="c">rt</span><span class="w">.mapbase</span><span class="pc">)</span><span class="c"> {</span>
+		   <span class="w">iou</span><span class="c">nmap</span><span class="pc">((</span><span class="w">v</span><span class="pc">o</span><span class="c">id*)</span><span class="w">u</span><span class="pc">p</span><span class="w">[</span><span class="pc">(</span><span class="c">i</span> <span class="w">*</span> <span class="w">2)</span><span class="pc"> +</span> <span class="pc">0</span><span class="w">]</span><span class="c">.</span><span class="w">po</span><span class="c">rt</span><span class="w">.</span><span class="c">mapbase</span><span class="pc">)</span><span class="c">;</span>
+		   <span class="w">up[</span><span class="pc">(</span><span class="c">i</span> <span class="w">*</span> <span class="w">2</span><span class="c">) +</span> <span class="pc">0]</span><span class="c">.</span><span class="w">po</span><span class="pc">r</span><span class="c">t</span><span class="w">.</span><span class="c">mapbase</span> <span class="pc">=</span> <span class="c">0;</span>
+		<span class="w">}</span>
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">u</span><span class="pc">p</span><span class="w">[</span><span class="pc">(i</span> <span class="w">*</span> <span class="w">2) </span><span class="pc">+</span> <span class="pc">1</span><span class="w">].po</span><span class="c">rt</span><span class="w">.</span><span class="pc">m</span><span class="c">apbase</span><span class="pc">)</span><span class="c"> {</span>
+			<span class="w">io</span><span class="pc">u</span><span class="c">nmap</span><span class="pc">((</span><span class="w">v</span><span class="pc">o</span><span class="c">id</span><span class="pc">*)</span><span class="w">u</span><span class="pc">p</span><span class="w">[</span><span class="pc">(i</span> <span class="w">*</span> <span class="w">2) </span><span class="pc">+</span> <span class="c">1</span><span class="w">]</span><span class="pc">.</span><span class="w">po</span><span class="c">rt</span><span class="w">.</span><span class="pc">m</span><span class="c">apbase</span><span class="pc">)</span><span class="c">;</span>
+			<span class="w">up[</span><span class="pc">(i</span> <span class="w">*</span> <span class="w">2</span><span class="pc">)</span><span class="c"> +</span> <span class="pc">1]</span><span class="c">.</span><span class="w">po</span><span class="c">rt</span><span class="w">.</span><span class="c">mapbase</span> <span class="pc">=</span> <span class="pc">0</span><span class="c">;</span>
+		<span class="w">}</span>
+	<span class="pc">}</span>
+
+	<span class="w">uart_unregister_driver(</span><span class="pc">&amp;</span><span class="w">ip22zilog_reg</span><span class="c">);</span>
+<span class="pc">}</span>
+
+<span class="w">m</span><span class="pc">o</span><span class="c">dule_init(</span><span class="w">ip22zilog_init</span><span class="c">);</span>
+<span class="c">module_exit(</span><span class="w">ip22zilog_exit</span><span class="c">);</span>
+
+
+<span class="c">MODULE_AUTHOR("</span><span class="w">Ralf</span> <span class="w">Baechle</span> <span class="c">&lt;</span><span class="w">ralf</span><span class="c">@linux</span><span class="pc">-</span><span class="w">mips</span><span class="c">.</span><span class="w">org</span><span class="c">&gt;");</span>
+<span class="c">MODULE_DESCRIPTION("</span><span class="w">SGI</span> <span class="w">Zilog</span> <span class="w">s</span><span class="pc">e</span><span class="c">rial</span> <span class="w">po</span><span class="pc">r</span><span class="c">t</span> <span class="c">driver");</span>
+<span class="c">MODULE_LICENSE("GPL</span><span class="pc">"</span><span class="c">);</span>
+
+</pre>
+</body>
+</html>
+

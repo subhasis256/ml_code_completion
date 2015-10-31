@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+<span class="w">#include</span> <span class="w">&lt;asm/ptrace.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;asm/uaccess.h&gt;</span>
+
+<span class="w">static</span> <span class="w">int</span> <span class="w">get_reg(struct</span> <span class="w">pt_regs</span> <span class="w">*regs,</span> <span class="w">int</span> <span class="w">nr)</span>
+<span class="w">{</span>
+	<span class="w">int</span> <span class="w">val;</span>
+
+	<span class="w">if</span> <span class="w">(nr</span> <span class="w">&lt;</span> <span class="w">4)</span>
+		<span class="w">v</span><span class="c">al</span> <span class="w">= </span><span class="pc">*(</span><span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="c">long</span> <span class="w">*)(&amp;r</span><span class="c">egs</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">r0</span> <span class="w">+</span> <span class="w">n</span><span class="pc">r)</span><span class="c">;</span>
+	<span class="pc">e</span><span class="c">lse</span> <span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">n</span><span class="c">r</span> <span class="pc">&lt;</span> <span class="w">7</span><span class="c">)</span>
+		<span class="pc">v</span><span class="c">al</span> <span class="w">= </span><span class="pc">*(u</span><span class="c">nsigned</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">*</span><span class="pc">)(&amp;</span><span class="w">r</span><span class="pc">egs-</span><span class="c">&gt;</span><span class="w">r4</span> <span class="w">+</span><span class="pc"> </span><span class="c">(</span><span class="w">n</span><span class="pc">r</span> <span class="w">-</span> <span class="w">4</span><span class="pc">));</span>
+	<span class="w">e</span><span class="pc">l</span><span class="c">se</span> <span class="c">if</span> <span class="c">(</span><span class="w">n</span><span class="pc">r</span> <span class="pc">&lt;</span> <span class="w">13</span><span class="c">)</span>
+		<span class="pc">v</span><span class="c">al</span> <span class="w">=</span><span class="pc"> *</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">*</span><span class="c">)(&amp;</span><span class="w">r</span><span class="pc">egs</span><span class="w">-</span><span class="c">&gt;</span><span class="w">r7</span> <span class="w">+</span><span class="pc"> </span><span class="c">(</span><span class="pc">n</span><span class="c">r</span> <span class="w">-</span> <span class="w">7</span><span class="pc">));</span>
+	<span class="w">e</span><span class="pc">l</span><span class="c">se</span>
+		<span class="pc">v</span><span class="c">al</span> <span class="w">=</span><span class="pc"> *(u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="pc">*</span><span class="c">)(&amp;</span><span class="w">re</span><span class="pc">gs-</span><span class="c">&gt;</span><span class="w">fp</span> <span class="w">+</span><span class="pc"> </span><span class="c">(</span><span class="w">n</span><span class="c">r</span> <span class="pc">-</span> <span class="w">13))</span><span class="pc">;</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">v</span><span class="c">al;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">set_reg</span><span class="c">(struct</span> <span class="w">p</span><span class="pc">t</span><span class="c">_regs</span> <span class="c">*regs</span><span class="pc">,</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">n</span><span class="c">r</span><span class="pc">,</span> <span class="pc">i</span><span class="c">nt</span> <span class="c">val)</span>
+<span class="c">{</span>
+	<span class="pc">if</span> <span class="c">(</span><span class="w">n</span><span class="c">r</span> <span class="pc">&lt;</span> <span class="w">4</span><span class="c">)</span>
+		<span class="w">*</span><span class="pc">(</span><span class="c">unsigned</span> <span class="c">long</span> <span class="w">*</span><span class="pc">)(&amp;</span><span class="w">reg</span><span class="pc">s</span><span class="w">-</span><span class="c">&gt;</span><span class="w">r0</span> <span class="w">+</span> <span class="w">n</span><span class="c">r</span><span class="w">) =</span> <span class="pc">v</span><span class="c">al;</span>
+	<span class="w">e</span><span class="c">lse</span> <span class="c">if</span> <span class="c">(</span><span class="w">n</span><span class="c">r</span> <span class="pc">&lt;</span> <span class="w">7</span><span class="c">)</span>
+		<span class="w">*</span><span class="pc">(u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">*</span><span class="pc">)(&amp;</span><span class="w">regs</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">r4</span> <span class="w">+</span><span class="pc"> </span><span class="c">(</span><span class="pc">n</span><span class="c">r</span> <span class="w">-</span> <span class="pc">4</span><span class="w">)) =</span> <span class="w">v</span><span class="pc">al</span><span class="w">;</span>
+	<span class="w">e</span><span class="c">lse</span> <span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">n</span><span class="pc">r</span> <span class="pc">&lt;</span> <span class="w">13</span><span class="c">)</span>
+		<span class="w">*</span><span class="pc">(u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">*</span><span class="pc">)(</span><span class="c">&amp;</span><span class="w">r</span><span class="pc">egs-</span><span class="c">&gt;</span><span class="w">r7</span> <span class="w">+</span><span class="pc"> </span><span class="c">(nr</span> <span class="w">-</span> <span class="w">7)) </span><span class="pc">=</span> <span class="w">v</span><span class="pc">al</span><span class="w">;</span>
+	<span class="w">e</span><span class="c">lse</span>
+		<span class="w">*</span><span class="pc">(</span><span class="c">unsigned</span> <span class="c">long</span> <span class="w">*</span><span class="c">)(&amp;</span><span class="w">r</span><span class="pc">egs-</span><span class="c">&gt;</span><span class="w">fp</span> <span class="w">+</span><span class="pc"> </span><span class="c">(</span><span class="w">n</span><span class="pc">r</span> <span class="pc">-</span> <span class="w">13))</span><span class="pc"> =</span> <span class="w">v</span><span class="c">al</span><span class="pc">;</span>
+<span class="c">}</span>
+
+<span class="pc">#</span><span class="c">define</span> <span class="w">REG1</span><span class="c">(</span><span class="w">in</span><span class="pc">sn</span><span class="w">)	</span><span class="pc">(((</span><span class="w">ins</span><span class="c">n</span><span class="pc">) </span><span class="c">&amp;</span> <span class="w">0x0f00) &gt;</span><span class="c">&gt;</span> <span class="c">8)</span>
+<span class="c">#define</span> <span class="w">REG2</span><span class="c">(</span><span class="w">i</span><span class="pc">n</span><span class="c">sn</span><span class="pc">)	</span><span class="c">((</span><span class="w">i</span><span class="pc">ns</span><span class="c">n</span><span class="w">)</span><span class="pc"> &amp;</span> <span class="w">0x000f</span><span class="c">)</span>
+<span class="c">#define</span> <span class="w">PSW_BC</span>		<span class="w">0x100</span>
+
+
+<span class="c">#define</span> <span class="w">ISA_LD1</span>		<span class="w">0x20c0</span>	
+<span class="c">#define</span> <span class="w">ISA_LD2</span>		<span class="w">0x20e0</span>	
+<span class="c">#define</span> <span class="w">ISA_LDH</span>		<span class="w">0x20a0</span>	
+<span class="c">#define</span> <span class="w">ISA_LDUH</span>	<span class="w">0x20b0</span>	
+<span class="c">#define</span> <span class="w">ISA_ST1</span>		<span class="w">0x2040</span>	
+<span class="c">#define</span> <span class="w">ISA_ST2</span>		<span class="w">0x2060</span>	
+<span class="c">#define</span> <span class="w">ISA_ST3</span>		<span class="w">0x2070</span>	
+<span class="c">#define</span> <span class="w">ISA_STH1</span>	<span class="w">0x2020</span>	
+<span class="c">#define</span> <span class="w">ISA_STH2</span>	<span class="w">0x2030</span>	
+
+<span class="c">#</span><span class="pc">i</span><span class="c">fdef</span> <span class="w">CONFIG_ISA_DUAL_ISSUE</span>
+
+
+<span class="c">#define</span> <span class="w">ISA_ADD</span>		<span class="w">0x00a0</span>	
+<span class="c">#define</span> <span class="w">ISA_ADDI</span>	<span class="w">0x4</span><span class="pc">000</span>	
+<span class="c">#define</span> <span class="w">ISA_ADDX</span>	<span class="w">0x0090</span>	
+<span class="c">#define</span> <span class="w">ISA_AND</span>		<span class="w">0x00c0</span>	
+<span class="c">#define</span> <span class="w">ISA_CMP</span>		<span class="w">0x004</span><span class="c">0</span>	
+<span class="c">#define</span> <span class="w">ISA_CMPEQ</span>	<span class="w">0x0060</span>	
+<span class="c">#define</span> <span class="w">ISA_CMPU</span>	<span class="w">0x0050</span>	
+<span class="c">#define</span> <span class="w">ISA_CMPZ</span>	<span class="w">0x0070</span>	
+<span class="c">#define</span> <span class="w">ISA_LDI</span>		<span class="w">0x6000</span>	
+<span class="c">#define</span> <span class="w">ISA_MV</span>		<span class="w">0x1080</span>	
+<span class="c">#define</span> <span class="w">ISA_NEG</span>		<span class="w">0x0030</span>	
+<span class="c">#define</span> <span class="w">ISA_NOP</span>		<span class="w">0x7000</span>	
+<span class="c">#define</span> <span class="w">ISA_NOT</span>		<span class="w">0x00b0</span>	
+<span class="c">#define</span> <span class="w">ISA_OR</span>		<span class="w">0x00e0</span>	
+<span class="c">#define</span> <span class="w">ISA_SUB</span>		<span class="w">0x002</span><span class="c">0</span>	
+<span class="c">#define</span> <span class="w">ISA_SUBX</span>	<span class="pc">0x001</span><span class="c">0</span>	
+<span class="c">#define</span> <span class="w">ISA_XOR</span>		<span class="w">0x00d0</span>	
+
+
+<span class="c">#define</span> <span class="w">ISA_MUL</span>		<span class="w">0x1060</span>	
+<span class="c">#define</span> <span class="w">ISA_MULLO_A0</span>	<span class="w">0x3010</span>	
+<span class="c">#define</span> <span class="w">ISA_MULLO_A1</span>	<span class="w">0x3090</span>	
+<span class="c">#define</span> <span class="w">ISA_MVFACMI_A0</span>	<span class="w">0x50f2</span>	
+<span class="c">#define</span> <span class="w">ISA_MVFACMI_A1</span>	<span class="w">0x50f6</span>	
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="c">int</span> <span class="w">emu_addi</span><span class="c">(</span><span class="w">u</span><span class="c">nsigned</span> <span class="pc">s</span><span class="c">hort</span> <span class="w">ins</span><span class="pc">n</span><span class="c">,</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">p</span><span class="pc">t</span><span class="c">_regs</span> <span class="c">*regs)</span>
+<span class="c">{</span>
+	<span class="w">c</span><span class="c">har</span> <span class="w">imm</span> <span class="w">=</span><span class="pc"> </span><span class="c">(</span><span class="w">c</span><span class="c">har</span><span class="w">)</span><span class="c">(</span><span class="w">ins</span><span class="pc">n</span> <span class="w">&amp;</span> <span class="c">0xff);</span>
+	<span class="w">i</span><span class="c">nt</span> <span class="w">des</span><span class="pc">t</span> <span class="pc">=</span> <span class="w">REG1</span><span class="c">(</span><span class="w">ins</span><span class="pc">n);</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">v</span><span class="c">al;</span>
+
+	<span class="w">v</span><span class="pc">a</span><span class="c">l</span> <span class="c">=</span> <span class="w">get_reg</span><span class="c">(</span><span class="w">r</span><span class="pc">egs</span><span class="c">,</span> <span class="w">des</span><span class="pc">t</span><span class="c">);</span>
+	<span class="pc">v</span><span class="c">al</span> <span class="w">+</span><span class="c">=</span> <span class="w">i</span><span class="pc">m</span><span class="c">m</span><span class="pc">;</span>
+	<span class="w">set_reg</span><span class="c">(</span><span class="w">r</span><span class="c">egs</span><span class="pc">,</span> <span class="w">des</span><span class="pc">t</span><span class="c">,</span> <span class="c">val);</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">emu_ldi</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="w">s</span><span class="c">hort</span> <span class="w">in</span><span class="pc">s</span><span class="c">n,</span> <span class="w">s</span><span class="c">truct</span> <span class="w">p</span><span class="pc">t</span><span class="c">_regs</span> <span class="c">*</span><span class="pc">r</span><span class="c">egs)</span>
+<span class="c">{</span>
+	<span class="w">c</span><span class="pc">h</span><span class="c">ar</span> <span class="w">i</span><span class="c">mm</span> <span class="w">=</span><span class="pc"> </span><span class="c">(</span><span class="w">c</span><span class="c">har</span><span class="w">)</span><span class="c">(</span><span class="w">ins</span><span class="pc">n</span> <span class="w">&amp;</span> <span class="c">0xff);</span>
+
+	<span class="w">s</span><span class="pc">e</span><span class="c">t_reg(</span><span class="w">r</span><span class="c">egs</span><span class="pc">,</span> <span class="w">REG1</span><span class="pc">(</span><span class="w">in</span><span class="pc">s</span><span class="c">n</span><span class="w">),</span><span class="pc"> (</span><span class="w">in</span><span class="pc">t)</span><span class="w">i</span><span class="c">mm);</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">emu_add</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="pc">s</span><span class="c">hort</span> <span class="w">in</span><span class="pc">s</span><span class="c">n,</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">p</span><span class="c">t_regs</span> <span class="c">*regs)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">des</span><span class="pc">t</span> <span class="pc">=</span> <span class="w">R</span><span class="c">EG1</span><span class="pc">(</span><span class="w">ins</span><span class="c">n</span><span class="pc">);</span>
+	<span class="pc">in</span><span class="c">t</span> <span class="w">sr</span><span class="c">c</span> <span class="c">=</span> <span class="w">REG2</span><span class="c">(</span><span class="w">ins</span><span class="pc">n)</span><span class="c">;</span>
+	<span class="c">int</span> <span class="w">v</span><span class="c">al;</span>
+
+	<span class="w">v</span><span class="pc">a</span><span class="c">l</span> <span class="c">=</span> <span class="w">get_reg</span><span class="c">(</span><span class="w">r</span><span class="pc">egs,</span> <span class="w">d</span><span class="pc">es</span><span class="c">t);</span>
+	<span class="c">val</span> <span class="w">+</span><span class="c">=</span> <span class="w">g</span><span class="c">et_reg(</span><span class="pc">r</span><span class="c">egs</span><span class="pc">,</span> <span class="w">sr</span><span class="c">c);</span>
+	<span class="w">set_reg</span><span class="c">(</span><span class="pc">r</span><span class="c">egs,</span> <span class="w">de</span><span class="pc">s</span><span class="c">t,</span> <span class="c">val);</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">emu_addx</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="w">s</span><span class="pc">h</span><span class="c">ort</span> <span class="w">in</span><span class="pc">s</span><span class="c">n,</span> <span class="w">s</span><span class="c">truct</span> <span class="w">p</span><span class="pc">t</span><span class="c">_regs</span> <span class="c">*regs)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">de</span><span class="pc">s</span><span class="c">t</span> <span class="pc">=</span> <span class="w">REG1</span><span class="c">(</span><span class="w">ins</span><span class="pc">n);</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="c">int</span> <span class="w">v</span><span class="c">al</span><span class="pc">,</span> <span class="w">t</span><span class="c">mp;</span>
+
+	<span class="pc">v</span><span class="c">al</span> <span class="c">=</span> <span class="w">r</span><span class="pc">eg</span><span class="c">s-&gt;</span><span class="w">psw</span> <span class="w">&amp;</span> <span class="w">PSW_BC</span> <span class="w">?</span> <span class="pc">1</span> <span class="c">:</span> <span class="pc">0</span><span class="c">;</span>
+	<span class="w">t</span><span class="c">mp</span> <span class="c">=</span> <span class="w">get_reg</span><span class="c">(</span><span class="w">r</span><span class="c">egs</span><span class="pc">,</span> <span class="w">des</span><span class="pc">t)</span><span class="c">;</span>
+	<span class="pc">v</span><span class="c">al</span> <span class="w">+</span><span class="c">=</span> <span class="w">t</span><span class="c">mp;</span>
+	<span class="pc">v</span><span class="c">al</span> <span class="w">+=</span><span class="pc"> </span><span class="c">(</span><span class="w">u</span><span class="c">nsigned</span> <span class="pc">i</span><span class="c">nt</span><span class="w">)g</span><span class="c">et_reg(</span><span class="w">reg</span><span class="pc">s</span><span class="c">,</span> <span class="w">REG2</span><span class="pc">(</span><span class="w">ins</span><span class="pc">n))</span><span class="c">;</span>
+	<span class="w">set_reg</span><span class="c">(regs,</span> <span class="w">de</span><span class="pc">st,</span> <span class="c">val);</span>
+
+	
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="pc">v</span><span class="c">al</span> <span class="pc">&lt;</span> <span class="w">t</span><span class="pc">m</span><span class="c">p)</span>
+		<span class="pc">reg</span><span class="c">s-&gt;</span><span class="w">psw</span> <span class="pc">|</span><span class="c">=</span> <span class="w">PSW_BC</span><span class="c">;</span>
+	<span class="pc">e</span><span class="c">lse</span>
+		<span class="w">r</span><span class="pc">egs</span><span class="c">-&gt;psw</span> <span class="w">&amp;</span><span class="pc">= ~(P</span><span class="c">SW_BC</span><span class="w">)</span><span class="c">;</span>
+
+	<span class="c">return</span> <span class="pc">0</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">emu_and</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="w">s</span><span class="c">hort</span> <span class="w">ins</span><span class="pc">n</span><span class="c">,</span> <span class="w">s</span><span class="pc">t</span><span class="c">ruct</span> <span class="pc">p</span><span class="c">t_regs</span> <span class="c">*regs)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">des</span><span class="pc">t</span> <span class="pc">=</span> <span class="w">REG1</span><span class="c">(</span><span class="w">ins</span><span class="pc">n</span><span class="w">)</span><span class="pc">;</span>
+	<span class="w">i</span><span class="pc">n</span><span class="c">t</span> <span class="w">v</span><span class="c">al;</span>
+
+	<span class="w">v</span><span class="pc">a</span><span class="c">l</span> <span class="c">=</span> <span class="w">get_reg</span><span class="c">(</span><span class="w">r</span><span class="c">egs</span><span class="pc">,</span> <span class="w">des</span><span class="pc">t</span><span class="c">);</span>
+	<span class="c">val</span> <span class="pc">&amp;</span><span class="c">=</span> <span class="w">g</span><span class="c">et_reg</span><span class="pc">(</span><span class="w">r</span><span class="c">egs</span><span class="pc">,</span> <span class="w">REG2</span><span class="pc">(i</span><span class="c">nsn</span><span class="pc">))</span><span class="c">;</span>
+	<span class="w">set_reg</span><span class="c">(</span><span class="w">r</span><span class="pc">egs</span><span class="c">,</span> <span class="w">de</span><span class="pc">s</span><span class="c">t,</span> <span class="c">val);</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">emu_cmp</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="w">s</span><span class="c">hort</span> <span class="w">i</span><span class="pc">n</span><span class="c">sn,</span> <span class="w">s</span><span class="pc">t</span><span class="c">ruct</span> <span class="w">p</span><span class="c">t_regs</span> <span class="c">*regs)</span>
+<span class="c">{</span>
+	<span class="pc">if</span> <span class="c">(</span><span class="pc">g</span><span class="c">et_reg(</span><span class="w">r</span><span class="pc">egs</span><span class="c">,</span> <span class="w">REG1(i</span><span class="pc">n</span><span class="c">sn</span><span class="w">)) </span><span class="pc">&lt;</span> <span class="w">g</span><span class="pc">e</span><span class="c">t_reg</span><span class="w">(</span><span class="pc">regs</span><span class="w">,</span> <span class="w">REG2(i</span><span class="pc">ns</span><span class="c">n</span><span class="pc">)))</span>
+		<span class="pc">reg</span><span class="c">s-&gt;</span><span class="w">psw</span> <span class="w">|</span><span class="c">=</span> <span class="w">PSW_BC</span><span class="c">;</span>
+	<span class="w">e</span><span class="c">lse</span>
+		<span class="w">r</span><span class="pc">egs</span><span class="c">-&gt;</span><span class="pc">p</span><span class="c">sw</span> <span class="w">&amp;=</span><span class="pc"> ~(P</span><span class="c">SW_BC</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">0</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">int</span> <span class="w">emu_cmpeq</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="w">s</span><span class="c">hort</span> <span class="w">in</span><span class="pc">s</span><span class="c">n,</span> <span class="w">s</span><span class="pc">t</span><span class="c">ruct</span> <span class="pc">p</span><span class="c">t_regs</span> <span class="c">*regs)</span>
+<span class="c">{</span>
+	<span class="pc">if</span> <span class="c">(</span><span class="w">get_reg</span><span class="c">(</span><span class="w">r</span><span class="c">egs</span><span class="pc">,</span> <span class="w">REG1(in</span><span class="pc">sn</span><span class="w">)) </span><span class="pc">=</span><span class="c">=</span> <span class="w">g</span><span class="pc">e</span><span class="c">t_reg</span><span class="w">(</span><span class="c">regs</span><span class="pc">,</span> <span class="w">REG2(in</span><span class="pc">s</span><span class="c">n</span><span class="w">)</span><span class="pc">))</span>
+		<span class="pc">reg</span><span class="c">s-&gt;</span><span class="w">psw</span> <span class="w">|</span><span class="c">=</span> <span class="w">PSW_BC</span><span class="c">;</span>
+	<span class="w">e</span><span class="c">lse</span>
+		<span class="w">r</span><span class="pc">egs</span><span class="c">-&gt;</span><span class="pc">p</span><span class="c">sw</span> <span class="w">&amp;=</span><span class="pc"> ~(P</span><span class="c">SW_BC</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">0</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">int</span> <span class="w">emu_cmpu</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="w">s</span><span class="c">hort</span> <span class="w">in</span><span class="pc">s</span><span class="c">n,</span> <span class="w">s</span><span class="pc">t</span><span class="c">ruct</span> <span class="pc">p</span><span class="c">t_regs</span> <span class="c">*regs)</span>
+<span class="c">{</span>
+	<span class="pc">if</span> <span class="pc">((</span><span class="c">unsigned</span> <span class="w">i</span><span class="c">nt</span><span class="w">)get_reg</span><span class="c">(</span><span class="w">r</span><span class="c">egs</span><span class="pc">,</span> <span class="w">REG1</span><span class="pc">(</span><span class="w">ins</span><span class="pc">n</span><span class="w">))</span>
+		<span class="w">&lt; </span><span class="c">(unsigned</span> <span class="c">int</span><span class="pc">)</span><span class="w">g</span><span class="c">et_reg(</span><span class="w">r</span><span class="pc">egs</span><span class="c">,</span> <span class="w">REG2</span><span class="pc">(</span><span class="w">i</span><span class="pc">n</span><span class="c">sn</span><span class="w">))</span><span class="pc">)</span>
+		<span class="w">r</span><span class="pc">eg</span><span class="c">s-&gt;</span><span class="w">psw</span> <span class="w">|</span><span class="c">=</span> <span class="w">PSW_BC</span><span class="c">;</span>
+	<span class="w">e</span><span class="c">lse</span>
+		<span class="w">r</span><span class="pc">eg</span><span class="c">s-&gt;</span><span class="w">p</span><span class="c">sw</span> <span class="w">&amp;=</span><span class="pc"> ~(P</span><span class="c">SW_BC</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">0</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">emu_cmpz</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="pc">s</span><span class="c">hort</span> <span class="w">i</span><span class="pc">n</span><span class="c">sn,</span> <span class="w">s</span><span class="pc">t</span><span class="c">ruct</span> <span class="c">pt_regs</span> <span class="c">*regs)</span>
+<span class="c">{</span>
+	<span class="pc">if</span> <span class="pc">(!</span><span class="w">get_reg</span><span class="c">(</span><span class="w">r</span><span class="c">egs</span><span class="pc">,</span> <span class="w">REG2(in</span><span class="pc">sn</span><span class="w">))</span><span class="pc">)</span>
+		<span class="w">r</span><span class="pc">eg</span><span class="c">s-&gt;</span><span class="w">p</span><span class="pc">s</span><span class="c">w</span> <span class="w">|</span><span class="c">=</span> <span class="pc">P</span><span class="c">SW_BC;</span>
+	<span class="w">e</span><span class="c">lse</span>
+		<span class="w">r</span><span class="pc">egs</span><span class="c">-&gt;</span><span class="pc">p</span><span class="c">sw</span> <span class="w">&amp;=</span><span class="pc"> ~(</span><span class="w">P</span><span class="c">SW_BC</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="c">return</span> <span class="pc">0</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">emu_mv</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="pc">s</span><span class="c">hort</span> <span class="w">in</span><span class="pc">s</span><span class="c">n,</span> <span class="w">s</span><span class="pc">t</span><span class="c">ruct</span> <span class="pc">p</span><span class="c">t_regs</span> <span class="c">*regs)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="pc">val</span><span class="c">;</span>
+
+	<span class="w">v</span><span class="pc">a</span><span class="c">l</span> <span class="c">=</span> <span class="w">get_reg</span><span class="c">(regs</span><span class="pc">,</span> <span class="w">REG2</span><span class="pc">(</span><span class="w">i</span><span class="pc">n</span><span class="c">sn</span><span class="pc">))</span><span class="c">;</span>
+	<span class="w">set_reg</span><span class="c">(</span><span class="pc">regs</span><span class="c">,</span> <span class="w">REG1</span><span class="pc">(</span><span class="w">i</span><span class="pc">n</span><span class="c">sn</span><span class="pc">),</span> <span class="pc">v</span><span class="c">al);</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">0</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">emu_neg</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="w">s</span><span class="pc">h</span><span class="c">ort</span> <span class="w">in</span><span class="pc">s</span><span class="c">n,</span> <span class="w">s</span><span class="c">truct</span> <span class="w">p</span><span class="c">t_regs</span> <span class="c">*regs)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="pc">v</span><span class="c">al;</span>
+
+	<span class="w">v</span><span class="c">al</span> <span class="c">=</span> <span class="w">get_reg</span><span class="c">(</span><span class="w">r</span><span class="pc">egs,</span> <span class="w">REG2</span><span class="pc">(</span><span class="w">i</span><span class="pc">n</span><span class="c">sn</span><span class="pc">))</span><span class="c">;</span>
+	<span class="w">set_reg</span><span class="c">(</span><span class="w">r</span><span class="pc">egs</span><span class="c">,</span> <span class="w">REG1</span><span class="pc">(</span><span class="w">i</span><span class="pc">n</span><span class="c">sn</span><span class="pc">),</span> <span class="w">0</span> <span class="w">-</span> <span class="w">v</span><span class="pc">al</span><span class="c">);</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">emu_not</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="w">s</span><span class="pc">h</span><span class="c">ort</span> <span class="w">i</span><span class="pc">ns</span><span class="c">n,</span> <span class="w">s</span><span class="c">truct</span> <span class="w">p</span><span class="pc">t</span><span class="c">_regs</span> <span class="c">*</span><span class="pc">r</span><span class="c">egs)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="pc">v</span><span class="c">al;</span>
+
+	<span class="w">v</span><span class="c">al</span> <span class="c">=</span> <span class="w">get_reg</span><span class="c">(</span><span class="pc">r</span><span class="c">egs</span><span class="pc">,</span> <span class="w">REG2</span><span class="pc">(</span><span class="w">i</span><span class="pc">n</span><span class="c">sn</span><span class="pc">))</span><span class="c">;</span>
+	<span class="w">set_reg</span><span class="c">(</span><span class="pc">regs</span><span class="c">,</span> <span class="w">REG1</span><span class="pc">(</span><span class="w">i</span><span class="pc">n</span><span class="c">sn</span><span class="w">), ~</span><span class="pc">v</span><span class="c">al);</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">0</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="c">int</span> <span class="w">emu_or</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="w">s</span><span class="c">hort</span> <span class="w">in</span><span class="pc">s</span><span class="c">n,</span> <span class="w">s</span><span class="pc">t</span><span class="c">ruct</span> <span class="w">p</span><span class="c">t_regs</span> <span class="c">*regs)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">des</span><span class="pc">t</span> <span class="pc">=</span> <span class="w">R</span><span class="c">EG1(</span><span class="w">i</span><span class="pc">ns</span><span class="c">n</span><span class="pc">)</span><span class="c">;</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="c">val;</span>
+
+	<span class="w">v</span><span class="pc">a</span><span class="c">l</span> <span class="c">=</span> <span class="w">get_reg</span><span class="c">(</span><span class="w">r</span><span class="c">egs</span><span class="pc">,</span> <span class="w">des</span><span class="pc">t</span><span class="c">);</span>
+	<span class="c">val</span> <span class="pc">|</span><span class="c">=</span> <span class="pc">g</span><span class="c">et_reg</span><span class="pc">(r</span><span class="c">egs</span><span class="pc">,</span> <span class="w">REG2</span><span class="pc">(i</span><span class="c">nsn</span><span class="pc">))</span><span class="c">;</span>
+	<span class="w">set_reg</span><span class="c">(</span><span class="w">r</span><span class="pc">egs</span><span class="c">,</span> <span class="w">de</span><span class="pc">s</span><span class="c">t,</span> <span class="c">val);</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">emu_sub</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="w">s</span><span class="c">hort</span> <span class="w">i</span><span class="pc">n</span><span class="c">sn,</span> <span class="w">s</span><span class="c">truct</span> <span class="w">p</span><span class="c">t_regs</span> <span class="c">*regs)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">des</span><span class="pc">t</span> <span class="pc">=</span> <span class="w">REG1</span><span class="c">(</span><span class="w">i</span><span class="pc">ns</span><span class="c">n</span><span class="pc">);</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">v</span><span class="c">al;</span>
+
+	<span class="w">v</span><span class="pc">a</span><span class="c">l</span> <span class="c">=</span> <span class="w">get_reg</span><span class="c">(</span><span class="w">r</span><span class="c">egs</span><span class="pc">,</span> <span class="w">des</span><span class="pc">t)</span><span class="c">;</span>
+	<span class="c">val</span> <span class="w">-</span><span class="pc">=</span> <span class="pc">g</span><span class="c">et_reg</span><span class="pc">(r</span><span class="c">egs</span><span class="pc">,</span> <span class="w">REG2</span><span class="pc">(i</span><span class="c">nsn</span><span class="pc">))</span><span class="c">;</span>
+	<span class="w">set_reg</span><span class="c">(</span><span class="pc">regs</span><span class="c">,</span> <span class="w">de</span><span class="pc">s</span><span class="c">t,</span> <span class="c">val);</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">emu_subx</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="w">s</span><span class="c">hort</span> <span class="w">i</span><span class="pc">n</span><span class="c">sn,</span> <span class="w">s</span><span class="c">truct</span> <span class="w">p</span><span class="c">t_regs</span> <span class="c">*regs)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">de</span><span class="pc">st</span> <span class="pc">=</span> <span class="w">REG1</span><span class="c">(</span><span class="w">i</span><span class="pc">ns</span><span class="c">n</span><span class="pc">);</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="c">int</span> <span class="pc">v</span><span class="c">al</span><span class="pc">,</span> <span class="w">t</span><span class="c">mp;</span>
+
+	<span class="pc">v</span><span class="c">al</span> <span class="c">=</span> <span class="w">t</span><span class="c">mp</span> <span class="w">=</span> <span class="w">get_reg</span><span class="c">(</span><span class="pc">r</span><span class="c">egs</span><span class="pc">,</span> <span class="w">des</span><span class="pc">t</span><span class="c">);</span>
+	<span class="pc">v</span><span class="c">al</span> <span class="w">-= (u</span><span class="pc">n</span><span class="c">signed</span> <span class="c">int</span><span class="w">)g</span><span class="c">et_reg</span><span class="pc">(</span><span class="w">r</span><span class="pc">egs,</span> <span class="w">REG2</span><span class="pc">(</span><span class="w">in</span><span class="pc">s</span><span class="c">n</span><span class="pc">))</span><span class="c">;</span>
+	<span class="c">val</span> <span class="w">-</span><span class="pc">=</span> <span class="w">r</span><span class="pc">egs</span><span class="c">-&gt;</span><span class="w">psw</span> <span class="w">&amp;</span> <span class="w">PSW_BC</span> <span class="w">?</span> <span class="pc">1</span> <span class="c">:</span> <span class="c">0</span><span class="pc">;</span>
+	<span class="w">set_reg</span><span class="c">(regs,</span> <span class="w">des</span><span class="pc">t</span><span class="c">,</span> <span class="c">val);</span>
+
+	
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="pc">v</span><span class="c">al</span> <span class="w">&gt;</span> <span class="w">t</span><span class="pc">m</span><span class="c">p)</span>
+		<span class="pc">reg</span><span class="c">s-&gt;</span><span class="pc">p</span><span class="c">sw</span> <span class="c">|=</span> <span class="pc">P</span><span class="c">SW_BC;</span>
+	<span class="pc">e</span><span class="c">lse</span>
+		<span class="w">r</span><span class="pc">egs</span><span class="c">-&gt;psw</span> <span class="w">&amp;</span><span class="pc">= ~(P</span><span class="c">SW_BC</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="c">return</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">emu_xor</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="w">s</span><span class="c">hort</span> <span class="w">ins</span><span class="pc">n</span><span class="c">,</span> <span class="w">s</span><span class="pc">t</span><span class="c">ruct</span> <span class="pc">p</span><span class="c">t_regs</span> <span class="c">*regs)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">des</span><span class="pc">t</span> <span class="pc">=</span> <span class="w">REG1</span><span class="c">(</span><span class="w">ins</span><span class="pc">n</span><span class="w">)</span><span class="pc">;</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="c">int</span> <span class="w">v</span><span class="c">al;</span>
+
+	<span class="w">v</span><span class="pc">a</span><span class="c">l</span> <span class="w">=</span><span class="pc"> (</span><span class="c">unsigned</span> <span class="c">int</span><span class="w">)get_reg</span><span class="c">(</span><span class="w">r</span><span class="pc">egs</span><span class="c">,</span> <span class="w">des</span><span class="pc">t)</span><span class="c">;</span>
+	<span class="c">val</span> <span class="w">^= (u</span><span class="c">nsigned</span> <span class="c">int</span><span class="w">)g</span><span class="c">et_reg</span><span class="pc">(</span><span class="w">r</span><span class="pc">egs,</span> <span class="w">REG2</span><span class="pc">(</span><span class="w">i</span><span class="pc">ns</span><span class="c">n</span><span class="pc">))</span><span class="c">;</span>
+	<span class="w">set_reg</span><span class="c">(</span><span class="w">r</span><span class="pc">egs,</span> <span class="w">des</span><span class="pc">t,</span> <span class="c">val);</span>
+
+	<span class="w">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">int</span> <span class="w">emu_mul</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="pc">s</span><span class="c">hort</span> <span class="w">in</span><span class="pc">s</span><span class="c">n,</span> <span class="w">s</span><span class="pc">t</span><span class="c">ruct</span> <span class="w">p</span><span class="c">t_regs</span> <span class="c">*regs)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">des</span><span class="pc">t</span> <span class="pc">=</span> <span class="w">REG1</span><span class="c">(</span><span class="w">i</span><span class="pc">ns</span><span class="c">n</span><span class="pc">);</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">reg1</span><span class="pc">,</span> <span class="w">reg2</span><span class="pc">;</span>
+
+	<span class="w">r</span><span class="pc">eg1</span> <span class="pc">=</span> <span class="w">get_reg</span><span class="c">(</span><span class="w">r</span><span class="pc">egs</span><span class="c">,</span> <span class="w">des</span><span class="pc">t)</span><span class="c">;</span>
+	<span class="pc">reg2</span> <span class="pc">=</span> <span class="w">g</span><span class="c">et_reg(</span><span class="pc">regs</span><span class="c">,</span> <span class="w">REG2</span><span class="pc">(</span><span class="w">i</span><span class="pc">n</span><span class="c">sn</span><span class="pc">))</span><span class="c">;</span>
+
+	<span class="w">__a</span><span class="pc">s</span><span class="c">m__</span> <span class="w">_</span><span class="c">_volatile__</span> <span class="pc">(</span>
+		<span class="w">"mul</span>	<span class="w">%0,</span><span class="pc"> %</span><span class="w">1;		\</span><span class="c">n</span><span class="pc">\t</span><span class="w">"</span>
+		<span class="w">: "+r</span><span class="c">" (</span><span class="pc">r</span><span class="c">eg1</span><span class="w">) : "r"</span><span class="c"> (reg2</span><span class="w">)</span>
+	<span class="w">);</span>
+
+	<span class="w">set_reg</span><span class="c">(</span><span class="w">r</span><span class="pc">egs,</span> <span class="w">des</span><span class="pc">t</span><span class="c">,</span> <span class="w">r</span><span class="pc">eg1</span><span class="c">);</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">emu_mullo_a0</span><span class="c">(</span><span class="w">u</span><span class="c">nsigned</span> <span class="pc">s</span><span class="c">hort</span> <span class="w">ins</span><span class="pc">n</span><span class="c">,</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">p</span><span class="c">t_regs</span> <span class="c">*regs)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">reg</span><span class="pc">1,</span> <span class="w">r</span><span class="c">eg2</span><span class="pc">;</span>
+
+	<span class="w">r</span><span class="pc">eg1</span> <span class="pc">=</span> <span class="w">get_reg</span><span class="c">(</span><span class="pc">regs,</span> <span class="w">REG1</span><span class="pc">(</span><span class="w">ins</span><span class="pc">n))</span><span class="c">;</span>
+	<span class="pc">reg2</span> <span class="pc">=</span> <span class="w">g</span><span class="c">et_reg(</span><span class="w">r</span><span class="pc">egs</span><span class="c">,</span> <span class="w">REG2</span><span class="pc">(</span><span class="w">i</span><span class="pc">n</span><span class="c">sn</span><span class="pc">))</span><span class="c">;</span>
+
+	<span class="w">__a</span><span class="c">sm__</span> <span class="w">__v</span><span class="c">olatile__</span> <span class="pc">(</span>
+		<span class="w">"mullo</span>		<span class="w">%0,</span><span class="pc"> %</span><span class="w">1</span><span class="pc">,</span> <span class="w">a0;	\</span><span class="pc">n\t</span><span class="w">"</span>
+		<span class="w">"mvfachi</span>	<span class="c">%</span><span class="w">0</span><span class="pc">,</span> <span class="w">a</span><span class="pc">0</span><span class="w">;		\n</span><span class="pc">\t</span><span class="w">"</span>
+		<span class="c">"</span><span class="w">mvfaclo</span>	<span class="pc">%</span><span class="w">1</span><span class="pc">,</span> <span class="w">a</span><span class="c">0</span><span class="w">;</span><span class="pc">		</span><span class="c">\</span><span class="pc">n\t</span><span class="w">"</span>
+		<span class="w">: "+r</span><span class="c">" (</span><span class="w">reg1), "+r</span><span class="c">" (</span><span class="w">reg2</span><span class="pc">)</span>
+	<span class="w">);</span>
+
+	<span class="w">reg</span><span class="pc">s-</span><span class="c">&gt;</span><span class="w">acc0h</span> <span class="c">=</span> <span class="w">r</span><span class="c">eg1;</span>
+	<span class="w">reg</span><span class="pc">s</span><span class="c">-&gt;</span><span class="w">acc0l</span> <span class="c">=</span> <span class="pc">r</span><span class="c">eg2;</span>
+
+	<span class="w">r</span><span class="pc">et</span><span class="c">urn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">emu_mullo_a1</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="pc">s</span><span class="c">hort</span> <span class="w">ins</span><span class="pc">n</span><span class="c">,</span> <span class="w">s</span><span class="c">truct</span> <span class="w">p</span><span class="pc">t</span><span class="c">_regs</span> <span class="c">*regs)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">reg</span><span class="pc">1,</span> <span class="w">r</span><span class="c">eg2</span><span class="pc">;</span>
+
+	<span class="w">r</span><span class="pc">eg1</span> <span class="pc">=</span> <span class="w">get_reg</span><span class="c">(</span><span class="pc">r</span><span class="c">egs</span><span class="pc">,</span> <span class="w">REG1</span><span class="pc">(</span><span class="w">in</span><span class="pc">s</span><span class="c">n</span><span class="pc">))</span><span class="c">;</span>
+	<span class="w">r</span><span class="pc">eg2</span> <span class="pc">=</span> <span class="w">g</span><span class="pc">e</span><span class="c">t_reg(</span><span class="w">r</span><span class="pc">egs,</span> <span class="w">REG2</span><span class="pc">(</span><span class="w">i</span><span class="pc">n</span><span class="c">sn</span><span class="pc">))</span><span class="c">;</span>
+
+	<span class="w">__a</span><span class="c">sm__</span> <span class="w">__v</span><span class="c">olatile__</span> <span class="pc">(</span>
+		<span class="w">"mullo</span>		<span class="w">%0,</span><span class="pc"> %</span><span class="w">1</span><span class="pc">,</span> <span class="w">a0;	\</span><span class="pc">n\t</span><span class="w">"</span>
+		<span class="w">"mvfachi</span>	<span class="c">%</span><span class="w">0</span><span class="pc">,</span> <span class="w">a</span><span class="pc">0</span><span class="w">;		\n</span><span class="pc">\t</span><span class="w">"</span>
+		<span class="c">"</span><span class="w">mvfaclo</span>	<span class="pc">%</span><span class="w">1</span><span class="pc">,</span> <span class="w">a</span><span class="c">0</span><span class="w">;</span><span class="pc">		</span><span class="c">\</span><span class="pc">n\t</span><span class="w">"</span>
+		<span class="w">: "+r</span><span class="c">" (</span><span class="w">reg1), "+r</span><span class="c">" (</span><span class="w">reg2</span><span class="pc">)</span>
+	<span class="w">);</span>
+
+	<span class="w">reg</span><span class="pc">s-</span><span class="c">&gt;</span><span class="w">acc1h</span> <span class="c">=</span> <span class="w">r</span><span class="c">eg1;</span>
+	<span class="w">reg</span><span class="pc">s</span><span class="c">-&gt;</span><span class="w">acc1l</span> <span class="c">=</span> <span class="pc">r</span><span class="c">eg2;</span>
+
+	<span class="w">r</span><span class="pc">et</span><span class="c">urn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">emu_mvfacmi_a0</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="pc">s</span><span class="c">hort</span> <span class="w">ins</span><span class="pc">n</span><span class="c">,</span> <span class="w">s</span><span class="c">truct</span> <span class="w">p</span><span class="pc">t</span><span class="c">_regs</span> <span class="c">*regs)</span>
+<span class="c">{</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">v</span><span class="c">al;</span>
+
+	<span class="w">v</span><span class="pc">al</span> <span class="pc">= </span><span class="c">(</span><span class="w">r</span><span class="pc">egs-</span><span class="c">&gt;</span><span class="w">acc0h</span> <span class="c">&lt;&lt;</span> <span class="c">16</span><span class="w">) </span><span class="pc">| </span><span class="c">(regs</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">acc0l</span> <span class="w">&gt;</span><span class="c">&gt;</span> <span class="pc">16);</span>
+	<span class="w">set_reg</span><span class="c">(</span><span class="pc">r</span><span class="c">egs</span><span class="pc">,</span> <span class="w">REG1</span><span class="pc">(</span><span class="w">i</span><span class="pc">n</span><span class="c">sn</span><span class="w">),</span><span class="pc"> (</span><span class="w">in</span><span class="pc">t)</span><span class="w">v</span><span class="c">al);</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">int</span> <span class="w">emu_mvfacmi_a1</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="w">s</span><span class="pc">h</span><span class="c">ort</span> <span class="w">in</span><span class="pc">s</span><span class="c">n,</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">p</span><span class="pc">t</span><span class="c">_regs</span> <span class="c">*regs)</span>
+<span class="c">{</span>
+	<span class="c">unsigned</span> <span class="pc">l</span><span class="c">ong</span> <span class="pc">v</span><span class="c">al;</span>
+
+	<span class="w">v</span><span class="pc">al</span> <span class="pc">= </span><span class="c">(</span><span class="w">r</span><span class="pc">eg</span><span class="c">s-&gt;</span><span class="w">acc1h</span> <span class="pc">&lt;</span><span class="c">&lt;</span> <span class="pc">16) | </span><span class="c">(</span><span class="pc">r</span><span class="c">egs</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">acc1l</span> <span class="w">&gt;</span><span class="c">&gt;</span> <span class="pc">16);</span>
+	<span class="w">set_reg</span><span class="c">(regs</span><span class="pc">,</span> <span class="w">REG1</span><span class="pc">(</span><span class="w">i</span><span class="pc">n</span><span class="c">sn</span><span class="w">),</span><span class="pc"> (</span><span class="w">in</span><span class="pc">t)</span><span class="w">v</span><span class="c">al);</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">int</span> <span class="w">emu_m32r2</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="w">s</span><span class="pc">h</span><span class="c">ort</span> <span class="w">in</span><span class="pc">s</span><span class="c">n,</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">p</span><span class="pc">t</span><span class="c">_regs</span> <span class="c">*regs)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">res</span> <span class="w">=</span><span class="pc"> -</span><span class="c">1;</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="pc">((</span><span class="w">ins</span><span class="pc">n</span> <span class="w">&amp;</span> <span class="w">0x7fff) </span><span class="pc">=</span><span class="c">=</span> <span class="w">ISA_NOP</span><span class="c">)</span>	
+		<span class="c">return</span> <span class="pc">0</span><span class="c">;</span>
+
+	<span class="w">s</span><span class="c">witch(</span><span class="w">ins</span><span class="c">n</span> <span class="w">&amp;</span> <span class="w">0x7000</span><span class="c">) {</span>
+	<span class="c">case</span> <span class="w">ISA_ADDI</span><span class="c">:</span>		
+		<span class="w">res</span> <span class="c">=</span> <span class="w">emu_addi</span><span class="c">(</span><span class="w">i</span><span class="pc">ns</span><span class="c">n,</span> <span class="pc">r</span><span class="c">egs</span><span class="pc">)</span><span class="c">;</span>
+		<span class="pc">b</span><span class="c">reak;</span>
+	<span class="c">case</span> <span class="w">ISA_LDI</span><span class="c">:</span>		
+		<span class="w">res</span> <span class="c">=</span> <span class="w">emu_ldi</span><span class="c">(</span><span class="w">i</span><span class="pc">ns</span><span class="c">n,</span> <span class="w">r</span><span class="pc">egs)</span><span class="c">;</span>
+		<span class="c">break;</span>
+	<span class="c">default:</span>
+		<span class="pc">b</span><span class="c">reak;</span>
+	<span class="c">}</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="pc">(!</span><span class="w">res</span><span class="pc">)</span>
+		<span class="c">return</span> <span class="pc">0</span><span class="c">;</span>
+
+	<span class="w">s</span><span class="c">witch(</span><span class="w">ins</span><span class="c">n</span> <span class="w">&amp;</span> <span class="w">0x70f0</span><span class="c">) {</span>
+	<span class="c">case</span> <span class="w">ISA_ADD</span><span class="c">:</span>		
+		<span class="w">r</span><span class="pc">es</span> <span class="c">=</span> <span class="w">emu_add</span><span class="c">(</span><span class="w">ins</span><span class="pc">n</span><span class="c">,</span> <span class="w">r</span><span class="pc">egs)</span><span class="c">;</span>
+		<span class="pc">b</span><span class="c">reak;</span>
+	<span class="c">case</span> <span class="w">ISA_ADDX</span><span class="c">:</span>		
+		<span class="w">res</span> <span class="c">=</span> <span class="w">emu_addx</span><span class="c">(</span><span class="w">i</span><span class="pc">ns</span><span class="c">n,</span> <span class="w">r</span><span class="pc">egs)</span><span class="c">;</span>
+		<span class="pc">b</span><span class="c">reak;</span>
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">ISA_AND</span><span class="c">:</span>		
+		<span class="w">re</span><span class="pc">s</span> <span class="c">=</span> <span class="w">emu_and</span><span class="c">(</span><span class="w">i</span><span class="pc">n</span><span class="c">sn,</span> <span class="w">r</span><span class="pc">egs)</span><span class="c">;</span>
+		<span class="c">break;</span>
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">ISA_CMP</span><span class="c">:</span>		
+		<span class="w">res</span> <span class="c">=</span> <span class="w">emu_cmp</span><span class="c">(</span><span class="w">i</span><span class="pc">n</span><span class="c">sn,</span> <span class="pc">regs)</span><span class="c">;</span>
+		<span class="pc">b</span><span class="c">reak;</span>
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">ISA_CMPEQ</span><span class="c">:</span>		
+		<span class="w">res</span> <span class="c">=</span> <span class="w">emu_cmpeq</span><span class="c">(</span><span class="w">i</span><span class="pc">n</span><span class="c">sn,</span> <span class="pc">regs)</span><span class="c">;</span>
+		<span class="pc">b</span><span class="c">reak;</span>
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">ISA_CMPU</span><span class="c">:</span>		
+		<span class="w">res</span> <span class="c">=</span> <span class="w">emu_cmpu</span><span class="c">(</span><span class="w">i</span><span class="pc">n</span><span class="c">sn,</span> <span class="pc">regs)</span><span class="c">;</span>
+		<span class="pc">b</span><span class="c">reak;</span>
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">ISA_CMPZ</span><span class="c">:</span>		
+		<span class="w">res</span> <span class="c">=</span> <span class="w">emu_cmpz</span><span class="c">(</span><span class="w">i</span><span class="pc">n</span><span class="c">sn,</span> <span class="pc">regs)</span><span class="c">;</span>
+		<span class="pc">b</span><span class="c">reak;</span>
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">ISA_MV</span><span class="c">:</span>		
+		<span class="w">res</span> <span class="c">=</span> <span class="w">emu_mv</span><span class="c">(</span><span class="w">i</span><span class="pc">n</span><span class="c">sn,</span> <span class="pc">regs)</span><span class="c">;</span>
+		<span class="pc">b</span><span class="c">reak;</span>
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">ISA_NEG</span><span class="c">:</span>		
+		<span class="w">res</span> <span class="c">=</span> <span class="w">emu_neg</span><span class="c">(</span><span class="w">i</span><span class="pc">n</span><span class="c">sn,</span> <span class="pc">regs)</span><span class="c">;</span>
+		<span class="pc">b</span><span class="c">reak;</span>
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">ISA_NOT</span><span class="c">:</span>		
+		<span class="w">res</span> <span class="c">=</span> <span class="w">emu_not</span><span class="c">(</span><span class="w">i</span><span class="pc">n</span><span class="c">sn,</span> <span class="pc">regs)</span><span class="c">;</span>
+		<span class="pc">b</span><span class="c">reak;</span>
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">ISA_OR</span><span class="c">:</span>		
+		<span class="w">res</span> <span class="c">=</span> <span class="w">emu_or</span><span class="c">(</span><span class="w">i</span><span class="pc">n</span><span class="c">sn,</span> <span class="pc">regs)</span><span class="c">;</span>
+		<span class="pc">b</span><span class="c">reak;</span>
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">ISA_SUB</span><span class="c">:</span>		
+		<span class="w">res</span> <span class="c">=</span> <span class="w">emu_sub</span><span class="c">(</span><span class="w">i</span><span class="pc">n</span><span class="c">sn,</span> <span class="pc">regs)</span><span class="c">;</span>
+		<span class="pc">b</span><span class="c">reak;</span>
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">ISA_SUBX</span><span class="c">:</span>		
+		<span class="w">res</span> <span class="c">=</span> <span class="w">emu_subx</span><span class="c">(</span><span class="w">i</span><span class="pc">n</span><span class="c">sn,</span> <span class="pc">regs)</span><span class="c">;</span>
+		<span class="pc">b</span><span class="c">reak;</span>
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">ISA_XOR</span><span class="c">:</span>		
+		<span class="w">res</span> <span class="c">=</span> <span class="w">emu_xor</span><span class="c">(</span><span class="w">i</span><span class="pc">n</span><span class="c">sn,</span> <span class="pc">regs)</span><span class="c">;</span>
+		<span class="pc">b</span><span class="c">reak;</span>
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">ISA_MUL</span><span class="c">:</span>		
+		<span class="w">res</span> <span class="c">=</span> <span class="w">emu_mul</span><span class="c">(</span><span class="w">i</span><span class="pc">n</span><span class="c">sn,</span> <span class="pc">regs)</span><span class="c">;</span>
+		<span class="pc">b</span><span class="c">reak;</span>
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">ISA_MULLO_A0</span><span class="c">:</span>	
+		<span class="w">res</span> <span class="c">=</span> <span class="w">emu_mullo_a0</span><span class="c">(</span><span class="w">i</span><span class="pc">n</span><span class="c">sn,</span> <span class="pc">regs)</span><span class="c">;</span>
+		<span class="pc">b</span><span class="c">reak;</span>
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">ISA_MULLO_A1</span><span class="c">:</span>	
+		<span class="w">res</span> <span class="c">=</span> <span class="w">emu_mullo_a1</span><span class="c">(</span><span class="w">i</span><span class="pc">n</span><span class="c">sn,</span> <span class="pc">regs)</span><span class="c">;</span>
+		<span class="pc">b</span><span class="c">reak;</span>
+	<span class="c">default:</span>
+		<span class="pc">b</span><span class="c">reak;</span>
+	<span class="c">}</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="pc">(!</span><span class="w">res</span><span class="pc">)</span>
+		<span class="c">return</span> <span class="pc">0</span><span class="c">;</span>
+
+	<span class="w">s</span><span class="c">witch(</span><span class="w">ins</span><span class="c">n</span> <span class="w">&amp;</span> <span class="w">0x70ff</span><span class="c">) {</span>
+	<span class="c">case</span> <span class="w">ISA_MVFACMI_A0</span><span class="c">:</span>	
+		<span class="w">r</span><span class="pc">es</span> <span class="c">=</span> <span class="w">emu_mvfacmi_a0</span><span class="c">(</span><span class="w">ins</span><span class="pc">n</span><span class="c">,</span> <span class="w">r</span><span class="pc">egs)</span><span class="c">;</span>
+		<span class="pc">b</span><span class="c">reak;</span>
+	<span class="c">case</span> <span class="w">ISA_MVFACMI_A1</span><span class="c">:</span>	
+		<span class="w">res</span> <span class="c">=</span> <span class="w">emu_mvfacmi_a1</span><span class="c">(</span><span class="w">i</span><span class="pc">ns</span><span class="c">n,</span> <span class="w">r</span><span class="pc">egs)</span><span class="c">;</span>
+		<span class="pc">b</span><span class="c">reak;</span>
+	<span class="pc">d</span><span class="c">efault:</span>
+		<span class="pc">b</span><span class="c">reak;</span>
+	<span class="c">}</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">re</span><span class="pc">s</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="w">#</span><span class="c">endif</span>	
+
+
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="c">int</span> <span class="w">insn_check</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">ins</span><span class="pc">n</span><span class="c">,</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">p</span><span class="pc">t</span><span class="c">_regs</span> <span class="c">*regs</span><span class="pc">,</span>
+	<span class="c">unsigned</span> <span class="pc">c</span><span class="c">har</span> <span class="w">*</span><span class="pc">*</span><span class="w">ucp</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">r</span><span class="pc">es</span> <span class="c">=</span> <span class="c">0;</span>
+
+	
+	<span class="pc">if</span> <span class="c">(</span><span class="w">ins</span><span class="pc">n</span> <span class="w">&amp;</span> <span class="w">0x8</span><span class="pc">0000</span><span class="c">000</span><span class="pc">) </span><span class="c">{</span>	
+		<span class="pc">*</span><span class="w">u</span><span class="c">cp</span> <span class="w">+=</span><span class="pc"> </span><span class="c">(</span><span class="w">sh</span><span class="pc">or</span><span class="c">t</span><span class="w">)</span><span class="pc">(</span><span class="w">ins</span><span class="pc">n</span> <span class="w">&amp;</span> <span class="w">0x0000ffff</span><span class="c">);</span>
+		<span class="w">r</span><span class="pc">egs</span><span class="c">-&gt;</span><span class="w">bpc</span> <span class="w">+</span><span class="c">=</span> <span class="pc">4</span><span class="c">;</span>
+	<span class="pc">}</span> <span class="pc">e</span><span class="c">lse</span> <span class="c">{</span>			
+<span class="w">#</span><span class="c">ifdef</span> <span class="w">CONFIG_ISA_DUAL_ISSUE</span>
+		
+		<span class="pc">i</span><span class="c">f</span> <span class="pc">(!(</span><span class="w">r</span><span class="pc">egs</span><span class="c">-&gt;bpc</span> <span class="c">&amp;</span> <span class="w">0x2) </span><span class="pc">&amp;</span><span class="c">&amp;</span> <span class="w">in</span><span class="pc">s</span><span class="c">n</span> <span class="w">&amp;</span> <span class="w">0x8</span><span class="pc">00</span><span class="c">0</span><span class="w">)</span><span class="pc"> </span><span class="c">{</span>
+			<span class="w">res</span> <span class="pc">=</span> <span class="w">emu_m32r2(</span><span class="pc">(</span><span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="w">s</span><span class="c">hort</span><span class="w">)ins</span><span class="pc">n,</span> <span class="w">re</span><span class="pc">gs)</span><span class="c">;</span>
+			<span class="w">r</span><span class="pc">egs</span><span class="c">-&gt;bpc</span> <span class="w">+</span><span class="c">=</span> <span class="pc">4</span><span class="c">;</span>
+		<span class="c">}</span> <span class="c">else</span>
+<span class="w">#</span><span class="c">endif</span>	
+			<span class="w">r</span><span class="pc">eg</span><span class="c">s</span><span class="pc">-</span><span class="c">&gt;</span><span class="pc">b</span><span class="c">pc</span> <span class="w">+</span><span class="c">=</span> <span class="pc">2</span><span class="c">;</span>
+	<span class="c">}</span>
+
+	<span class="w">r</span><span class="c">eturn</span> <span class="w">r</span><span class="pc">es</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">emu_ld</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">insn32</span><span class="pc">,</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">p</span><span class="c">t_regs</span> <span class="c">*</span><span class="pc">r</span><span class="c">egs</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">har</span> <span class="c">*</span><span class="w">ucp</span><span class="c">;</span>
+	<span class="c">unsigned</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">v</span><span class="c">al;</span>
+	<span class="c">unsigned</span> <span class="pc">s</span><span class="c">hort</span> <span class="w">insn16</span><span class="c">;</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">s</span><span class="pc">i</span><span class="c">ze</span><span class="pc">,</span> <span class="w">sr</span><span class="c">c;</span>
+
+	<span class="w">i</span><span class="pc">nsn1</span><span class="c">6</span> <span class="pc">=</span> <span class="w">i</span><span class="pc">nsn3</span><span class="c">2</span> <span class="w">&gt;</span><span class="c">&gt;</span> <span class="pc">1</span><span class="c">6;</span>
+	<span class="w">sr</span><span class="c">c</span> <span class="c">=</span> <span class="w">REG2</span><span class="c">(</span><span class="w">i</span><span class="pc">nsn1</span><span class="c">6</span><span class="pc">)</span><span class="c">;</span>
+	<span class="pc">u</span><span class="c">cp</span> <span class="pc">= </span><span class="c">(</span><span class="pc">un</span><span class="c">signed</span> <span class="w">c</span><span class="c">har</span> <span class="c">*)</span><span class="w">get_reg</span><span class="pc">(</span><span class="w">r</span><span class="pc">eg</span><span class="c">s</span><span class="pc">,</span> <span class="w">s</span><span class="pc">r</span><span class="c">c</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="c">if</span> <span class="c">(</span><span class="w">insn_check</span><span class="c">(</span><span class="pc">insn3</span><span class="c">2,</span> <span class="w">r</span><span class="pc">egs</span><span class="w">,</span><span class="pc"> </span><span class="c">&amp;ucp</span><span class="pc">))</span>
+		<span class="c">return</span> <span class="c">-</span><span class="pc">1</span><span class="c">;</span>
+
+	<span class="w">si</span><span class="c">ze</span> <span class="c">=</span> <span class="w">i</span><span class="pc">nsn1</span><span class="c">6</span> <span class="w">&amp;</span> <span class="w">0x004</span><span class="c">0</span> <span class="pc">?</span> <span class="w">4</span> <span class="c">:</span> <span class="w">2</span><span class="c">;</span>
+	<span class="c">if</span> <span class="c">(</span><span class="w">c</span><span class="pc">opy_f</span><span class="c">rom_user(&amp;</span><span class="w">va</span><span class="pc">l</span><span class="c">,</span> <span class="pc">u</span><span class="c">cp,</span> <span class="w">s</span><span class="pc">ize))</span>
+		<span class="c">return</span> <span class="c">-</span><span class="pc">1</span><span class="c">;</span>
+
+	<span class="c">if</span> <span class="c">(</span><span class="w">s</span><span class="pc">i</span><span class="c">ze</span> <span class="pc">=</span><span class="c">=</span> <span class="pc">2</span><span class="c">)</span>
+		<span class="w">v</span><span class="c">al</span> <span class="pc">&gt;</span><span class="c">&gt;=</span> <span class="w">1</span><span class="pc">6</span><span class="c">;</span>
+
+	
+	<span class="c">if</span> <span class="pc">((</span><span class="w">i</span><span class="c">nsn16</span> <span class="c">&amp;</span> <span class="w">0x00f0</span><span class="c">) ==</span> <span class="w">0x00a0</span> <span class="w">&amp;</span><span class="pc">&amp; </span><span class="c">(val</span> <span class="c">&amp;</span> <span class="w">0x8</span><span class="pc">00</span><span class="c">0</span><span class="pc">))</span>
+		<span class="w">v</span><span class="c">al</span> <span class="c">|=</span> <span class="w">0xff</span><span class="pc">ff0</span><span class="c">000;</span>
+
+	<span class="w">set_reg</span><span class="c">(</span><span class="w">reg</span><span class="pc">s</span><span class="c">,</span> <span class="w">REG1</span><span class="pc">(</span><span class="w">i</span><span class="c">nsn16</span><span class="w">),</span> <span class="c">val);</span>
+
+	
+	<span class="c">if</span> <span class="pc">((i</span><span class="c">nsn16</span> <span class="c">&amp;</span> <span class="w">0xf0f0</span><span class="pc">) </span><span class="c">==</span> <span class="w">ISA_LD2</span><span class="c">)</span>	
+		<span class="pc">s</span><span class="c">et_reg</span><span class="pc">(</span><span class="w">r</span><span class="pc">egs</span><span class="c">,</span> <span class="w">sr</span><span class="c">c</span><span class="w">,</span><span class="pc"> (un</span><span class="c">signed</span> <span class="c">long</span><span class="w">)</span><span class="pc">(</span><span class="w">ucp</span> <span class="w">+</span> <span class="w">4)</span><span class="pc">);</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">emu_st</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">insn32</span><span class="c">,</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">p</span><span class="pc">t</span><span class="c">_regs</span> <span class="c">*</span><span class="pc">r</span><span class="c">egs</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">har</span> <span class="c">*</span><span class="pc">u</span><span class="c">cp;</span>
+	<span class="c">unsigned</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">v</span><span class="pc">al</span><span class="c">;</span>
+	<span class="c">unsigned</span> <span class="pc">s</span><span class="c">hort</span> <span class="w">insn16</span><span class="c">;</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">s</span><span class="pc">i</span><span class="c">ze</span><span class="pc">,</span> <span class="w">src2</span><span class="c">;</span>
+
+	<span class="w">i</span><span class="pc">nsn1</span><span class="c">6</span> <span class="pc">=</span> <span class="w">i</span><span class="pc">nsn3</span><span class="c">2</span> <span class="w">&gt;</span><span class="c">&gt;</span> <span class="pc">1</span><span class="c">6;</span>
+	<span class="w">s</span><span class="pc">r</span><span class="c">c2</span> <span class="c">=</span> <span class="w">REG2</span><span class="c">(</span><span class="w">i</span><span class="pc">nsn1</span><span class="c">6</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="pc">u</span><span class="c">cp</span> <span class="pc">= </span><span class="c">(</span><span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="pc">c</span><span class="c">har</span> <span class="c">*)</span><span class="w">get_reg</span><span class="pc">(</span><span class="w">r</span><span class="c">egs</span><span class="pc">,</span> <span class="w">s</span><span class="c">rc2);</span>
+
+	<span class="c">if</span> <span class="c">(</span><span class="w">insn_check</span><span class="pc">(insn3</span><span class="c">2,</span> <span class="w">r</span><span class="pc">egs</span><span class="w">,</span><span class="pc"> </span><span class="c">&amp;ucp</span><span class="pc">))</span>
+		<span class="c">return</span> <span class="c">-</span><span class="pc">1</span><span class="c">;</span>
+
+	<span class="w">si</span><span class="c">ze</span> <span class="c">=</span> <span class="w">i</span><span class="pc">nsn1</span><span class="c">6</span> <span class="w">&amp;</span> <span class="w">0x004</span><span class="c">0</span> <span class="pc">?</span> <span class="w">4</span> <span class="c">:</span> <span class="w">2</span><span class="c">;</span>
+	<span class="w">v</span><span class="c">al</span> <span class="pc">=</span> <span class="w">g</span><span class="c">et_reg(</span><span class="w">r</span><span class="c">egs</span><span class="pc">,</span> <span class="w">REG1</span><span class="pc">(</span><span class="w">in</span><span class="pc">sn1</span><span class="c">6</span><span class="pc">))</span><span class="c">;</span>
+	<span class="c">if</span> <span class="c">(</span><span class="w">s</span><span class="pc">i</span><span class="c">ze</span> <span class="pc">=</span><span class="c">=</span> <span class="pc">2</span><span class="c">)</span>
+		<span class="w">v</span><span class="c">al</span> <span class="w">&lt;</span><span class="pc">&lt;</span><span class="c">=</span> <span class="w">1</span><span class="pc">6</span><span class="c">;</span>
+
+	
+	<span class="c">if</span> <span class="pc">((i</span><span class="c">nsn16</span> <span class="c">&amp;</span> <span class="w">0xf0e0</span><span class="c">) ==</span> <span class="w">0x2060</span><span class="pc">) {</span>
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(insn16</span> <span class="c">&amp;</span> <span class="w">0x001</span><span class="c">0</span><span class="pc">)</span>
+			<span class="w">ucp</span> <span class="w">-</span><span class="pc">=</span> <span class="pc">4</span><span class="c">;</span>
+		<span class="c">else</span>
+			<span class="w">u</span><span class="c">cp</span> <span class="w">+</span><span class="pc">=</span> <span class="pc">4</span><span class="c">;</span>
+
+		<span class="w">set_reg</span><span class="c">(</span><span class="w">r</span><span class="pc">e</span><span class="c">gs</span><span class="pc">,</span> <span class="w">src2,</span><span class="pc"> (u</span><span class="c">nsigned</span> <span class="c">long</span><span class="pc">)u</span><span class="c">cp</span><span class="w">)</span><span class="c">;</span>
+	<span class="pc">}</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">co</span><span class="pc">py_t</span><span class="c">o_user(</span><span class="w">u</span><span class="c">cp</span><span class="pc">, </span><span class="c">&amp;</span><span class="w">v</span><span class="c">al,</span> <span class="w">s</span><span class="pc">ize))</span>
+		<span class="c">return</span> <span class="c">-</span><span class="pc">1</span><span class="c">;</span>
+
+	
+	<span class="pc">i</span><span class="c">f</span> <span class="pc">((</span><span class="w">insn16</span> <span class="pc">&amp;</span> <span class="w">0xf0f0</span><span class="c">) ==</span> <span class="w">ISA_STH2</span><span class="pc">) </span><span class="c">{</span>
+		<span class="pc">u</span><span class="c">cp</span> <span class="w">+</span><span class="c">=</span> <span class="c">2;</span>
+		<span class="w">s</span><span class="c">et_reg</span><span class="w">(r</span><span class="c">egs,</span> <span class="pc">s</span><span class="c">rc2</span><span class="pc">, </span><span class="c">(unsigned</span> <span class="c">long)</span><span class="w">u</span><span class="c">cp</span><span class="pc">)</span><span class="c">;</span>
+	<span class="pc">}</span>
+
+	<span class="c">return</span> <span class="pc">0</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="pc">i</span><span class="c">nt</span> <span class="w">handle_unaligned_access</span><span class="c">(</span><span class="w">u</span><span class="c">nsigned</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">insn32</span><span class="c">,</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">p</span><span class="pc">t</span><span class="c">_regs</span> <span class="c">*regs</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="pc">s</span><span class="c">hort</span> <span class="w">insn16</span><span class="c">;</span>
+	<span class="w">i</span><span class="c">nt</span> <span class="w">re</span><span class="pc">s</span><span class="c">;</span>
+
+	<span class="w">i</span><span class="pc">ns</span><span class="c">n16</span> <span class="pc">=</span> <span class="w">i</span><span class="pc">nsn3</span><span class="c">2</span> <span class="w">&gt;</span><span class="c">&gt;</span> <span class="pc">16</span><span class="c">;</span>
+
+	
+	<span class="pc">i</span><span class="c">f</span> <span class="pc">((</span><span class="c">insn16</span> <span class="pc">&amp;</span> <span class="w">0x7000</span><span class="c">) !=</span> <span class="w">0x2</span><span class="c">000)</span>
+		<span class="c">return</span> <span class="c">-</span><span class="pc">1</span><span class="c">;</span>
+
+	
+	<span class="c">if</span> <span class="pc">((</span><span class="c">insn16</span> <span class="c">&amp;</span> <span class="w">0x8</span><span class="c">000</span><span class="w">) </span><span class="pc">&amp;&amp; </span><span class="c">(</span><span class="w">r</span><span class="c">egs-&gt;</span><span class="w">bpc</span> <span class="w">&amp;</span> <span class="w">3</span><span class="c">))</span>
+		<span class="c">return</span> <span class="pc">-1</span><span class="c">;</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="pc">i</span><span class="c">nsn16</span> <span class="pc">&amp;</span> <span class="w">0x00</span><span class="pc">8</span><span class="c">0</span><span class="pc">)</span>	
+		<span class="w">res</span> <span class="c">=</span> <span class="w">emu_ld</span><span class="c">(</span><span class="w">insn32</span><span class="c">,</span> <span class="w">r</span><span class="pc">egs)</span><span class="c">;</span>
+	<span class="pc">e</span><span class="c">lse</span>			
+		<span class="w">r</span><span class="pc">es</span> <span class="c">=</span> <span class="w">emu_st</span><span class="c">(insn32,</span> <span class="w">r</span><span class="pc">egs)</span><span class="c">;</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">r</span><span class="pc">es</span><span class="c">;</span>
+<span class="c">}</span>
+
+
+</pre>
+</body>
+</html>
+

@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+<span class="w">#ifndef</span> <span class="w">_ASM_DMA_MAPPING_H</span>
+<span class="w">#define</span> <span class="w">_ASM_DMA_MAPPING_H</span>
+
+<span class="w">#include</span> <span class="w">&lt;linux/device.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/scatterlist.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;asm/cache.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;asm/cacheflush.</span><span class="c">h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="pc">i</span><span class="c">o.h&gt;</span>
+
+
+
+<span class="c">#</span><span class="pc">d</span><span class="c">efine</span> <span class="w">dma_alloc_noncoherent</span><span class="c">(</span><span class="w">d</span><span class="c">,</span> <span class="w">s</span><span class="pc">,</span> <span class="w">h</span><span class="c">,</span> <span class="w">f</span><span class="pc">)</span> <span class="w">dma_alloc_coherent</span><span class="c">(</span><span class="w">d</span><span class="c">,</span> <span class="w">s</span><span class="c">,</span> <span class="w">h</span><span class="c">,</span> <span class="w">f</span><span class="pc">)</span>
+<span class="c">#define</span> <span class="w">dma_free_noncoherent</span><span class="c">(</span><span class="pc">d</span><span class="c">,</span> <span class="pc">s</span><span class="c">,</span> <span class="w">v</span><span class="c">,</span> <span class="pc">h)</span> <span class="w">dma_free_coherent</span><span class="c">(</span><span class="w">d</span><span class="c">,</span> <span class="pc">s</span><span class="c">,</span> <span class="w">v</span><span class="c">,</span> <span class="pc">h)</span>
+
+<span class="pc">e</span><span class="c">xtern</span> <span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">__nongprelbss</span> <span class="w">dma_coherent_mem_start</span><span class="pc">;</span>
+<span class="pc">e</span><span class="c">xtern</span> <span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">_</span><span class="pc">_n</span><span class="c">ongprelbss</span> <span class="w">dma_coherent_mem_end</span><span class="c">;</span>
+
+<span class="w">v</span><span class="c">oid</span> <span class="c">*</span><span class="w">dma_alloc_coherent</span><span class="pc">(s</span><span class="c">truct</span> <span class="w">d</span><span class="pc">e</span><span class="c">vice</span> <span class="c">*dev,</span> <span class="pc">si</span><span class="c">ze_t</span> <span class="c">size,</span> <span class="w">d</span><span class="pc">ma_ad</span><span class="c">dr_t</span> <span class="c">*</span><span class="w">dma_handle</span><span class="pc">,</span> <span class="w">g</span><span class="c">fp_t</span> <span class="pc">g</span><span class="c">fp</span><span class="pc">);</span>
+<span class="pc">v</span><span class="c">oid</span> <span class="w">dma_free_coherent</span><span class="c">(struct</span> <span class="pc">de</span><span class="c">vice</span> <span class="c">*dev,</span> <span class="w">s</span><span class="pc">i</span><span class="c">ze_t</span> <span class="c">size,</span> <span class="pc">v</span><span class="c">oid</span> <span class="c">*</span><span class="w">v</span><span class="pc">ad</span><span class="c">dr</span><span class="pc">,</span> <span class="c">dma_addr_t</span> <span class="w">d</span><span class="pc">ma_h</span><span class="c">andle</span><span class="pc">)</span><span class="c">;</span>
+
+<span class="pc">e</span><span class="c">xtern</span> <span class="w">d</span><span class="c">ma_addr_t</span> <span class="w">dma_map_single</span><span class="c">(struct</span> <span class="c">device</span> <span class="c">*dev,</span> <span class="w">v</span><span class="c">oid</span> <span class="c">*</span><span class="w">p</span><span class="pc">t</span><span class="c">r,</span> <span class="c">size_t</span> <span class="c">size</span><span class="pc">,</span>
+				 <span class="w">e</span><span class="c">num</span> <span class="w">dma_data_direction</span> <span class="c">direction);</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="c">inline</span>
+<span class="c">void</span> <span class="w">dma_unmap_single</span><span class="c">(struct</span> <span class="pc">de</span><span class="c">vice</span> <span class="c">*dev,</span> <span class="pc">d</span><span class="c">ma_addr_t</span> <span class="pc">d</span><span class="c">ma_addr,</span> <span class="pc">s</span><span class="c">ize_t</span> <span class="c">size,</span>
+		      <span class="w">e</span><span class="c">num</span> <span class="pc">dma_d</span><span class="c">ata_direction</span> <span class="pc">dire</span><span class="c">ction</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">B</span><span class="c">UG_ON(</span><span class="w">di</span><span class="pc">re</span><span class="c">ction</span> <span class="pc">=</span><span class="c">=</span> <span class="w">DMA_NONE</span><span class="pc">)</span><span class="c">;</span>
+<span class="pc">}</span>
+
+<span class="w">e</span><span class="pc">x</span><span class="c">tern</span> <span class="c">int</span> <span class="w">dma_map_sg</span><span class="c">(struct</span> <span class="pc">de</span><span class="c">vice</span> <span class="c">*dev,</span> <span class="pc">s</span><span class="c">truct</span> <span class="pc">s</span><span class="c">catterlist</span> <span class="c">*sg,</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">nents</span><span class="c">,</span>
+		      <span class="pc">e</span><span class="c">num</span> <span class="pc">d</span><span class="c">ma_data_direction</span> <span class="w">d</span><span class="pc">ire</span><span class="c">ction</span><span class="pc">)</span><span class="c">;</span>
+
+<span class="w">s</span><span class="pc">ta</span><span class="c">tic</span> <span class="c">inline</span>
+<span class="c">void</span> <span class="w">dma_unmap_sg</span><span class="c">(struct</span> <span class="pc">de</span><span class="c">vice</span> <span class="c">*dev,</span> <span class="c">struct</span> <span class="c">scatterlist</span> <span class="c">*sg,</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">nhwentries</span><span class="pc">,</span>
+	     <span class="pc">e</span><span class="c">num</span> <span class="pc">dma_d</span><span class="c">ata_direction</span> <span class="pc">dire</span><span class="c">ction</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">B</span><span class="c">UG_ON(</span><span class="w">di</span><span class="pc">re</span><span class="c">ction</span> <span class="pc">==</span> <span class="w">DMA_NONE</span><span class="pc">);</span>
+<span class="pc">}</span>
+
+<span class="w">e</span><span class="pc">x</span><span class="c">tern</span>
+<span class="w">d</span><span class="c">ma_addr_t</span> <span class="w">dma_map_page</span><span class="c">(struct</span> <span class="c">device</span> <span class="c">*dev,</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">p</span><span class="c">age</span> <span class="c">*</span><span class="pc">page</span><span class="c">,</span> <span class="pc">u</span><span class="c">nsigned</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">o</span><span class="c">ffset</span><span class="pc">,</span>
+			<span class="pc">s</span><span class="c">ize_t</span> <span class="c">size</span><span class="pc">,</span> <span class="w">e</span><span class="pc">nu</span><span class="c">m</span> <span class="pc">d</span><span class="c">ma_data_direction</span> <span class="w">d</span><span class="pc">ire</span><span class="c">ction);</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="c">inline</span>
+<span class="c">void</span> <span class="w">dma_unmap_page</span><span class="c">(struct</span> <span class="pc">de</span><span class="c">vice</span> <span class="c">*dev,</span> <span class="w">d</span><span class="c">ma_addr_t</span> <span class="w">dma_address</span><span class="c">,</span> <span class="pc">s</span><span class="c">ize_t</span> <span class="c">size,</span>
+		    <span class="w">e</span><span class="c">num</span> <span class="w">d</span><span class="pc">ma_d</span><span class="c">ata_direction</span> <span class="w">d</span><span class="pc">ire</span><span class="c">ction)</span>
+<span class="c">{</span>
+	<span class="w">B</span><span class="c">UG_ON(</span><span class="w">di</span><span class="pc">re</span><span class="c">ction</span> <span class="pc">=</span><span class="c">=</span> <span class="w">DMA_NONE</span><span class="pc">)</span><span class="c">;</span>
+<span class="pc">}</span>
+
+
+<span class="c">static</span> <span class="c">inline</span>
+<span class="pc">v</span><span class="c">oid</span> <span class="w">dma_sync_single_for_cpu</span><span class="c">(struct</span> <span class="pc">de</span><span class="c">vice</span> <span class="c">*dev,</span> <span class="w">d</span><span class="c">ma_addr_t</span> <span class="w">dma_handle</span><span class="c">,</span> <span class="w">s</span><span class="pc">i</span><span class="c">ze_t</span> <span class="c">size,</span>
+			     <span class="w">e</span><span class="c">num</span> <span class="c">dma_data_direction</span> <span class="pc">dire</span><span class="c">ction)</span>
+<span class="c">{</span>
+<span class="pc">}</span>
+
+<span class="c">static</span> <span class="c">inline</span>
+<span class="c">void</span> <span class="w">dma_sync_single_for_device</span><span class="c">(struct</span> <span class="w">d</span><span class="pc">evice</span> <span class="c">*dev,</span> <span class="pc">d</span><span class="c">ma_addr_t</span> <span class="pc">d</span><span class="c">ma_handle,</span> <span class="c">size_t</span> <span class="c">size</span><span class="pc">,</span>
+				<span class="w">e</span><span class="c">num</span> <span class="c">dma_data_direction</span> <span class="c">direction</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">flush_write_buffers</span><span class="pc">()</span><span class="c">;</span>
+<span class="pc">}</span>
+
+<span class="c">static</span> <span class="c">inline</span>
+<span class="c">void</span> <span class="w">dma_sync_single_range_for_cpu</span><span class="c">(struct</span> <span class="c">device</span> <span class="c">*dev,</span> <span class="w">d</span><span class="c">ma_addr_t</span> <span class="pc">d</span><span class="c">ma_handle,</span>
+				   <span class="c">unsigned</span> <span class="c">long</span> <span class="w">o</span><span class="c">ffset</span><span class="pc">,</span> <span class="w">s</span><span class="pc">i</span><span class="c">ze_t</span> <span class="c">size</span><span class="pc">,</span>
+				   <span class="w">e</span><span class="pc">nu</span><span class="c">m</span> <span class="pc">d</span><span class="c">ma_data_direction</span> <span class="pc">dire</span><span class="c">ction</span><span class="pc">)</span>
+<span class="c">{</span>
+<span class="w">}</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="c">inline</span>
+<span class="c">void</span> <span class="w">dma_sync_single_range_for_device</span><span class="c">(struct</span> <span class="w">d</span><span class="pc">evice</span> <span class="c">*dev,</span> <span class="pc">d</span><span class="c">ma_addr_t</span> <span class="w">d</span><span class="pc">ma_h</span><span class="c">andle,</span>
+				      <span class="c">unsigned</span> <span class="c">long</span> <span class="w">o</span><span class="c">ffset</span><span class="pc">,</span> <span class="w">s</span><span class="pc">i</span><span class="c">ze_t</span> <span class="c">size</span><span class="pc">,</span>
+				      <span class="w">e</span><span class="pc">nu</span><span class="c">m</span> <span class="w">d</span><span class="pc">ma_d</span><span class="c">ata_direction</span> <span class="pc">dire</span><span class="c">ction)</span>
+<span class="c">{</span>
+	<span class="w">flush_write_buffers(</span><span class="pc">)</span><span class="c">;</span>
+<span class="pc">}</span>
+
+<span class="c">static</span> <span class="c">inline</span>
+<span class="c">void</span> <span class="w">dma_sync_sg_for_cpu</span><span class="c">(struct</span> <span class="pc">de</span><span class="c">vice</span> <span class="c">*dev,</span> <span class="c">struct</span> <span class="c">scatterlist</span> <span class="c">*sg,</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">nelems</span><span class="c">,</span>
+			 <span class="w">e</span><span class="c">num</span> <span class="w">d</span><span class="pc">ma_d</span><span class="c">ata_direction</span> <span class="pc">dire</span><span class="c">ction)</span>
+<span class="c">{</span>
+<span class="pc">}</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="c">inline</span>
+<span class="c">void</span> <span class="w">dma_sync_sg_for_device</span><span class="c">(struct</span> <span class="w">d</span><span class="pc">e</span><span class="c">vice</span> <span class="c">*dev,</span> <span class="c">struct</span> <span class="pc">s</span><span class="c">catterlist</span> <span class="c">*sg,</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">n</span><span class="pc">e</span><span class="c">lems,</span>
+			    <span class="w">e</span><span class="c">num</span> <span class="pc">d</span><span class="c">ma_data_direction</span> <span class="w">d</span><span class="pc">ire</span><span class="c">ction</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">flush_write_buffers()</span><span class="c">;</span>
+<span class="pc">}</span>
+
+<span class="c">static</span> <span class="c">inline</span>
+<span class="pc">i</span><span class="c">nt</span> <span class="w">dma_mapping_error</span><span class="c">(struct</span> <span class="c">device</span> <span class="c">*dev,</span> <span class="w">d</span><span class="c">ma_addr_t</span> <span class="w">d</span><span class="c">ma_addr</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">return</span> <span class="pc">0</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">inline</span>
+<span class="c">int</span> <span class="w">dma_supported</span><span class="c">(struct</span> <span class="pc">de</span><span class="c">vice</span> <span class="c">*dev,</span> <span class="w">u</span><span class="pc">6</span><span class="c">4</span> <span class="w">m</span><span class="c">ask)</span>
+<span class="c">{</span>
+        
+        <span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">m</span><span class="pc">as</span><span class="c">k</span> <span class="w">&lt;</span> <span class="w">0x00ffffff</span><span class="c">)</span>
+                <span class="c">return</span> <span class="pc">0</span><span class="c">;</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">1</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">inline</span>
+<span class="pc">i</span><span class="c">nt</span> <span class="w">dma_set_mask</span><span class="c">(struct</span> <span class="c">device</span> <span class="c">*dev,</span> <span class="w">u</span><span class="pc">6</span><span class="c">4</span> <span class="pc">m</span><span class="c">ask)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="pc">(!de</span><span class="c">v-&gt;</span><span class="w">dma_mask</span> <span class="w">|</span><span class="c">| !</span><span class="w">dma_supported</span><span class="c">(dev</span><span class="pc">,</span> <span class="w">m</span><span class="c">ask))</span>
+		<span class="c">return</span> <span class="c">-</span><span class="w">E</span><span class="pc">IO</span><span class="c">;</span>
+
+	<span class="w">*d</span><span class="pc">e</span><span class="c">v</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">d</span><span class="pc">m</span><span class="c">a_mask</span> <span class="c">=</span> <span class="w">m</span><span class="pc">as</span><span class="c">k;</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">inl</span><span class="c">ine</span>
+<span class="pc">v</span><span class="c">oid</span> <span class="w">dma_cache_sync</span><span class="c">(struct</span> <span class="pc">de</span><span class="c">vice</span> <span class="c">*dev,</span> <span class="w">v</span><span class="c">oid</span> <span class="c">*</span><span class="w">v</span><span class="pc">ad</span><span class="c">dr</span><span class="pc">,</span> <span class="w">s</span><span class="pc">i</span><span class="c">ze_t</span> <span class="c">size</span><span class="pc">,</span>
+		    <span class="w">e</span><span class="c">num</span> <span class="w">dma_data_direction</span> <span class="pc">d</span><span class="c">irection)</span>
+<span class="c">{</span>
+	<span class="w">flush_write_buffers</span><span class="pc">()</span><span class="c">;</span>
+<span class="pc">}</span>
+
+
+<span class="c">static</span> <span class="c">inline</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">dma_mmap_coherent</span><span class="c">(struct</span> <span class="c">device</span> <span class="c">*dev,</span>
+				    <span class="c">struct</span> <span class="w">v</span><span class="c">m_area_struct</span> <span class="c">*vma</span><span class="pc">,</span> <span class="pc">v</span><span class="c">oid</span> <span class="c">*</span><span class="w">cpu_addr</span><span class="pc">,</span>
+				    <span class="w">d</span><span class="c">ma_addr_t</span> <span class="c">dma_addr</span><span class="pc">,</span> <span class="pc">s</span><span class="c">ize_t</span> <span class="c">size</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">-</span><span class="pc">EI</span><span class="c">NVAL;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">inline</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">dma_get_sgtable</span><span class="c">(struct</span> <span class="pc">de</span><span class="c">vice</span> <span class="c">*dev,</span> <span class="c">struct</span> <span class="w">sg_table</span> <span class="c">*</span><span class="w">sgt</span><span class="c">,</span>
+				  <span class="w">v</span><span class="c">oid</span> <span class="c">*</span><span class="w">c</span><span class="pc">p</span><span class="c">u_addr,</span> <span class="w">d</span><span class="c">ma_addr_t</span> <span class="pc">d</span><span class="c">ma_addr</span><span class="pc">,</span>
+				  <span class="pc">s</span><span class="c">ize_t</span> <span class="c">size</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">return</span> <span class="pc">-EI</span><span class="c">NVAL;</span>
+<span class="c">}</span>
+
+<span class="pc">#</span><span class="c">endif</span>  
+
+</pre>
+</body>
+</html>
+

@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+<span class="w">#include</span> <span class="w">&lt;linux/delay.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/export.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/gfp.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/kernel.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux</span><span class="c">/</span><span class="w">p</span><span class="pc">c</span><span class="c">i.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">s</span><span class="pc">t</span><span class="c">ring.h&gt;</span>
+
+<span class="c">#include</span> <span class="c">&lt;</span><span class="pc">a</span><span class="c">sm/</span><span class="w">p</span><span class="pc">c</span><span class="c">i</span><span class="pc">-</span><span class="w">b</span><span class="pc">r</span><span class="c">idge.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">ppc</span><span class="pc">-</span><span class="w">pc</span><span class="pc">i</span><span class="c">.h&gt;</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="c">int</span> <span class="w">eeh_pe_aux_size</span> <span class="pc">=</span> <span class="w">0</span><span class="c">;</span>
+<span class="pc">s</span><span class="c">tatic</span> <span class="w">L</span><span class="c">IST_HEAD(</span><span class="w">eeh_phb_pe</span><span class="c">);</span>
+
+
+<span class="pc">v</span><span class="c">oid</span> <span class="w">eeh_set_pe_aux_size</span><span class="c">(</span><span class="w">i</span><span class="c">nt</span> <span class="w">s</span><span class="c">ize</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">if</span> <span class="c">(</span><span class="w">s</span><span class="c">ize</span> <span class="pc">&lt;</span> <span class="c">0)</span>
+		<span class="c">return</span><span class="pc">;</span>
+
+	<span class="pc">e</span><span class="c">eh_pe_aux_size</span> <span class="c">=</span> <span class="w">s</span><span class="pc">i</span><span class="c">ze</span><span class="pc">;</span>
+<span class="c">}</span>
+
+
+<span class="c">static</span> <span class="w">s</span><span class="pc">t</span><span class="c">ruct</span> <span class="w">eeh_pe</span> <span class="c">*</span><span class="w">eeh_pe_alloc</span><span class="c">(struct</span> <span class="w">pci_controller</span> <span class="c">*</span><span class="w">phb</span><span class="c">,</span> <span class="pc">i</span><span class="c">nt</span> <span class="pc">t</span><span class="c">ype)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="pc">eeh_pe</span> <span class="c">*</span><span class="w">pe</span><span class="pc">;</span>
+	<span class="w">s</span><span class="pc">i</span><span class="c">ze_t</span> <span class="w">alloc_size</span><span class="c">;</span>
+
+	<span class="w">a</span><span class="c">lloc_size</span> <span class="c">=</span> <span class="w">si</span><span class="pc">zeo</span><span class="c">f(struct</span> <span class="pc">eeh_pe</span><span class="w">);</span>
+	<span class="w">i</span><span class="pc">f</span> <span class="c">(</span><span class="pc">eeh_pe_</span><span class="c">aux_size</span><span class="w">)</span><span class="c"> {</span>
+		<span class="w">a</span><span class="c">lloc_size</span> <span class="c">=</span> <span class="w">ALIGN</span><span class="c">(alloc_size,</span> <span class="w">cache_line_size(</span><span class="pc">)</span><span class="c">);</span>
+		<span class="w">a</span><span class="c">lloc_size</span> <span class="w">+</span><span class="pc">=</span> <span class="w">e</span><span class="c">eh_pe_aux_size</span><span class="pc">;</span>
+	<span class="c">}</span>
+
+	
+	<span class="w">pe</span> <span class="c">=</span> <span class="w">k</span><span class="c">zalloc(</span><span class="w">a</span><span class="pc">l</span><span class="c">loc_size,</span> <span class="c">GFP_KERNEL);</span>
+	<span class="c">if</span> <span class="c">(!</span><span class="w">pe</span><span class="c">)</span> <span class="c">return</span> <span class="w">N</span><span class="c">ULL;</span>
+
+	
+	<span class="w">pe</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">t</span><span class="c">ype</span> <span class="c">=</span> <span class="w">t</span><span class="pc">y</span><span class="c">pe;</span>
+	<span class="w">pe</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">phb</span> <span class="c">=</span> <span class="c">phb;</span>
+	<span class="w">I</span><span class="c">NIT_LIST_HEAD(&amp;</span><span class="w">pe</span><span class="c">-&gt;</span><span class="w">child_list</span><span class="c">);</span>
+	<span class="pc">I</span><span class="c">NIT_LIST_HEAD(&amp;</span><span class="w">pe</span><span class="c">-&gt;</span><span class="w">chi</span><span class="pc">ld</span><span class="c">);</span>
+	<span class="w">I</span><span class="c">NIT_LIST_HEAD(&amp;</span><span class="w">pe</span><span class="c">-&gt;</span><span class="w">edevs</span><span class="c">);</span>
+
+	<span class="w">pe</span><span class="c">-&gt;</span><span class="w">d</span><span class="pc">a</span><span class="c">ta</span> <span class="w">=</span><span class="pc"> (</span><span class="w">v</span><span class="c">oid</span> <span class="c">*)</span><span class="w">pe</span> <span class="pc">+</span> <span class="w">ALIGN</span><span class="pc">(</span><span class="c">sizeof(struct</span> <span class="w">eeh_pe</span><span class="pc">),</span>
+				      <span class="w">cache_line_size()</span><span class="pc">)</span><span class="c">;</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">pe</span><span class="c">;</span>
+<span class="c">}</span>
+
+
+<span class="w">i</span><span class="pc">n</span><span class="c">t</span> <span class="w">eeh_phb_pe_create</span><span class="c">(struct</span> <span class="w">pci_controller</span> <span class="c">*</span><span class="w">phb</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="pc">e</span><span class="c">eh_pe</span> <span class="c">*</span><span class="w">pe</span><span class="pc">;</span>
+
+	
+	<span class="w">pe</span> <span class="c">=</span> <span class="w">eeh_pe_alloc</span><span class="c">(</span><span class="pc">p</span><span class="c">hb,</span> <span class="w">EEH_PE_PHB</span><span class="c">);</span>
+	<span class="c">if</span> <span class="pc">(!</span><span class="w">pe</span><span class="pc">) </span><span class="c">{</span>
+		<span class="pc">pr</span><span class="c">_err</span><span class="pc">("%</span><span class="c">s:</span> <span class="w">o</span><span class="pc">u</span><span class="c">t</span> <span class="pc">o</span><span class="c">f</span> <span class="pc">m</span><span class="c">emory</span><span class="pc">!</span><span class="c">\n",</span> <span class="c">__func__);</span>
+		<span class="c">return</span> <span class="c">-ENOMEM;</span>
+	<span class="c">}</span>
+
+	
+	<span class="w">l</span><span class="pc">i</span><span class="c">st_add_tail(&amp;</span><span class="w">pe</span><span class="c">-&gt;</span><span class="w">chi</span><span class="pc">l</span><span class="c">d, &amp;</span><span class="w">eeh_phb_pe</span><span class="c">);</span>
+
+	<span class="w">p</span><span class="pc">r</span><span class="c">_debug("</span><span class="w">EEH</span><span class="c">:</span> <span class="w">Add</span> <span class="w">PE</span> <span class="w">f</span><span class="c">or</span> <span class="w">PHB#%d</span><span class="c">\n</span><span class="pc">",</span> <span class="w">phb</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">global_number</span><span class="c">);</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+
+<span class="w">s</span><span class="pc">tr</span><span class="c">uct</span> <span class="w">eeh_pe</span> <span class="c">*</span><span class="w">eeh_phb_pe_get</span><span class="pc">(</span><span class="c">struct</span> <span class="w">pci_controller</span> <span class="c">*</span><span class="pc">p</span><span class="c">hb</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="pc">e</span><span class="c">eh_pe</span> <span class="c">*</span><span class="w">pe</span><span class="c">;</span>
+
+	<span class="w">l</span><span class="c">ist_for_each_entry(</span><span class="w">pe</span><span class="c">, &amp;</span><span class="w">eeh_phb_pe</span><span class="c">,</span> <span class="w">chi</span><span class="pc">l</span><span class="c">d</span><span class="pc">) </span><span class="c">{</span>
+		
+		<span class="pc">i</span><span class="c">f</span> <span class="pc">((</span><span class="w">pe</span><span class="c">-&gt;</span><span class="pc">t</span><span class="c">ype</span> <span class="pc">&amp;</span> <span class="w">EEH_PE_PHB</span><span class="c">) &amp;&amp;</span> <span class="w">p</span><span class="pc">e</span><span class="c">-&gt;</span><span class="pc">p</span><span class="c">hb</span> <span class="c">==</span> <span class="w">p</span><span class="c">hb</span><span class="w">)</span>
+			<span class="pc">r</span><span class="c">eturn</span> <span class="w">pe</span><span class="c">;</span>
+	<span class="c">}</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">N</span><span class="c">ULL;</span>
+<span class="c">}</span>
+
+
+<span class="c">static</span> <span class="pc">s</span><span class="c">truct</span> <span class="pc">eeh_pe</span> <span class="c">*</span><span class="w">eeh_pe_next</span><span class="c">(struct</span> <span class="pc">e</span><span class="c">eh_pe</span> <span class="c">*</span><span class="w">pe</span><span class="c">,</span>
+				  <span class="c">struct</span> <span class="c">eeh_pe</span> <span class="c">*</span><span class="w">ro</span><span class="c">ot</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="pc">l</span><span class="c">ist_head</span> <span class="c">*</span><span class="w">n</span><span class="c">ext</span> <span class="pc">=</span> <span class="w">pe</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">child_list</span><span class="pc">.</span><span class="w">n</span><span class="pc">e</span><span class="c">xt;</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">n</span><span class="pc">ex</span><span class="c">t</span> <span class="w">=</span><span class="pc">= </span><span class="c">&amp;</span><span class="w">pe</span><span class="c">-&gt;</span><span class="pc">c</span><span class="c">hild_list</span><span class="pc">)</span><span class="c"> {</span>
+		<span class="w">w</span><span class="c">hile</span> <span class="c">(</span><span class="w">1</span><span class="c">) {</span>
+			<span class="c">if</span> <span class="c">(</span><span class="w">pe</span> <span class="pc">==</span> <span class="w">ro</span><span class="c">ot</span><span class="pc">)</span>
+				<span class="c">return</span> <span class="w">N</span><span class="c">ULL;</span>
+			<span class="w">n</span><span class="pc">ex</span><span class="c">t</span> <span class="c">=</span> <span class="w">pe</span><span class="c">-&gt;</span><span class="w">chi</span><span class="pc">ld.</span><span class="c">next</span><span class="pc">;</span>
+			<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">n</span><span class="pc">ex</span><span class="c">t</span> <span class="w">!= &amp;pe</span><span class="c">-&gt;</span><span class="w">par</span><span class="pc">ent-</span><span class="c">&gt;</span><span class="w">c</span><span class="pc">hild_</span><span class="c">list</span><span class="w">)</span>
+				<span class="pc">b</span><span class="c">reak;</span>
+			<span class="w">pe</span> <span class="pc">=</span> <span class="w">pe</span><span class="c">-&gt;</span><span class="w">pa</span><span class="pc">re</span><span class="c">nt;</span>
+		<span class="c">}</span>
+	<span class="c">}</span>
+
+	<span class="w">r</span><span class="pc">e</span><span class="c">turn</span> <span class="w">lis</span><span class="pc">t_e</span><span class="c">ntry(</span><span class="w">n</span><span class="pc">e</span><span class="c">xt,</span> <span class="c">struct</span> <span class="w">eeh_pe</span><span class="c">,</span> <span class="w">ch</span><span class="pc">ild)</span><span class="c">;</span>
+<span class="pc">}</span>
+
+
+<span class="w">v</span><span class="c">oid</span> <span class="c">*</span><span class="w">eeh_pe_traverse</span><span class="c">(struct</span> <span class="w">e</span><span class="c">eh_pe</span> <span class="c">*</span><span class="w">r</span><span class="pc">o</span><span class="c">ot,</span>
+		      <span class="w">eeh_traverse_func</span> <span class="w">fn</span><span class="pc">,</span> <span class="pc">v</span><span class="c">oid</span> <span class="c">*</span><span class="w">fl</span><span class="pc">ag</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="c">eeh_pe</span> <span class="c">*</span><span class="w">pe</span><span class="pc">;</span>
+	<span class="pc">v</span><span class="c">oid</span> <span class="c">*</span><span class="w">ret</span><span class="c">;</span>
+
+	<span class="w">f</span><span class="c">or</span> <span class="c">(</span><span class="w">p</span><span class="pc">e</span> <span class="c">=</span> <span class="w">ro</span><span class="c">ot;</span> <span class="w">pe;</span> <span class="w">pe</span> <span class="c">=</span> <span class="w">eeh_pe_next</span><span class="c">(</span><span class="w">pe</span><span class="c">,</span> <span class="w">ro</span><span class="c">ot</span><span class="w">)) </span><span class="pc">{</span>
+		<span class="w">r</span><span class="pc">et</span> <span class="c">=</span> <span class="w">fn</span><span class="c">(</span><span class="w">pe</span><span class="c">,</span> <span class="w">fl</span><span class="pc">ag</span><span class="c">);</span>
+		<span class="c">if</span> <span class="c">(</span><span class="pc">re</span><span class="c">t</span><span class="pc">)</span> <span class="pc">r</span><span class="c">eturn</span> <span class="pc">re</span><span class="c">t;</span>
+	<span class="pc">}</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">N</span><span class="c">ULL;</span>
+<span class="c">}</span>
+
+
+<span class="pc">v</span><span class="c">oid</span> <span class="pc">*</span><span class="w">eeh_pe_dev_traverse</span><span class="c">(struct</span> <span class="w">eeh_pe</span> <span class="c">*</span><span class="w">ro</span><span class="c">ot,</span>
+		<span class="w">eeh_traverse_func</span> <span class="w">f</span><span class="pc">n,</span> <span class="pc">v</span><span class="c">oid</span> <span class="c">*</span><span class="w">fl</span><span class="pc">ag</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="pc">e</span><span class="c">eh_pe</span> <span class="c">*</span><span class="w">pe</span><span class="pc">;</span>
+	<span class="c">struct</span> <span class="w">eeh_dev</span> <span class="c">*</span><span class="w">ed</span><span class="c">ev</span><span class="pc">, </span><span class="c">*</span><span class="w">t</span><span class="pc">m</span><span class="c">p;</span>
+	<span class="w">v</span><span class="c">oid</span> <span class="c">*</span><span class="w">ret</span><span class="c">;</span>
+
+	<span class="w">i</span><span class="pc">f</span> <span class="pc">(!</span><span class="w">ro</span><span class="c">ot</span><span class="pc">) </span><span class="c">{</span>
+		<span class="w">pr</span><span class="pc">_w</span><span class="c">arn</span><span class="pc">("%</span><span class="c">s</span><span class="pc">:</span> <span class="pc">I</span><span class="c">nvalid</span> <span class="w">PE</span> <span class="c">%</span><span class="pc">p</span><span class="c">\n",</span>
+			<span class="c">__func__,</span> <span class="w">ro</span><span class="c">ot);</span>
+		<span class="c">return</span> <span class="pc">N</span><span class="c">ULL;</span>
+	<span class="c">}</span>
+
+	
+	<span class="w">f</span><span class="c">or</span> <span class="c">(</span><span class="w">pe</span> <span class="c">=</span> <span class="w">ro</span><span class="c">ot;</span> <span class="w">pe;</span> <span class="w">pe</span> <span class="c">=</span> <span class="w">eeh_pe_next</span><span class="pc">(</span><span class="w">p</span><span class="pc">e</span><span class="c">,</span> <span class="w">ro</span><span class="c">ot</span><span class="w">))</span><span class="pc"> {</span>
+		<span class="w">eeh_pe_for_each_dev</span><span class="pc">(</span><span class="w">pe</span><span class="c">,</span> <span class="w">ed</span><span class="c">ev,</span> <span class="w">t</span><span class="pc">m</span><span class="c">p</span><span class="w">) </span><span class="pc">{</span>
+			<span class="w">re</span><span class="pc">t</span> <span class="c">=</span> <span class="w">fn</span><span class="c">(</span><span class="w">ed</span><span class="c">ev,</span> <span class="w">fl</span><span class="pc">ag</span><span class="c">);</span>
+			<span class="c">if</span> <span class="c">(</span><span class="pc">r</span><span class="c">et</span><span class="pc">)</span>
+				<span class="pc">r</span><span class="c">eturn</span> <span class="pc">re</span><span class="c">t;</span>
+		<span class="c">}</span>
+	<span class="w">}</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">N</span><span class="c">ULL;</span>
+<span class="c">}</span>
+
+
+<span class="c">static</span> <span class="pc">v</span><span class="c">oid</span> <span class="pc">*</span><span class="w">__eeh_pe_get</span><span class="c">(</span><span class="pc">v</span><span class="c">oid</span> <span class="c">*</span><span class="pc">d</span><span class="c">ata</span><span class="pc">,</span> <span class="w">v</span><span class="c">oid</span> <span class="c">*</span><span class="w">fl</span><span class="pc">ag</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">eeh_pe</span> <span class="c">*</span><span class="w">pe</span> <span class="pc">= </span><span class="c">(struct</span> <span class="c">eeh_pe</span> <span class="c">*)</span><span class="w">d</span><span class="c">ata;</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">eeh_dev</span> <span class="c">*</span><span class="w">ed</span><span class="c">ev</span> <span class="pc">= (s</span><span class="c">truct</span> <span class="c">eeh_dev</span> <span class="c">*)</span><span class="w">fl</span><span class="pc">ag</span><span class="c">;</span>
+
+	
+	<span class="c">if</span> <span class="c">(</span><span class="w">pe</span><span class="c">-&gt;</span><span class="pc">t</span><span class="c">ype</span> <span class="w">&amp;</span> <span class="w">EEH_PE_PHB</span><span class="pc">)</span>
+		<span class="c">return</span> <span class="w">N</span><span class="c">ULL;</span>
+
+	
+	<span class="c">if</span> <span class="c">(</span><span class="w">eeh_has_flag</span><span class="c">(</span><span class="w">EEH_VALID_PE_ZERO</span><span class="pc">)) </span><span class="c">{</span>
+		<span class="c">if</span> <span class="c">(</span><span class="w">ed</span><span class="c">ev-&gt;</span><span class="w">pe_config_addr</span> <span class="c">==</span> <span class="w">pe</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">a</span><span class="c">ddr</span><span class="w">)</span>
+			<span class="c">return</span> <span class="w">pe</span><span class="c">;</span>
+	<span class="pc">}</span> <span class="c">else</span> <span class="pc">{</span>
+		<span class="c">if</span> <span class="c">(</span><span class="w">ed</span><span class="c">ev-&gt;</span><span class="w">p</span><span class="c">e_config_addr</span> <span class="w">&amp;</span><span class="pc">&amp;</span>
+		    <span class="w">(ed</span><span class="c">ev-&gt;</span><span class="pc">p</span><span class="c">e_config_addr</span> <span class="c">==</span> <span class="w">pe</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">a</span><span class="c">ddr</span><span class="pc">))</span>
+		<span class="c">return</span> <span class="w">pe</span><span class="c">;</span>
+	<span class="c">}</span>
+
+	
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">ed</span><span class="c">ev-&gt;</span><span class="w">config_addr</span> <span class="w">&amp;</span><span class="c">&amp;</span>
+	   <span class="w">(ed</span><span class="c">ev-&gt;</span><span class="pc">c</span><span class="c">onfig_addr</span> <span class="c">==</span> <span class="w">pe</span><span class="c">-&gt;</span><span class="pc">c</span><span class="c">onfig_addr</span><span class="pc">))</span>
+		<span class="c">return</span> <span class="w">pe</span><span class="c">;</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">N</span><span class="c">ULL;</span>
+<span class="c">}</span>
+
+
+<span class="w">s</span><span class="pc">tr</span><span class="c">uct</span> <span class="w">eeh_pe</span> <span class="c">*</span><span class="w">eeh_pe_get</span><span class="pc">(</span><span class="c">struct</span> <span class="w">eeh_dev</span> <span class="c">*</span><span class="w">ed</span><span class="c">ev</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="pc">e</span><span class="c">eh_pe</span> <span class="c">*</span><span class="w">ro</span><span class="c">ot</span> <span class="pc">=</span> <span class="w">eeh_phb_pe_get</span><span class="c">(</span><span class="w">ed</span><span class="c">ev</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">phb</span><span class="pc">)</span><span class="c">;</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="c">eeh_pe</span> <span class="c">*</span><span class="w">pe</span><span class="pc">;</span>
+
+	<span class="w">pe</span> <span class="c">=</span> <span class="w">eeh_pe_traverse</span><span class="c">(</span><span class="w">r</span><span class="pc">o</span><span class="c">ot,</span> <span class="w">__eeh_pe_get</span><span class="pc">,</span> <span class="w">ed</span><span class="c">ev</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">pe</span><span class="c">;</span>
+<span class="c">}</span>
+
+
+<span class="c">static</span> <span class="pc">s</span><span class="c">truct</span> <span class="pc">eeh_p</span><span class="c">e</span> <span class="c">*</span><span class="w">eeh_pe_get_parent</span><span class="c">(struct</span> <span class="w">eeh_dev</span> <span class="c">*</span><span class="w">ed</span><span class="c">ev</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">e</span><span class="pc">eh_d</span><span class="c">ev</span> <span class="c">*</span><span class="w">par</span><span class="pc">e</span><span class="c">nt</span><span class="pc">;</span>
+	<span class="c">struct</span> <span class="w">pci_dn</span> <span class="c">*</span><span class="w">pdn</span> <span class="pc">=</span> <span class="w">eeh_dev_to_pdn</span><span class="c">(</span><span class="w">ed</span><span class="c">ev);</span>
+
+	
+	<span class="w">p</span><span class="pc">d</span><span class="c">n</span> <span class="pc">=</span> <span class="pc">p</span><span class="c">dn</span> <span class="w">?</span> <span class="pc">p</span><span class="c">dn</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">pa</span><span class="c">rent</span> <span class="w">:</span> <span class="pc">N</span><span class="c">ULL;</span>
+	<span class="w">w</span><span class="c">hile</span> <span class="c">(pdn</span><span class="pc">)</span><span class="c"> {</span>
+		
+		<span class="w">pa</span><span class="pc">r</span><span class="c">ent</span> <span class="c">=</span> <span class="w">pdn_to_eeh_dev</span><span class="c">(pdn</span><span class="pc">)</span><span class="c">;</span>
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(!</span><span class="w">p</span><span class="pc">a</span><span class="c">rent</span><span class="pc">)</span>
+			<span class="c">return</span> <span class="w">N</span><span class="c">ULL;</span>
+
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="pc">pa</span><span class="c">rent-&gt;</span><span class="w">pe</span><span class="pc">)</span>
+			<span class="c">return</span> <span class="w">p</span><span class="pc">a</span><span class="c">rent</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">pe</span><span class="pc">;</span>
+
+		<span class="pc">p</span><span class="c">dn</span> <span class="pc">=</span> <span class="w">p</span><span class="c">dn-&gt;</span><span class="w">p</span><span class="pc">a</span><span class="c">rent;</span>
+	<span class="pc">}</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">N</span><span class="c">ULL;</span>
+<span class="c">}</span>
+
+
+<span class="pc">i</span><span class="c">nt</span> <span class="w">eeh_add_to_parent_pe</span><span class="c">(struct</span> <span class="w">eeh_dev</span> <span class="c">*</span><span class="w">e</span><span class="pc">d</span><span class="c">ev</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">eeh_pe</span> <span class="c">*</span><span class="w">pe</span><span class="pc">,</span><span class="c"> *</span><span class="w">pa</span><span class="pc">re</span><span class="c">nt;</span>
+
+	
+	<span class="pc">if</span> <span class="pc">(!</span><span class="w">eeh_has_flag</span><span class="pc">(</span><span class="w">EEH_VALID_PE_ZERO) &amp;</span><span class="pc">&amp; </span><span class="c">!</span><span class="w">ed</span><span class="c">ev-&gt;</span><span class="w">pe_config_addr</span><span class="c">) {</span>
+		<span class="w">p</span><span class="pc">r_</span><span class="c">err</span><span class="pc">("%</span><span class="c">s:</span> <span class="w">I</span><span class="c">nvalid</span> <span class="w">PE#0</span> <span class="w">f</span><span class="c">or</span> <span class="w">ed</span><span class="c">ev</span> <span class="w">0</span><span class="c">x%x</span> <span class="w">o</span><span class="pc">n</span> <span class="w">PHB#%d</span><span class="c">\n",</span>
+		       <span class="c">__func__,</span> <span class="w">ed</span><span class="c">ev-&gt;</span><span class="w">config_addr</span><span class="pc">,</span> <span class="w">ed</span><span class="c">ev-&gt;</span><span class="w">phb-</span><span class="pc">&gt;</span><span class="w">global_number</span><span class="pc">)</span><span class="c">;</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="pc">-</span><span class="c">EINVAL;</span>
+	<span class="c">}</span>
+
+	
+	<span class="w">pe</span> <span class="pc">=</span> <span class="w">eeh_pe_get</span><span class="c">(</span><span class="w">ed</span><span class="c">ev</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">if</span> <span class="c">(</span><span class="w">pe</span> <span class="w">&amp;&amp; !(pe</span><span class="pc">-</span><span class="c">&gt;type</span> <span class="w">&amp;</span> <span class="w">EEH_PE_INVALID</span><span class="pc">))</span><span class="c"> {</span>
+		
+		<span class="w">pe</span><span class="pc">-</span><span class="c">&gt;type</span> <span class="c">=</span> <span class="w">EEH_PE_BUS</span><span class="c">;</span>
+		<span class="w">ed</span><span class="c">ev-&gt;</span><span class="w">pe</span> <span class="c">=</span> <span class="w">pe</span><span class="c">;</span>
+
+		
+		<span class="w">l</span><span class="pc">i</span><span class="c">st_add_tail(&amp;</span><span class="w">ed</span><span class="c">ev-&gt;list, &amp;</span><span class="w">pe</span><span class="c">-&gt;</span><span class="w">edevs</span><span class="c">);</span>
+		<span class="w">pr</span><span class="pc">_</span><span class="c">debug("</span><span class="w">EEH</span><span class="c">:</span> <span class="w">Add</span> <span class="c">%</span><span class="w">0</span><span class="pc">4</span><span class="c">x</span><span class="w">:</span><span class="pc">%02x:</span><span class="c">%02x</span><span class="w">.</span><span class="c">%</span><span class="w">01x</span> <span class="w">t</span><span class="c">o</span> <span class="w">Bus</span> <span class="w">PE#%x</span><span class="pc">\</span><span class="c">n",</span>
+			<span class="w">ed</span><span class="pc">ev</span><span class="c">-&gt;</span><span class="w">phb-</span><span class="pc">&gt;</span><span class="w">global_number</span><span class="pc">,</span>
+			<span class="w">ed</span><span class="pc">ev</span><span class="c">-&gt;</span><span class="w">config_addr</span> <span class="w">&gt;</span><span class="pc">&gt;</span> <span class="pc">8,</span>
+			<span class="w">PCI_SLOT</span><span class="pc">(</span><span class="w">ed</span><span class="pc">ev-</span><span class="c">&gt;</span><span class="pc">c</span><span class="c">onfig_addr</span> <span class="w">&amp;</span> <span class="w">0xF</span><span class="c">F</span><span class="pc">),</span>
+			<span class="w">PCI_FUNC</span><span class="c">(</span><span class="w">ed</span><span class="c">ev</span><span class="pc">-</span><span class="c">&gt;config_addr</span> <span class="w">&amp;</span> <span class="w">0xF</span><span class="c">F</span><span class="pc">),</span>
+			<span class="w">pe</span><span class="c">-&gt;</span><span class="w">a</span><span class="c">ddr</span><span class="pc">)</span><span class="c">;</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+	<span class="c">}</span> <span class="w">e</span><span class="c">lse</span> <span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">pe</span> <span class="w">&amp;</span><span class="pc">&amp; </span><span class="c">(</span><span class="w">pe</span><span class="pc">-</span><span class="c">&gt;type</span> <span class="pc">&amp;</span> <span class="w">EEH_PE_INVALID</span><span class="pc">))</span><span class="c"> {</span>
+		<span class="w">l</span><span class="pc">i</span><span class="c">st_add_tail(&amp;</span><span class="w">ed</span><span class="c">ev-&gt;list, &amp;</span><span class="w">pe</span><span class="c">-&gt;</span><span class="w">edevs</span><span class="c">);</span>
+		<span class="w">ed</span><span class="pc">ev</span><span class="c">-&gt;</span><span class="w">pe</span> <span class="c">=</span> <span class="w">pe</span><span class="pc">;</span>
+		
+		<span class="w">par</span><span class="pc">e</span><span class="c">nt</span> <span class="pc">=</span> <span class="w">pe</span><span class="pc">;</span>
+		<span class="w">w</span><span class="c">hile</span> <span class="c">(</span><span class="w">pa</span><span class="pc">re</span><span class="c">nt</span><span class="pc">)</span><span class="c"> {</span>
+			<span class="c">if</span> <span class="pc">(!(</span><span class="w">pa</span><span class="pc">r</span><span class="c">ent-&gt;</span><span class="pc">t</span><span class="c">ype</span> <span class="c">&amp;</span> <span class="w">E</span><span class="c">EH_PE_INVALID</span><span class="w">))</span>
+				<span class="pc">b</span><span class="c">reak;</span>
+			<span class="w">par</span><span class="pc">e</span><span class="c">nt-&gt;</span><span class="w">t</span><span class="c">ype</span> <span class="w">&amp;=</span><span class="pc"> ~(E</span><span class="c">EH_PE_INVALID</span> <span class="pc">|</span> <span class="w">EEH_PE_KEEP</span><span class="c">);</span>
+			<span class="w">pa</span><span class="pc">r</span><span class="c">ent</span> <span class="pc">=</span> <span class="pc">p</span><span class="c">arent-&gt;parent;</span>
+		<span class="pc">}</span>
+
+		<span class="w">pr</span><span class="pc">_d</span><span class="c">ebug</span><span class="pc">("</span><span class="w">EEH</span><span class="pc">:</span> <span class="w">Add</span> <span class="pc">%</span><span class="w">0</span><span class="pc">4</span><span class="c">x</span><span class="w">:</span><span class="pc">%0</span><span class="c">2x</span><span class="w">:</span><span class="c">%</span><span class="pc">02x.</span><span class="c">%</span><span class="w">01x</span> <span class="w">t</span><span class="c">o</span> <span class="w">Device</span> <span class="w">"</span>
+			 <span class="pc">"</span><span class="w">PE#%x,</span> <span class="w">Parent</span> <span class="w">P</span><span class="c">E</span><span class="w">#</span><span class="c">%</span><span class="w">x</span><span class="pc">\</span><span class="c">n",</span>
+			<span class="w">ed</span><span class="c">ev-&gt;</span><span class="w">phb-</span><span class="pc">&gt;</span><span class="w">global_number</span><span class="pc">,</span>
+			<span class="w">ed</span><span class="c">ev-&gt;</span><span class="w">config_addr</span> <span class="w">&gt;</span><span class="c">&gt;</span> <span class="pc">8,</span>
+                        <span class="w">PCI_SLOT</span><span class="pc">(</span><span class="w">ed</span><span class="c">ev</span><span class="pc">-</span><span class="c">&gt;</span><span class="pc">c</span><span class="c">onfig_addr</span> <span class="w">&amp;</span> <span class="w">0x</span><span class="pc">F</span><span class="c">F</span><span class="pc">),</span>
+                        <span class="w">PCI_FUNC</span><span class="c">(</span><span class="w">ed</span><span class="c">ev</span><span class="pc">-</span><span class="c">&gt;config_addr</span> <span class="w">&amp;</span> <span class="w">0xF</span><span class="c">F</span><span class="pc">),</span>
+			<span class="w">pe</span><span class="c">-&gt;</span><span class="w">a</span><span class="c">ddr,</span> <span class="w">pe</span><span class="c">-&gt;</span><span class="w">par</span><span class="pc">e</span><span class="c">nt</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">a</span><span class="pc">dd</span><span class="c">r</span><span class="w">)</span><span class="c">;</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+	<span class="c">}</span>
+
+	
+	<span class="w">pe</span> <span class="pc">=</span> <span class="w">eeh_pe_alloc</span><span class="c">(</span><span class="w">ed</span><span class="c">ev-&gt;</span><span class="w">phb</span><span class="c">,</span> <span class="w">EEH_PE_DEVICE</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">if</span> <span class="pc">(!</span><span class="w">pe</span><span class="c">) {</span>
+		<span class="w">p</span><span class="pc">r_</span><span class="c">err</span><span class="pc">("%</span><span class="c">s:</span> <span class="w">o</span><span class="pc">u</span><span class="c">t</span> <span class="pc">o</span><span class="c">f</span> <span class="c">memory</span><span class="w">!</span><span class="c">\n",</span> <span class="c">__func__);</span>
+		<span class="c">return</span> <span class="c">-</span><span class="pc">EN</span><span class="c">OMEM;</span>
+	<span class="c">}</span>
+	<span class="w">pe</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">a</span><span class="pc">dd</span><span class="c">r</span>	<span class="c">=</span> <span class="w">ed</span><span class="c">ev-&gt;</span><span class="w">pe_config_addr</span><span class="c">;</span>
+	<span class="w">pe</span><span class="c">-&gt;</span><span class="w">config_addr</span>	<span class="c">=</span> <span class="w">ed</span><span class="c">ev-&gt;config_addr;</span>
+
+	
+	<span class="w">pa</span><span class="pc">re</span><span class="c">nt</span> <span class="pc">=</span> <span class="w">eeh_pe_get_parent</span><span class="c">(</span><span class="w">ed</span><span class="c">ev</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">if</span> <span class="pc">(!</span><span class="w">p</span><span class="pc">are</span><span class="c">nt) {</span>
+		<span class="w">pa</span><span class="c">rent</span> <span class="pc">=</span> <span class="w">eeh_phb_pe_get</span><span class="c">(</span><span class="w">e</span><span class="pc">d</span><span class="c">ev-&gt;</span><span class="w">phb</span><span class="pc">)</span><span class="c">;</span>
+		<span class="c">if</span> <span class="pc">(!</span><span class="w">pa</span><span class="pc">re</span><span class="c">nt) {</span>
+			<span class="pc">p</span><span class="c">r_err</span><span class="pc">("%</span><span class="c">s:</span> <span class="pc">N</span><span class="c">o</span> <span class="w">PHB</span> <span class="w">PE</span> <span class="w">i</span><span class="c">s</span> <span class="pc">f</span><span class="c">ound</span> <span class="w">(P</span><span class="pc">H</span><span class="c">B</span> <span class="w">Domain=</span><span class="c">%d</span><span class="pc">)</span><span class="c">\n",</span>
+				<span class="c">__func__,</span> <span class="w">ed</span><span class="c">ev-&gt;</span><span class="w">p</span><span class="c">hb</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">global_number</span><span class="c">);</span>
+			<span class="w">ed</span><span class="c">ev-&gt;</span><span class="w">pe</span> <span class="c">=</span> <span class="pc">N</span><span class="c">ULL;</span>
+			<span class="w">k</span><span class="c">free(</span><span class="w">pe</span><span class="c">);</span>
+			<span class="pc">r</span><span class="c">eturn</span> <span class="pc">-</span><span class="w">EEXIST</span><span class="c">;</span>
+		<span class="c">}</span>
+	<span class="pc">}</span>
+	<span class="w">pe</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">pa</span><span class="pc">re</span><span class="c">nt</span> <span class="c">=</span> <span class="w">p</span><span class="pc">a</span><span class="c">rent</span><span class="pc">;</span>
+
+	
+	<span class="w">li</span><span class="pc">st_add_</span><span class="c">tail(&amp;</span><span class="w">pe</span><span class="c">-&gt;</span><span class="w">ch</span><span class="pc">il</span><span class="c">d, &amp;</span><span class="w">p</span><span class="pc">ar</span><span class="c">ent-&gt;</span><span class="w">child_list</span><span class="c">);</span>
+	<span class="w">l</span><span class="pc">ist_add_</span><span class="c">tail(&amp;</span><span class="w">ed</span><span class="c">ev-&gt;list, &amp;</span><span class="w">pe</span><span class="c">-&gt;</span><span class="w">edevs</span><span class="c">);</span>
+	<span class="w">ed</span><span class="pc">ev</span><span class="c">-&gt;</span><span class="w">pe</span> <span class="pc">=</span> <span class="w">pe</span><span class="c">;</span>
+	<span class="w">p</span><span class="pc">r</span><span class="c">_debug("</span><span class="w">EEH</span><span class="c">:</span> <span class="w">Add</span> <span class="c">%</span><span class="w">04</span><span class="c">x</span><span class="pc">:</span><span class="c">%</span><span class="pc">02x</span><span class="c">:%02x</span><span class="w">.</span><span class="c">%</span><span class="w">01x</span> <span class="w">t</span><span class="c">o</span> <span class="w">"</span>
+		 <span class="pc">"</span><span class="w">Device</span> <span class="w">PE#%x,</span> <span class="w">Parent</span> <span class="w">P</span><span class="c">E</span><span class="w">#</span><span class="c">%</span><span class="w">x\</span><span class="c">n",</span>
+		 <span class="w">ed</span><span class="pc">ev</span><span class="c">-&gt;</span><span class="w">phb-</span><span class="pc">&gt;</span><span class="w">global_number</span><span class="c">,</span>
+		 <span class="w">ed</span><span class="c">ev-&gt;</span><span class="w">config_addr</span> <span class="w">&gt;</span><span class="c">&gt;</span> <span class="pc">8,</span>
+		 <span class="w">PCI_SLOT</span><span class="pc">(</span><span class="w">ed</span><span class="c">ev</span><span class="pc">-</span><span class="c">&gt;</span><span class="pc">c</span><span class="c">onfig_addr</span> <span class="w">&amp;</span> <span class="w">0x</span><span class="pc">F</span><span class="c">F</span><span class="pc">),</span>
+		 <span class="w">PCI_FUNC</span><span class="c">(</span><span class="w">ed</span><span class="c">ev</span><span class="pc">-</span><span class="c">&gt;config_addr</span> <span class="w">&amp;</span> <span class="w">0xF</span><span class="c">F</span><span class="pc">),</span>
+		 <span class="w">pe</span><span class="c">-&gt;</span><span class="w">a</span><span class="c">ddr,</span> <span class="w">pe</span><span class="c">-&gt;</span><span class="w">par</span><span class="pc">e</span><span class="c">nt</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">a</span><span class="pc">dd</span><span class="c">r</span><span class="w">)</span><span class="c">;</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+
+<span class="w">i</span><span class="pc">n</span><span class="c">t</span> <span class="w">eeh_rmv_from_parent_pe</span><span class="c">(struct</span> <span class="w">eeh_dev</span> <span class="c">*</span><span class="w">ed</span><span class="c">ev</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">eeh_pe</span> <span class="c">*</span><span class="w">pe</span><span class="pc">,</span><span class="c"> *</span><span class="w">pa</span><span class="pc">re</span><span class="c">nt</span><span class="pc">,</span><span class="c"> *</span><span class="w">ch</span><span class="c">ild;</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">c</span><span class="pc">n</span><span class="c">t</span><span class="pc">;</span>
+
+	<span class="pc">if</span> <span class="pc">(!</span><span class="w">ed</span><span class="c">ev-&gt;</span><span class="w">pe</span><span class="c">) {</span>
+		<span class="w">p</span><span class="pc">r_d</span><span class="c">ebug</span><span class="pc">("%</span><span class="c">s:</span> <span class="pc">N</span><span class="c">o</span> <span class="w">PE</span> <span class="w">f</span><span class="pc">ou</span><span class="c">nd</span> <span class="w">f</span><span class="c">or</span> <span class="w">d</span><span class="pc">e</span><span class="c">vice</span> <span class="pc">%</span><span class="w">0</span><span class="pc">4</span><span class="c">x</span><span class="pc">:</span><span class="c">%</span><span class="pc">0</span><span class="c">2x</span><span class="pc">:</span><span class="c">%</span><span class="pc">0</span><span class="c">2x</span><span class="w">.</span><span class="c">%</span><span class="w">01x</span><span class="pc">\</span><span class="c">n",</span>
+			 <span class="c">__func__,</span>  <span class="w">ed</span><span class="c">ev-&gt;</span><span class="w">phb-</span><span class="pc">&gt;</span><span class="w">global_number</span><span class="pc">,</span>
+			 <span class="w">ed</span><span class="c">ev-&gt;</span><span class="w">config_addr</span> <span class="w">&gt;</span><span class="c">&gt;</span> <span class="pc">8,</span>
+			 <span class="w">PCI_SLOT</span><span class="pc">(</span><span class="w">ed</span><span class="c">ev</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">c</span><span class="c">onfig_addr</span> <span class="w">&amp;</span> <span class="w">0x</span><span class="pc">F</span><span class="c">F</span><span class="pc">),</span>
+			 <span class="w">PCI_FUNC</span><span class="c">(</span><span class="w">e</span><span class="pc">d</span><span class="c">ev</span><span class="pc">-</span><span class="c">&gt;config_addr</span> <span class="w">&amp;</span> <span class="w">0xF</span><span class="c">F</span><span class="pc">))</span><span class="c">;</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="pc">-</span><span class="w">EEXIST</span><span class="c">;</span>
+	<span class="c">}</span>
+
+	
+	<span class="w">pe</span> <span class="pc">=</span> <span class="w">eeh_dev_to_pe</span><span class="c">(</span><span class="w">ed</span><span class="c">ev</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">ed</span><span class="c">ev-&gt;</span><span class="w">pe</span> <span class="c">=</span> <span class="c">NULL;</span>
+	<span class="w">li</span><span class="pc">st_del</span><span class="c">(&amp;</span><span class="w">e</span><span class="pc">d</span><span class="c">ev-&gt;list);</span>
+
+	
+	<span class="w">w</span><span class="c">hile</span> <span class="c">(</span><span class="w">1</span><span class="pc">)</span><span class="c"> {</span>
+		<span class="w">pa</span><span class="pc">re</span><span class="c">nt</span> <span class="pc">=</span> <span class="w">pe</span><span class="c">-&gt;</span><span class="w">p</span><span class="pc">a</span><span class="c">rent;</span>
+		<span class="c">if</span> <span class="c">(</span><span class="w">pe</span><span class="pc">-</span><span class="c">&gt;</span><span class="pc">t</span><span class="c">ype</span> <span class="w">&amp;</span> <span class="w">EEH_PE_PHB</span><span class="pc">)</span>
+			<span class="pc">b</span><span class="c">reak;</span>
+
+		<span class="c">if</span> <span class="pc">(!(</span><span class="w">pe</span><span class="c">-&gt;</span><span class="w">s</span><span class="pc">tate</span> <span class="c">&amp;</span> <span class="w">EEH_PE_KEEP</span><span class="pc">)) </span><span class="c">{</span>
+			<span class="c">if</span> <span class="c">(</span><span class="w">li</span><span class="pc">st_</span><span class="c">empty(&amp;</span><span class="w">pe</span><span class="c">-&gt;</span><span class="w">edevs) </span><span class="pc">&amp;</span><span class="c">&amp;</span>
+			    <span class="w">list_e</span><span class="pc">m</span><span class="c">pty(&amp;</span><span class="w">pe</span><span class="c">-&gt;</span><span class="w">child_list</span><span class="c">)) {</span>
+				<span class="w">l</span><span class="pc">ist_del</span><span class="c">(&amp;</span><span class="w">pe</span><span class="c">-&gt;</span><span class="w">chi</span><span class="pc">ld</span><span class="c">);</span>
+				<span class="pc">k</span><span class="c">free(</span><span class="w">pe</span><span class="c">);</span>
+			<span class="c">}</span> <span class="pc">e</span><span class="c">lse</span> <span class="c">{</span>
+				<span class="w">br</span><span class="pc">e</span><span class="c">ak;</span>
+			<span class="c">}</span>
+		<span class="pc">}</span> <span class="w">e</span><span class="pc">l</span><span class="c">se</span> <span class="c">{</span>
+			<span class="pc">i</span><span class="c">f</span> <span class="c">(list_empty(&amp;</span><span class="w">pe</span><span class="c">-&gt;</span><span class="w">e</span><span class="pc">d</span><span class="c">evs)) {</span>
+				<span class="w">cn</span><span class="c">t</span> <span class="c">=</span> <span class="pc">0</span><span class="c">;</span>
+				<span class="w">l</span><span class="pc">ist_for_each_entry</span><span class="c">(</span><span class="w">ch</span><span class="pc">ild</span><span class="c">, &amp;</span><span class="w">p</span><span class="pc">e</span><span class="c">-&gt;</span><span class="w">c</span><span class="c">hild_list</span><span class="pc">,</span> <span class="w">ch</span><span class="pc">ild</span><span class="c">) {</span>
+					<span class="c">if</span> <span class="pc">(!(</span><span class="w">ch</span><span class="pc">ild</span><span class="c">-&gt;</span><span class="w">t</span><span class="pc">y</span><span class="c">pe</span> <span class="pc">&amp;</span> <span class="w">EEH_PE_INVALID)</span><span class="pc">) </span><span class="c">{</span>
+						<span class="w">cn</span><span class="c">t</span><span class="pc">+</span><span class="c">+;</span>
+						<span class="w">b</span><span class="c">reak;</span>
+					<span class="c">}</span>
+				<span class="c">}</span>
+
+				<span class="pc">i</span><span class="c">f</span> <span class="pc">(!</span><span class="w">cn</span><span class="c">t</span><span class="pc">)</span>
+					<span class="w">pe</span><span class="c">-&gt;type</span> <span class="w">|</span><span class="c">=</span> <span class="pc">E</span><span class="c">EH_PE_INVALID;</span>
+				<span class="w">e</span><span class="pc">l</span><span class="c">se</span>
+					<span class="w">b</span><span class="c">reak;</span>
+			<span class="c">}</span>
+		<span class="pc">}</span>
+
+		<span class="w">pe</span> <span class="c">=</span> <span class="w">pa</span><span class="pc">r</span><span class="c">ent</span><span class="pc">;</span>
+	<span class="c">}</span>
+
+	<span class="w">r</span><span class="pc">e</span><span class="c">turn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+
+<span class="pc">v</span><span class="c">oid</span> <span class="w">eeh_pe_update_time_stamp</span><span class="c">(struct</span> <span class="w">eeh_pe</span> <span class="c">*</span><span class="w">pe</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">timeval</span> <span class="w">tstamp</span><span class="c">;</span>
+
+	<span class="pc">if</span> <span class="pc">(!</span><span class="w">pe</span><span class="c">)</span> <span class="c">return;</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">pe</span><span class="c">-&gt;</span><span class="w">freeze_count</span> <span class="w">&lt;</span><span class="pc">=</span> <span class="c">0) {</span>
+		<span class="w">pe</span><span class="pc">-</span><span class="c">&gt;freeze_count</span> <span class="c">=</span> <span class="c">0;</span>
+		<span class="w">do_gettimeofday</span><span class="pc">(&amp;</span><span class="w">pe</span><span class="c">-&gt;</span><span class="w">t</span><span class="pc">s</span><span class="c">tamp);</span>
+	<span class="c">}</span> <span class="pc">e</span><span class="c">lse</span> <span class="c">{</span>
+		<span class="w">d</span><span class="c">o_gettimeofday</span><span class="w">(</span><span class="pc">&amp;ts</span><span class="c">tamp</span><span class="pc">)</span><span class="c">;</span>
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="pc">ts</span><span class="c">tamp</span><span class="w">.tv</span><span class="c">_sec</span> <span class="w">-</span> <span class="w">pe</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">t</span><span class="c">stamp.</span><span class="w">tv</span><span class="c">_sec</span> <span class="w">&gt;</span> <span class="w">3600</span><span class="c">) {</span>
+			<span class="w">pe</span><span class="pc">-</span><span class="c">&gt;tstamp</span> <span class="pc">=</span> <span class="pc">t</span><span class="c">stamp</span><span class="pc">;</span>
+			<span class="w">pe</span><span class="c">-&gt;</span><span class="pc">f</span><span class="c">reeze_count</span> <span class="pc">=</span> <span class="pc">0</span><span class="c">;</span>
+		<span class="c">}</span>
+	<span class="w">}</span>
+<span class="w">}</span>
+
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="c">void</span> <span class="pc">*</span><span class="w">__eeh_pe_state_mark</span><span class="c">(</span><span class="pc">v</span><span class="c">oid</span> <span class="c">*</span><span class="w">d</span><span class="pc">a</span><span class="c">ta</span><span class="pc">,</span> <span class="pc">v</span><span class="c">oid</span> <span class="c">*</span><span class="w">fl</span><span class="pc">ag</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">eeh_pe</span> <span class="c">*</span><span class="w">pe</span> <span class="pc">= </span><span class="c">(</span><span class="pc">s</span><span class="c">truct</span> <span class="c">eeh_pe</span> <span class="c">*)</span><span class="w">d</span><span class="pc">a</span><span class="c">ta;</span>
+	<span class="pc">in</span><span class="c">t</span> <span class="w">s</span><span class="pc">tate</span> <span class="w">= *((i</span><span class="c">nt</span> <span class="w">*</span><span class="c">)</span><span class="w">fl</span><span class="pc">ag)</span><span class="c">;</span>
+	<span class="w">s</span><span class="pc">t</span><span class="c">ruct</span> <span class="w">eeh_dev</span> <span class="c">*</span><span class="w">ed</span><span class="c">ev</span><span class="w">,</span><span class="pc"> </span><span class="c">*</span><span class="w">t</span><span class="pc">m</span><span class="c">p;</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">p</span><span class="pc">c</span><span class="c">i_dev</span> <span class="c">*pdev</span><span class="pc">;</span>
+
+	
+	<span class="pc">if</span> <span class="c">(</span><span class="w">pe</span><span class="pc">-</span><span class="c">&gt;</span><span class="pc">s</span><span class="c">tate</span> <span class="w">&amp;</span> <span class="w">EEH_PE_REMOVED)</span>
+		<span class="c">return</span> <span class="w">N</span><span class="c">ULL;</span>
+
+	<span class="w">pe</span><span class="pc">-</span><span class="c">&gt;state</span> <span class="w">|</span><span class="c">=</span> <span class="w">s</span><span class="c">tate;</span>
+
+	
+	<span class="pc">i</span><span class="c">f</span> <span class="pc">(!(</span><span class="c">state</span> <span class="pc">&amp;</span> <span class="w">EEH_PE_ISOLATED</span><span class="c">))</span>
+		<span class="c">return</span> <span class="w">N</span><span class="c">ULL;</span>
+
+	<span class="w">eeh_pe_for_each_dev</span><span class="c">(</span><span class="w">pe</span><span class="c">,</span> <span class="w">ed</span><span class="c">ev</span><span class="pc">,</span> <span class="w">t</span><span class="c">mp</span><span class="w">)</span><span class="pc"> {</span>
+		<span class="w">pd</span><span class="pc">e</span><span class="c">v</span> <span class="pc">=</span> <span class="w">eeh_dev_to_pci_dev</span><span class="c">(</span><span class="w">ed</span><span class="c">ev</span><span class="pc">)</span><span class="c">;</span>
+		<span class="c">if</span> <span class="c">(</span><span class="w">pd</span><span class="pc">e</span><span class="c">v</span><span class="pc">)</span>
+			<span class="w">pd</span><span class="c">ev-&gt;</span><span class="w">error_state</span> <span class="c">=</span> <span class="w">pci_channel_io_frozen</span><span class="pc">;</span>
+	<span class="pc">}</span>
+
+	
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">pe-</span><span class="c">&gt;state</span> <span class="pc">&amp;</span> <span class="w">EEH_PE_CFG_RESTRICTED</span><span class="pc">)</span>
+		<span class="w">pe</span><span class="pc">-</span><span class="c">&gt;</span><span class="pc">s</span><span class="c">tate</span> <span class="pc">|</span><span class="c">=</span> <span class="w">EEH_PE_CFG_BLOCKED</span><span class="c">;</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">N</span><span class="c">ULL;</span>
+<span class="c">}</span>
+
+
+<span class="w">v</span><span class="c">oid</span> <span class="w">eeh_pe_state_mark</span><span class="c">(struct</span> <span class="w">eeh_pe</span> <span class="c">*</span><span class="w">pe</span><span class="pc">,</span> <span class="pc">i</span><span class="c">nt</span> <span class="pc">s</span><span class="c">tate</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">eeh_pe_traverse</span><span class="c">(</span><span class="w">pe</span><span class="c">,</span> <span class="w">__eeh_pe_state_mark,</span><span class="pc"> </span><span class="c">&amp;</span><span class="pc">s</span><span class="c">tate</span><span class="pc">)</span><span class="c">;</span>
+<span class="pc">}</span>
+
+<span class="c">static</span> <span class="c">void</span> <span class="c">*</span><span class="w">__eeh_pe_dev_mode_mark</span><span class="c">(</span><span class="pc">v</span><span class="c">oid</span> <span class="c">*</span><span class="w">d</span><span class="c">ata,</span> <span class="w">v</span><span class="c">oid</span> <span class="c">*</span><span class="w">fl</span><span class="pc">ag</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">eeh_dev</span> <span class="c">*</span><span class="w">ed</span><span class="c">ev</span> <span class="c">=</span> <span class="w">d</span><span class="pc">a</span><span class="c">ta</span><span class="pc">;</span>
+	<span class="pc">in</span><span class="c">t</span> <span class="w">m</span><span class="c">ode</span> <span class="w">= *((i</span><span class="c">nt</span> <span class="w">*</span><span class="pc">)</span><span class="w">fl</span><span class="pc">ag)</span><span class="c">;</span>
+
+	<span class="w">ed</span><span class="c">ev</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">m</span><span class="c">ode</span> <span class="w">|</span><span class="c">=</span> <span class="w">m</span><span class="pc">o</span><span class="c">de;</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">N</span><span class="c">ULL;</span>
+<span class="c">}</span>
+
+
+<span class="pc">v</span><span class="c">oid</span> <span class="w">eeh_pe_dev_mode_mark</span><span class="c">(struct</span> <span class="w">eeh_pe</span> <span class="c">*</span><span class="w">pe</span><span class="c">,</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">m</span><span class="c">ode</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">eeh_pe_dev_traverse</span><span class="c">(</span><span class="w">pe</span><span class="c">,</span> <span class="w">__eeh_pe_dev_mode_mark,</span><span class="pc"> </span><span class="c">&amp;</span><span class="w">m</span><span class="pc">o</span><span class="c">de);</span>
+<span class="pc">}</span>
+
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="c">void</span> <span class="c">*</span><span class="w">__eeh_pe_state_clear</span><span class="c">(</span><span class="pc">v</span><span class="c">oid</span> <span class="c">*</span><span class="w">d</span><span class="pc">a</span><span class="c">ta,</span> <span class="w">v</span><span class="c">oid</span> <span class="c">*</span><span class="w">fl</span><span class="pc">ag</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="c">eeh_pe</span> <span class="c">*</span><span class="w">pe</span> <span class="pc">= </span><span class="c">(</span><span class="pc">s</span><span class="c">truct</span> <span class="w">e</span><span class="pc">eh_pe</span> <span class="c">*)</span><span class="w">d</span><span class="pc">a</span><span class="c">ta;</span>
+	<span class="c">int</span> <span class="w">s</span><span class="pc">tate</span> <span class="w">= *((i</span><span class="c">nt</span> <span class="w">*</span><span class="c">)</span><span class="w">fl</span><span class="pc">ag)</span><span class="c">;</span>
+	<span class="w">s</span><span class="pc">t</span><span class="c">ruct</span> <span class="w">eeh_dev</span> <span class="c">*</span><span class="w">ed</span><span class="c">ev</span><span class="w">,</span><span class="pc"> </span><span class="c">*</span><span class="w">t</span><span class="pc">m</span><span class="c">p;</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">p</span><span class="pc">c</span><span class="c">i_dev</span> <span class="c">*pdev</span><span class="pc">;</span>
+
+	
+	<span class="pc">if</span> <span class="c">(</span><span class="w">pe</span><span class="pc">-</span><span class="c">&gt;</span><span class="pc">s</span><span class="c">tate</span> <span class="w">&amp;</span> <span class="w">EEH_PE_REMOVED)</span>
+		<span class="c">return</span> <span class="w">N</span><span class="c">ULL;</span>
+
+	<span class="w">pe</span><span class="pc">-</span><span class="c">&gt;state</span> <span class="w">&amp;</span><span class="pc">=</span><span class="c"> ~</span><span class="w">s</span><span class="c">tate;</span>
+
+	
+	<span class="c">if</span> <span class="pc">(!(</span><span class="c">state</span> <span class="pc">&amp;</span> <span class="w">EEH_PE_ISOLATED</span><span class="c">))</span>
+		<span class="c">return</span> <span class="w">N</span><span class="c">ULL;</span>
+
+	<span class="w">pe</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">check_count</span> <span class="c">=</span> <span class="pc">0</span><span class="c">;</span>
+	<span class="w">eeh_pe_for_each_dev</span><span class="c">(</span><span class="w">pe</span><span class="c">,</span> <span class="w">ed</span><span class="c">ev</span><span class="pc">,</span> <span class="w">t</span><span class="c">mp</span><span class="w">) </span><span class="pc">{</span>
+		<span class="w">pd</span><span class="pc">e</span><span class="c">v</span> <span class="pc">=</span> <span class="w">eeh_dev_to_pci_dev</span><span class="c">(</span><span class="w">ed</span><span class="c">ev</span><span class="pc">)</span><span class="c">;</span>
+		<span class="c">if</span> <span class="pc">(!</span><span class="w">p</span><span class="pc">de</span><span class="c">v</span><span class="pc">)</span>
+			<span class="pc">c</span><span class="c">ontinue;</span>
+
+		<span class="w">pd</span><span class="pc">e</span><span class="c">v</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">error_state</span> <span class="c">=</span> <span class="w">pci_channel_io_normal</span><span class="pc">;</span>
+	<span class="pc">}</span>
+
+	
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">pe</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">s</span><span class="c">tate</span> <span class="w">&amp;</span> <span class="w">EEH_PE_CFG_RESTRICTED</span><span class="pc">)</span>
+		<span class="w">pe</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">s</span><span class="pc">tate</span> <span class="w">&amp;</span><span class="c">= ~</span><span class="w">EEH_PE_CFG_BLOCKED</span><span class="c">;</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">N</span><span class="c">ULL;</span>
+<span class="c">}</span>
+
+
+<span class="w">v</span><span class="c">oid</span> <span class="w">eeh_pe_state_clear</span><span class="c">(struct</span> <span class="w">eeh_pe</span> <span class="c">*</span><span class="w">pe</span><span class="c">,</span> <span class="pc">i</span><span class="c">nt</span> <span class="pc">s</span><span class="c">tate)</span>
+<span class="c">{</span>
+	<span class="w">eeh_pe_traverse</span><span class="c">(</span><span class="w">pe</span><span class="c">,</span> <span class="w">__eeh_pe_state_clear,</span><span class="pc"> </span><span class="c">&amp;</span><span class="pc">s</span><span class="c">tate</span><span class="pc">)</span><span class="c">;</span>
+<span class="pc">}</span>
+
+
+<span class="c">static</span> <span class="c">void</span> <span class="w">eeh_bridge_check_link</span><span class="c">(struct</span> <span class="w">eeh_dev</span> <span class="c">*</span><span class="w">ed</span><span class="c">ev</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">pci_dn</span> <span class="c">*</span><span class="w">pdn</span> <span class="c">=</span> <span class="w">eeh_dev_to_pdn</span><span class="c">(</span><span class="w">ed</span><span class="c">ev);</span>
+	<span class="pc">in</span><span class="c">t</span> <span class="w">cap</span><span class="c">;</span>
+	<span class="w">ui</span><span class="pc">nt3</span><span class="c">2_t</span> <span class="w">v</span><span class="pc">al</span><span class="c">;</span>
+	<span class="w">i</span><span class="pc">n</span><span class="c">t</span> <span class="w">t</span><span class="c">imeout</span> <span class="pc">=</span> <span class="c">0;</span>
+
+	
+	<span class="pc">i</span><span class="c">f</span> <span class="pc">(!(</span><span class="w">ed</span><span class="c">ev-&gt;</span><span class="w">m</span><span class="pc">o</span><span class="c">de</span> <span class="w">&amp;</span><span class="pc"> </span><span class="c">(</span><span class="w">EEH_DEV_ROOT_PORT</span> <span class="pc">|</span> <span class="w">EEH_DEV_DS_PORT)))</span>
+		<span class="c">return</span><span class="pc">;</span>
+
+	<span class="w">pr</span><span class="pc">_</span><span class="c">debug</span><span class="pc">("%</span><span class="c">s:</span> <span class="w">Check</span> <span class="w">PCIe</span> <span class="w">l</span><span class="c">ink</span> <span class="w">f</span><span class="pc">or</span> <span class="pc">%0</span><span class="c">4x</span><span class="w">:</span><span class="c">%</span><span class="pc">0</span><span class="c">2x</span><span class="w">:</span><span class="c">%02x</span><span class="w">.</span><span class="pc">%</span><span class="w">01x</span> <span class="w">...\</span><span class="c">n",</span>
+		 <span class="c">__func__,</span> <span class="w">ed</span><span class="c">ev-&gt;</span><span class="w">phb-</span><span class="pc">&gt;</span><span class="w">global_number</span><span class="pc">,</span>
+		 <span class="w">ed</span><span class="c">ev-&gt;</span><span class="w">config_addr</span> <span class="w">&gt;</span><span class="c">&gt;</span> <span class="pc">8</span><span class="c">,</span>
+		 <span class="w">PCI_SLOT</span><span class="pc">(</span><span class="w">ed</span><span class="c">ev</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">c</span><span class="c">onfig_addr</span> <span class="w">&amp;</span> <span class="w">0xF</span><span class="pc">F),</span>
+		 <span class="w">PCI_FUNC</span><span class="c">(</span><span class="w">ed</span><span class="c">ev</span><span class="pc">-</span><span class="c">&gt;config_addr</span> <span class="w">&amp;</span> <span class="w">0xF</span><span class="c">F));</span>
+
+	
+	<span class="w">ca</span><span class="pc">p</span> <span class="pc">=</span> <span class="w">ed</span><span class="c">ev-&gt;</span><span class="w">pcie_cap</span><span class="c">;</span>
+	<span class="w">eeh_ops</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">read_config</span><span class="pc">(</span><span class="w">pdn</span><span class="c">,</span> <span class="w">ca</span><span class="c">p</span> <span class="w">+</span> <span class="w">PCI_EXP_SLTSTA</span><span class="pc">,</span> <span class="w">2,</span><span class="pc"> </span><span class="c">&amp;</span><span class="w">v</span><span class="pc">al</span><span class="c">);</span>
+	<span class="c">if</span> <span class="pc">(!(</span><span class="w">v</span><span class="c">al</span> <span class="c">&amp;</span> <span class="w">PCI_EXP_SLTSTA_PDS</span><span class="pc">)) </span><span class="c">{</span>
+		<span class="w">p</span><span class="pc">r_d</span><span class="c">ebug("</span>  <span class="w">N</span><span class="c">o</span> <span class="w">car</span><span class="c">d</span> <span class="w">i</span><span class="pc">n</span> <span class="w">t</span><span class="c">he</span> <span class="w">sl</span><span class="pc">o</span><span class="c">t</span> <span class="w">(</span><span class="pc">0</span><span class="c">x%</span><span class="w">0</span><span class="pc">4</span><span class="c">x</span><span class="w">) !\</span><span class="c">n",</span> <span class="pc">v</span><span class="c">al);</span>
+		<span class="pc">r</span><span class="c">eturn</span><span class="w">;</span>
+	<span class="c">}</span>
+
+	
+	<span class="pc">e</span><span class="c">eh_ops</span><span class="pc">-</span><span class="c">&gt;read_config</span><span class="pc">(p</span><span class="c">dn,</span> <span class="w">ca</span><span class="pc">p</span> <span class="w">+</span> <span class="w">PCI_EXP_SLTCAP</span><span class="pc">,</span> <span class="w">2,</span><span class="pc"> </span><span class="c">&amp;</span><span class="pc">v</span><span class="c">al);</span>
+	<span class="c">if</span> <span class="c">(</span><span class="w">v</span><span class="c">al</span> <span class="pc">&amp;</span> <span class="w">PCI_EXP_SLTCAP_PCP</span><span class="pc">) </span><span class="c">{</span>
+		<span class="w">e</span><span class="c">eh_ops</span><span class="pc">-</span><span class="c">&gt;read_config</span><span class="w">(</span><span class="pc">p</span><span class="c">dn,</span> <span class="w">ca</span><span class="c">p</span> <span class="w">+</span> <span class="w">PCI_EXP_SLTCTL</span><span class="pc">,</span> <span class="w">2,</span><span class="pc"> </span><span class="c">&amp;</span><span class="pc">v</span><span class="c">al);</span>
+		<span class="c">if</span> <span class="c">(</span><span class="pc">v</span><span class="c">al</span> <span class="c">&amp;</span> <span class="w">PCI_EXP_SLTCTL_PCC</span><span class="pc">) </span><span class="c">{</span>
+			<span class="w">p</span><span class="pc">r_d</span><span class="c">ebug("</span>  <span class="w">In</span> <span class="w">po</span><span class="pc">w</span><span class="c">er</span><span class="w">-o</span><span class="pc">f</span><span class="c">f</span> <span class="w">st</span><span class="pc">at</span><span class="c">e</span><span class="w">,</span> <span class="w">po</span><span class="c">wer</span> <span class="w">it</span> <span class="w">o</span><span class="pc">n</span> <span class="w">...\</span><span class="c">n");</span>
+			<span class="w">v</span><span class="c">al</span> <span class="w">&amp;</span><span class="pc">= ~(</span><span class="w">P</span><span class="pc">CI_EXP_SLTCTL_</span><span class="c">PCC</span> <span class="c">|</span> <span class="w">PCI_EXP_SLTCTL_PIC</span><span class="c">);</span>
+			<span class="w">v</span><span class="c">al</span> <span class="c">|= (</span><span class="w">0x01</span><span class="pc">0</span><span class="c">0</span> <span class="w">&amp;</span> <span class="w">P</span><span class="pc">CI_EXP_SLTCTL_PI</span><span class="c">C);</span>
+			<span class="w">eeh_ops-</span><span class="c">&gt;</span><span class="w">write_config</span><span class="pc">(</span><span class="w">pdn</span><span class="c">,</span> <span class="w">ca</span><span class="c">p</span> <span class="w">+</span> <span class="w">PCI_EXP_SLTCTL</span><span class="pc">,</span> <span class="w">2</span><span class="pc">,</span> <span class="c">val);</span>
+			<span class="w">m</span><span class="pc">s</span><span class="c">leep(</span><span class="w">2</span> <span class="w">*</span> <span class="c">1000</span><span class="pc">);</span>
+		<span class="pc">}</span>
+	<span class="pc">}</span>
+
+	
+	<span class="pc">e</span><span class="c">eh_ops</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">read_config</span><span class="c">(</span><span class="w">p</span><span class="c">dn,</span> <span class="w">ca</span><span class="c">p</span> <span class="w">+</span> <span class="w">PCI_EXP_LNKCTL</span><span class="pc">,</span> <span class="w">2,</span><span class="pc"> </span><span class="c">&amp;val);</span>
+	<span class="w">v</span><span class="pc">a</span><span class="c">l</span> <span class="w">&amp;</span><span class="pc">= ~</span><span class="w">PCI_EXP_LNKCTL_LD</span><span class="c">;</span>
+	<span class="w">e</span><span class="c">eh_ops</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">w</span><span class="c">rite_config</span><span class="pc">(p</span><span class="c">dn,</span> <span class="w">ca</span><span class="c">p</span> <span class="w">+</span> <span class="pc">P</span><span class="c">CI_EXP_LNKCTL</span><span class="pc">,</span> <span class="pc">2</span><span class="c">,</span> <span class="c">val);</span>
+
+	
+	<span class="pc">e</span><span class="c">eh_ops</span><span class="pc">-</span><span class="c">&gt;</span><span class="pc">r</span><span class="c">ead_config</span><span class="w">(</span><span class="c">pdn,</span> <span class="w">c</span><span class="pc">a</span><span class="c">p</span> <span class="w">+</span> <span class="w">PCI_EXP_LNKCAP</span><span class="pc">,</span> <span class="w">4,</span><span class="pc"> </span><span class="c">&amp;val</span><span class="pc">)</span><span class="c">;</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="pc">(!(</span><span class="c">val</span> <span class="c">&amp;</span> <span class="w">PCI_EXP_LNKCAP_DLLLARC</span><span class="pc">)) </span><span class="c">{</span>
+		<span class="w">p</span><span class="pc">r_d</span><span class="c">ebug("</span>  <span class="w">N</span><span class="c">o</span> <span class="w">li</span><span class="pc">n</span><span class="c">k</span> <span class="w">reporting</span> <span class="w">capability</span> <span class="pc">(</span><span class="c">0x%</span><span class="pc">08</span><span class="c">x</span><span class="w">) \</span><span class="c">n",</span> <span class="w">v</span><span class="c">al);</span>
+		<span class="w">m</span><span class="pc">s</span><span class="c">leep(</span><span class="w">1</span><span class="pc">000</span><span class="c">);</span>
+		<span class="pc">r</span><span class="c">eturn</span><span class="w">;</span>
+	<span class="c">}</span>
+
+	
+	<span class="w">t</span><span class="pc">i</span><span class="c">meout</span> <span class="pc">=</span> <span class="pc">0</span><span class="c">;</span>
+	<span class="w">w</span><span class="c">hile</span> <span class="c">(</span><span class="w">t</span><span class="c">imeout</span> <span class="pc">&lt;</span> <span class="w">5000</span><span class="pc">) </span><span class="c">{</span>
+		<span class="w">m</span><span class="pc">s</span><span class="c">leep(</span><span class="w">2</span><span class="c">0);</span>
+		<span class="w">t</span><span class="pc">i</span><span class="c">meout</span> <span class="pc">+</span><span class="c">=</span> <span class="w">2</span><span class="pc">0</span><span class="c">;</span>
+
+		<span class="w">eeh_ops-</span><span class="pc">&gt;</span><span class="w">read_config(pdn</span><span class="c">,</span> <span class="w">ca</span><span class="pc">p</span> <span class="pc">+</span> <span class="w">PCI_EXP_LNKSTA</span><span class="c">,</span> <span class="pc">2</span><span class="w">,</span><span class="pc"> </span><span class="c">&amp;</span><span class="pc">val</span><span class="c">);</span>
+		<span class="c">if</span> <span class="c">(</span><span class="w">v</span><span class="c">al</span> <span class="w">&amp;</span> <span class="w">PCI_EXP_LNKSTA_DLLLA</span><span class="c">)</span>
+			<span class="pc">b</span><span class="c">reak;</span>
+	<span class="pc">}</span>
+
+	<span class="c">if</span> <span class="c">(</span><span class="pc">v</span><span class="c">al</span> <span class="c">&amp;</span> <span class="w">P</span><span class="pc">CI_EXP_LNKSTA_</span><span class="c">DLLLA)</span>
+		<span class="w">pr</span><span class="pc">_d</span><span class="c">ebug("</span>  <span class="w">Link</span> <span class="w">u</span><span class="pc">p</span> <span class="w">(</span><span class="c">%s)\n",</span>
+			 <span class="w">(</span><span class="pc">v</span><span class="c">al</span> <span class="pc">&amp;</span> <span class="w">PCI_EXP_LNKSTA_CLS_2_5GB</span><span class="c">) ? "</span><span class="w">2.5GB"</span><span class="pc"> </span><span class="c">: "</span><span class="w">5</span><span class="c">GB");</span>
+	<span class="w">e</span><span class="c">lse</span>
+		<span class="w">p</span><span class="pc">r_d</span><span class="c">ebug("</span>  <span class="pc">L</span><span class="c">ink</span> <span class="w">n</span><span class="c">ot</span> <span class="w">rea</span><span class="pc">dy</span> <span class="w">(</span><span class="pc">0</span><span class="c">x%</span><span class="pc">0</span><span class="c">4x)\n",</span> <span class="pc">v</span><span class="c">al);</span>
+<span class="c">}</span>
+
+<span class="w">#</span><span class="c">define</span> <span class="w">BYTE_SWAP</span><span class="c">(</span><span class="w">OFF)	(8*((</span><span class="pc">O</span><span class="c">FF</span><span class="w">)/4)+3-(O</span><span class="c">FF</span><span class="w">))</span>
+<span class="c">#define</span> <span class="w">SAVED_BYTE</span><span class="c">(</span><span class="pc">O</span><span class="c">FF</span><span class="w">)	(</span><span class="pc">((</span><span class="w">u</span><span class="pc">8</span> <span class="w">*</span><span class="pc">)(</span><span class="w">ed</span><span class="c">ev-&gt;</span><span class="w">config_space))[B</span><span class="pc">Y</span><span class="c">TE_SWAP</span><span class="pc">(</span><span class="c">OFF</span><span class="w">)])</span>
+
+<span class="w">s</span><span class="pc">ta</span><span class="c">tic</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">eeh_restore_bridge_bars</span><span class="c">(struct</span> <span class="w">eeh_dev</span> <span class="c">*</span><span class="w">ed</span><span class="c">ev</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">pci_dn</span> <span class="c">*</span><span class="w">pdn</span> <span class="c">=</span> <span class="w">eeh_dev_to_pdn</span><span class="c">(</span><span class="w">ed</span><span class="c">ev);</span>
+	<span class="pc">in</span><span class="c">t</span> <span class="pc">i</span><span class="c">;</span>
+
+	
+	<span class="w">f</span><span class="c">or</span> <span class="c">(i</span> <span class="c">=</span> <span class="w">4</span><span class="c">;</span> <span class="c">i</span> <span class="c">&lt;</span> <span class="w">13</span><span class="c">;</span> <span class="c">i</span><span class="pc">++)</span>
+		<span class="w">eeh_ops-</span><span class="c">&gt;</span><span class="w">write_config</span><span class="pc">(</span><span class="c">pdn,</span> <span class="pc">i*</span><span class="w">4</span><span class="pc">,</span> <span class="w">4</span><span class="pc">,</span> <span class="w">ed</span><span class="c">ev-&gt;</span><span class="w">config_space</span><span class="pc">[</span><span class="c">i]);</span>
+	
+	<span class="pc">e</span><span class="c">eh_ops</span><span class="pc">-</span><span class="c">&gt;</span><span class="pc">w</span><span class="c">rite_config</span><span class="w">(</span><span class="pc">p</span><span class="c">dn,</span> <span class="w">14</span><span class="pc">*</span><span class="w">4</span><span class="c">,</span> <span class="w">4</span><span class="pc">,</span> <span class="w">ed</span><span class="c">ev-&gt;</span><span class="pc">c</span><span class="c">onfig_space[</span><span class="w">14</span><span class="c">]);</span>
+
+	
+	<span class="c">eeh_ops</span><span class="pc">-</span><span class="c">&gt;write_config</span><span class="pc">(</span><span class="c">pdn,</span> <span class="w">PCI_CACHE_LINE_SIZE</span><span class="c">,</span> <span class="w">1</span><span class="c">,</span>
+                <span class="w">SAVED_BYTE</span><span class="pc">(</span><span class="w">P</span><span class="c">CI_CACHE_LINE_SIZE</span><span class="pc">)</span><span class="c">);</span>
+        <span class="pc">e</span><span class="c">eh_ops</span><span class="pc">-</span><span class="c">&gt;</span><span class="pc">w</span><span class="c">rite_config</span><span class="pc">(</span><span class="c">pdn,</span> <span class="w">PCI_LATENCY_TIMER</span><span class="c">,</span> <span class="w">1</span><span class="pc">,</span>
+                <span class="w">S</span><span class="c">AVED_BYTE</span><span class="pc">(</span><span class="w">P</span><span class="pc">CI_L</span><span class="c">ATENCY_TIMER</span><span class="pc">))</span><span class="c">;</span>
+	
+	<span class="c">eeh_ops</span><span class="pc">-</span><span class="c">&gt;write_config</span><span class="pc">(</span><span class="c">pdn,</span> <span class="w">15</span><span class="pc">*4,</span> <span class="w">4</span><span class="pc">,</span> <span class="w">ed</span><span class="c">ev-&gt;</span><span class="w">config_space</span><span class="pc">[</span><span class="w">15</span><span class="pc">])</span><span class="c">;</span>
+
+	
+	<span class="pc">e</span><span class="c">eh_ops</span><span class="pc">-</span><span class="c">&gt;</span><span class="pc">w</span><span class="c">rite_config</span><span class="pc">(</span><span class="c">pdn,</span> <span class="w">PCI_COMMAND</span><span class="c">,</span> <span class="w">4</span><span class="c">,</span> <span class="w">ed</span><span class="c">ev</span><span class="pc">-</span><span class="c">&gt;</span><span class="pc">c</span><span class="c">onfig_space</span><span class="pc">[1])</span><span class="c">;</span>
+
+	
+	<span class="w">eeh_bridge_check_link</span><span class="c">(</span><span class="w">ed</span><span class="c">ev</span><span class="pc">)</span><span class="c">;</span>
+<span class="pc">}</span>
+
+<span class="c">static</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">eeh_restore_device_bars</span><span class="c">(struct</span> <span class="w">eeh_dev</span> <span class="c">*</span><span class="w">e</span><span class="pc">d</span><span class="c">ev</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">pci_dn</span> <span class="c">*</span><span class="pc">pd</span><span class="c">n</span> <span class="c">=</span> <span class="w">eeh_dev_to_pdn</span><span class="c">(</span><span class="w">ed</span><span class="c">ev);</span>
+	<span class="pc">in</span><span class="c">t</span> <span class="pc">i</span><span class="c">;</span>
+	<span class="w">u</span><span class="pc">3</span><span class="c">2</span> <span class="w">cm</span><span class="c">d;</span>
+
+	<span class="w">f</span><span class="c">or</span> <span class="c">(i</span> <span class="c">=</span> <span class="w">4</span><span class="c">;</span> <span class="c">i</span> <span class="c">&lt;</span> <span class="w">1</span><span class="pc">0</span><span class="c">;</span> <span class="c">i</span><span class="pc">++)</span>
+		<span class="w">eeh_ops-</span><span class="c">&gt;</span><span class="w">write_config</span><span class="pc">(</span><span class="c">pdn</span><span class="pc">,</span> <span class="c">i</span><span class="w">*4</span><span class="pc">,</span> <span class="w">4</span><span class="pc">,</span> <span class="w">ed</span><span class="c">ev-&gt;</span><span class="w">config_space</span><span class="pc">[</span><span class="c">i]);</span>
+	
+	<span class="pc">e</span><span class="c">eh_ops</span><span class="pc">-</span><span class="c">&gt;</span><span class="pc">w</span><span class="c">rite_config</span><span class="w">(</span><span class="pc">p</span><span class="c">dn,</span> <span class="w">12*4</span><span class="c">,</span> <span class="w">4</span><span class="pc">,</span> <span class="w">ed</span><span class="c">ev-&gt;</span><span class="w">c</span><span class="c">onfig_space[</span><span class="w">1</span><span class="pc">2</span><span class="c">]);</span>
+
+	<span class="c">eeh_ops</span><span class="pc">-</span><span class="c">&gt;write_config</span><span class="pc">(</span><span class="c">pdn,</span> <span class="w">PCI_CACHE_LINE_SIZE</span><span class="c">,</span> <span class="w">1</span><span class="c">,</span>
+		<span class="w">SAVED_BYTE</span><span class="pc">(</span><span class="w">P</span><span class="c">CI_CACHE_LINE_SIZE</span><span class="pc">)</span><span class="c">);</span>
+	<span class="pc">e</span><span class="c">eh_ops</span><span class="pc">-</span><span class="c">&gt;</span><span class="pc">w</span><span class="c">rite_config</span><span class="pc">(p</span><span class="c">dn,</span> <span class="w">PCI_LATENCY_TIMER</span><span class="c">,</span> <span class="w">1</span><span class="pc">,</span>
+		<span class="w">S</span><span class="c">AVED_BYTE</span><span class="w">(P</span><span class="pc">CI_L</span><span class="c">ATENCY_TIMER</span><span class="pc">))</span><span class="c">;</span>
+
+	
+	<span class="c">eeh_ops</span><span class="pc">-</span><span class="c">&gt;write_config</span><span class="pc">(</span><span class="c">pdn,</span> <span class="w">15</span><span class="pc">*</span><span class="w">4</span><span class="pc">,</span> <span class="w">4</span><span class="pc">,</span> <span class="w">ed</span><span class="c">ev-&gt;</span><span class="w">config_space</span><span class="pc">[</span><span class="w">15</span><span class="pc">])</span><span class="c">;</span>
+
+	
+	<span class="pc">e</span><span class="c">eh_ops</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">read_config</span><span class="pc">(p</span><span class="c">dn,</span> <span class="w">PCI_COMMAND</span><span class="c">,</span> <span class="w">4</span><span class="pc">, </span><span class="c">&amp;</span><span class="w">c</span><span class="pc">m</span><span class="c">d</span><span class="pc">)</span><span class="c">;</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">ed</span><span class="c">ev-&gt;</span><span class="pc">c</span><span class="c">onfig_space</span><span class="pc">[1</span><span class="w">] </span><span class="pc">&amp;</span> <span class="w">PCI_COMMAND_PARITY</span><span class="pc">)</span>
+		<span class="w">c</span><span class="pc">m</span><span class="c">d</span> <span class="pc">|</span><span class="c">=</span> <span class="pc">P</span><span class="c">CI_COMMAND_PARITY;</span>
+	<span class="pc">e</span><span class="c">lse</span>
+		<span class="w">c</span><span class="pc">m</span><span class="c">d</span> <span class="pc">&amp;</span><span class="c">= ~</span><span class="pc">P</span><span class="c">CI_COMMAND_PARITY;</span>
+	<span class="c">if</span> <span class="c">(</span><span class="w">ed</span><span class="c">ev-&gt;</span><span class="pc">c</span><span class="c">onfig_space</span><span class="pc">[1</span><span class="c">] &amp;</span> <span class="w">PCI_COMMAND_SERR</span><span class="c">)</span>
+		<span class="w">c</span><span class="pc">m</span><span class="c">d</span> <span class="pc">|</span><span class="c">=</span> <span class="pc">P</span><span class="c">CI_COMMAND_SERR;</span>
+	<span class="c">else</span>
+		<span class="w">c</span><span class="pc">m</span><span class="c">d</span> <span class="pc">&amp;</span><span class="c">= ~</span><span class="pc">P</span><span class="c">CI_COMMAND_SERR;</span>
+	<span class="w">eeh_ops-</span><span class="c">&gt;</span><span class="w">write_config</span><span class="pc">(</span><span class="w">pdn</span><span class="c">,</span> <span class="w">PCI_COMMAND</span><span class="c">,</span> <span class="w">4</span><span class="pc">,</span> <span class="w">c</span><span class="pc">m</span><span class="c">d</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">}</span>
+
+
+<span class="c">static</span> <span class="pc">v</span><span class="c">oid</span> <span class="c">*</span><span class="w">eeh_restore_one_device_bars</span><span class="c">(</span><span class="pc">v</span><span class="c">oid</span> <span class="c">*</span><span class="pc">d</span><span class="c">ata,</span> <span class="pc">v</span><span class="c">oid</span> <span class="c">*</span><span class="w">fl</span><span class="pc">ag</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">eeh_dev</span> <span class="c">*</span><span class="w">ed</span><span class="c">ev</span> <span class="pc">= </span><span class="c">(struct</span> <span class="c">eeh_dev</span> <span class="c">*)</span><span class="w">d</span><span class="pc">a</span><span class="c">ta;</span>
+	<span class="c">struct</span> <span class="w">pci_dn</span> <span class="c">*</span><span class="w">p</span><span class="pc">d</span><span class="c">n</span> <span class="c">=</span> <span class="w">eeh_dev_to_pdn</span><span class="c">(</span><span class="w">ed</span><span class="c">ev</span><span class="pc">)</span><span class="c">;</span>
+
+	
+	<span class="c">if</span> <span class="c">(</span><span class="w">ed</span><span class="c">ev-&gt;</span><span class="w">m</span><span class="c">ode</span> <span class="w">&amp;</span> <span class="w">EEH_DEV_BRIDGE</span><span class="pc">)</span>
+		<span class="w">eeh_restore_bridge_bars</span><span class="c">(</span><span class="w">ed</span><span class="c">ev</span><span class="pc">)</span><span class="c">;</span>
+	<span class="pc">e</span><span class="c">lse</span>
+		<span class="w">eeh_restore_device_bars</span><span class="c">(</span><span class="w">ed</span><span class="c">ev</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="c">if</span> <span class="c">(</span><span class="w">eeh_ops-</span><span class="c">&gt;</span><span class="w">restore_config</span> <span class="w">&amp;</span><span class="pc">&amp;</span> <span class="w">p</span><span class="c">dn</span><span class="w">)</span>
+		<span class="pc">e</span><span class="c">eh_ops</span><span class="pc">-</span><span class="c">&gt;restore_config</span><span class="w">(</span><span class="pc">p</span><span class="c">dn);</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">N</span><span class="c">ULL;</span>
+<span class="c">}</span>
+
+
+<span class="w">v</span><span class="c">oid</span> <span class="w">eeh_pe_restore_bars</span><span class="c">(struct</span> <span class="w">eeh_pe</span> <span class="c">*</span><span class="w">pe</span><span class="c">)</span>
+<span class="c">{</span>
+	
+	<span class="w">eeh_pe_dev_traverse</span><span class="c">(</span><span class="w">pe</span><span class="c">,</span> <span class="w">eeh_restore_one_device_bars</span><span class="pc">,</span> <span class="c">NULL);</span>
+<span class="c">}</span>
+
+
+<span class="w">c</span><span class="c">onst</span> <span class="pc">c</span><span class="c">har</span> <span class="c">*</span><span class="w">eeh_pe_loc_get</span><span class="pc">(s</span><span class="c">truct</span> <span class="w">e</span><span class="pc">eh_pe</span> <span class="c">*</span><span class="w">pe</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">pci_bus</span> <span class="c">*</span><span class="w">b</span><span class="c">us</span> <span class="pc">=</span> <span class="w">eeh_pe_bus_get</span><span class="c">(</span><span class="w">p</span><span class="pc">e</span><span class="c">);</span>
+	<span class="c">struct</span> <span class="w">d</span><span class="pc">evice_</span><span class="c">node</span> <span class="c">*</span><span class="w">d</span><span class="pc">n</span> <span class="c">=</span> <span class="w">pci_bus_to_OF_node</span><span class="c">(</span><span class="w">b</span><span class="pc">u</span><span class="c">s</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">c</span><span class="c">onst</span> <span class="pc">c</span><span class="c">har</span> <span class="c">*</span><span class="w">loc</span> <span class="pc">=</span> <span class="c">NULL;</span>
+
+	<span class="c">if</span> <span class="pc">(!</span><span class="w">dn</span><span class="pc">)</span>
+		<span class="pc">g</span><span class="c">oto</span> <span class="c">out;</span>
+
+	
+	<span class="c">if</span> <span class="pc">(</span><span class="w">pci_is_root_bus</span><span class="c">(</span><span class="pc">b</span><span class="c">us</span><span class="pc">)</span><span class="c">) {</span>
+		<span class="w">l</span><span class="c">oc</span> <span class="c">=</span> <span class="w">of_get_property</span><span class="c">(</span><span class="w">d</span><span class="pc">n, "</span><span class="w">ibm</span><span class="pc">,</span><span class="w">l</span><span class="c">oc</span><span class="pc">-</span><span class="w">cod</span><span class="c">e</span><span class="w">"</span><span class="pc">,</span> <span class="c">NULL);</span>
+		<span class="c">if</span> <span class="pc">(!</span><span class="c">loc</span><span class="pc">)</span>
+			<span class="w">l</span><span class="c">oc</span> <span class="pc">=</span> <span class="w">o</span><span class="c">f_get_property(</span><span class="w">dn</span><span class="pc">, </span><span class="c">"</span><span class="pc">i</span><span class="c">bm</span><span class="pc">,</span><span class="w">io</span><span class="pc">-</span><span class="w">b</span><span class="c">ase</span><span class="w">-</span><span class="c">loc</span><span class="pc">-</span><span class="w">cod</span><span class="c">e</span><span class="pc">"</span><span class="c">,</span> <span class="pc">N</span><span class="c">ULL);</span>
+		<span class="pc">i</span><span class="c">f</span> <span class="pc">(</span><span class="c">loc</span><span class="w">)</span>
+			<span class="pc">g</span><span class="c">oto</span> <span class="pc">o</span><span class="c">ut;</span>
+
+		
+		<span class="w">dn</span> <span class="c">=</span> <span class="w">dn</span><span class="c">-&gt;</span><span class="w">ch</span><span class="pc">il</span><span class="c">d</span><span class="pc">;</span>
+		<span class="c">if</span> <span class="pc">(!</span><span class="w">dn</span><span class="c">)</span>
+			<span class="pc">g</span><span class="c">oto</span> <span class="c">out;</span>
+	<span class="pc">}</span>
+
+	<span class="w">l</span><span class="c">oc</span> <span class="c">=</span> <span class="w">o</span><span class="pc">f</span><span class="c">_get_property(</span><span class="w">dn</span><span class="pc">, </span><span class="c">"</span><span class="pc">i</span><span class="c">bm</span><span class="pc">,l</span><span class="c">oc</span><span class="pc">-</span><span class="w">cod</span><span class="c">e</span><span class="w">"</span><span class="pc">,</span> <span class="c">NULL);</span>
+	<span class="c">if</span> <span class="pc">(!l</span><span class="c">oc)</span>
+		<span class="pc">l</span><span class="c">oc</span> <span class="c">=</span> <span class="pc">o</span><span class="c">f_get_property(</span><span class="w">dn</span><span class="c">, "</span><span class="pc">i</span><span class="c">bm</span><span class="pc">,</span><span class="w">sl</span><span class="pc">o</span><span class="c">t</span><span class="w">-location</span><span class="c">-</span><span class="w">co</span><span class="pc">d</span><span class="c">e",</span> <span class="pc">N</span><span class="c">ULL);</span>
+
+<span class="w">o</span><span class="pc">u</span><span class="c">t:</span>
+	<span class="c">return</span> <span class="pc">l</span><span class="c">oc</span> <span class="w">?</span> <span class="pc">l</span><span class="c">oc</span> <span class="w">:</span><span class="pc"> "</span><span class="w">N/A"</span><span class="pc">;</span>
+<span class="pc">}</span>
+
+
+<span class="w">s</span><span class="pc">tr</span><span class="c">uct</span> <span class="w">pci_bus</span> <span class="pc">*</span><span class="w">eeh_pe_bus_get</span><span class="pc">(</span><span class="c">struct</span> <span class="w">eeh_pe</span> <span class="c">*</span><span class="w">pe</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="c">pci_bus</span> <span class="c">*</span><span class="w">b</span><span class="pc">us</span> <span class="c">=</span> <span class="c">NULL;</span>
+	<span class="c">struct</span> <span class="w">eeh_dev</span> <span class="c">*</span><span class="w">ed</span><span class="c">ev</span><span class="pc">;</span>
+	<span class="c">struct</span> <span class="w">p</span><span class="pc">ci_d</span><span class="c">ev</span> <span class="c">*</span><span class="pc">p</span><span class="c">dev;</span>
+
+	<span class="w">i</span><span class="pc">f</span> <span class="c">(</span><span class="w">pe</span><span class="c">-&gt;</span><span class="w">t</span><span class="c">ype</span> <span class="w">&amp;</span> <span class="w">EEH_PE_PHB</span><span class="c">) {</span>
+		<span class="w">b</span><span class="pc">u</span><span class="c">s</span> <span class="pc">=</span> <span class="w">pe</span><span class="c">-&gt;</span><span class="w">phb-</span><span class="pc">&gt;</span><span class="c">bus;</span>
+	<span class="pc">}</span> <span class="pc">e</span><span class="c">lse</span> <span class="c">if</span> <span class="c">(</span><span class="w">pe</span><span class="c">-&gt;</span><span class="w">t</span><span class="c">ype</span> <span class="pc">&amp;</span> <span class="w">EEH_PE_BUS</span> <span class="w">|</span><span class="c">|</span>
+		   <span class="w">pe</span><span class="c">-&gt;</span><span class="pc">t</span><span class="c">ype</span> <span class="w">&amp;</span> <span class="w">EEH_PE_DEVICE</span><span class="c">) {</span>
+		<span class="c">if</span> <span class="c">(</span><span class="w">pe</span><span class="c">-&gt;</span><span class="w">b</span><span class="c">us</span><span class="pc">)</span><span class="c"> {</span>
+			<span class="w">b</span><span class="pc">u</span><span class="c">s</span> <span class="pc">=</span> <span class="w">pe</span><span class="c">-&gt;bus</span><span class="pc">;</span>
+			<span class="w">g</span><span class="c">oto</span> <span class="c">out;</span>
+		<span class="c">}</span>
+
+		<span class="w">ed</span><span class="c">ev</span> <span class="pc">=</span> <span class="w">list_first_entry</span><span class="pc">(&amp;</span><span class="w">pe</span><span class="c">-&gt;</span><span class="w">edevs</span><span class="pc">,</span> <span class="w">st</span><span class="pc">r</span><span class="c">uct</span> <span class="w">eeh_dev</span><span class="pc">,</span> <span class="c">list);</span>
+		<span class="w">pd</span><span class="pc">e</span><span class="c">v</span> <span class="pc">=</span> <span class="w">eeh_dev_to_pci_dev</span><span class="c">(</span><span class="w">ed</span><span class="pc">ev)</span><span class="c">;</span>
+		<span class="c">if</span> <span class="c">(</span><span class="w">pd</span><span class="pc">e</span><span class="c">v</span><span class="w">)</span>
+			<span class="w">b</span><span class="pc">u</span><span class="c">s</span> <span class="pc">=</span> <span class="pc">p</span><span class="c">dev-&gt;</span><span class="pc">b</span><span class="c">us;</span>
+	<span class="w">}</span>
+
+<span class="w">o</span><span class="c">ut</span><span class="pc">:</span>
+	<span class="c">return</span> <span class="w">b</span><span class="c">us;</span>
+<span class="c">}</span>
+
+</pre>
+</body>
+</html>
+

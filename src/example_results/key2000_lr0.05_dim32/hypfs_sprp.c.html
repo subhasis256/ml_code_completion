@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+<span class="w">#include</span> <span class="w">&lt;linux/compat.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/errno.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/gfp.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/string.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux</span><span class="c">/</span><span class="w">t</span><span class="pc">y</span><span class="c">pes.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">u</span><span class="pc">a</span><span class="c">ccess.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;</span><span class="pc">a</span><span class="c">sm/</span><span class="w">compat</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">sclp</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="pc">"</span><span class="w">hypfs</span><span class="c">.h"</span>
+
+<span class="c">#</span><span class="pc">d</span><span class="c">efine</span> <span class="w">DIAG304_SET_WEIGHTS</span>	<span class="pc">0</span>
+<span class="c">#define</span> <span class="w">DIAG304_QUERY_PRP</span>	<span class="c">1</span>
+<span class="c">#define</span> <span class="w">DIAG304_SET_CAPPING</span>	<span class="c">2</span>
+
+<span class="c">#define</span> <span class="w">DIAG304_CMD_MAX</span>		<span class="pc">2</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="w">u</span><span class="c">nsigned</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">hypfs_sprp_diag304</span><span class="pc">(v</span><span class="c">oid</span> <span class="pc">*</span><span class="w">d</span><span class="pc">a</span><span class="c">ta,</span> <span class="c">unsigned</span> <span class="c">long</span> <span class="w">c</span><span class="c">md</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">reg</span><span class="pc">i</span><span class="c">ster</span> <span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">_data</span> <span class="w">as</span><span class="pc">m</span><span class="w">("2") = (u</span><span class="c">nsigned</span> <span class="c">long</span><span class="w">)</span> <span class="pc">d</span><span class="c">ata;</span>
+	<span class="w">regi</span><span class="pc">s</span><span class="c">ter</span> <span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">_rc</span> <span class="w">a</span><span class="pc">s</span><span class="c">m</span><span class="w">("3"</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">regi</span><span class="pc">s</span><span class="c">ter</span> <span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">_cmd</span> <span class="w">as</span><span class="pc">m</span><span class="w">("4") =</span> <span class="w">cm</span><span class="c">d</span><span class="w">;</span>
+
+	<span class="w">a</span><span class="c">sm</span> <span class="w">v</span><span class="pc">ola</span><span class="c">tile</span><span class="w">(</span><span class="c">"</span><span class="w">diag</span> <span class="pc">%</span><span class="w">1,</span><span class="c">%</span><span class="w">2,0x304\</span><span class="c">n</span><span class="pc">"</span>
+		     <span class="w">: "=d"</span><span class="pc"> </span><span class="c">(</span><span class="w">_</span><span class="c">rc</span><span class="w">) : "</span><span class="pc">d"</span><span class="c"> (</span><span class="w">_data),</span><span class="pc"> </span><span class="c">"</span><span class="pc">d</span><span class="c">" (</span><span class="w">_</span><span class="c">cmd</span><span class="w">) </span><span class="pc">:</span><span class="c"> "</span><span class="w">me</span><span class="pc">m</span><span class="c">ory</span><span class="w">"</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">_</span><span class="c">rc</span><span class="pc">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">void</span> <span class="w">hypfs_sprp_free</span><span class="c">(</span><span class="pc">c</span><span class="c">onst</span> <span class="pc">v</span><span class="c">oid</span> <span class="c">*</span><span class="pc">d</span><span class="c">ata</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">free_page(</span><span class="pc">(u</span><span class="c">nsigned</span> <span class="c">long</span><span class="w">)</span> <span class="pc">d</span><span class="c">ata</span><span class="w">)</span><span class="pc">;</span>
+<span class="pc">}</span>
+
+<span class="c">static</span> <span class="pc">int</span> <span class="w">hypfs_sprp_create</span><span class="c">(</span><span class="pc">v</span><span class="c">oid</span> <span class="w">*</span><span class="pc">*</span><span class="w">data_ptr</span><span class="pc">,</span> <span class="pc">v</span><span class="c">oid</span> <span class="pc">**</span><span class="w">free_ptr</span><span class="pc">,</span> <span class="pc">s</span><span class="c">ize_t</span> <span class="pc">*</span><span class="w">s</span><span class="c">ize)</span>
+<span class="c">{</span>
+	<span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="c">long</span> <span class="w">rc</span><span class="c">;</span>
+	<span class="w">v</span><span class="c">oid</span> <span class="pc">*d</span><span class="c">ata;</span>
+
+	<span class="w">d</span><span class="pc">ata</span> <span class="w">=</span><span class="pc"> </span><span class="c">(void</span> <span class="c">*)</span> <span class="w">get_zeroed_page</span><span class="pc">(</span><span class="w">G</span><span class="c">FP_KERNEL);</span>
+	<span class="c">if</span> <span class="c">(!</span><span class="pc">data</span><span class="c">)</span>
+		<span class="c">return</span> <span class="c">-ENOMEM;</span>
+	<span class="w">rc</span> <span class="c">=</span> <span class="w">hypfs_sprp_diag304</span><span class="c">(</span><span class="w">d</span><span class="pc">ata</span><span class="c">,</span> <span class="w">DIAG304_QUERY_PRP</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">if</span> <span class="c">(</span><span class="w">r</span><span class="pc">c</span> <span class="pc">!</span><span class="c">=</span> <span class="w">1</span><span class="pc">) </span><span class="c">{</span>
+		<span class="w">*data_ptr</span> <span class="w">=</span><span class="pc"> *</span><span class="w">free_ptr</span> <span class="pc">=</span> <span class="w">N</span><span class="c">ULL;</span>
+		<span class="w">*s</span><span class="pc">i</span><span class="c">ze</span> <span class="c">=</span> <span class="pc">0</span><span class="c">;</span>
+		<span class="w">free_page((u</span><span class="c">nsigned</span> <span class="c">long</span><span class="w">)</span> <span class="w">d</span><span class="pc">ata</span><span class="w">)</span><span class="c">;</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="pc">-</span><span class="w">EI</span><span class="pc">O</span><span class="c">;</span>
+	<span class="c">}</span>
+	<span class="w">*</span><span class="pc">data_</span><span class="c">ptr</span> <span class="w">= </span><span class="pc">*</span><span class="w">f</span><span class="pc">ree_pt</span><span class="c">r</span> <span class="pc">=</span> <span class="pc">d</span><span class="c">ata;</span>
+	<span class="w">*</span><span class="pc">s</span><span class="c">ize</span> <span class="c">=</span> <span class="w">P</span><span class="c">AGE_SIZE</span><span class="pc">;</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">__hypfs_sprp_ioctl</span><span class="c">(</span><span class="pc">v</span><span class="c">oid</span> <span class="pc">_</span><span class="c">_user</span> <span class="c">*</span><span class="w">user_area</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">hypfs_diag304</span> <span class="w">diag304</span><span class="c">;</span>
+	<span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="c">long</span> <span class="w">cm</span><span class="c">d;</span>
+	<span class="pc">v</span><span class="c">oid</span> <span class="c">__user</span> <span class="c">*</span><span class="w">udata</span><span class="c">;</span>
+	<span class="pc">v</span><span class="c">oid</span> <span class="pc">*</span><span class="c">data;</span>
+	<span class="c">int</span> <span class="w">rc</span><span class="c">;</span>
+
+	<span class="w">i</span><span class="pc">f</span> <span class="pc">(c</span><span class="c">opy_from_user(&amp;</span><span class="pc">d</span><span class="c">iag304,</span> <span class="pc">u</span><span class="c">ser_area,</span> <span class="c">sizeof</span><span class="pc">(</span><span class="w">d</span><span class="pc">i</span><span class="c">ag304)))</span>
+		<span class="c">return</span> <span class="c">-EFAULT;</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="pc">((d</span><span class="c">iag304</span><span class="w">.ar</span><span class="pc">gs</span><span class="w">[</span><span class="c">0</span><span class="w">] &gt;</span><span class="c">&gt;</span> <span class="c">8</span><span class="pc">) !</span><span class="c">=</span> <span class="c">0</span> <span class="w">|</span><span class="c">|</span> <span class="c">diag304</span><span class="w">.a</span><span class="pc">r</span><span class="c">gs[</span><span class="w">1] &gt;</span> <span class="w">DIAG304_CMD_MAX</span><span class="pc">)</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="c">-EINVAL;</span>
+
+	<span class="w">d</span><span class="pc">a</span><span class="c">ta</span> <span class="pc">= </span><span class="c">(</span><span class="w">v</span><span class="c">oid</span> <span class="c">*)</span> <span class="w">get_zeroed_page</span><span class="c">(</span><span class="w">G</span><span class="c">FP_KERNEL</span> <span class="w">|</span> <span class="w">GFP_DMA</span><span class="c">);</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="pc">(!</span><span class="c">data)</span>
+		<span class="c">return</span> <span class="c">-ENOMEM;</span>
+
+	<span class="w">udata</span> <span class="pc">= </span><span class="c">(</span><span class="w">v</span><span class="pc">o</span><span class="c">id</span> <span class="w">_</span><span class="pc">_u</span><span class="c">ser</span> <span class="pc">*)(</span><span class="w">u</span><span class="c">nsigned</span> <span class="c">long</span><span class="pc">)</span> <span class="w">d</span><span class="pc">i</span><span class="c">ag304</span><span class="w">.</span><span class="c">data</span><span class="pc">;</span>
+	<span class="c">if</span> <span class="pc">(d</span><span class="c">iag304</span><span class="w">.ar</span><span class="pc">gs</span><span class="w">[1</span><span class="pc">] </span><span class="c">==</span> <span class="w">DIAG304_SET_WEIGHTS</span> <span class="pc">|</span><span class="c">|</span>
+	    <span class="c">diag304</span><span class="pc">.</span><span class="w">ar</span><span class="pc">gs[1</span><span class="w">] </span><span class="pc">==</span> <span class="w">DIAG304_SET_CAPPING</span><span class="c">)</span>
+		<span class="w">i</span><span class="c">f</span> <span class="c">(</span><span class="w">co</span><span class="pc">py_f</span><span class="c">rom_user(</span><span class="w">d</span><span class="pc">a</span><span class="c">ta,</span> <span class="w">u</span><span class="c">data,</span> <span class="w">P</span><span class="c">AGE_SIZE</span><span class="pc">)) </span><span class="c">{</span>
+			<span class="w">rc</span> <span class="c">= -EFAULT;</span>
+			<span class="c">goto</span> <span class="c">out;</span>
+		<span class="c">}</span>
+
+	<span class="w">cm</span><span class="c">d</span> <span class="w">= *</span><span class="pc">(u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">*</span><span class="pc">) </span><span class="c">&amp;</span><span class="pc">d</span><span class="c">iag304</span><span class="pc">.</span><span class="w">a</span><span class="pc">rgs</span><span class="c">[0];</span>
+	<span class="w">d</span><span class="pc">ia</span><span class="c">g304</span><span class="pc">.</span><span class="w">r</span><span class="pc">c</span> <span class="c">=</span> <span class="w">hypfs_sprp_diag304</span><span class="c">(</span><span class="w">da</span><span class="c">ta,</span> <span class="pc">c</span><span class="c">md</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="c">if</span> <span class="c">(</span><span class="w">d</span><span class="c">iag304</span><span class="pc">.</span><span class="w">a</span><span class="c">rgs[</span><span class="pc">1] </span><span class="c">==</span> <span class="w">DIAG304_QUERY_PRP</span><span class="c">)</span>
+		<span class="w">i</span><span class="c">f</span> <span class="c">(</span><span class="w">c</span><span class="c">opy_to_user(</span><span class="w">udata</span><span class="c">,</span> <span class="w">d</span><span class="pc">a</span><span class="c">ta,</span> <span class="w">P</span><span class="c">AGE_SIZE</span><span class="pc">)) </span><span class="c">{</span>
+			<span class="w">rc</span> <span class="c">= -EFAULT;</span>
+			<span class="c">goto</span> <span class="c">out;</span>
+		<span class="c">}</span>
+
+	<span class="w">r</span><span class="pc">c</span> <span class="c">=</span> <span class="w">c</span><span class="c">opy_to_user(</span><span class="w">user_area</span><span class="pc">, </span><span class="c">&amp;</span><span class="pc">d</span><span class="c">iag304,</span> <span class="c">sizeof(</span><span class="pc">d</span><span class="c">iag304</span><span class="w">)) ? -E</span><span class="c">FAULT</span> <span class="pc">:</span> <span class="pc">0;</span>
+<span class="w">o</span><span class="c">ut:</span>
+	<span class="w">free_page((u</span><span class="c">nsigned</span> <span class="pc">l</span><span class="c">ong</span><span class="w">)</span> <span class="w">d</span><span class="pc">a</span><span class="c">ta</span><span class="w">)</span><span class="c">;</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">r</span><span class="c">c;</span>
+<span class="c">}</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="w">l</span><span class="c">ong</span> <span class="w">hypfs_sprp_ioctl</span><span class="c">(struct</span> <span class="pc">f</span><span class="c">ile</span> <span class="c">*file,</span> <span class="pc">u</span><span class="c">nsigned</span> <span class="c">int</span> <span class="c">cmd,</span>
+			       <span class="c">unsigned</span> <span class="c">long</span> <span class="c">arg)</span>
+<span class="c">{</span>
+	<span class="w">v</span><span class="c">oid</span> <span class="pc">_</span><span class="c">_user</span> <span class="c">*argp</span><span class="pc">;</span>
+
+	<span class="w">i</span><span class="pc">f</span> <span class="pc">(!</span><span class="w">capable</span><span class="c">(</span><span class="w">CAP_SYS_ADMIN</span><span class="pc">))</span>
+		<span class="c">return</span> <span class="c">-</span><span class="w">EACCES</span><span class="c">;</span>
+	<span class="pc">if</span> <span class="c">(</span><span class="w">is_compat_task(</span><span class="pc">)</span><span class="c">)</span>
+		<span class="w">arg</span><span class="pc">p</span> <span class="c">=</span> <span class="w">compat_ptr</span><span class="c">(</span><span class="w">ar</span><span class="pc">g)</span><span class="c">;</span>
+	<span class="pc">e</span><span class="c">lse</span>
+		<span class="w">ar</span><span class="pc">gp</span> <span class="w">=</span><span class="pc"> </span><span class="c">(void</span> <span class="pc">_</span><span class="c">_user</span> <span class="c">*)</span> <span class="pc">arg</span><span class="c">;</span>
+	<span class="pc">s</span><span class="c">witch</span> <span class="c">(cmd) {</span>
+	<span class="c">case</span> <span class="w">HYPFS_DIAG304</span><span class="c">:</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="w">__hypfs_sprp_ioctl</span><span class="pc">(</span><span class="w">a</span><span class="pc">r</span><span class="c">gp</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">d</span><span class="c">efault:</span> 
+		<span class="c">return</span> <span class="c">-</span><span class="w">ENOTTY</span><span class="c">;</span>
+	<span class="c">}</span>
+	<span class="c">return</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="w">s</span><span class="c">truct</span> <span class="w">hypfs_dbfs_file</span> <span class="w">hypfs_sprp_file</span> <span class="c">= {</span>
+	<span class="c">.name</span>		<span class="c">= "</span><span class="w">diag_304</span><span class="c">",</span>
+	<span class="c">.</span><span class="w">data_create</span>	<span class="c">=</span> <span class="w">hypfs_sprp_create</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">data_free</span>	<span class="c">=</span> <span class="w">hypfs_sprp_free</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">unlocked_ioctl</span> <span class="c">=</span> <span class="w">hypfs_sprp_ioctl</span><span class="c">,</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="pc">i</span><span class="c">nt</span> <span class="w">hypfs_sprp_init</span><span class="c">(</span><span class="pc">v</span><span class="c">oid</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">if</span> <span class="c">(!</span><span class="w">sclp.has_sprp</span><span class="pc">)</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="pc">0</span><span class="c">;</span>
+	<span class="w">r</span><span class="c">eturn</span> <span class="w">hypfs_dbfs_create_file</span><span class="pc">(&amp;</span><span class="w">hypfs_sprp_file</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="pc">v</span><span class="c">oid</span> <span class="w">hypfs_sprp_exit</span><span class="c">(</span><span class="pc">v</span><span class="c">oid</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">i</span><span class="pc">f</span> <span class="pc">(!</span><span class="c">sclp</span><span class="w">.</span><span class="c">has_sprp)</span>
+		<span class="pc">r</span><span class="c">eturn</span><span class="pc">;</span>
+	<span class="w">hypfs_dbfs_remove_file</span><span class="pc">(&amp;</span><span class="w">h</span><span class="pc">ypfs_sprp_f</span><span class="c">ile</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">}</span>
+
+</pre>
+</body>
+</html>
+

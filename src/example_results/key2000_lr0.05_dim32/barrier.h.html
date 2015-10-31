@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+<span class="w">#ifndef</span> <span class="w">_XTENSA_SYSTEM_H</span>
+<span class="w">#define</span> <span class="w">_XTENSA_SYSTEM_H</span>
+
+<span class="w">#define</span> <span class="w">mb()  ({</span> <span class="w">__asm__</span> <span class="w">__volatile__("memw" : : : "memory"); })</span>
+<span class="w">#define</span> <span class="w">rmb()</span> <span class="w">barrier()</span>
+<span class="w">#define</span> <span class="w">wmb()</span> <span class="w">mb()</span>
+
+<span class="w">#define</span> <span class="w">smp_mb__before_atomic()</span>		<span class="w">barrier()</span>
+<span class="w">#define</span> <span class="w">smp_mb__after_atomic()</span>		<span class="w">barrier</span><span class="c">()</span>
+
+<span class="c">#</span><span class="w">i</span><span class="pc">n</span><span class="c">clude</span> <span class="c">&lt;</span><span class="pc">a</span><span class="c">sm</span><span class="pc">-</span><span class="w">g</span><span class="pc">e</span><span class="c">neric/</span><span class="w">b</span><span class="c">arrier.h&gt;</span>
+
+<span class="c">#</span><span class="pc">e</span><span class="c">ndif</span> 
+
+</pre>
+</body>
+</html>
+

@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+<span class="w">#include</span> <span class="w">&lt;linux/interrupt.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/kernel.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/module.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/platform_device.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux</span><span class="c">/</span><span class="w">of_platform</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">i</span><span class="c">2c</span><span class="pc">/</span><span class="w">twl</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">iio</span><span class="pc">/</span><span class="c">iio.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/iio/</span><span class="w">sysfs</span><span class="c">.h&gt;</span>
+
+<span class="c">#</span><span class="pc">d</span><span class="c">efine</span> <span class="w">DRIVER_NAME</span>		<span class="pc">"</span><span class="w">twl6030_gpadc</span><span class="pc">"</span>
+
+
+<span class="c">#define</span> <span class="w">TWL6030_GPADC_USED_CHANNELS</span>		<span class="w">13</span>
+<span class="c">#define</span> <span class="w">TWL6030_GPADC_MAX_CHANNELS</span>		<span class="w">15</span>
+<span class="c">#define</span> <span class="w">TWL6032_GPADC_USED_CHANNELS</span>		<span class="w">1</span><span class="pc">5</span>
+<span class="c">#define</span> <span class="w">TWL6032_GPADC_MAX_CHANNELS</span>		<span class="w">19</span>
+<span class="c">#define</span> <span class="w">TWL6030_GPADC_NUM_TRIM_REGS</span>		<span class="pc">16</span>
+
+<span class="c">#define</span> <span class="w">TWL6030_GPADC_CTRL_P1</span>			<span class="w">0x05</span>
+
+<span class="c">#define</span> <span class="w">TWL6032_GPADC_GPSELECT_ISB</span>		<span class="w">0x07</span>
+<span class="c">#define</span> <span class="w">TWL6032_GPADC_CTRL_P1</span>			<span class="w">0x08</span>
+
+<span class="c">#define</span> <span class="w">TWL6032_GPADC_GPCH0_LSB</span>			<span class="w">0x0d</span>
+<span class="c">#define</span> <span class="w">TWL6032_GPADC_GPCH0_MSB</span>			<span class="w">0x0e</span>
+
+<span class="c">#define</span> <span class="w">TWL6030_GPADC_CTRL_P1_SP1</span>		<span class="w">B</span><span class="c">IT(</span><span class="w">3</span><span class="c">)</span>
+
+<span class="c">#define</span> <span class="w">TWL6030_GPADC_GPCH0_LSB</span>			<span class="pc">(</span><span class="w">0x29</span><span class="pc">)</span>
+
+<span class="c">#define</span> <span class="w">TWL6030_GPADC_RT_SW1_EOC_MASK</span>		<span class="w">B</span><span class="c">IT(</span><span class="pc">5</span><span class="c">)</span>
+
+<span class="c">#define</span> <span class="w">TWL6030_GPADC_TRIM1</span>			<span class="w">0xCD</span>
+
+<span class="c">#define</span> <span class="w">TWL6030_REG_TOGGLE1</span>			<span class="w">0x9</span><span class="pc">0</span>
+<span class="c">#define</span> <span class="w">TWL6030_GPADCS</span>				<span class="w">B</span><span class="c">IT(</span><span class="w">1</span><span class="c">)</span>
+<span class="c">#define</span> <span class="w">TWL6030_GPADCR</span>				<span class="c">BIT(</span><span class="pc">0</span><span class="c">)</span>
+
+
+<span class="pc">s</span><span class="c">truct</span> <span class="w">twl6030_chnl_calib</span> <span class="c">{</span>
+	<span class="w">s</span><span class="pc">3</span><span class="c">2</span> <span class="w">gain</span><span class="c">;</span>
+	<span class="w">s</span><span class="pc">3</span><span class="c">2</span> <span class="w">gain_error</span><span class="c">;</span>
+	<span class="pc">s3</span><span class="c">2</span> <span class="w">offset_error</span><span class="c">;</span>
+<span class="c">};</span>
+
+
+<span class="c">struct</span> <span class="w">twl6030_ideal_code</span> <span class="c">{</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">ch</span><span class="pc">an</span><span class="c">nel;</span>
+	<span class="w">u</span><span class="pc">1</span><span class="c">6</span> <span class="w">code1</span><span class="c">;</span>
+	<span class="c">u16</span> <span class="w">code2</span><span class="c">;</span>
+	<span class="c">u16</span> <span class="w">volt1</span><span class="c">;</span>
+	<span class="c">u16</span> <span class="w">volt2</span><span class="c">;</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="c">struct</span> <span class="w">twl6030_gpadc_data</span><span class="pc">;</span>
+
+
+<span class="c">struct</span> <span class="w">twl6030_gpadc_platform_data</span> <span class="c">{</span>
+	<span class="w">c</span><span class="pc">o</span><span class="c">nst</span> <span class="w">i</span><span class="c">nt</span> <span class="w">nchannels</span><span class="c">;</span>
+	<span class="w">c</span><span class="c">onst</span> <span class="c">struct</span> <span class="w">iio_chan_spec</span> <span class="c">*</span><span class="w">iio_channels</span><span class="c">;</span>
+	<span class="pc">c</span><span class="c">onst</span> <span class="c">struct</span> <span class="w">t</span><span class="pc">wl6030_i</span><span class="c">deal_code</span> <span class="c">*</span><span class="w">ideal</span><span class="c">;</span>
+	<span class="c">int</span> <span class="c">(*</span><span class="w">start_conversion</span><span class="c">)(</span><span class="pc">i</span><span class="c">nt</span> <span class="w">ch</span><span class="pc">annel)</span><span class="c">;</span>
+	<span class="w">u</span><span class="pc">8</span> <span class="pc">(</span><span class="c">*</span><span class="w">channel_to_reg</span><span class="c">)(</span><span class="w">i</span><span class="c">nt</span> <span class="w">c</span><span class="pc">h</span><span class="c">annel</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">int</span> <span class="c">(*</span><span class="w">calibrate</span><span class="c">)(struct</span> <span class="w">t</span><span class="pc">wl6030_gpadc_d</span><span class="c">ata</span> <span class="c">*</span><span class="w">gpadc</span><span class="c">);</span>
+<span class="pc">}</span><span class="c">;</span>
+
+
+<span class="pc">s</span><span class="c">truct</span> <span class="pc">t</span><span class="c">wl6030_gpadc_data</span> <span class="c">{</span>
+	<span class="c">struct</span> <span class="pc">d</span><span class="c">evice</span>	<span class="c">*dev;</span>
+	<span class="c">struct</span> <span class="pc">m</span><span class="c">utex</span>	<span class="w">l</span><span class="c">ock;</span>
+	<span class="c">struct</span> <span class="w">c</span><span class="pc">o</span><span class="c">mpletion</span>	<span class="w">irq_complete</span><span class="c">;</span>
+	<span class="c">struct</span> <span class="w">twl6030_chnl_calib</span>	<span class="c">*</span><span class="w">twl6030_cal_tbl</span><span class="c">;</span>
+	<span class="pc">c</span><span class="c">onst</span> <span class="c">struct</span> <span class="w">twl6030_gpadc_platform_data</span> <span class="c">*</span><span class="w">p</span><span class="c">data;</span>
+<span class="pc">}</span><span class="c">;</span>
+
+
+<span class="pc">sta</span><span class="c">tic</span> <span class="pc">c</span><span class="c">onst</span> <span class="c">struct</span> <span class="w">twl6030_ideal_code</span>
+	<span class="w">twl6030_ideal</span><span class="pc">[</span><span class="w">TWL6030_GPADC_USED_CHANNELS</span><span class="c">] = {</span>
+	<span class="w">[</span><span class="c">0</span><span class="pc">] = {</span> 
+		<span class="c">.</span><span class="w">ch</span><span class="pc">annel</span> <span class="c">=</span> <span class="c">0,</span>
+		<span class="c">.</span><span class="w">code1</span> <span class="c">=</span> <span class="w">116</span><span class="c">,</span>
+		<span class="c">.</span><span class="w">code2</span> <span class="c">=</span> <span class="w">745</span><span class="c">,</span>
+		<span class="c">.</span><span class="w">volt1</span> <span class="c">=</span> <span class="w">141</span><span class="c">,</span>
+		<span class="c">.</span><span class="w">volt2</span> <span class="c">=</span> <span class="w">910</span><span class="c">,</span>
+	<span class="pc">},</span>
+	<span class="pc">[1</span><span class="c">] = {</span> 
+		<span class="c">.</span><span class="w">ch</span><span class="pc">annel</span> <span class="c">=</span> <span class="pc">1</span><span class="c">,</span>
+		<span class="c">.</span><span class="w">c</span><span class="c">ode1</span> <span class="c">=</span> <span class="w">82</span><span class="c">,</span>
+		<span class="pc">.</span><span class="w">c</span><span class="pc">ode2</span> <span class="c">=</span> <span class="w">900</span><span class="c">,</span>
+		<span class="c">.</span><span class="pc">v</span><span class="c">olt1</span> <span class="c">=</span> <span class="w">10</span><span class="pc">0</span><span class="c">,</span>
+		<span class="c">.volt2</span> <span class="c">=</span> <span class="w">1100</span><span class="c">,</span>
+	<span class="pc">}</span><span class="c">,</span>
+	<span class="pc">[2</span><span class="c">] = {</span> 
+		<span class="c">.</span><span class="w">ch</span><span class="pc">annel</span> <span class="c">=</span> <span class="w">2</span><span class="c">,</span>
+		<span class="pc">.</span><span class="w">c</span><span class="pc">ode1</span> <span class="c">=</span> <span class="w">55</span><span class="c">,</span>
+		<span class="pc">.code2</span> <span class="c">=</span> <span class="w">818</span><span class="c">,</span>
+		<span class="c">.</span><span class="pc">v</span><span class="c">olt1</span> <span class="c">=</span> <span class="w">101</span><span class="c">,</span>
+		<span class="c">.volt2</span> <span class="c">=</span> <span class="w">1499</span><span class="c">,</span>
+	<span class="pc">},</span>
+	<span class="pc">[</span><span class="w">3</span><span class="c">] = {</span> 
+		<span class="c">.</span><span class="w">ch</span><span class="pc">annel</span> <span class="c">=</span> <span class="w">3</span><span class="c">,</span>
+		<span class="c">.</span><span class="pc">c</span><span class="c">ode1</span> <span class="c">=</span> <span class="w">82</span><span class="c">,</span>
+		<span class="pc">.</span><span class="w">c</span><span class="pc">ode2</span> <span class="c">=</span> <span class="w">900</span><span class="c">,</span>
+		<span class="pc">.v</span><span class="c">olt1</span> <span class="c">=</span> <span class="w">10</span><span class="pc">0</span><span class="c">,</span>
+		<span class="c">.</span><span class="pc">volt2</span> <span class="c">=</span> <span class="w">1100</span><span class="c">,</span>
+	<span class="pc">}</span><span class="c">,</span>
+	<span class="pc">[4</span><span class="c">] = {</span> 
+		<span class="c">.</span><span class="w">ch</span><span class="pc">annel</span> <span class="c">=</span> <span class="w">4</span><span class="c">,</span>
+		<span class="pc">.</span><span class="w">c</span><span class="pc">ode1</span> <span class="c">=</span> <span class="pc">8</span><span class="c">2,</span>
+		<span class="pc">.code2</span> <span class="c">=</span> <span class="c">900,</span>
+		<span class="pc">.v</span><span class="c">olt1</span> <span class="c">=</span> <span class="w">10</span><span class="pc">0</span><span class="c">,</span>
+		<span class="c">.volt2</span> <span class="c">=</span> <span class="c">1100,</span>
+	<span class="pc">}</span><span class="c">,</span>
+	<span class="pc">[5</span><span class="c">] = {</span> 
+		<span class="c">.</span><span class="w">ch</span><span class="pc">annel</span> <span class="c">=</span> <span class="pc">5</span><span class="c">,</span>
+		<span class="pc">.c</span><span class="c">ode1</span> <span class="c">=</span> <span class="pc">8</span><span class="c">2,</span>
+		<span class="pc">.code2</span> <span class="c">=</span> <span class="c">900,</span>
+		<span class="pc">.</span><span class="c">volt1</span> <span class="c">=</span> <span class="w">10</span><span class="pc">0</span><span class="c">,</span>
+		<span class="pc">.</span><span class="c">volt2</span> <span class="c">=</span> <span class="c">1100,</span>
+	<span class="pc">}</span><span class="c">,</span>
+	<span class="pc">[</span><span class="w">6</span><span class="c">] = {</span> 
+		<span class="c">.</span><span class="w">ch</span><span class="pc">annel</span> <span class="c">=</span> <span class="w">6</span><span class="c">,</span>
+		<span class="pc">.code1</span> <span class="c">=</span> <span class="pc">8</span><span class="c">2,</span>
+		<span class="pc">.code2</span> <span class="c">=</span> <span class="c">900,</span>
+		<span class="pc">.</span><span class="c">volt1</span> <span class="c">=</span> <span class="w">10</span><span class="pc">0</span><span class="c">,</span>
+		<span class="pc">.</span><span class="c">volt2</span> <span class="c">=</span> <span class="c">1100,</span>
+	<span class="pc">},</span>
+	<span class="pc">[</span><span class="w">7</span><span class="c">] = {</span> 
+		<span class="c">.</span><span class="w">ch</span><span class="pc">annel</span> <span class="c">=</span> <span class="w">7</span><span class="c">,</span>
+		<span class="pc">.c</span><span class="c">ode1</span> <span class="c">=</span> <span class="w">614</span><span class="c">,</span>
+		<span class="pc">.</span><span class="w">c</span><span class="pc">ode2</span> <span class="c">=</span> <span class="w">941</span><span class="c">,</span>
+		<span class="c">.</span><span class="pc">v</span><span class="c">olt1</span> <span class="c">=</span> <span class="w">3001</span><span class="c">,</span>
+		<span class="c">.volt2</span> <span class="c">=</span> <span class="w">4599</span><span class="c">,</span>
+	<span class="pc">},</span>
+	<span class="pc">[</span><span class="w">8</span><span class="c">] = {</span> 
+		<span class="c">.</span><span class="w">ch</span><span class="pc">annel</span> <span class="c">=</span> <span class="pc">8</span><span class="c">,</span>
+		<span class="pc">.</span><span class="w">c</span><span class="c">ode1</span> <span class="c">=</span> <span class="w">82</span><span class="c">,</span>
+		<span class="pc">.code2</span> <span class="c">=</span> <span class="w">688</span><span class="c">,</span>
+		<span class="c">.</span><span class="pc">v</span><span class="c">olt1</span> <span class="c">=</span> <span class="w">501</span><span class="c">,</span>
+		<span class="c">.volt2</span> <span class="c">=</span> <span class="w">4203</span><span class="c">,</span>
+	<span class="pc">}</span><span class="c">,</span>
+	<span class="pc">[</span><span class="w">9</span><span class="c">] = {</span> 
+		<span class="c">.</span><span class="w">ch</span><span class="pc">annel</span> <span class="c">=</span> <span class="w">9</span><span class="c">,</span>
+		<span class="pc">.</span><span class="w">c</span><span class="pc">ode1</span> <span class="c">=</span> <span class="w">182</span><span class="c">,</span>
+		<span class="pc">.</span><span class="w">c</span><span class="pc">ode2</span> <span class="c">=</span> <span class="w">818</span><span class="c">,</span>
+		<span class="c">.</span><span class="pc">v</span><span class="c">olt1</span> <span class="c">=</span> <span class="w">2001</span><span class="c">,</span>
+		<span class="c">.volt2</span> <span class="c">=</span> <span class="w">8996</span><span class="c">,</span>
+	<span class="pc">},</span>
+	<span class="pc">[</span><span class="w">1</span><span class="pc">0</span><span class="c">] = {</span> 
+		<span class="c">.</span><span class="w">ch</span><span class="pc">annel</span> <span class="c">=</span> <span class="w">1</span><span class="pc">0</span><span class="c">,</span>
+		<span class="pc">.</span><span class="w">c</span><span class="pc">ode1</span> <span class="c">=</span> <span class="w">149</span><span class="c">,</span>
+		<span class="pc">.</span><span class="w">c</span><span class="pc">ode2</span> <span class="c">=</span> <span class="c">818,</span>
+		<span class="c">.</span><span class="pc">v</span><span class="c">olt1</span> <span class="c">=</span> <span class="w">1001</span><span class="c">,</span>
+		<span class="c">.volt2</span> <span class="c">=</span> <span class="w">5497</span><span class="c">,</span>
+	<span class="pc">},</span>
+	<span class="pc">[</span><span class="w">11</span><span class="c">] = {</span> 
+		<span class="c">.</span><span class="w">ch</span><span class="pc">annel</span> <span class="c">=</span> <span class="w">11</span><span class="c">,</span>
+	<span class="c">},</span>
+		
+		
+	<span class="c">[</span><span class="pc">1</span><span class="c">2] = {</span> 
+		<span class="c">.</span><span class="w">c</span><span class="pc">h</span><span class="c">annel</span> <span class="c">=</span> <span class="w">14</span><span class="c">,</span>
+		<span class="pc">.</span><span class="w">c</span><span class="c">ode1</span> <span class="c">=</span> <span class="w">4</span><span class="pc">8</span><span class="c">,</span>
+		<span class="c">.</span><span class="pc">c</span><span class="c">ode2</span> <span class="c">=</span> <span class="w">714</span><span class="c">,</span>
+		<span class="c">.</span><span class="pc">v</span><span class="c">olt1</span> <span class="c">=</span> <span class="w">323</span><span class="c">,</span>
+		<span class="c">.</span><span class="pc">v</span><span class="c">olt2</span> <span class="c">=</span> <span class="w">4800</span><span class="c">,</span>
+	<span class="pc">}</span><span class="c">,</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="c">static</span> <span class="pc">c</span><span class="c">onst</span> <span class="c">struct</span> <span class="w">twl6030_ideal_code</span>
+			<span class="w">twl6032_ideal</span><span class="pc">[</span><span class="w">TWL6032_GPADC_USED_CHANNELS</span><span class="c">] = {</span>
+	<span class="pc">[</span><span class="c">0] = {</span> 
+		<span class="c">.</span><span class="w">ch</span><span class="pc">annel</span> <span class="c">=</span> <span class="c">0,</span>
+		<span class="c">.</span><span class="w">c</span><span class="c">ode1</span> <span class="c">=</span> <span class="w">1441</span><span class="c">,</span>
+		<span class="c">.</span><span class="pc">c</span><span class="c">ode2</span> <span class="c">=</span> <span class="w">3276</span><span class="c">,</span>
+		<span class="c">.</span><span class="w">v</span><span class="pc">olt1</span> <span class="c">=</span> <span class="w">440</span><span class="c">,</span>
+		<span class="c">.</span><span class="w">v</span><span class="c">olt2</span> <span class="c">=</span> <span class="w">10</span><span class="pc">00</span><span class="c">,</span>
+	<span class="pc">},</span>
+	<span class="pc">[1</span><span class="c">] = {</span> 
+		<span class="c">.</span><span class="w">ch</span><span class="pc">annel</span> <span class="c">=</span> <span class="pc">1</span><span class="c">,</span>
+		<span class="c">.</span><span class="w">c</span><span class="pc">ode1</span> <span class="c">=</span> <span class="w">1</span><span class="pc">4</span><span class="c">41,</span>
+		<span class="pc">.code2</span> <span class="c">=</span> <span class="c">3276,</span>
+		<span class="pc">.v</span><span class="c">olt1</span> <span class="c">=</span> <span class="c">440,</span>
+		<span class="c">.volt2</span> <span class="c">=</span> <span class="w">10</span><span class="pc">00</span><span class="c">,</span>
+	<span class="pc">},</span>
+	<span class="pc">[2</span><span class="c">] = {</span> 
+		<span class="c">.</span><span class="w">ch</span><span class="pc">annel</span> <span class="c">=</span> <span class="w">2</span><span class="c">,</span>
+		<span class="pc">.</span><span class="w">c</span><span class="pc">ode1</span> <span class="c">=</span> <span class="w">1</span><span class="pc">4</span><span class="c">41,</span>
+		<span class="pc">.code2</span> <span class="c">=</span> <span class="c">3276,</span>
+		<span class="pc">.v</span><span class="c">olt1</span> <span class="c">=</span> <span class="w">660</span><span class="c">,</span>
+		<span class="c">.volt2</span> <span class="c">=</span> <span class="w">1500</span><span class="c">,</span>
+	<span class="pc">},</span>
+	<span class="pc">[</span><span class="w">3</span><span class="c">] = {</span> 
+		<span class="c">.</span><span class="w">ch</span><span class="pc">annel</span> <span class="c">=</span> <span class="w">3</span><span class="c">,</span>
+		<span class="c">.</span><span class="pc">c</span><span class="c">ode1</span> <span class="c">=</span> <span class="pc">14</span><span class="c">41,</span>
+		<span class="pc">.code2</span> <span class="c">=</span> <span class="c">3276,</span>
+		<span class="pc">.v</span><span class="c">olt1</span> <span class="c">=</span> <span class="w">440</span><span class="c">,</span>
+		<span class="c">.volt2</span> <span class="c">=</span> <span class="w">10</span><span class="pc">00</span><span class="c">,</span>
+	<span class="pc">},</span>
+	<span class="pc">[</span><span class="w">4</span><span class="c">] = {</span> 
+		<span class="c">.</span><span class="w">ch</span><span class="pc">annel</span> <span class="c">=</span> <span class="w">4</span><span class="c">,</span>
+		<span class="pc">.</span><span class="w">c</span><span class="pc">ode1</span> <span class="c">=</span> <span class="pc">14</span><span class="c">41,</span>
+		<span class="pc">.code2</span> <span class="c">=</span> <span class="c">3276,</span>
+		<span class="pc">.v</span><span class="c">olt1</span> <span class="c">=</span> <span class="c">440,</span>
+		<span class="c">.volt2</span> <span class="c">=</span> <span class="w">10</span><span class="pc">00</span><span class="c">,</span>
+	<span class="pc">},</span>
+	<span class="pc">[5</span><span class="c">] = {</span> 
+		<span class="c">.</span><span class="w">ch</span><span class="pc">annel</span> <span class="c">=</span> <span class="pc">5</span><span class="c">,</span>
+		<span class="pc">.</span><span class="w">c</span><span class="pc">ode1</span> <span class="c">=</span> <span class="w">1</span><span class="pc">4</span><span class="c">41,</span>
+		<span class="pc">.code2</span> <span class="c">=</span> <span class="c">3276,</span>
+		<span class="pc">.v</span><span class="c">olt1</span> <span class="c">=</span> <span class="c">440,</span>
+		<span class="pc">.</span><span class="c">volt2</span> <span class="c">=</span> <span class="w">10</span><span class="pc">00</span><span class="c">,</span>
+	<span class="pc">},</span>
+	<span class="pc">[</span><span class="w">6</span><span class="c">] = {</span> 
+		<span class="c">.</span><span class="w">ch</span><span class="pc">annel</span> <span class="c">=</span> <span class="w">6</span><span class="c">,</span>
+		<span class="pc">.code1</span> <span class="c">=</span> <span class="w">1</span><span class="pc">4</span><span class="c">41,</span>
+		<span class="pc">.code2</span> <span class="c">=</span> <span class="c">3276,</span>
+		<span class="pc">.v</span><span class="c">olt1</span> <span class="c">=</span> <span class="c">440,</span>
+		<span class="pc">.</span><span class="c">volt2</span> <span class="c">=</span> <span class="w">10</span><span class="pc">00</span><span class="c">,</span>
+	<span class="pc">},</span>
+	<span class="pc">[</span><span class="w">7</span><span class="c">] = {</span> 
+		<span class="c">.</span><span class="w">ch</span><span class="pc">annel</span> <span class="c">=</span> <span class="w">7</span><span class="c">,</span>
+		<span class="pc">.</span><span class="w">c</span><span class="pc">ode1</span> <span class="c">=</span> <span class="w">1</span><span class="pc">4</span><span class="c">41,</span>
+		<span class="pc">.code2</span> <span class="c">=</span> <span class="c">3276,</span>
+		<span class="pc">.</span><span class="c">volt1</span> <span class="c">=</span> <span class="w">2200</span><span class="c">,</span>
+		<span class="c">.volt2</span> <span class="c">=</span> <span class="w">5000</span><span class="c">,</span>
+	<span class="pc">},</span>
+	<span class="pc">[</span><span class="w">8</span><span class="c">] = {</span> 
+		<span class="c">.</span><span class="w">ch</span><span class="pc">annel</span> <span class="c">=</span> <span class="pc">8</span><span class="c">,</span>
+		<span class="pc">.</span><span class="w">c</span><span class="c">ode1</span> <span class="c">=</span> <span class="pc">14</span><span class="c">41,</span>
+		<span class="pc">.code2</span> <span class="c">=</span> <span class="c">3276,</span>
+		<span class="c">.volt1</span> <span class="c">=</span> <span class="c">2200,</span>
+		<span class="c">.volt2</span> <span class="c">=</span> <span class="c">5000,</span>
+	<span class="pc">}</span><span class="c">,</span>
+	<span class="pc">[</span><span class="w">9</span><span class="c">] = {</span> 
+		<span class="c">.</span><span class="w">ch</span><span class="pc">annel</span> <span class="c">=</span> <span class="w">9</span><span class="c">,</span>
+		<span class="pc">.</span><span class="w">c</span><span class="pc">ode1</span> <span class="c">=</span> <span class="pc">14</span><span class="c">41,</span>
+		<span class="pc">.code2</span> <span class="c">=</span> <span class="c">3276,</span>
+		<span class="c">.volt1</span> <span class="c">=</span> <span class="w">3960</span><span class="c">,</span>
+		<span class="c">.volt2</span> <span class="c">=</span> <span class="w">9000</span><span class="c">,</span>
+	<span class="pc">},</span>
+	<span class="pc">[</span><span class="w">1</span><span class="pc">0</span><span class="c">] = {</span> 
+		<span class="c">.</span><span class="w">ch</span><span class="pc">annel</span> <span class="c">=</span> <span class="w">1</span><span class="pc">0</span><span class="c">,</span>
+		<span class="pc">.</span><span class="w">c</span><span class="pc">ode1</span> <span class="c">=</span> <span class="w">150</span><span class="c">,</span>
+		<span class="pc">.</span><span class="w">c</span><span class="pc">ode2</span> <span class="c">=</span> <span class="w">751</span><span class="c">,</span>
+		<span class="c">.</span><span class="pc">v</span><span class="c">olt1</span> <span class="c">=</span> <span class="w">10</span><span class="pc">00</span><span class="c">,</span>
+		<span class="c">.volt2</span> <span class="c">=</span> <span class="w">5000</span><span class="c">,</span>
+	<span class="pc">}</span><span class="c">,</span>
+	<span class="pc">[</span><span class="w">11</span><span class="c">] = {</span> 
+		<span class="c">.</span><span class="w">ch</span><span class="pc">annel</span> <span class="c">=</span> <span class="w">11</span><span class="c">,</span>
+		<span class="pc">.</span><span class="w">c</span><span class="c">ode1</span> <span class="c">=</span> <span class="w">1441</span><span class="c">,</span>
+		<span class="pc">.</span><span class="w">c</span><span class="pc">ode2</span> <span class="c">=</span> <span class="w">3276</span><span class="c">,</span>
+		<span class="c">.</span><span class="pc">v</span><span class="c">olt1</span> <span class="c">=</span> <span class="w">660</span><span class="c">,</span>
+		<span class="c">.volt2</span> <span class="c">=</span> <span class="w">1500</span><span class="c">,</span>
+	<span class="pc">},</span>
+		
+		
+	<span class="pc">[</span><span class="w">12</span><span class="c">] = {</span> 
+		<span class="c">.</span><span class="w">ch</span><span class="pc">annel</span> <span class="c">=</span> <span class="w">14</span><span class="c">,</span>
+		<span class="c">.</span><span class="w">c</span><span class="pc">ode1</span> <span class="c">=</span> <span class="pc">14</span><span class="c">41,</span>
+		<span class="pc">.code2</span> <span class="c">=</span> <span class="c">3276,</span>
+		<span class="c">.volt1</span> <span class="c">=</span> <span class="w">2420</span><span class="c">,</span>
+		<span class="c">.volt2</span> <span class="c">=</span> <span class="w">5500</span><span class="c">,</span>
+	<span class="pc">},</span>
+		
+		
+	<span class="pc">[</span><span class="w">13</span><span class="c">] = {</span> 
+		<span class="c">.</span><span class="w">ch</span><span class="pc">annel</span> <span class="c">=</span> <span class="w">17</span><span class="c">,</span>
+	<span class="pc">}</span><span class="c">,</span>
+	<span class="c">[</span><span class="w">14</span><span class="c">] = {</span> 
+		<span class="c">.</span><span class="w">c</span><span class="pc">h</span><span class="c">annel</span> <span class="c">=</span> <span class="w">18</span><span class="c">,</span>
+		<span class="c">.</span><span class="pc">c</span><span class="c">ode1</span> <span class="c">=</span> <span class="c">1441,</span>
+		<span class="c">.</span><span class="pc">c</span><span class="c">ode2</span> <span class="c">=</span> <span class="pc">3</span><span class="c">276,</span>
+		<span class="c">.</span><span class="pc">volt1</span> <span class="c">=</span> <span class="w">2200</span><span class="c">,</span>
+		<span class="c">.</span><span class="pc">v</span><span class="c">olt2</span> <span class="c">=</span> <span class="w">5000</span><span class="c">,</span>
+	<span class="pc">}</span><span class="c">,</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="c">static</span> <span class="w">i</span><span class="pc">nl</span><span class="c">ine</span> <span class="c">int</span> <span class="w">twl6030_gpadc_write</span><span class="c">(</span><span class="w">u</span><span class="pc">8</span> <span class="w">r</span><span class="c">eg,</span> <span class="c">u8</span> <span class="pc">v</span><span class="c">al)</span>
+<span class="c">{</span>
+	<span class="c">return</span> <span class="w">twl_i2c_write_u8</span><span class="c">(</span><span class="w">TWL6030_MODULE_GPADC</span><span class="c">,</span> <span class="w">v</span><span class="pc">a</span><span class="c">l,</span> <span class="w">r</span><span class="c">eg</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">inline</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">twl6030_gpadc_read</span><span class="c">(</span><span class="w">u</span><span class="pc">8</span> <span class="pc">r</span><span class="c">eg,</span> <span class="c">u8</span> <span class="pc">*</span><span class="c">val)</span>
+<span class="c">{</span>
+
+	<span class="c">return</span> <span class="w">twl_i2c_read</span><span class="c">(</span><span class="pc">T</span><span class="c">WL6030_MODULE_GPADC,</span> <span class="pc">v</span><span class="c">al,</span> <span class="c">reg</span><span class="pc">,</span> <span class="w">2</span><span class="c">);</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">int</span> <span class="w">twl6030_gpadc_enable_irq</span><span class="c">(</span><span class="w">u</span><span class="pc">8</span> <span class="w">m</span><span class="c">ask</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="pc">r</span><span class="c">et;</span>
+
+	<span class="pc">r</span><span class="c">et</span> <span class="c">=</span> <span class="w">twl6030_interrupt_unmask</span><span class="c">(</span><span class="w">m</span><span class="c">ask,</span> <span class="w">REG_INT_MSK_LINE_B</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">if</span> <span class="c">(ret</span> <span class="pc">&lt;</span> <span class="c">0)</span>
+		<span class="c">return</span> <span class="c">ret;</span>
+
+	<span class="pc">ret</span> <span class="c">=</span> <span class="w">t</span><span class="pc">wl6030_i</span><span class="c">nterrupt_unmask(</span><span class="w">m</span><span class="pc">as</span><span class="c">k,</span> <span class="w">REG_INT_MSK_STS_B</span><span class="c">);</span>
+
+	<span class="pc">retu</span><span class="c">rn</span> <span class="c">ret;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">twl6030_gpadc_disable_irq</span><span class="c">(</span><span class="w">u</span><span class="pc">8</span> <span class="w">m</span><span class="pc">a</span><span class="c">sk</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">twl6030_interrupt_mask</span><span class="c">(</span><span class="w">m</span><span class="c">ask,</span> <span class="pc">REG_INT_MSK_L</span><span class="c">INE_B);</span>
+	<span class="w">t</span><span class="pc">wl6030_interrupt_m</span><span class="c">ask(</span><span class="w">m</span><span class="c">ask,</span> <span class="pc">R</span><span class="c">EG_INT_MSK_STS_B</span><span class="pc">)</span><span class="c">;</span>
+<span class="pc">}</span>
+
+<span class="c">static</span> <span class="w">i</span><span class="pc">r</span><span class="c">qreturn_t</span> <span class="w">twl6030_gpadc_irq_handler</span><span class="c">(int</span> <span class="c">irq,</span> <span class="c">void</span> <span class="c">*</span><span class="w">ind</span><span class="pc">i</span><span class="c">o_dev)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">twl6030_gpadc_data</span> <span class="c">*</span><span class="w">gpadc</span> <span class="c">=</span> <span class="w">iio_priv</span><span class="c">(</span><span class="w">ind</span><span class="pc">i</span><span class="c">o_dev);</span>
+
+	<span class="w">com</span><span class="c">plete(&amp;gpadc-&gt;</span><span class="w">irq_complete</span><span class="c">);</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">I</span><span class="c">RQ_HANDLED;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">twl6030_start_conversion</span><span class="c">(</span><span class="pc">i</span><span class="c">nt</span> <span class="w">ch</span><span class="pc">ann</span><span class="c">el</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">twl6030_gpadc_write</span><span class="pc">(</span><span class="w">TWL6030_GPADC_CTRL_P1</span><span class="c">,</span>
+					<span class="w">TWL6030_GPADC_CTRL_P1_SP1</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">twl6032_start_conversion</span><span class="c">(</span><span class="pc">i</span><span class="c">nt</span> <span class="w">c</span><span class="pc">h</span><span class="c">annel</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="pc">ret;</span>
+
+	<span class="pc">r</span><span class="c">et</span> <span class="c">=</span> <span class="w">t</span><span class="pc">wl6030</span><span class="c">_gpadc_write(</span><span class="w">TWL6032_GPADC_GPSELECT_ISB</span><span class="c">,</span> <span class="w">ch</span><span class="c">annel);</span>
+	<span class="c">if</span> <span class="c">(ret</span><span class="pc">)</span>
+		<span class="c">return</span> <span class="c">ret;</span>
+
+	<span class="c">return</span> <span class="w">t</span><span class="pc">wl6030</span><span class="c">_gpadc_write(</span><span class="w">TWL6032_GPADC_CTRL_P1</span><span class="c">,</span>
+						<span class="pc">TWL6030_GPADC_CTRL_P1_</span><span class="c">SP1);</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="w">u</span><span class="pc">8</span> <span class="w">twl6030_channel_to_reg</span><span class="c">(</span><span class="pc">i</span><span class="c">nt</span> <span class="w">ch</span><span class="pc">ann</span><span class="c">el</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">return</span> <span class="w">TWL6030_GPADC_GPCH0_LSB</span> <span class="w">+</span> <span class="w">2</span> <span class="w">*</span> <span class="w">c</span><span class="pc">h</span><span class="c">annel</span><span class="pc">;</span>
+<span class="pc">}</span>
+
+<span class="c">static</span> <span class="w">u</span><span class="pc">8</span> <span class="w">twl6032_channel_to_reg</span><span class="c">(</span><span class="w">i</span><span class="c">nt</span> <span class="w">c</span><span class="pc">h</span><span class="c">annel</span><span class="pc">)</span>
+<span class="c">{</span>
+	
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">TWL6032_GPADC_GPCH0_LSB</span><span class="pc">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">twl6030_gpadc_lookup</span><span class="c">(</span><span class="pc">c</span><span class="c">onst</span> <span class="c">struct</span> <span class="w">twl6030_ideal_code</span> <span class="c">*</span><span class="w">ideal</span><span class="pc">,</span>
+		<span class="pc">i</span><span class="c">nt</span> <span class="w">ch</span><span class="c">annel</span><span class="pc">,</span> <span class="c">int</span> <span class="w">s</span><span class="pc">i</span><span class="c">ze)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="c">i;</span>
+
+	<span class="c">for</span> <span class="c">(i</span> <span class="c">=</span> <span class="c">0;</span> <span class="c">i</span> <span class="c">&lt;</span> <span class="w">s</span><span class="pc">ize</span><span class="c">;</span> <span class="c">i</span><span class="pc">++)</span>
+		<span class="c">if</span> <span class="c">(</span><span class="pc">id</span><span class="c">eal</span><span class="pc">[</span><span class="c">i].</span><span class="w">ch</span><span class="pc">annel</span> <span class="c">==</span> <span class="w">c</span><span class="pc">h</span><span class="c">annel)</span>
+			<span class="pc">b</span><span class="c">reak;</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">i</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">twl6030_channel_calibrated</span><span class="c">(</span><span class="pc">c</span><span class="c">onst</span> <span class="c">struct</span> <span class="w">twl6030_gpadc_platform_data</span>
+		<span class="c">*</span><span class="w">p</span><span class="pc">d</span><span class="c">ata,</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">ch</span><span class="c">annel)</span>
+<span class="c">{</span>
+	<span class="w">c</span><span class="c">onst</span> <span class="c">struct</span> <span class="w">twl6030_ideal_code</span> <span class="c">*ideal</span> <span class="c">=</span> <span class="w">p</span><span class="c">data-&gt;</span><span class="w">i</span><span class="pc">de</span><span class="c">al</span><span class="pc">;</span>
+	<span class="w">i</span><span class="pc">n</span><span class="c">t</span> <span class="pc">i;</span>
+
+	<span class="w">i</span> <span class="c">=</span> <span class="w">twl6030_gpadc_lookup</span><span class="c">(ideal</span><span class="pc">,</span> <span class="w">ch</span><span class="c">annel</span><span class="pc">,</span> <span class="w">p</span><span class="pc">d</span><span class="c">ata-&gt;</span><span class="w">nchannels</span><span class="pc">)</span><span class="c">;</span>
+	
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">p</span><span class="c">data-&gt;</span><span class="pc">i</span><span class="c">deal</span><span class="pc">[i</span><span class="c">].</span><span class="w">code2</span><span class="pc">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">twl6030_gpadc_make_correction</span><span class="c">(struct</span> <span class="w">twl6030_gpadc_data</span> <span class="c">*</span><span class="w">gpadc</span><span class="c">,</span>
+		<span class="pc">i</span><span class="c">nt</span> <span class="w">c</span><span class="pc">h</span><span class="c">annel</span><span class="pc">,</span> <span class="c">int</span> <span class="w">raw_code</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="w">c</span><span class="c">onst</span> <span class="c">struct</span> <span class="w">twl6030_ideal_code</span> <span class="c">*</span><span class="pc">i</span><span class="c">deal</span> <span class="c">=</span> <span class="pc">g</span><span class="c">padc-&gt;</span><span class="w">p</span><span class="pc">d</span><span class="c">ata-&gt;</span><span class="w">i</span><span class="c">deal;</span>
+	<span class="pc">in</span><span class="c">t</span> <span class="w">corrected_code</span><span class="pc">;</span>
+	<span class="pc">in</span><span class="c">t</span> <span class="pc">i</span><span class="c">;</span>
+
+	<span class="w">i</span> <span class="c">=</span> <span class="w">twl6030_gpadc_lookup</span><span class="c">(</span><span class="pc">i</span><span class="c">deal,</span> <span class="w">c</span><span class="pc">h</span><span class="c">annel</span><span class="pc">,</span> <span class="c">gpadc</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">p</span><span class="c">data-&gt;</span><span class="w">nchannels</span><span class="c">);</span>
+	<span class="w">c</span><span class="c">orrected_code</span> <span class="w">=</span><span class="pc"> ((r</span><span class="c">aw_code</span> <span class="w">*</span> <span class="w">1</span><span class="c">000</span><span class="w">) -</span>
+		<span class="w">g</span><span class="c">padc-&gt;</span><span class="w">twl6030_cal_tbl</span><span class="pc">[</span><span class="c">i</span><span class="pc">].</span><span class="w">offset_error) </span><span class="pc">/</span>
+		<span class="c">gpadc</span><span class="pc">-</span><span class="c">&gt;</span><span class="pc">t</span><span class="c">wl6030_cal_tbl[i].</span><span class="w">gain_error</span><span class="pc">;</span>
+
+	<span class="w">r</span><span class="pc">e</span><span class="c">turn</span> <span class="w">c</span><span class="c">orrected_code</span><span class="pc">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">twl6030_gpadc_get_raw</span><span class="c">(struct</span> <span class="w">twl6030_gpadc_data</span> <span class="c">*gpadc,</span>
+		<span class="pc">i</span><span class="c">nt</span> <span class="w">c</span><span class="pc">h</span><span class="c">annel</span><span class="pc">,</span> <span class="c">int</span> <span class="c">*</span><span class="w">res</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">u</span><span class="pc">8</span> <span class="w">re</span><span class="pc">g</span> <span class="c">=</span> <span class="c">gpadc-&gt;</span><span class="w">pd</span><span class="pc">a</span><span class="c">ta-&gt;</span><span class="w">channel_to_reg(ch</span><span class="pc">annel</span><span class="c">);</span>
+	<span class="w">__l</span><span class="pc">e1</span><span class="c">6</span> <span class="pc">v</span><span class="c">al;</span>
+	<span class="w">i</span><span class="pc">n</span><span class="c">t</span> <span class="w">raw_code</span><span class="pc">;</span>
+	<span class="pc">in</span><span class="c">t</span> <span class="c">ret;</span>
+
+	<span class="pc">r</span><span class="c">et</span> <span class="c">=</span> <span class="w">twl6030_gpadc_read</span><span class="c">(</span><span class="w">r</span><span class="pc">eg</span><span class="w">,</span><span class="pc"> (</span><span class="c">u8</span> <span class="pc">*)&amp;</span><span class="c">val);</span>
+	<span class="c">if</span> <span class="c">(ret</span><span class="pc">) </span><span class="c">{</span>
+		<span class="w">d</span><span class="pc">ev_d</span><span class="c">bg(</span><span class="pc">g</span><span class="c">padc-&gt;dev, "</span><span class="w">u</span><span class="c">nable</span> <span class="c">to</span> <span class="pc">rea</span><span class="c">d</span> <span class="pc">r</span><span class="c">egister</span> <span class="w">0</span><span class="c">x%</span><span class="w">X</span><span class="c">\n",</span> <span class="w">r</span><span class="pc">eg</span><span class="c">);</span>
+		<span class="c">return</span> <span class="c">ret;</span>
+	<span class="c">}</span>
+
+	<span class="w">raw_code</span> <span class="pc">=</span> <span class="w">l</span><span class="c">e16_to_cpu(</span><span class="w">v</span><span class="c">al);</span>
+	<span class="w">d</span><span class="pc">e</span><span class="c">v_dbg(</span><span class="pc">g</span><span class="c">padc-&gt;dev, "</span><span class="w">GPADC</span> <span class="w">ra</span><span class="pc">w</span> <span class="w">cod</span><span class="pc">e:</span><span class="c"> %d</span><span class="w">"</span><span class="pc">,</span> <span class="pc">r</span><span class="c">aw_code</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">twl6030_channel_calibrated</span><span class="c">(gpadc</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">pd</span><span class="pc">a</span><span class="c">ta</span><span class="pc">,</span> <span class="w">ch</span><span class="pc">ann</span><span class="c">el</span><span class="w">)</span><span class="pc">)</span>
+		<span class="w">*r</span><span class="pc">es</span> <span class="c">=</span> <span class="w">twl6030_gpadc_make_correction</span><span class="c">(</span><span class="pc">g</span><span class="c">padc</span><span class="pc">,</span> <span class="w">c</span><span class="pc">ha</span><span class="c">nnel</span><span class="pc">,</span> <span class="pc">r</span><span class="c">aw_code</span><span class="pc">)</span><span class="c">;</span>
+	<span class="pc">e</span><span class="c">lse</span>
+		<span class="w">*re</span><span class="pc">s</span> <span class="c">=</span> <span class="w">r</span><span class="c">aw_code</span><span class="pc">;</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">r</span><span class="c">et;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">twl6030_gpadc_get_processed</span><span class="c">(struct</span> <span class="w">twl6030_gpadc_data</span> <span class="c">*gpadc,</span>
+		<span class="pc">i</span><span class="c">nt</span> <span class="w">c</span><span class="pc">h</span><span class="c">annel</span><span class="pc">,</span> <span class="c">int</span> <span class="pc">*</span><span class="w">v</span><span class="c">al</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">c</span><span class="c">onst</span> <span class="c">struct</span> <span class="w">twl6030_ideal_code</span> <span class="c">*</span><span class="w">ideal</span> <span class="c">=</span> <span class="pc">g</span><span class="c">padc-&gt;</span><span class="w">pd</span><span class="c">ata-&gt;</span><span class="pc">i</span><span class="c">deal;</span>
+	<span class="pc">in</span><span class="c">t</span> <span class="w">corrected_code</span><span class="pc">;</span>
+	<span class="c">int</span> <span class="w">channel_value</span><span class="c">;</span>
+	<span class="c">int</span> <span class="pc">i</span><span class="c">;</span>
+	<span class="c">int</span> <span class="c">ret;</span>
+
+	<span class="pc">r</span><span class="c">et</span> <span class="c">=</span> <span class="w">twl6030_gpadc_get_raw</span><span class="c">(</span><span class="pc">g</span><span class="c">padc,</span> <span class="w">ch</span><span class="pc">annel, </span><span class="c">&amp;</span><span class="pc">co</span><span class="c">rrected_code);</span>
+	<span class="c">if</span> <span class="c">(ret</span><span class="pc">)</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="c">ret;</span>
+
+	<span class="w">i</span> <span class="c">=</span> <span class="w">twl6030_gpadc_lookup</span><span class="c">(</span><span class="w">i</span><span class="c">deal</span><span class="pc">,</span> <span class="w">ch</span><span class="pc">annel,</span> <span class="pc">g</span><span class="c">padc</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">pd</span><span class="c">ata-&gt;</span><span class="w">nchannels</span><span class="c">);</span>
+	<span class="w">c</span><span class="c">hannel_value</span> <span class="pc">=</span> <span class="pc">c</span><span class="c">orrected_code</span> <span class="w">*</span>
+			<span class="pc">g</span><span class="c">padc</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">twl6030_cal_tbl</span><span class="pc">[i].</span><span class="w">gain</span><span class="pc">;</span>
+
+	
+	<span class="w">c</span><span class="pc">h</span><span class="c">annel_value</span> <span class="w">/=</span> <span class="w">1</span><span class="pc">000</span><span class="c">;</span>
+
+	<span class="w">d</span><span class="c">ev_dbg(</span><span class="pc">g</span><span class="c">padc-&gt;dev, "</span><span class="w">GPADC</span> <span class="w">corrected</span> <span class="w">cod</span><span class="pc">e:</span><span class="c"> %d</span><span class="pc">"</span><span class="c">,</span> <span class="w">c</span><span class="pc">orrected_</span><span class="c">code</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">d</span><span class="c">ev_dbg</span><span class="pc">(g</span><span class="c">padc-&gt;dev, "</span><span class="w">G</span><span class="c">PADC</span> <span class="w">v</span><span class="c">alue</span><span class="w">:</span><span class="pc"> </span><span class="c">%d</span><span class="w">"</span><span class="c">,</span> <span class="w">c</span><span class="pc">h</span><span class="c">annel_value</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="w">*v</span><span class="pc">al</span> <span class="pc">=</span> <span class="w">c</span><span class="pc">h</span><span class="c">annel_value</span><span class="pc">;</span>
+
+	<span class="w">r</span><span class="c">eturn</span> <span class="pc">r</span><span class="c">et;</span>
+<span class="c">}</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="c">int</span> <span class="w">twl6030_gpadc_read_raw</span><span class="c">(struct</span> <span class="w">ii</span><span class="c">o_dev</span> <span class="c">*</span><span class="pc">i</span><span class="c">ndio_dev,</span>
+			     <span class="pc">c</span><span class="c">onst</span> <span class="c">struct</span> <span class="w">iio_chan_spec</span> <span class="c">*</span><span class="w">ch</span><span class="pc">an</span><span class="c">,</span>
+			     <span class="pc">i</span><span class="c">nt</span> <span class="pc">*</span><span class="w">v</span><span class="pc">al,</span> <span class="c">int</span> <span class="c">*</span><span class="w">val2</span><span class="pc">,</span> <span class="w">l</span><span class="c">ong</span> <span class="w">m</span><span class="pc">as</span><span class="c">k</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">twl6030_gpadc_data</span> <span class="c">*</span><span class="w">gpadc</span> <span class="c">=</span> <span class="w">iio_priv</span><span class="c">(</span><span class="w">ind</span><span class="pc">i</span><span class="c">o_dev);</span>
+	<span class="pc">in</span><span class="c">t</span> <span class="pc">re</span><span class="c">t</span><span class="pc">;</span>
+	<span class="w">l</span><span class="pc">o</span><span class="c">ng</span> <span class="w">t</span><span class="pc">i</span><span class="c">meout</span><span class="pc">;</span>
+
+	<span class="w">m</span><span class="c">utex_lock(&amp;gpadc</span><span class="pc">-</span><span class="c">&gt;lock);</span>
+
+	<span class="w">r</span><span class="pc">et</span> <span class="c">=</span> <span class="pc">g</span><span class="c">padc</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">pd</span><span class="pc">a</span><span class="c">ta</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">start_conversion(</span><span class="pc">c</span><span class="c">han</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">ch</span><span class="pc">a</span><span class="c">nnel);</span>
+	<span class="c">if</span> <span class="c">(ret</span><span class="pc">) </span><span class="c">{</span>
+		<span class="c">dev_err(</span><span class="pc">g</span><span class="c">padc-&gt;dev, "failed</span> <span class="c">to</span> <span class="w">st</span><span class="pc">a</span><span class="c">rt</span> <span class="w">conversion</span><span class="c">\n");</span>
+		<span class="pc">g</span><span class="c">oto</span> <span class="pc">err</span><span class="c">;</span>
+	<span class="c">}</span>
+	
+	<span class="w">t</span><span class="pc">i</span><span class="c">meout</span> <span class="c">=</span> <span class="w">wait_for_completion_interruptible_timeout</span><span class="c">(</span>
+				<span class="w">&amp;</span><span class="pc">g</span><span class="c">padc-&gt;</span><span class="w">irq_complete</span><span class="c">,</span> <span class="w">m</span><span class="pc">s</span><span class="c">ecs_to_jiffies(</span><span class="w">5000</span><span class="c">));</span>
+	<span class="c">if</span> <span class="c">(</span><span class="w">t</span><span class="pc">i</span><span class="c">meout</span> <span class="pc">=</span><span class="c">=</span> <span class="c">0</span><span class="pc">) </span><span class="c">{</span>
+		<span class="pc">r</span><span class="c">et</span> <span class="pc">= </span><span class="c">-</span><span class="w">ET</span><span class="c">IMEDOUT;</span>
+		<span class="c">goto</span> <span class="pc">e</span><span class="c">rr;</span>
+	<span class="c">}</span> <span class="w">e</span><span class="pc">l</span><span class="c">se</span> <span class="c">if</span> <span class="c">(</span><span class="w">t</span><span class="pc">i</span><span class="c">meout</span> <span class="c">&lt;</span> <span class="c">0</span><span class="pc">) </span><span class="c">{</span>
+		<span class="c">ret</span> <span class="c">= -</span><span class="w">EINTR</span><span class="c">;</span>
+		<span class="c">goto</span> <span class="pc">e</span><span class="c">rr;</span>
+	<span class="c">}</span>
+
+	<span class="w">s</span><span class="pc">w</span><span class="c">itch</span> <span class="c">(</span><span class="w">ma</span><span class="pc">s</span><span class="c">k) {</span>
+	<span class="c">case</span> <span class="w">IIO_CHAN_INFO_RAW</span><span class="c">:</span>
+		<span class="c">ret</span> <span class="c">=</span> <span class="w">twl6030_gpadc_get_raw</span><span class="c">(</span><span class="w">gpadc</span><span class="c">,</span> <span class="w">c</span><span class="pc">h</span><span class="c">an</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">ch</span><span class="pc">ann</span><span class="c">el</span><span class="pc">,</span> <span class="w">v</span><span class="c">al</span><span class="pc">)</span><span class="c">;</span>
+		<span class="pc">ret</span> <span class="c">=</span> <span class="pc">r</span><span class="c">et</span> <span class="w">? -E</span><span class="pc">IO</span> <span class="w">:</span> <span class="w">IIO_VAL_INT</span><span class="pc">;</span>
+		<span class="pc">b</span><span class="c">reak;</span>
+
+	<span class="c">case</span> <span class="w">IIO_CHAN_INFO_PROCESSED</span><span class="c">:</span>
+		<span class="c">ret</span> <span class="c">=</span> <span class="w">twl6030_gpadc_get_processed</span><span class="c">(</span><span class="w">g</span><span class="c">padc,</span> <span class="w">c</span><span class="pc">h</span><span class="c">an</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">ch</span><span class="c">annel</span><span class="pc">,</span> <span class="pc">v</span><span class="c">al</span><span class="pc">)</span><span class="c">;</span>
+		<span class="pc">r</span><span class="c">et</span> <span class="c">=</span> <span class="pc">r</span><span class="c">et</span> <span class="w">?</span><span class="pc"> -</span><span class="w">E</span><span class="pc">IO</span> <span class="w">:</span> <span class="w">I</span><span class="c">IO_VAL_INT</span><span class="pc">;</span>
+		<span class="pc">b</span><span class="c">reak;</span>
+
+	<span class="pc">d</span><span class="c">efault:</span>
+		<span class="w">b</span><span class="c">reak;</span>
+	<span class="c">}</span>
+<span class="w">e</span><span class="pc">rr:</span>
+	<span class="w">m</span><span class="c">utex_unlock(&amp;gpadc-&gt;lock);</span>
+
+	<span class="c">return</span> <span class="c">ret;</span>
+<span class="c">}</span>
+
+
+<span class="c">static</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">twl6030_calibrate_channel</span><span class="c">(struct</span> <span class="w">twl6030_gpadc_data</span> <span class="c">*gpadc</span><span class="pc">,</span>
+		<span class="c">int</span> <span class="w">ch</span><span class="pc">ann</span><span class="c">el</span><span class="pc">,</span> <span class="c">int</span> <span class="w">d1</span><span class="pc">,</span> <span class="c">int</span> <span class="w">d2</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">b</span><span class="pc">,</span> <span class="w">k</span><span class="pc">,</span> <span class="w">gain</span><span class="pc">,</span> <span class="w">x1</span><span class="pc">,</span> <span class="w">x2</span><span class="c">,</span> <span class="w">i;</span>
+	<span class="w">c</span><span class="pc">on</span><span class="c">st</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">twl6030_ideal_code</span> <span class="c">*</span><span class="w">ideal</span> <span class="pc">=</span> <span class="pc">g</span><span class="c">padc</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">pd</span><span class="c">ata</span><span class="pc">-</span><span class="c">&gt;ideal</span><span class="pc">;</span>
+
+	<span class="w">i</span> <span class="c">=</span> <span class="w">twl6030_gpadc_lookup</span><span class="c">(ideal,</span> <span class="w">ch</span><span class="pc">an</span><span class="c">nel,</span> <span class="w">g</span><span class="c">padc</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">p</span><span class="c">data-&gt;</span><span class="w">nchannels</span><span class="pc">)</span><span class="c">;</span>
+
+	
+	<span class="w">g</span><span class="pc">a</span><span class="c">in</span> <span class="w">= </span><span class="pc">((</span><span class="c">ideal</span><span class="w">[</span><span class="pc">i</span><span class="c">].</span><span class="w">volt2</span> <span class="w">-</span> <span class="pc">i</span><span class="c">deal</span><span class="w">[</span><span class="c">i</span><span class="pc">].</span><span class="w">volt1) *</span> <span class="w">1</span><span class="pc">0</span><span class="c">00</span><span class="w">)</span><span class="pc"> /</span>
+		<span class="w">(</span><span class="c">ideal</span><span class="w">[</span><span class="c">i].</span><span class="w">code2</span> <span class="w">-</span> <span class="w">i</span><span class="c">deal</span><span class="pc">[</span><span class="c">i].</span><span class="w">code1</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="w">x1</span> <span class="pc">=</span> <span class="pc">i</span><span class="c">deal[i].</span><span class="pc">c</span><span class="c">ode1</span><span class="pc">;</span>
+	<span class="w">x2</span> <span class="pc">=</span> <span class="pc">i</span><span class="c">deal[i].</span><span class="pc">code2;</span>
+
+	
+	<span class="w">k</span> <span class="c">=</span> <span class="w">1</span><span class="pc">0</span><span class="c">00</span> <span class="w">+ (((d2</span> <span class="w">-</span> <span class="w">d1)</span><span class="pc"> *</span> <span class="w">1</span><span class="pc">0</span><span class="c">00</span><span class="w">) / (x</span><span class="pc">2</span> <span class="w">-</span> <span class="w">x</span><span class="c">1</span><span class="w">))</span><span class="pc">;</span>
+
+	
+	<span class="w">b</span> <span class="pc">= </span><span class="c">(</span><span class="pc">d</span><span class="c">1</span> <span class="w">*</span> <span class="w">1</span><span class="pc">00</span><span class="c">0</span><span class="w">) - (k</span> <span class="pc">-</span> <span class="w">1</span><span class="pc">0</span><span class="c">00</span><span class="w">) </span><span class="pc">*</span> <span class="w">x</span><span class="pc">1</span><span class="c">;</span>
+
+	<span class="w">gpadc-</span><span class="c">&gt;</span><span class="w">twl6030_cal_tbl</span><span class="pc">[</span><span class="c">i].</span><span class="w">gain</span> <span class="c">=</span> <span class="w">g</span><span class="pc">a</span><span class="c">in;</span>
+	<span class="c">gpadc-&gt;</span><span class="pc">t</span><span class="c">wl6030_cal_tbl[i].</span><span class="w">gain_error</span> <span class="pc">=</span> <span class="w">k</span><span class="c">;</span>
+	<span class="c">gpadc-&gt;twl6030_cal_tbl[i].</span><span class="w">offset_error</span> <span class="c">=</span> <span class="w">b</span><span class="c">;</span>
+
+	<span class="w">d</span><span class="pc">e</span><span class="c">v_dbg</span><span class="pc">(g</span><span class="c">padc-&gt;</span><span class="pc">d</span><span class="c">ev, "</span><span class="w">GPADC</span> <span class="w">d1</span>   <span class="w">f</span><span class="c">or</span> <span class="w">Chn:</span><span class="c"> %d</span> <span class="w">= </span><span class="pc">%</span><span class="c">d\n",</span> <span class="w">c</span><span class="pc">ha</span><span class="c">nnel</span><span class="pc">,</span> <span class="pc">d</span><span class="c">1</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">d</span><span class="pc">e</span><span class="c">v_dbg</span><span class="pc">(g</span><span class="c">padc-&gt;dev, "</span><span class="w">G</span><span class="c">PADC</span> <span class="w">d2</span>   <span class="w">f</span><span class="pc">o</span><span class="c">r</span> <span class="w">C</span><span class="c">hn</span><span class="w">:</span><span class="c"> %d</span> <span class="w">=</span><span class="pc"> %</span><span class="c">d\n",</span> <span class="w">c</span><span class="pc">h</span><span class="c">annel</span><span class="pc">,</span> <span class="pc">d2)</span><span class="c">;</span>
+	<span class="w">d</span><span class="pc">e</span><span class="c">v_dbg</span><span class="pc">(</span><span class="w">g</span><span class="c">padc-&gt;dev, "</span><span class="pc">G</span><span class="c">PADC</span> <span class="w">x1</span>   <span class="w">f</span><span class="c">or</span> <span class="w">C</span><span class="c">hn</span><span class="pc">:</span><span class="c"> %d</span> <span class="w">=</span><span class="pc"> %</span><span class="c">d\n",</span> <span class="w">c</span><span class="pc">h</span><span class="c">annel</span><span class="pc">,</span> <span class="pc">x</span><span class="c">1</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">d</span><span class="pc">e</span><span class="c">v_dbg</span><span class="pc">(</span><span class="w">g</span><span class="c">padc-&gt;dev, "</span><span class="pc">G</span><span class="c">PADC</span> <span class="w">x2</span>   <span class="w">f</span><span class="c">or</span> <span class="w">C</span><span class="c">hn</span><span class="pc">:</span><span class="c"> %d</span> <span class="w">=</span><span class="pc"> %</span><span class="c">d\n",</span> <span class="w">c</span><span class="pc">h</span><span class="c">annel</span><span class="pc">,</span> <span class="pc">x2)</span><span class="c">;</span>
+	<span class="w">d</span><span class="c">ev_dbg</span><span class="pc">(</span><span class="w">g</span><span class="c">padc-&gt;dev, "</span><span class="pc">G</span><span class="c">PADC</span> <span class="w">Gain</span> <span class="w">f</span><span class="c">or</span> <span class="w">C</span><span class="c">hn</span><span class="pc">:</span><span class="c"> %d</span> <span class="w">=</span><span class="pc"> %</span><span class="c">d\n",</span> <span class="w">c</span><span class="pc">h</span><span class="c">annel</span><span class="pc">,</span> <span class="w">gain</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">d</span><span class="c">ev_dbg</span><span class="pc">(</span><span class="w">g</span><span class="pc">p</span><span class="c">adc-&gt;dev, "</span><span class="pc">G</span><span class="c">PADC</span> <span class="w">k</span>    <span class="w">f</span><span class="c">or</span> <span class="w">C</span><span class="c">hn</span><span class="pc">:</span><span class="c"> %d</span> <span class="w">=</span><span class="pc"> %</span><span class="c">d\n",</span> <span class="w">c</span><span class="pc">h</span><span class="c">annel</span><span class="pc">,</span> <span class="w">k</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">d</span><span class="c">ev_dbg</span><span class="pc">(</span><span class="w">g</span><span class="pc">p</span><span class="c">adc-&gt;dev, "</span><span class="pc">G</span><span class="c">PADC</span> <span class="w">b</span>    <span class="w">f</span><span class="c">or</span> <span class="w">C</span><span class="c">hn</span><span class="pc">:</span><span class="c"> %d</span> <span class="w">=</span><span class="pc"> %</span><span class="c">d\n",</span> <span class="w">c</span><span class="pc">h</span><span class="c">annel</span><span class="pc">,</span> <span class="w">b</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="w">s</span><span class="pc">t</span><span class="c">atic</span> <span class="w">i</span><span class="pc">nl</span><span class="c">ine</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">twl6030_gpadc_get_trim_offset</span><span class="c">(</span><span class="w">s8</span> <span class="w">d</span><span class="pc">)</span>
+<span class="c">{</span>
+	
+	<span class="w">__u</span><span class="pc">3</span><span class="c">2</span> <span class="w">t</span><span class="pc">e</span><span class="c">mp</span> <span class="w">=</span><span class="pc"> ((</span><span class="w">d</span> <span class="w">&amp;</span> <span class="w">0x7</span><span class="c">f</span><span class="pc">) &gt;</span><span class="c">&gt;</span> <span class="pc">1</span><span class="w">) | ((d</span> <span class="w">&amp;</span> <span class="w">1)</span><span class="pc"> &lt;</span><span class="c">&lt;</span> <span class="w">6</span><span class="pc">);</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">sign_extend32</span><span class="c">(</span><span class="w">t</span><span class="pc">e</span><span class="c">mp,</span> <span class="w">6</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">int</span> <span class="w">twl6030_calibration</span><span class="c">(struct</span> <span class="w">twl6030_gpadc_data</span> <span class="c">*</span><span class="w">gpadc</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="pc">r</span><span class="c">et</span><span class="pc">;</span>
+	<span class="pc">in</span><span class="c">t</span> <span class="w">chn</span><span class="c">;</span>
+	<span class="pc">u</span><span class="c">8</span> <span class="w">trim_regs</span><span class="pc">[</span><span class="w">TWL6030_GPADC_NUM_TRIM_REGS</span><span class="c">];</span>
+	<span class="w">s8</span> <span class="w">d1,</span> <span class="w">d2</span><span class="c">;</span>
+
+	
+	<span class="w">r</span><span class="c">et</span> <span class="c">=</span> <span class="w">twl_i2c_read</span><span class="c">(</span><span class="w">TWL6030_MODULE_ID2</span><span class="c">,</span> <span class="pc">t</span><span class="c">rim_regs,</span>
+			<span class="w">TWL6030_GPADC_TRIM1</span><span class="pc">,</span> <span class="w">T</span><span class="c">WL6030_GPADC_NUM_TRIM_REGS</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">if</span> <span class="c">(ret</span> <span class="c">&lt;</span> <span class="c">0</span><span class="pc">) </span><span class="c">{</span>
+		<span class="pc">d</span><span class="c">ev_err(</span><span class="pc">g</span><span class="c">padc-&gt;dev, "</span><span class="w">calibration</span> <span class="pc">f</span><span class="c">ailed\n");</span>
+		<span class="c">return</span> <span class="pc">r</span><span class="c">et;</span>
+	<span class="c">}</span>
+
+	<span class="w">f</span><span class="c">or</span> <span class="c">(</span><span class="w">chn</span> <span class="c">=</span> <span class="c">0;</span> <span class="pc">c</span><span class="c">hn</span> <span class="c">&lt;</span> <span class="w">TWL6030_GPADC_MAX_CHANNELS</span><span class="c">;</span> <span class="c">chn++) {</span>
+
+		<span class="w">sw</span><span class="c">itch</span> <span class="c">(chn) {</span>
+		<span class="c">case</span> <span class="c">0:</span>
+			<span class="w">d1</span> <span class="pc">=</span> <span class="w">trim_regs[</span><span class="c">0];</span>
+			<span class="w">d2</span> <span class="c">=</span> <span class="w">t</span><span class="c">rim_regs</span><span class="pc">[</span><span class="c">1];</span>
+			<span class="c">break;</span>
+		<span class="c">case</span> <span class="pc">1</span><span class="c">:</span>
+		<span class="w">c</span><span class="pc">a</span><span class="c">se</span> <span class="pc">3</span><span class="c">:</span>
+		<span class="c">case</span> <span class="pc">4</span><span class="c">:</span>
+		<span class="pc">c</span><span class="c">ase</span> <span class="w">5</span><span class="c">:</span>
+		<span class="c">case</span> <span class="w">6</span><span class="c">:</span>
+			<span class="pc">d</span><span class="c">1</span> <span class="c">=</span> <span class="c">trim_regs</span><span class="pc">[</span><span class="w">4</span><span class="c">];</span>
+			<span class="pc">d</span><span class="c">2</span> <span class="c">=</span> <span class="pc">t</span><span class="c">rim_regs[</span><span class="pc">5</span><span class="c">];</span>
+			<span class="c">break;</span>
+		<span class="pc">c</span><span class="c">ase</span> <span class="pc">2</span><span class="c">:</span>
+			<span class="c">d1</span> <span class="c">=</span> <span class="w">t</span><span class="c">rim_regs</span><span class="pc">[</span><span class="w">1</span><span class="pc">2</span><span class="c">];</span>
+			<span class="w">d</span><span class="pc">2</span> <span class="c">=</span> <span class="pc">t</span><span class="c">rim_regs</span><span class="pc">[</span><span class="w">1</span><span class="pc">3</span><span class="c">];</span>
+			<span class="c">break;</span>
+		<span class="c">case</span> <span class="w">7</span><span class="c">:</span>
+			<span class="c">d1</span> <span class="pc">=</span> <span class="c">trim_regs</span><span class="pc">[</span><span class="w">6</span><span class="c">];</span>
+			<span class="c">d2</span> <span class="c">=</span> <span class="pc">t</span><span class="c">rim_regs[</span><span class="w">7</span><span class="c">];</span>
+			<span class="pc">b</span><span class="c">reak;</span>
+		<span class="c">case</span> <span class="pc">8</span><span class="c">:</span>
+			<span class="c">d1</span> <span class="pc">=</span> <span class="c">trim_regs</span><span class="pc">[</span><span class="w">2</span><span class="c">];</span>
+			<span class="c">d2</span> <span class="c">=</span> <span class="w">t</span><span class="c">rim_regs[3];</span>
+			<span class="c">break;</span>
+		<span class="c">case</span> <span class="w">9</span><span class="c">:</span>
+			<span class="c">d1</span> <span class="pc">=</span> <span class="c">trim_regs</span><span class="pc">[</span><span class="w">8</span><span class="c">];</span>
+			<span class="c">d2</span> <span class="c">=</span> <span class="pc">t</span><span class="c">rim_regs[</span><span class="pc">9</span><span class="c">];</span>
+			<span class="c">break;</span>
+		<span class="c">case</span> <span class="w">10</span><span class="c">:</span>
+			<span class="c">d1</span> <span class="pc">=</span> <span class="c">trim_regs</span><span class="pc">[</span><span class="w">1</span><span class="pc">0</span><span class="c">];</span>
+			<span class="c">d2</span> <span class="pc">=</span> <span class="pc">t</span><span class="c">rim_regs[</span><span class="w">1</span><span class="pc">1</span><span class="c">];</span>
+			<span class="c">break;</span>
+		<span class="c">case</span> <span class="w">14</span><span class="c">:</span>
+			<span class="c">d1</span> <span class="pc">=</span> <span class="c">trim_regs</span><span class="pc">[</span><span class="w">1</span><span class="pc">4</span><span class="c">];</span>
+			<span class="c">d2</span> <span class="c">=</span> <span class="pc">t</span><span class="c">rim_regs[</span><span class="w">1</span><span class="pc">5</span><span class="c">];</span>
+			<span class="pc">b</span><span class="c">reak;</span>
+		<span class="pc">d</span><span class="c">efault:</span>
+			<span class="w">co</span><span class="pc">nti</span><span class="c">nue;</span>
+		<span class="c">}</span>
+
+		<span class="pc">d</span><span class="c">1</span> <span class="c">=</span> <span class="w">twl6030_gpadc_get_trim_offset</span><span class="c">(</span><span class="pc">d1)</span><span class="c">;</span>
+		<span class="pc">d</span><span class="c">2</span> <span class="pc">=</span> <span class="w">t</span><span class="pc">w</span><span class="c">l6030_gpadc_get_trim_offset</span><span class="pc">(</span><span class="w">d</span><span class="pc">2)</span><span class="c">;</span>
+
+		<span class="w">twl6030_calibrate_channel</span><span class="c">(</span><span class="w">gpadc</span><span class="c">,</span> <span class="w">chn</span><span class="pc">,</span> <span class="pc">d1,</span> <span class="pc">d</span><span class="c">2);</span>
+	<span class="c">}</span>
+
+	<span class="w">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">twl6032_get_trim_value</span><span class="c">(</span><span class="w">u</span><span class="pc">8</span> <span class="c">*</span><span class="w">trim_regs</span><span class="c">,</span> <span class="pc">un</span><span class="c">signed</span> <span class="c">int</span> <span class="w">reg0</span><span class="c">,</span>
+		<span class="c">unsigned</span> <span class="c">int</span> <span class="w">reg1</span><span class="c">,</span> <span class="c">unsigned</span> <span class="c">int</span> <span class="w">mask0</span><span class="c">,</span> <span class="c">unsigned</span> <span class="c">int</span> <span class="w">mask1</span><span class="c">,</span>
+		<span class="c">unsigned</span> <span class="c">int</span> <span class="w">shift0</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">int</span> <span class="w">v</span><span class="c">al;</span>
+
+	<span class="w">v</span><span class="pc">a</span><span class="c">l</span> <span class="pc">= </span><span class="c">(</span><span class="pc">t</span><span class="c">rim_regs</span><span class="w">[r</span><span class="c">eg0</span><span class="w">] </span><span class="pc">&amp;</span> <span class="w">m</span><span class="pc">ask0</span><span class="w">) &lt;</span><span class="c">&lt;</span> <span class="w">s</span><span class="c">hift0;</span>
+	<span class="pc">v</span><span class="c">al</span> <span class="w">|</span><span class="pc">= </span><span class="c">(</span><span class="pc">t</span><span class="c">rim_regs[</span><span class="w">r</span><span class="c">eg1</span><span class="w">] </span><span class="pc">&amp;</span> <span class="pc">m</span><span class="c">ask1</span><span class="pc">) </span><span class="c">&gt;&gt;</span> <span class="w">1</span><span class="c">;</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="pc">t</span><span class="c">rim_regs</span><span class="pc">[</span><span class="w">r</span><span class="c">eg1</span><span class="pc">] &amp;</span> <span class="pc">0</span><span class="c">x01)</span>
+		<span class="w">v</span><span class="c">al</span> <span class="w">=</span><span class="pc"> -</span><span class="w">v</span><span class="c">al;</span>
+
+	<span class="w">r</span><span class="c">eturn</span> <span class="c">val;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">int</span> <span class="w">twl6032_calibration</span><span class="c">(struct</span> <span class="w">twl6030_gpadc_data</span> <span class="c">*</span><span class="w">gpadc</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">chn</span><span class="pc">,</span> <span class="w">d1</span> <span class="c">=</span> <span class="pc">0</span><span class="c">,</span> <span class="w">d2</span> <span class="pc">=</span> <span class="c">0,</span> <span class="w">te</span><span class="c">mp</span><span class="pc">;</span>
+	<span class="w">u</span><span class="pc">8</span> <span class="w">t</span><span class="pc">r</span><span class="c">im_regs</span><span class="pc">[</span><span class="w">TWL6030_GPADC_NUM_TRIM_REGS</span><span class="pc">];</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="c">ret;</span>
+
+	<span class="c">ret</span> <span class="c">=</span> <span class="w">twl_i2c_read</span><span class="c">(</span><span class="w">TWL6030_MODULE_ID2</span><span class="c">,</span> <span class="w">t</span><span class="pc">r</span><span class="c">im_regs,</span>
+			<span class="w">TWL6030_GPADC_TRIM1</span><span class="c">,</span> <span class="pc">T</span><span class="c">WL6030_GPADC_NUM_TRIM_REGS</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">if</span> <span class="c">(ret</span> <span class="c">&lt;</span> <span class="c">0</span><span class="pc">) </span><span class="c">{</span>
+		<span class="c">dev_err(</span><span class="w">gpadc</span><span class="pc">-</span><span class="c">&gt;dev, "</span><span class="w">calibration</span> <span class="c">failed</span><span class="pc">\</span><span class="c">n");</span>
+		<span class="c">return</span> <span class="pc">r</span><span class="c">et;</span>
+	<span class="c">}</span>
+
+	
+	<span class="w">f</span><span class="c">or</span> <span class="c">(</span><span class="w">chn</span> <span class="c">=</span> <span class="c">0;</span> <span class="pc">c</span><span class="c">hn</span> <span class="c">&lt;</span> <span class="w">TWL6032_GPADC_MAX_CHANNELS</span><span class="c">;</span> <span class="c">chn++) {</span>
+
+		<span class="w">sw</span><span class="c">itch</span> <span class="c">(chn) {</span>
+		<span class="c">case</span> <span class="c">0:</span>
+		<span class="pc">ca</span><span class="c">se</span> <span class="w">1</span><span class="c">:</span>
+		<span class="c">case</span> <span class="w">2</span><span class="c">:</span>
+		<span class="c">case</span> <span class="pc">3</span><span class="c">:</span>
+		<span class="c">case</span> <span class="pc">4</span><span class="c">:</span>
+		<span class="c">case</span> <span class="w">5</span><span class="c">:</span>
+		<span class="c">case</span> <span class="w">6</span><span class="c">:</span>
+		<span class="c">case</span> <span class="w">11</span><span class="c">:</span>
+		<span class="c">case</span> <span class="w">1</span><span class="pc">4</span><span class="c">:</span>
+			<span class="w">d1</span> <span class="pc">=</span> <span class="w">twl6032_get_trim_value</span><span class="pc">(</span><span class="w">trim_regs</span><span class="c">,</span> <span class="w">2</span><span class="pc">,</span> <span class="w">0</span><span class="pc">,</span> <span class="w">0x1</span><span class="c">f,</span>
+								<span class="w">0x06</span><span class="pc">,</span> <span class="w">2</span><span class="c">);</span>
+			<span class="w">d2</span> <span class="pc">=</span> <span class="w">t</span><span class="pc">w</span><span class="c">l6032_get_trim_value(trim_regs,</span> <span class="w">3</span><span class="c">,</span> <span class="w">1</span><span class="pc">,</span> <span class="w">0x3</span><span class="pc">f</span><span class="c">,</span>
+								<span class="w">0x06</span><span class="c">,</span> <span class="w">2</span><span class="pc">)</span><span class="c">;</span>
+			<span class="w">b</span><span class="c">reak;</span>
+		<span class="c">case</span> <span class="w">8</span><span class="c">:</span>
+			<span class="w">t</span><span class="pc">e</span><span class="c">mp</span> <span class="c">=</span> <span class="w">t</span><span class="pc">w</span><span class="c">l6032_get_trim_value</span><span class="pc">(</span><span class="c">trim_regs,</span> <span class="w">2</span><span class="c">,</span> <span class="pc">0</span><span class="c">,</span> <span class="w">0x</span><span class="pc">1</span><span class="c">f,</span>
+								<span class="w">0x06</span><span class="c">,</span> <span class="w">2</span><span class="pc">)</span><span class="c">;</span>
+			<span class="w">d1</span> <span class="pc">=</span> <span class="w">t</span><span class="pc">e</span><span class="c">mp</span> <span class="w">+</span> <span class="w">t</span><span class="pc">w</span><span class="c">l6032_get_trim_value</span><span class="pc">(</span><span class="c">trim_regs,</span> <span class="w">7</span><span class="c">,</span> <span class="w">6</span><span class="c">,</span>
+								<span class="w">0x18</span><span class="c">,</span> <span class="w">0x1E</span><span class="c">,</span> <span class="w">1</span><span class="pc">)</span><span class="c">;</span>
+
+			<span class="w">t</span><span class="pc">e</span><span class="c">mp</span> <span class="c">=</span> <span class="pc">tw</span><span class="c">l6032_get_trim_value(trim_regs,</span> <span class="pc">3</span><span class="c">,</span> <span class="pc">1</span><span class="c">,</span> <span class="w">0x3</span><span class="pc">F</span><span class="c">,</span>
+								<span class="w">0x06</span><span class="c">,</span> <span class="w">2</span><span class="pc">)</span><span class="c">;</span>
+			<span class="w">d2</span> <span class="pc">=</span> <span class="w">t</span><span class="pc">e</span><span class="c">mp</span> <span class="w">+</span> <span class="w">t</span><span class="pc">w</span><span class="c">l6032_get_trim_value</span><span class="pc">(</span><span class="c">trim_regs,</span> <span class="w">9</span><span class="c">,</span> <span class="w">7</span><span class="c">,</span>
+								<span class="w">0x1F</span><span class="c">,</span> <span class="w">0x0</span><span class="pc">6</span><span class="c">,</span> <span class="w">2</span><span class="pc">)</span><span class="c">;</span>
+			<span class="pc">b</span><span class="c">reak;</span>
+		<span class="c">case</span> <span class="w">9</span><span class="c">:</span>
+			<span class="w">t</span><span class="pc">e</span><span class="c">mp</span> <span class="c">=</span> <span class="w">t</span><span class="pc">w</span><span class="c">l6032_get_trim_value</span><span class="pc">(t</span><span class="c">rim_regs,</span> <span class="w">2</span><span class="c">,</span> <span class="c">0,</span> <span class="w">0x</span><span class="pc">1f</span><span class="c">,</span>
+								<span class="w">0x</span><span class="pc">06</span><span class="c">,</span> <span class="w">2</span><span class="pc">)</span><span class="c">;</span>
+			<span class="w">d1</span> <span class="pc">=</span> <span class="w">t</span><span class="pc">e</span><span class="c">mp</span> <span class="w">+</span> <span class="w">t</span><span class="pc">w</span><span class="c">l6032_get_trim_value</span><span class="pc">(</span><span class="c">trim_regs,</span> <span class="w">13</span><span class="c">,</span> <span class="w">1</span><span class="pc">1,</span>
+								<span class="w">0x18</span><span class="c">,</span> <span class="w">0x1E</span><span class="c">,</span> <span class="w">1</span><span class="pc">)</span><span class="c">;</span>
+
+			<span class="w">t</span><span class="pc">e</span><span class="c">mp</span> <span class="c">=</span> <span class="pc">t</span><span class="c">wl6032_get_trim_value(trim_regs,</span> <span class="pc">3</span><span class="c">,</span> <span class="pc">1</span><span class="c">,</span> <span class="w">0x3</span><span class="c">f,</span>
+								<span class="w">0x06</span><span class="c">,</span> <span class="w">2</span><span class="pc">)</span><span class="c">;</span>
+			<span class="w">d2</span> <span class="pc">=</span> <span class="w">t</span><span class="pc">e</span><span class="c">mp</span> <span class="w">+</span> <span class="w">t</span><span class="pc">w</span><span class="c">l6032_get_trim_value</span><span class="pc">(</span><span class="c">trim_regs,</span> <span class="w">1</span><span class="pc">5</span><span class="c">,</span> <span class="w">13</span><span class="pc">,</span>
+								<span class="w">0x1F</span><span class="c">,</span> <span class="w">0x06</span><span class="c">,</span> <span class="w">1</span><span class="pc">)</span><span class="c">;</span>
+			<span class="pc">b</span><span class="c">reak;</span>
+		<span class="c">case</span> <span class="w">10</span><span class="c">:</span>
+			<span class="w">d1</span> <span class="pc">=</span> <span class="w">t</span><span class="pc">w</span><span class="c">l6032_get_trim_value(</span><span class="w">t</span><span class="c">rim_regs,</span> <span class="w">1</span><span class="pc">0</span><span class="c">,</span> <span class="w">8</span><span class="c">,</span> <span class="w">0x0f</span><span class="c">,</span>
+								<span class="w">0x0E</span><span class="c">,</span> <span class="w">3</span><span class="pc">)</span><span class="c">;</span>
+			<span class="w">d</span><span class="pc">2</span> <span class="c">=</span> <span class="w">t</span><span class="pc">w</span><span class="c">l6032_get_trim_value(trim_regs,</span> <span class="w">1</span><span class="c">4,</span> <span class="w">12</span><span class="c">,</span> <span class="w">0x0f</span><span class="c">,</span>
+								<span class="w">0</span><span class="pc">x0E</span><span class="c">,</span> <span class="w">3</span><span class="pc">)</span><span class="c">;</span>
+			<span class="w">b</span><span class="c">reak;</span>
+		<span class="c">case</span> <span class="w">7</span><span class="c">:</span>
+		<span class="w">c</span><span class="c">ase</span> <span class="w">18</span><span class="c">:</span>
+			<span class="w">t</span><span class="pc">e</span><span class="c">mp</span> <span class="c">=</span> <span class="w">t</span><span class="pc">w</span><span class="c">l6032_get_trim_value</span><span class="pc">(t</span><span class="c">rim_regs,</span> <span class="w">2</span><span class="c">,</span> <span class="w">0</span><span class="c">,</span> <span class="w">0x1</span><span class="pc">f</span><span class="c">,</span>
+								<span class="w">0x06</span><span class="c">,</span> <span class="w">2</span><span class="pc">)</span><span class="c">;</span>
+
+			<span class="w">d1</span> <span class="w">=</span><span class="pc"> </span><span class="c">(</span><span class="w">t</span><span class="pc">r</span><span class="c">im_regs</span><span class="w">[4</span><span class="pc">] &amp;</span> <span class="w">0x7E</span><span class="c">) &gt;&gt;</span> <span class="w">1</span><span class="c">;</span>
+			<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="pc">t</span><span class="c">rim_regs</span><span class="w">[4</span><span class="c">] &amp;</span> <span class="w">0x0</span><span class="pc">1</span><span class="c">)</span>
+				<span class="pc">d</span><span class="c">1</span> <span class="w">=</span><span class="pc"> -</span><span class="w">d</span><span class="c">1;</span>
+			<span class="pc">d</span><span class="c">1</span> <span class="w">+</span><span class="c">=</span> <span class="w">te</span><span class="c">mp;</span>
+
+			<span class="w">t</span><span class="pc">e</span><span class="c">mp</span> <span class="c">=</span> <span class="w">twl6032_get_trim_value</span><span class="c">(</span><span class="pc">t</span><span class="c">rim_regs,</span> <span class="w">3</span><span class="c">,</span> <span class="pc">1,</span> <span class="w">0x3</span><span class="pc">f</span><span class="c">,</span>
+								<span class="w">0x06</span><span class="c">,</span> <span class="w">2</span><span class="pc">)</span><span class="c">;</span>
+
+			<span class="w">d2</span> <span class="w">=</span><span class="pc"> </span><span class="c">(trim_regs</span><span class="w">[5</span><span class="c">] &amp;</span> <span class="w">0xF</span><span class="pc">E)</span><span class="c"> &gt;&gt;</span> <span class="pc">1</span><span class="c">;</span>
+			<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="pc">t</span><span class="c">rim_regs</span><span class="w">[5</span><span class="pc">] &amp;</span> <span class="w">0x0</span><span class="pc">1</span><span class="c">)</span>
+				<span class="pc">d</span><span class="c">2</span> <span class="w">=</span><span class="pc"> -</span><span class="w">d</span><span class="pc">2</span><span class="c">;</span>
+
+			<span class="pc">d</span><span class="c">2</span> <span class="w">+</span><span class="c">=</span> <span class="w">te</span><span class="c">mp;</span>
+			<span class="pc">b</span><span class="c">reak;</span>
+		<span class="pc">d</span><span class="c">efault:</span>
+			
+			<span class="w">co</span><span class="pc">nt</span><span class="c">inue;</span>
+		<span class="c">}</span>
+
+		<span class="w">twl6030_calibrate_channel</span><span class="c">(</span><span class="w">gpadc</span><span class="c">,</span> <span class="w">chn</span><span class="c">,</span> <span class="w">d1</span><span class="c">,</span> <span class="w">d</span><span class="c">2</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">}</span>
+
+	<span class="w">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="pc">#</span><span class="c">define</span> <span class="w">TWL6030_GPADC_CHAN</span><span class="c">(</span><span class="w">c</span><span class="c">hn,</span> <span class="w">_type</span><span class="c">,</span> <span class="w">chan_info) {	\</span>
+	<span class="w">.t</span><span class="c">ype</span> <span class="pc">=</span> <span class="pc">_</span><span class="c">type</span><span class="w">,					\</span>
+	<span class="c">.</span><span class="w">ch</span><span class="pc">ann</span><span class="c">el</span> <span class="c">=</span> <span class="pc">c</span><span class="c">hn</span><span class="w">,</span><span class="pc">				</span><span class="c">	\</span>
+	<span class="c">.</span><span class="w">info_mask_separate</span> <span class="c">=</span> <span class="w">B</span><span class="c">IT(</span><span class="w">c</span><span class="c">han_info</span><span class="w">),		\</span>
+	<span class="c">.</span><span class="w">indexed</span> <span class="c">=</span> <span class="pc">1</span><span class="w">,	</span><span class="pc">				</span><span class="c">\</span>
+<span class="w">}</span>
+
+<span class="c">static</span> <span class="pc">c</span><span class="c">onst</span> <span class="c">struct</span> <span class="w">iio_chan_spec</span> <span class="w">twl6030_gpadc_iio_channels</span><span class="pc">[</span><span class="c">] = {</span>
+	<span class="w">T</span><span class="c">WL6030_GPADC_CHAN</span><span class="w">(0</span><span class="c">,</span> <span class="w">IIO_VOLTAGE</span><span class="c">,</span> <span class="w">IIO_CHAN_INFO_PROCESSED</span><span class="pc">),</span>
+	<span class="w">T</span><span class="c">WL6030_GPADC_CHAN(</span><span class="w">1</span><span class="c">,</span> <span class="w">IIO_TEMP</span><span class="c">,</span> <span class="w">IIO_CHAN_INFO_RAW</span><span class="pc">)</span><span class="c">,</span>
+	<span class="pc">T</span><span class="c">WL6030_GPADC_CHAN(</span><span class="w">2</span><span class="c">,</span> <span class="pc">IIO_V</span><span class="c">OLTAGE,</span> <span class="pc">I</span><span class="c">IO_CHAN_INFO_PROCESSED</span><span class="pc">)</span><span class="c">,</span>
+	<span class="c">TWL6030_GPADC_CHAN(</span><span class="w">3</span><span class="c">,</span> <span class="c">IIO_VOLTAGE,</span> <span class="c">IIO_CHAN_INFO_PROCESSED</span><span class="pc">)</span><span class="c">,</span>
+	<span class="c">TWL6030_GPADC_CHAN(</span><span class="pc">4</span><span class="c">,</span> <span class="pc">IIO_T</span><span class="c">EMP,</span> <span class="pc">IIO_CHAN_INFO_R</span><span class="c">AW),</span>
+	<span class="c">TWL6030_GPADC_CHAN(5,</span> <span class="pc">I</span><span class="c">IO_VOLTAGE,</span> <span class="pc">IIO_CHAN_INFO_P</span><span class="c">ROCESSED),</span>
+	<span class="c">TWL6030_GPADC_CHAN(6,</span> <span class="pc">I</span><span class="c">IO_VOLTAGE,</span> <span class="c">IIO_CHAN_INFO_PROCESSED),</span>
+	<span class="c">TWL6030_GPADC_CHAN(7,</span> <span class="c">IIO_VOLTAGE,</span> <span class="c">IIO_CHAN_INFO_PROCESSED),</span>
+	<span class="c">TWL6030_GPADC_CHAN(</span><span class="w">8</span><span class="c">,</span> <span class="pc">IIO_V</span><span class="c">OLTAGE,</span> <span class="c">IIO_CHAN_INFO_PROCESSED),</span>
+	<span class="c">TWL6030_GPADC_CHAN(9,</span> <span class="c">IIO_VOLTAGE,</span> <span class="c">IIO_CHAN_INFO_PROCESSED),</span>
+	<span class="c">TWL6030_GPADC_CHAN(10,</span> <span class="c">IIO_VOLTAGE,</span> <span class="c">IIO_CHAN_INFO_PROCESSED),</span>
+	<span class="c">TWL6030_GPADC_CHAN(11,</span> <span class="c">IIO_VOLTAGE,</span> <span class="w">IIO_CHAN_INFO_RAW</span><span class="c">),</span>
+	<span class="c">TWL6030_GPADC_CHAN(</span><span class="w">14</span><span class="pc">,</span> <span class="c">IIO_VOLTAGE,</span> <span class="pc">IIO_CHAN_INFO_P</span><span class="c">ROCESSED),</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="c">const</span> <span class="c">struct</span> <span class="w">iio_chan_spec</span> <span class="w">twl6032_gpadc_iio_channels</span><span class="c">[] = {</span>
+	<span class="w">T</span><span class="c">WL6030_GPADC_CHAN</span><span class="w">(0</span><span class="c">,</span> <span class="pc">I</span><span class="c">IO_VOLTAGE,</span> <span class="w">I</span><span class="pc">IO_CHAN_INFO_P</span><span class="c">ROCESSED</span><span class="pc">)</span><span class="c">,</span>
+	<span class="pc">T</span><span class="c">WL6030_GPADC_CHAN</span><span class="pc">(1,</span> <span class="w">IIO_TEMP</span><span class="pc">,</span> <span class="pc">I</span><span class="c">IO_CHAN_INFO_RAW</span><span class="pc">)</span><span class="c">,</span>
+	<span class="pc">T</span><span class="c">WL6030_GPADC_CHAN</span><span class="pc">(</span><span class="w">2</span><span class="pc">,</span> <span class="pc">I</span><span class="c">IO_VOLTAGE,</span> <span class="pc">I</span><span class="c">IO_CHAN_INFO_PROCESSED</span><span class="pc">)</span><span class="c">,</span>
+	<span class="w">T</span><span class="c">WL6030_GPADC_CHAN</span><span class="pc">(</span><span class="w">3</span><span class="c">,</span> <span class="w">I</span><span class="pc">IO_V</span><span class="c">OLTAGE,</span> <span class="c">IIO_CHAN_INFO_PROCESSED</span><span class="pc">)</span><span class="c">,</span>
+	<span class="c">TWL6030_GPADC_CHAN(</span><span class="pc">4</span><span class="c">,</span> <span class="pc">IIO_T</span><span class="c">EMP,</span> <span class="pc">IIO_CHAN_INFO_R</span><span class="c">AW),</span>
+	<span class="c">TWL6030_GPADC_CHAN(5,</span> <span class="pc">I</span><span class="c">IO_VOLTAGE,</span> <span class="pc">IIO_CHAN_INFO_P</span><span class="c">ROCESSED),</span>
+	<span class="c">TWL6030_GPADC_CHAN(6,</span> <span class="pc">I</span><span class="c">IO_VOLTAGE,</span> <span class="c">IIO_CHAN_INFO_PROCESSED),</span>
+	<span class="c">TWL6030_GPADC_CHAN(7,</span> <span class="c">IIO_VOLTAGE,</span> <span class="c">IIO_CHAN_INFO_PROCESSED),</span>
+	<span class="c">TWL6030_GPADC_CHAN(</span><span class="w">8</span><span class="c">,</span> <span class="pc">IIO_V</span><span class="c">OLTAGE,</span> <span class="c">IIO_CHAN_INFO_PROCESSED),</span>
+	<span class="c">TWL6030_GPADC_CHAN(9,</span> <span class="c">IIO_VOLTAGE,</span> <span class="c">IIO_CHAN_INFO_PROCESSED),</span>
+	<span class="c">TWL6030_GPADC_CHAN(10,</span> <span class="c">IIO_VOLTAGE,</span> <span class="c">IIO_CHAN_INFO_PROCESSED),</span>
+	<span class="c">TWL6030_GPADC_CHAN(11,</span> <span class="c">IIO_VOLTAGE,</span> <span class="c">IIO_CHAN_INFO_PROCESSED),</span>
+	<span class="c">TWL6030_GPADC_CHAN(</span><span class="w">14</span><span class="pc">,</span> <span class="c">IIO_VOLTAGE,</span> <span class="c">IIO_CHAN_INFO_PROCESSED),</span>
+	<span class="c">TWL6030_GPADC_CHAN(</span><span class="w">17</span><span class="c">,</span> <span class="c">IIO_VOLTAGE,</span> <span class="w">IIO_CHAN_INFO_RAW</span><span class="c">),</span>
+	<span class="c">TWL6030_GPADC_CHAN(</span><span class="w">1</span><span class="pc">8</span><span class="c">,</span> <span class="c">IIO_VOLTAGE,</span> <span class="pc">I</span><span class="c">IO_CHAN_INFO_PROCESSED),</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="c">const</span> <span class="c">struct</span> <span class="w">iio_info</span> <span class="w">twl6030_gpadc_iio_info</span> <span class="pc">=</span><span class="c"> {</span>
+	<span class="c">.</span><span class="w">read_raw</span> <span class="w">=</span><span class="pc"> &amp;</span><span class="w">twl6030_gpadc_read_raw</span><span class="c">,</span>
+	<span class="pc">.</span><span class="w">driver_module</span> <span class="c">=</span> <span class="w">T</span><span class="pc">H</span><span class="c">IS_MODULE,</span>
+<span class="c">};</span>
+
+<span class="c">static</span> <span class="pc">c</span><span class="c">onst</span> <span class="c">struct</span> <span class="w">twl6030_gpadc_platform_data</span> <span class="w">twl6030_pdata</span> <span class="c">= {</span>
+	<span class="c">.</span><span class="w">iio_channels</span> <span class="c">=</span> <span class="w">twl6030_gpadc_iio_channels</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">nchannels</span> <span class="c">=</span> <span class="w">TWL6030_GPADC_USED_CHANNELS</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">ideal</span> <span class="c">=</span> <span class="w">twl6030_ideal</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">start_conversion</span> <span class="c">=</span> <span class="w">twl6030_start_conversion</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">channel_to_reg</span> <span class="c">=</span> <span class="w">twl6030_channel_to_reg</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">calibrate</span> <span class="c">=</span> <span class="w">twl6030_calibration</span><span class="c">,</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="c">static</span> <span class="pc">c</span><span class="c">onst</span> <span class="c">struct</span> <span class="c">twl6030_gpadc_platform_data</span> <span class="w">twl6032_pdata</span> <span class="c">= {</span>
+	<span class="c">.</span><span class="w">i</span><span class="pc">i</span><span class="c">o_channels</span> <span class="c">=</span> <span class="w">twl6032_gpadc_iio_channels</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">n</span><span class="pc">c</span><span class="c">hannels</span> <span class="c">=</span> <span class="w">TWL6032_GPADC_USED_CHANNELS</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">i</span><span class="pc">d</span><span class="c">eal</span> <span class="c">=</span> <span class="w">twl6032_ideal</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">s</span><span class="pc">t</span><span class="c">art_conversion</span> <span class="c">=</span> <span class="w">twl6032_start_conversion</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">c</span><span class="pc">h</span><span class="c">annel_to_reg</span> <span class="c">=</span> <span class="w">twl6032_channel_to_reg</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">c</span><span class="pc">a</span><span class="c">librate</span> <span class="c">=</span> <span class="w">twl6032_calibration</span><span class="c">,</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="c">static</span> <span class="pc">c</span><span class="c">onst</span> <span class="c">struct</span> <span class="pc">o</span><span class="c">f_device_id</span> <span class="w">of_twl6030_match_tbl</span><span class="c">[] = {</span>
+	<span class="pc">{</span>
+		<span class="c">.compatible</span> <span class="c">= "</span><span class="w">ti</span><span class="c">,</span><span class="w">twl6030</span><span class="c">-</span><span class="w">gpadc</span><span class="pc">"</span><span class="c">,</span>
+		<span class="c">.data</span> <span class="c">= &amp;</span><span class="w">twl6030_pdata</span><span class="c">,</span>
+	<span class="pc">}</span><span class="c">,</span>
+	<span class="c">{</span>
+		<span class="c">.compatible</span> <span class="c">= "</span><span class="w">t</span><span class="pc">i</span><span class="c">,</span><span class="w">twl6032</span><span class="c">-</span><span class="w">g</span><span class="pc">pa</span><span class="c">dc</span><span class="pc">"</span><span class="c">,</span>
+		<span class="pc">.</span><span class="c">data</span> <span class="c">= &amp;</span><span class="w">twl6032_pdata</span><span class="c">,</span>
+	<span class="c">},</span>
+	<span class="w">{  }</span>
+<span class="pc">};</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">twl6030_gpadc_probe</span><span class="c">(struct</span> <span class="pc">p</span><span class="c">latform_device</span> <span class="c">*pdev)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">d</span><span class="pc">evice</span> <span class="c">*dev</span> <span class="pc">= </span><span class="c">&amp;pdev-&gt;dev;</span>
+	<span class="c">struct</span> <span class="w">twl6030_gpadc_data</span> <span class="c">*</span><span class="w">g</span><span class="pc">pa</span><span class="c">dc</span><span class="pc">;</span>
+	<span class="w">c</span><span class="pc">o</span><span class="c">nst</span> <span class="c">struct</span> <span class="w">twl6030_gpadc_platform_data</span> <span class="c">*pdata</span><span class="pc">;</span>
+	<span class="pc">c</span><span class="c">onst</span> <span class="c">struct</span> <span class="pc">o</span><span class="c">f_device_id</span> <span class="c">*match;</span>
+	<span class="c">struct</span> <span class="w">ii</span><span class="c">o_dev</span> <span class="c">*</span><span class="pc">i</span><span class="c">ndio_dev;</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">i</span><span class="pc">r</span><span class="c">q;</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="pc">r</span><span class="c">et;</span>
+
+	<span class="w">m</span><span class="pc">a</span><span class="c">tch</span> <span class="c">=</span> <span class="w">of_match_device</span><span class="pc">(</span><span class="w">of_twl6030_match_tbl</span><span class="pc">,</span> <span class="pc">d</span><span class="c">ev);</span>
+	<span class="c">if</span> <span class="pc">(!m</span><span class="c">atch</span><span class="pc">)</span>
+		<span class="c">return</span> <span class="c">-EINVAL;</span>
+
+	<span class="w">p</span><span class="pc">d</span><span class="c">ata</span> <span class="pc">=</span> <span class="w">m</span><span class="c">atch-&gt;</span><span class="pc">da</span><span class="c">ta;</span>
+
+	<span class="w">ind</span><span class="pc">i</span><span class="c">o_dev</span> <span class="pc">=</span> <span class="w">devm_iio_device_alloc</span><span class="pc">(</span><span class="c">dev,</span> <span class="w">s</span><span class="c">izeof(*</span><span class="w">gpadc</span><span class="pc">))</span><span class="c">;</span>
+	<span class="c">if</span> <span class="pc">(!</span><span class="w">ind</span><span class="pc">i</span><span class="c">o_dev</span><span class="pc">)</span>
+		<span class="c">return</span> <span class="c">-ENOMEM;</span>
+
+	<span class="w">g</span><span class="c">padc</span> <span class="c">=</span> <span class="w">iio_priv</span><span class="c">(</span><span class="w">ind</span><span class="pc">i</span><span class="c">o_dev</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="w">g</span><span class="c">padc</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">twl6030_cal_tbl</span> <span class="c">=</span> <span class="w">de</span><span class="pc">vm_k</span><span class="c">zalloc</span><span class="pc">(</span><span class="c">dev,</span>
+					<span class="c">sizeof(*gpadc</span><span class="pc">-</span><span class="c">&gt;twl6030_cal_tbl</span><span class="w">) *</span>
+					<span class="w">p</span><span class="pc">d</span><span class="c">ata-&gt;</span><span class="w">nchannels</span><span class="pc">,</span> <span class="pc">G</span><span class="c">FP_KERNEL);</span>
+	<span class="c">if</span> <span class="c">(!</span><span class="pc">g</span><span class="c">padc</span><span class="pc">-</span><span class="c">&gt;twl6030_cal_tbl)</span>
+		<span class="c">return</span> <span class="c">-ENOMEM;</span>
+
+	<span class="c">gpadc-&gt;</span><span class="pc">d</span><span class="c">ev</span> <span class="c">=</span> <span class="w">d</span><span class="pc">ev;</span>
+	<span class="c">gpadc-&gt;</span><span class="w">p</span><span class="pc">d</span><span class="c">ata</span> <span class="c">=</span> <span class="w">p</span><span class="c">data</span><span class="pc">;</span>
+
+	<span class="w">p</span><span class="pc">l</span><span class="c">atform_set_drvdata(pdev,</span> <span class="w">ind</span><span class="pc">i</span><span class="c">o_dev);</span>
+	<span class="w">m</span><span class="c">utex_init(&amp;gpadc-&gt;lock);</span>
+	<span class="w">init_completion</span><span class="c">(&amp;</span><span class="pc">g</span><span class="c">padc</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">irq_complete</span><span class="c">);</span>
+
+	<span class="w">r</span><span class="pc">et</span> <span class="c">=</span> <span class="w">p</span><span class="pc">d</span><span class="c">ata-&gt;</span><span class="w">calibrate(</span><span class="c">gpadc);</span>
+	<span class="c">if</span> <span class="c">(ret</span> <span class="pc">&lt;</span> <span class="c">0</span><span class="pc">) </span><span class="c">{</span>
+		<span class="c">dev_err(&amp;pdev-&gt;dev, "</span><span class="pc">f</span><span class="c">ailed</span> <span class="c">to</span> <span class="w">r</span><span class="pc">ea</span><span class="c">d</span> <span class="w">calibration</span> <span class="w">registers</span><span class="c">\n");</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="pc">r</span><span class="c">et;</span>
+	<span class="c">}</span>
+
+	<span class="w">ir</span><span class="pc">q</span> <span class="c">=</span> <span class="w">platform_get_irq</span><span class="c">(pdev</span><span class="pc">,</span> <span class="pc">0</span><span class="c">);</span>
+	<span class="c">if</span> <span class="c">(</span><span class="pc">i</span><span class="c">rq</span> <span class="pc">&lt;</span> <span class="c">0) {</span>
+		<span class="c">dev_err(&amp;pdev-&gt;dev, "failed</span> <span class="c">to</span> <span class="c">get</span> <span class="c">irq\n");</span>
+		<span class="c">return</span> <span class="w">i</span><span class="c">rq;</span>
+	<span class="c">}</span>
+
+	<span class="pc">ret</span> <span class="c">=</span> <span class="w">devm_request_threaded_irq</span><span class="c">(</span><span class="pc">d</span><span class="c">ev</span><span class="pc">,</span> <span class="c">irq,</span> <span class="w">N</span><span class="c">ULL</span><span class="pc">,</span>
+				<span class="w">twl6030_gpadc_irq_handler</span><span class="pc">,</span>
+				<span class="w">IRQF_ONESHOT</span><span class="pc">, </span><span class="c">"</span><span class="w">twl6030_gpadc</span><span class="pc">",</span> <span class="w">ind</span><span class="pc">i</span><span class="c">o_dev</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="pc">r</span><span class="c">et</span> <span class="c">=</span> <span class="w">twl6030_gpadc_enable_irq</span><span class="c">(</span><span class="w">TWL6030_GPADC_RT_SW1_EOC_MASK</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">if</span> <span class="c">(ret</span> <span class="c">&lt;</span> <span class="c">0</span><span class="pc">) </span><span class="c">{</span>
+		<span class="c">dev_err</span><span class="pc">(&amp;</span><span class="c">pdev-&gt;dev, "failed</span> <span class="c">to</span> <span class="c">enable</span> <span class="w">GPADC</span> <span class="w">in</span><span class="pc">terr</span><span class="c">upt\n");</span>
+		<span class="c">return</span> <span class="c">ret;</span>
+	<span class="c">}</span>
+
+	<span class="c">ret</span> <span class="c">=</span> <span class="w">twl_i2c_write_u8</span><span class="c">(</span><span class="w">TWL6030_MODULE_ID1</span><span class="pc">,</span> <span class="w">TWL6030_GPADCS</span><span class="pc">,</span>
+					<span class="w">TWL6030_REG_TOGGLE1</span><span class="c">);</span>
+	<span class="c">if</span> <span class="c">(ret</span> <span class="pc">&lt;</span> <span class="c">0</span><span class="pc">) </span><span class="c">{</span>
+		<span class="c">dev_err</span><span class="pc">(&amp;</span><span class="c">pdev-&gt;dev, "failed</span> <span class="c">to</span> <span class="pc">e</span><span class="c">nable</span> <span class="w">G</span><span class="c">PADC</span> <span class="w">m</span><span class="pc">odu</span><span class="c">le\n");</span>
+		<span class="pc">retu</span><span class="c">rn</span> <span class="c">ret;</span>
+	<span class="c">}</span>
+
+	<span class="w">ind</span><span class="pc">i</span><span class="c">o_dev-&gt;</span><span class="pc">n</span><span class="c">ame</span> <span class="c">=</span> <span class="w">DRIVER_NAME</span><span class="pc">;</span>
+	<span class="w">ind</span><span class="pc">i</span><span class="c">o_dev-&gt;dev</span><span class="pc">.</span><span class="c">parent</span> <span class="c">=</span> <span class="pc">d</span><span class="c">ev</span><span class="pc">;</span>
+	<span class="w">ind</span><span class="pc">i</span><span class="c">o_dev-&gt;</span><span class="w">inf</span><span class="c">o</span> <span class="pc">= </span><span class="c">&amp;</span><span class="w">twl6030_gpadc_iio_info</span><span class="c">;</span>
+	<span class="w">ind</span><span class="pc">i</span><span class="c">o_dev-&gt;</span><span class="w">modes</span> <span class="c">=</span> <span class="w">INDIO_DIRECT_MODE</span><span class="c">;</span>
+	<span class="w">ind</span><span class="pc">i</span><span class="c">o_dev-&gt;</span><span class="w">ch</span><span class="pc">annels</span> <span class="c">=</span> <span class="w">pd</span><span class="pc">a</span><span class="c">ta-&gt;</span><span class="w">iio_channels</span><span class="c">;</span>
+	<span class="w">ind</span><span class="pc">i</span><span class="c">o_dev-&gt;</span><span class="w">num_channels</span> <span class="c">=</span> <span class="w">pd</span><span class="pc">a</span><span class="c">ta-&gt;</span><span class="w">nchannels</span><span class="c">;</span>
+
+	<span class="w">re</span><span class="pc">tu</span><span class="c">rn</span> <span class="w">iio_device_register</span><span class="pc">(</span><span class="w">ind</span><span class="pc">i</span><span class="c">o_dev</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">twl6030_gpadc_remove</span><span class="c">(struct</span> <span class="pc">p</span><span class="c">latform_device</span> <span class="c">*pdev)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">ii</span><span class="pc">o_dev</span> <span class="c">*</span><span class="w">i</span><span class="pc">nd</span><span class="c">io_dev</span> <span class="pc">=</span> <span class="c">platform_get_drvdata(pdev);</span>
+
+	<span class="w">twl6030_gpadc_disable_irq</span><span class="c">(</span><span class="w">TWL6030_GPADC_RT_SW1_EOC_MASK</span><span class="c">);</span>
+	<span class="w">iio_device_unregister</span><span class="c">(</span><span class="w">ind</span><span class="pc">i</span><span class="c">o_dev);</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">0</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="pc">#i</span><span class="c">fdef</span> <span class="w">CONFIG_PM_SLEEP</span>
+<span class="c">static</span> <span class="c">int</span> <span class="w">twl6030_gpadc_suspend</span><span class="c">(struct</span> <span class="c">device</span> <span class="c">*</span><span class="pc">pd</span><span class="c">ev</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">r</span><span class="pc">e</span><span class="c">t;</span>
+
+	<span class="w">r</span><span class="pc">et</span> <span class="c">=</span> <span class="w">twl_i2c_write_u8</span><span class="c">(</span><span class="w">TWL6030_MODULE_ID1</span><span class="pc">,</span> <span class="w">TWL6030_GPADCR</span><span class="pc">,</span>
+				<span class="w">TWL6030_REG_TOGGLE1</span><span class="c">);</span>
+	<span class="c">if</span> <span class="c">(ret)</span>
+		<span class="pc">d</span><span class="c">ev_err(</span><span class="pc">p</span><span class="c">dev</span><span class="pc">, </span><span class="c">"</span><span class="w">e</span><span class="c">rror</span> <span class="w">resetting</span> <span class="w">GPADC</span> <span class="w">(%</span><span class="pc">d</span><span class="w">)!\</span><span class="pc">n</span><span class="c">",</span> <span class="c">ret);</span>
+
+	<span class="pc">retu</span><span class="c">rn</span> <span class="pc">0</span><span class="c">;</span>
+<span class="w">}</span><span class="pc">;</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">twl6030_gpadc_resume</span><span class="c">(struct</span> <span class="pc">d</span><span class="c">evice</span> <span class="c">*</span><span class="w">p</span><span class="pc">d</span><span class="c">ev</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="c">ret;</span>
+
+	<span class="c">ret</span> <span class="c">=</span> <span class="w">twl_i2c_write_u8</span><span class="c">(</span><span class="w">TWL6030_MODULE_ID1</span><span class="c">,</span> <span class="w">TWL6030_GPADCS</span><span class="pc">,</span>
+				<span class="w">TWL6030_REG_TOGGLE1</span><span class="c">);</span>
+	<span class="c">if</span> <span class="c">(ret</span><span class="pc">)</span>
+		<span class="w">d</span><span class="c">ev_err(</span><span class="pc">p</span><span class="c">dev</span><span class="pc">, </span><span class="c">"</span><span class="w">e</span><span class="c">rror</span> <span class="w">s</span><span class="pc">ett</span><span class="c">ing</span> <span class="w">GPADC</span> <span class="w">(%</span><span class="c">d</span><span class="w">)!\</span><span class="pc">n</span><span class="c">",</span> <span class="c">ret);</span>
+
+	<span class="pc">retu</span><span class="c">rn</span> <span class="pc">0</span><span class="c">;</span>
+<span class="w">}</span><span class="pc">;</span>
+<span class="pc">#</span><span class="c">endif</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="w">SIMPLE_DEV_PM_OPS</span><span class="c">(</span><span class="w">twl6030_gpadc_pm_ops</span><span class="pc">,</span> <span class="w">twl6030_gpadc_suspend</span><span class="c">,</span>
+					<span class="w">twl6030_gpadc_resume</span><span class="pc">)</span><span class="c">;</span>
+
+<span class="c">static</span> <span class="pc">s</span><span class="c">truct</span> <span class="c">platform_driver</span> <span class="w">twl6030_gpadc_driver</span> <span class="c">= {</span>
+	<span class="c">.probe</span>		<span class="c">=</span> <span class="w">twl6030_gpadc_probe</span><span class="c">,</span>
+	<span class="c">.remove</span>		<span class="c">=</span> <span class="w">twl6030_gpadc_remove</span><span class="c">,</span>
+	<span class="pc">.</span><span class="c">driver</span>		<span class="c">= {</span>
+		<span class="c">.name</span>	<span class="pc">=</span> <span class="w">DRIVER_NAME</span><span class="c">,</span>
+		<span class="c">.pm</span>	<span class="pc">= </span><span class="c">&amp;twl6030_gpadc_pm_ops,</span>
+		<span class="c">.</span><span class="w">of_match_table</span> <span class="c">=</span> <span class="w">of_twl6030_match_tbl</span><span class="c">,</span>
+	<span class="c">},</span>
+<span class="c">};</span>
+
+<span class="w">module_platform_driver</span><span class="c">(twl6030_gpadc_driver</span><span class="pc">)</span><span class="c">;</span>
+
+<span class="pc">MODULE_AL</span><span class="c">IAS("platform</span><span class="w">:"</span> <span class="w">D</span><span class="pc">RI</span><span class="c">VER_NAME</span><span class="pc">)</span><span class="c">;</span>
+<span class="pc">MODULE_AU</span><span class="c">THOR("</span><span class="w">Balaji</span> <span class="w">T</span> <span class="w">K</span> <span class="pc">&lt;</span><span class="w">balajitk</span><span class="c">@</span><span class="w">t</span><span class="pc">i</span><span class="c">.com&gt;");</span>
+<span class="pc">MODULE_A</span><span class="c">UTHOR("</span><span class="w">Graeme</span> <span class="w">Gregory</span> <span class="c">&lt;</span><span class="w">gg</span><span class="c">@</span><span class="w">slimlogic</span><span class="c">.</span><span class="w">co</span><span class="c">.</span><span class="w">uk</span><span class="c">&gt;");</span>
+<span class="pc">MODULE_A</span><span class="c">UTHOR("</span><span class="w">Oleksandr</span> <span class="w">Kozaruk</span> <span class="c">&lt;</span><span class="w">oleksandr</span><span class="pc">.</span><span class="w">kozaruk</span><span class="c">@</span><span class="w">t</span><span class="c">i.com</span><span class="pc">"</span><span class="c">);</span>
+<span class="pc">MODULE_D</span><span class="c">ESCRIPTION("</span><span class="w">twl6030</span> <span class="w">A</span><span class="pc">D</span><span class="c">C</span> <span class="w">d</span><span class="c">river");</span>
+<span class="c">MODULE_LICENSE("GPL");</span>
+
+</pre>
+</body>
+</html>
+

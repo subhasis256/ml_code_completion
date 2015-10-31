@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+<span class="w">#ifndef</span> <span class="w">_ASM_POWERPC_ATOMIC_H_</span>
+<span class="w">#define</span> <span class="w">_ASM_POWERPC_ATOMIC_H_</span>
+
+
+
+<span class="w">#ifdef</span> <span class="w">__KERNEL__</span>
+<span class="w">#include</span> <span class="w">&lt;linux/types.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;asm/cmpxchg.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;asm/barrier.h&gt;</span>
+
+<span class="w">#define</span> <span class="w">ATOMIC_INIT(i)		{ (i) }</span>
+
+<span class="w">s</span><span class="pc">ta</span><span class="c">tic</span> <span class="w">__inline__</span> <span class="w">i</span><span class="pc">n</span><span class="c">t</span> <span class="w">at</span><span class="pc">o</span><span class="c">mic_read(</span><span class="w">c</span><span class="c">onst</span> <span class="w">a</span><span class="pc">t</span><span class="c">omic_t</span> <span class="c">*</span><span class="w">v</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="pc">in</span><span class="c">t</span> <span class="w">t</span><span class="c">;</span>
+
+	<span class="w">__a</span><span class="pc">s</span><span class="c">m__</span> <span class="w">__v</span><span class="c">olatile__("</span><span class="w">lwz</span><span class="c">%</span><span class="w">U1</span><span class="pc">%</span><span class="w">X1</span> <span class="c">%</span><span class="w">0</span><span class="pc">,</span><span class="c">%</span><span class="w">1" : "=r"(</span><span class="pc">t</span><span class="w">) : "m"</span><span class="pc">(v</span><span class="w">-</span><span class="pc">&gt;</span><span class="w">cou</span><span class="pc">nte</span><span class="c">r</span><span class="w">)</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="pc">re</span><span class="c">turn</span> <span class="pc">t</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="w">__inline__</span> <span class="w">v</span><span class="c">oid</span> <span class="w">at</span><span class="pc">omic_s</span><span class="c">et(</span><span class="w">a</span><span class="pc">t</span><span class="c">omic_t</span> <span class="c">*</span><span class="w">v</span><span class="c">,</span> <span class="w">i</span><span class="c">nt</span> <span class="w">i</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">__a</span><span class="c">sm__</span> <span class="w">_</span><span class="pc">_v</span><span class="c">olatile__("</span><span class="w">stw</span><span class="c">%</span><span class="w">U0%X0</span> <span class="c">%</span><span class="w">1,</span><span class="pc">%</span><span class="w">0"</span><span class="pc"> </span><span class="c">: "=</span><span class="w">m"(v-</span><span class="pc">&gt;</span><span class="w">co</span><span class="pc">unte</span><span class="c">r</span><span class="w">) : "r"(i</span><span class="pc">))</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="pc">#d</span><span class="c">efine</span> <span class="w">ATOMIC_OP</span><span class="c">(</span><span class="w">op</span><span class="c">,</span> <span class="w">asm_op)						\</span>
+<span class="w">s</span><span class="pc">ta</span><span class="c">tic</span> <span class="w">__inline__</span> <span class="w">v</span><span class="c">oid</span> <span class="w">atomic_</span><span class="pc">#</span><span class="c">#</span><span class="w">o</span><span class="pc">p(</span><span class="w">i</span><span class="c">nt</span> <span class="w">a</span><span class="c">,</span> <span class="w">at</span><span class="pc">omic_t</span> <span class="c">*</span><span class="w">v)	</span><span class="pc">		\</span>
+<span class="w">{									\</span>
+	<span class="w">i</span><span class="pc">n</span><span class="c">t</span> <span class="w">t;								\</span>
+									<span class="w">\</span>
+	<span class="w">__a</span><span class="pc">s</span><span class="c">m__</span> <span class="w">__v</span><span class="c">olatile__</span><span class="w">(						\</span>
+<span class="pc">"</span><span class="w">1:</span>	<span class="w">lwarx</span>	<span class="w">%0</span><span class="pc">,</span><span class="c">0</span><span class="w">,</span><span class="pc">%</span><span class="w">3</span>		<span class="w">#</span> <span class="w">a</span><span class="pc">t</span><span class="c">omic_</span><span class="w">" #o</span><span class="pc">p</span> <span class="w">"\</span><span class="c">n</span><span class="w">"			\</span>
+	<span class="c">#</span><span class="w">asm_op</span> <span class="w">" %</span><span class="pc">0</span><span class="w">,%2,</span><span class="pc">%</span><span class="w">0\</span><span class="c">n</span><span class="w">"						\</span>
+	<span class="w">PPC405_ERR77</span><span class="pc">(0</span><span class="w">,%3)						\</span>
+<span class="w">"</span>	<span class="w">stwcx.	%0</span><span class="pc">,</span><span class="c">0</span><span class="w">,%3</span> <span class="pc">\</span><span class="c">n</span><span class="w">"	</span><span class="pc">			</span><span class="c">		\</span>
+<span class="w">"</span>	<span class="w">bne-</span>	<span class="w">1b\</span><span class="c">n</span><span class="w">"							\</span>
+	<span class="w">: "=&amp;r" </span><span class="pc">(</span><span class="w">t), "+m</span><span class="pc">"</span><span class="c"> (</span><span class="w">v-</span><span class="pc">&gt;</span><span class="w">cou</span><span class="pc">nte</span><span class="c">r</span><span class="w">)	</span><span class="pc">				\</span>
+	<span class="w">:</span><span class="pc"> "</span><span class="w">r</span><span class="c">" (</span><span class="w">a),</span><span class="pc"> "</span><span class="w">r" (&amp;v-</span><span class="pc">&gt;</span><span class="w">cou</span><span class="pc">nte</span><span class="c">r</span><span class="w">)		</span><span class="pc">			\</span>
+	<span class="w">: </span><span class="pc">"</span><span class="w">cc");							\</span>
+<span class="w">}									\</span>
+
+<span class="w">#</span><span class="c">define</span> <span class="w">ATOMIC_OP_RETURN</span><span class="pc">(</span><span class="w">o</span><span class="c">p,</span> <span class="w">asm_op)</span><span class="pc">					</span><span class="c">\</span>
+<span class="w">s</span><span class="c">tatic</span> <span class="w">__inline__</span> <span class="w">i</span><span class="pc">n</span><span class="c">t</span> <span class="w">atomic_</span><span class="pc">#</span><span class="c">#</span><span class="w">o</span><span class="pc">p</span><span class="c">##</span><span class="w">_return</span><span class="c">(</span><span class="w">i</span><span class="c">nt</span> <span class="w">a</span><span class="c">,</span> <span class="w">a</span><span class="pc">tomic_t</span> <span class="pc">*v</span><span class="w">)</span><span class="pc">	</span><span class="c">	\</span>
+<span class="w">{									\</span>
+	<span class="w">i</span><span class="pc">n</span><span class="c">t</span> <span class="w">t;								\</span>
+									<span class="w">\</span>
+	<span class="w">__a</span><span class="pc">s</span><span class="c">m__</span> <span class="w">__v</span><span class="c">olatile__</span><span class="w">(						\</span>
+	<span class="w">PPC_ATOMIC_ENTRY_BARRIER</span>					<span class="c">\</span>
+<span class="w">"1:</span>	<span class="w">lwarx</span>	<span class="w">%0</span><span class="pc">,</span><span class="c">0</span><span class="w">,%2</span>		<span class="w">#</span> <span class="w">a</span><span class="c">tomic_</span><span class="w">" #op</span> <span class="c">"</span><span class="w">_</span><span class="c">return</span><span class="pc">\</span><span class="c">n</span><span class="w">"		\</span>
+	<span class="c">#</span><span class="w">asm_op</span> <span class="w">" %0,</span><span class="pc">%</span><span class="w">1</span><span class="pc">,%</span><span class="w">0\</span><span class="c">n</span><span class="w">"						\</span>
+	<span class="w">PPC405_ERR77</span><span class="pc">(0</span><span class="w">,%</span><span class="pc">2</span><span class="w">)						\</span>
+<span class="w">"</span>	<span class="w">stwcx.	%0</span><span class="pc">,</span><span class="c">0</span><span class="w">,%</span><span class="pc">2</span> <span class="pc">\</span><span class="c">n</span><span class="w">"	</span><span class="pc">		</span><span class="c">			\</span>
+<span class="w">"</span>	<span class="w">bne-</span>	<span class="w">1b\</span><span class="c">n</span><span class="w">"							\</span>
+	<span class="w">PPC_ATOMIC_EXIT_BARRIER</span>						<span class="pc">\</span>
+	<span class="w">: "=&amp;r"</span><span class="pc"> (</span><span class="w">t)							\</span>
+	<span class="w">:</span><span class="pc"> "</span><span class="w">r"</span><span class="pc"> </span><span class="c">(</span><span class="w">a),</span><span class="pc"> </span><span class="c">"</span><span class="w">r" (&amp;v-</span><span class="pc">&gt;</span><span class="w">cou</span><span class="pc">nte</span><span class="c">r</span><span class="w">)			</span><span class="pc">		\</span>
+	<span class="w">: </span><span class="pc">"</span><span class="w">cc",</span><span class="pc"> "</span><span class="w">me</span><span class="pc">mo</span><span class="c">ry</span><span class="w">");						\</span>
+									<span class="w">\</span>
+	<span class="w">r</span><span class="pc">e</span><span class="c">turn</span> <span class="w">t;							\</span>
+<span class="c">}</span>
+
+<span class="w">#</span><span class="c">define</span> <span class="w">ATOMIC_OPS</span><span class="c">(</span><span class="w">o</span><span class="c">p,</span> <span class="w">asm_op</span><span class="c">)</span> <span class="w">ATOMIC_OP</span><span class="c">(</span><span class="w">o</span><span class="pc">p</span><span class="c">,</span> <span class="c">asm_op</span><span class="pc">)</span> <span class="w">ATOMIC_OP_RETURN</span><span class="c">(</span><span class="w">o</span><span class="c">p,</span> <span class="c">asm_op</span><span class="pc">)</span>
+
+<span class="w">A</span><span class="pc">TOMIC_OPS</span><span class="c">(</span><span class="w">ad</span><span class="pc">d</span><span class="c">,</span> <span class="w">add</span><span class="pc">)</span>
+<span class="pc">A</span><span class="c">TOMIC_OPS(</span><span class="w">sub</span><span class="c">,</span> <span class="w">subf</span><span class="pc">)</span>
+
+<span class="c">#</span><span class="pc">u</span><span class="c">ndef</span> <span class="w">A</span><span class="pc">TOMIC_OPS</span>
+<span class="c">#undef</span> <span class="c">ATOMIC_OP_RETURN</span>
+<span class="pc">#</span><span class="c">undef</span> <span class="pc">A</span><span class="c">TOMIC_OP</span>
+
+<span class="c">#</span><span class="pc">d</span><span class="c">efine</span> <span class="w">atomic_add_negative</span><span class="c">(</span><span class="w">a</span><span class="c">,</span> <span class="w">v)	</span><span class="pc">(</span><span class="w">atomic_add_return(</span><span class="pc">(a),</span><span class="c"> (</span><span class="w">v)) </span><span class="pc">&lt;</span> <span class="c">0)</span>
+
+<span class="w">s</span><span class="c">tatic</span> <span class="w">__inline__</span> <span class="w">v</span><span class="c">oid</span> <span class="w">atomic_i</span><span class="c">nc(</span><span class="w">at</span><span class="pc">omic_t</span> <span class="pc">*v</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">t</span><span class="c">;</span>
+
+	<span class="w">__a</span><span class="pc">s</span><span class="c">m__</span> <span class="w">__v</span><span class="c">olatile__</span><span class="pc">(</span>
+<span class="w">"1:</span>	<span class="w">lwarx</span>	<span class="w">%0</span><span class="pc">,0</span><span class="w">,</span><span class="pc">%</span><span class="w">2</span>		<span class="w">#</span> <span class="w">at</span><span class="pc">omic_i</span><span class="c">nc\n</span><span class="w">\</span>
+	<span class="w">addic</span>	<span class="w">%0,%0</span><span class="c">,</span><span class="pc">1</span><span class="w">\</span><span class="c">n</span><span class="pc">"</span>
+	<span class="w">PPC405_ERR77</span><span class="pc">(0</span><span class="w">,%</span><span class="pc">2</span><span class="w">)</span>
+<span class="w">"</span>	<span class="w">stwcx.	%0,</span><span class="pc">0</span><span class="w">,%</span><span class="pc">2</span> <span class="pc">\</span><span class="c">n</span><span class="w">\</span>
+	<span class="w">bne-</span>	<span class="w">1b"</span>
+	<span class="w">: "=&amp;r</span><span class="c">" (</span><span class="w">t), "+m</span><span class="c">" (</span><span class="w">v-</span><span class="pc">&gt;</span><span class="w">cou</span><span class="pc">nte</span><span class="c">r</span><span class="w">)</span>
+	<span class="w">: </span><span class="pc">"</span><span class="w">r" (&amp;v</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">co</span><span class="pc">unte</span><span class="c">r</span><span class="w">)</span>
+	<span class="w">:</span><span class="pc"> "</span><span class="w">cc"</span><span class="pc">, </span><span class="c">"</span><span class="w">xer"</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="w">__inline__</span> <span class="w">i</span><span class="c">nt</span> <span class="w">atomic_inc_return</span><span class="c">(</span><span class="w">a</span><span class="pc">tomic_t</span> <span class="c">*</span><span class="w">v</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="w">i</span><span class="pc">n</span><span class="c">t</span> <span class="w">t</span><span class="c">;</span>
+
+	<span class="w">_</span><span class="pc">_a</span><span class="c">sm__</span> <span class="pc">_</span><span class="c">_volatile__</span><span class="pc">(</span>
+	<span class="w">PPC_ATOMIC_ENTRY_BARRIER</span>
+<span class="w">"1</span><span class="c">:</span>	<span class="w">lwarx</span>	<span class="w">%0,</span><span class="c">0</span><span class="w">,</span><span class="pc">%</span><span class="w">1</span>		<span class="w">#</span> <span class="w">a</span><span class="c">tomic_inc_return</span><span class="pc">\</span><span class="c">n</span><span class="w">\</span>
+	<span class="w">addic</span>	<span class="w">%0,%</span><span class="pc">0,1</span><span class="w">\</span><span class="c">n</span><span class="pc">"</span>
+	<span class="w">PPC405_ERR77</span><span class="pc">(0</span><span class="w">,%1)</span>
+<span class="w">"</span>	<span class="w">stwcx.	%0,</span><span class="pc">0</span><span class="w">,%1</span> <span class="pc">\</span><span class="c">n</span><span class="w">\</span>
+	<span class="w">bne-</span>	<span class="w">1b"</span>
+	<span class="w">PPC_ATOMIC_EXIT_BARRIER</span>
+	<span class="w">: "=&amp;r" </span><span class="c">(</span><span class="w">t)</span>
+	<span class="w">:</span><span class="pc"> "</span><span class="w">r" (&amp;v</span><span class="c">-&gt;</span><span class="w">cou</span><span class="pc">nte</span><span class="c">r</span><span class="w">)</span>
+	<span class="w">: </span><span class="pc">"</span><span class="w">cc",</span><span class="pc"> "</span><span class="w">xer",</span><span class="pc"> "</span><span class="w">me</span><span class="pc">mo</span><span class="c">ry</span><span class="pc">")</span><span class="c">;</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">t</span><span class="c">;</span>
+<span class="c">}</span>
+
+
+<span class="pc">#</span><span class="c">define</span> <span class="w">atomic_inc_and_test</span><span class="c">(</span><span class="w">v) </span><span class="pc">(</span><span class="w">atomic_inc_return</span><span class="c">(</span><span class="pc">v</span><span class="w">) </span><span class="pc">=</span><span class="c">=</span> <span class="c">0)</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="w">__inline__</span> <span class="w">v</span><span class="pc">o</span><span class="c">id</span> <span class="w">atomic_dec</span><span class="c">(</span><span class="w">a</span><span class="pc">tomic_t</span> <span class="pc">*</span><span class="c">v)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">t</span><span class="c">;</span>
+
+	<span class="w">__a</span><span class="c">sm__</span> <span class="w">_</span><span class="c">_volatile__</span><span class="pc">(</span>
+<span class="w">"1:</span>	<span class="w">lwarx</span>	<span class="w">%0,</span><span class="c">0</span><span class="w">,</span><span class="pc">%</span><span class="w">2</span>		<span class="w">#</span> <span class="w">a</span><span class="pc">tomic_d</span><span class="c">ec</span><span class="pc">\</span><span class="c">n</span><span class="w">\</span>
+	<span class="w">addic</span>	<span class="w">%0,%0,-</span><span class="pc">1</span><span class="c">\n</span><span class="pc">"</span>
+	<span class="w">PPC405_ERR77</span><span class="pc">(</span><span class="w">0,%</span><span class="pc">2)\</span>
+<span class="w">"</span>	<span class="w">stwcx.	%0,</span><span class="pc">0</span><span class="w">,%</span><span class="pc">2\</span><span class="c">n</span><span class="pc">\</span>
+	<span class="w">bne-</span>	<span class="w">1b"</span>
+	<span class="w">: "=&amp;r</span><span class="c">" (</span><span class="w">t), "+m</span><span class="c">" (</span><span class="w">v-</span><span class="pc">&gt;</span><span class="w">cou</span><span class="pc">nte</span><span class="c">r</span><span class="w">)</span>
+	<span class="w">: </span><span class="pc">"</span><span class="w">r" (&amp;v</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">co</span><span class="pc">unte</span><span class="c">r</span><span class="w">)</span>
+	<span class="w">:</span><span class="pc"> "</span><span class="w">cc"</span><span class="pc">, </span><span class="c">"</span><span class="w">xer"</span><span class="pc">);</span>
+<span class="c">}</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="w">__inline__</span> <span class="w">i</span><span class="c">nt</span> <span class="w">atomic_dec_return</span><span class="c">(</span><span class="w">a</span><span class="pc">tomic_t</span> <span class="c">*</span><span class="w">v</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="w">i</span><span class="pc">n</span><span class="c">t</span> <span class="w">t</span><span class="c">;</span>
+
+	<span class="w">_</span><span class="pc">_a</span><span class="c">sm__</span> <span class="pc">_</span><span class="c">_volatile__</span><span class="pc">(</span>
+	<span class="w">PPC_ATOMIC_ENTRY_BARRIER</span>
+<span class="w">"1</span><span class="c">:</span>	<span class="w">lwarx</span>	<span class="w">%0,</span><span class="c">0</span><span class="w">,</span><span class="pc">%</span><span class="w">1</span>		<span class="w">#</span> <span class="w">a</span><span class="c">tomic_dec_return</span><span class="pc">\</span><span class="c">n</span><span class="w">\</span>
+	<span class="w">addic</span>	<span class="w">%0,%</span><span class="pc">0</span><span class="w">,-</span><span class="pc">1</span><span class="c">\n</span><span class="pc">"</span>
+	<span class="w">PPC405_ERR77</span><span class="pc">(0</span><span class="w">,%1)</span>
+<span class="w">"</span>	<span class="w">stwcx.	%0,</span><span class="pc">0</span><span class="w">,%1</span><span class="pc">\</span><span class="c">n</span><span class="w">\</span>
+	<span class="w">bne-</span>	<span class="w">1b"</span>
+	<span class="w">PPC_ATOMIC_EXIT_BARRIER</span>
+	<span class="w">: "=&amp;r" </span><span class="c">(</span><span class="w">t)</span>
+	<span class="w">:</span><span class="pc"> "</span><span class="w">r" (&amp;v</span><span class="c">-&gt;</span><span class="w">cou</span><span class="pc">nte</span><span class="c">r</span><span class="w">)</span>
+	<span class="w">: </span><span class="pc">"</span><span class="w">cc",</span><span class="pc"> "</span><span class="w">xer",</span><span class="pc"> "</span><span class="w">me</span><span class="pc">mo</span><span class="c">ry</span><span class="pc">")</span><span class="c">;</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">t</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="pc">#</span><span class="c">define</span> <span class="w">atomic_cmpxchg</span><span class="c">(</span><span class="w">v</span><span class="pc">,</span> <span class="w">o</span><span class="c">,</span> <span class="w">n) (cmpxchg(&amp;((</span><span class="pc">v</span><span class="w">)</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">cou</span><span class="pc">nte</span><span class="c">r</span><span class="w">),</span><span class="c"> (</span><span class="pc">o),</span><span class="c"> (</span><span class="pc">n</span><span class="w">))</span><span class="pc">)</span>
+<span class="c">#define</span> <span class="w">atomic_xchg</span><span class="c">(</span><span class="w">v</span><span class="pc">,</span> <span class="w">ne</span><span class="pc">w</span><span class="w">) </span><span class="pc">(</span><span class="w">xchg(&amp;</span><span class="pc">((</span><span class="w">v</span><span class="pc">)-</span><span class="c">&gt;</span><span class="w">cou</span><span class="pc">nte</span><span class="c">r</span><span class="w">),</span> <span class="w">ne</span><span class="pc">w</span><span class="w">)</span><span class="pc">)</span>
+
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="w">__inline__</span> <span class="w">i</span><span class="pc">n</span><span class="c">t</span> <span class="w">__atomic_add_unless</span><span class="c">(</span><span class="w">at</span><span class="pc">omic_t</span> <span class="c">*</span><span class="w">v</span><span class="c">,</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">a</span><span class="c">,</span> <span class="c">int</span> <span class="w">u</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">int</span> <span class="w">t</span><span class="pc">;</span>
+
+	<span class="w">__a</span><span class="pc">s</span><span class="c">m__</span> <span class="w">_</span><span class="pc">_v</span><span class="c">olatile__</span> <span class="pc">(</span>
+	<span class="w">PPC_ATOMIC_ENTRY_BARRIER</span>
+<span class="w">"1</span><span class="pc">:</span>	<span class="w">lwarx</span>	<span class="pc">%</span><span class="w">0</span><span class="pc">,</span><span class="c">0</span><span class="w">,</span><span class="pc">%</span><span class="w">1</span>		<span class="w">#</span> <span class="w">_</span><span class="pc">_a</span><span class="c">tomic_add_unless</span><span class="w">\</span><span class="c">n</span><span class="w">\</span>
+	<span class="w">cmpw</span>	<span class="w">0,</span><span class="pc">%</span><span class="w">0,%3</span> <span class="pc">\</span><span class="c">n</span><span class="w">\</span>
+	<span class="w">beq-</span>	<span class="w">2f</span> <span class="w">\</span><span class="c">n</span><span class="pc">\</span>
+	<span class="w">add</span>	<span class="w">%0,%</span><span class="pc">2</span><span class="w">,%0</span> <span class="pc">\</span><span class="c">n</span><span class="pc">"</span>
+	<span class="w">PPC405_ERR77</span><span class="pc">(</span><span class="w">0,%2)</span>
+<span class="w">"</span>	<span class="w">stwcx.	%0,</span><span class="pc">0</span><span class="w">,%1</span> <span class="pc">\</span><span class="c">n</span><span class="w">\</span>
+	<span class="w">bne-</span>	<span class="w">1b</span> <span class="w">\</span><span class="c">n</span><span class="pc">"</span>
+	<span class="w">PPC_ATOMIC_EXIT_BARRIER</span>
+<span class="w">"</span>	<span class="w">subf</span>	<span class="w">%0,</span><span class="pc">%</span><span class="w">2,</span><span class="pc">%</span><span class="w">0</span> <span class="pc">\</span><span class="c">n</span><span class="pc">\</span>
+<span class="w">2:"</span>
+	<span class="w">: "=&amp;r</span><span class="pc">"</span><span class="c"> (</span><span class="w">t</span><span class="pc">)</span>
+	<span class="w">:</span><span class="pc"> "</span><span class="w">r" (&amp;v</span><span class="c">-&gt;</span><span class="w">cou</span><span class="pc">nte</span><span class="c">r</span><span class="w">),</span><span class="pc"> "</span><span class="w">r"</span><span class="pc"> (a</span><span class="w">),</span><span class="pc"> "</span><span class="w">r</span><span class="c">" (</span><span class="w">u)</span>
+	<span class="w">:</span><span class="pc"> "</span><span class="w">cc",</span><span class="pc"> </span><span class="c">"</span><span class="w">m</span><span class="pc">e</span><span class="c">mory</span><span class="w">"</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="pc">re</span><span class="c">turn</span> <span class="w">t</span><span class="c">;</span>
+<span class="c">}</span>
+
+
+<span class="c">static</span> <span class="w">__inline__</span> <span class="w">i</span><span class="pc">n</span><span class="c">t</span> <span class="w">atomic_inc_not_zero</span><span class="c">(</span><span class="w">a</span><span class="pc">t</span><span class="c">omic_t</span> <span class="c">*</span><span class="w">v</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">t1</span><span class="pc">,</span> <span class="w">t2</span><span class="pc">;</span>
+
+	<span class="w">_</span><span class="pc">_a</span><span class="c">sm__</span> <span class="pc">_</span><span class="c">_volatile__</span> <span class="w">(</span>
+	<span class="w">PPC_ATOMIC_ENTRY_BARRIER</span>
+<span class="pc">"</span><span class="w">1:</span>	<span class="w">lwarx</span>	<span class="w">%0</span><span class="pc">,</span><span class="c">0</span><span class="w">,%</span><span class="pc">2</span>		<span class="w">#</span> <span class="w">a</span><span class="c">tomic_inc_not_zero</span><span class="pc">\</span><span class="c">n</span><span class="w">\</span>
+	<span class="w">cmpwi</span>	<span class="w">0,%0</span><span class="pc">,</span><span class="c">0</span><span class="w">\</span><span class="c">n</span><span class="pc">\</span>
+	<span class="w">beq-</span>	<span class="w">2f\</span><span class="c">n</span><span class="pc">\</span>
+	<span class="w">addic</span>	<span class="w">%1,%</span><span class="pc">0</span><span class="c">,</span><span class="pc">1</span><span class="w">\</span><span class="c">n</span><span class="pc">"</span>
+	<span class="w">PPC405_ERR77</span><span class="pc">(0</span><span class="w">,%2)</span>
+<span class="w">"</span>	<span class="w">stwcx.	%1,</span><span class="pc">0</span><span class="w">,%</span><span class="pc">2\</span><span class="c">n</span><span class="pc">\</span>
+	<span class="w">bne</span><span class="pc">-</span>	<span class="w">1b\</span><span class="c">n</span><span class="pc">"</span>
+	<span class="w">PPC_ATOMIC_EXIT_BARRIER</span>
+	<span class="w">"\</span><span class="c">n</span><span class="pc">\</span>
+<span class="w">2:"</span>
+	<span class="w">: "=&amp;r</span><span class="pc">"</span><span class="c"> (</span><span class="w">t1), "=&amp;r</span><span class="pc">"</span><span class="c"> (</span><span class="w">t2</span><span class="pc">)</span>
+	<span class="w">:</span><span class="pc"> "</span><span class="w">r" (&amp;v</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">cou</span><span class="pc">nte</span><span class="c">r</span><span class="w">)</span>
+	<span class="w">: </span><span class="pc">"</span><span class="w">cc",</span><span class="pc"> </span><span class="c">"</span><span class="w">xer",</span><span class="pc"> "</span><span class="w">m</span><span class="pc">e</span><span class="c">mory</span><span class="w">"</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">t</span><span class="pc">1;</span>
+<span class="c">}</span>
+<span class="pc">#</span><span class="c">define</span> <span class="w">atomic_inc_not_zero</span><span class="c">(</span><span class="w">v</span><span class="pc">)</span> <span class="w">a</span><span class="pc">t</span><span class="c">omic_inc_not_zero</span><span class="pc">((v</span><span class="w">))</span>
+
+<span class="c">#define</span> <span class="w">atomic_sub_and_test</span><span class="c">(</span><span class="pc">a,</span> <span class="pc">v</span><span class="w">)	</span><span class="c">(</span><span class="w">atomic_sub_return</span><span class="pc">((a),</span><span class="c"> (v</span><span class="w">))</span><span class="pc"> </span><span class="c">==</span> <span class="c">0)</span>
+<span class="pc">#</span><span class="c">define</span> <span class="w">atomic_dec_and_test</span><span class="c">(v</span><span class="w">)		</span><span class="pc">(</span><span class="w">atomic_dec_return</span><span class="pc">((</span><span class="c">v</span><span class="w">)) </span><span class="pc">=</span><span class="c">=</span> <span class="c">0)</span>
+
+
+<span class="w">s</span><span class="c">tatic</span> <span class="w">__inline__</span> <span class="w">i</span><span class="pc">n</span><span class="c">t</span> <span class="w">atomic_dec_if_positive</span><span class="c">(</span><span class="w">atomic_t</span> <span class="pc">*</span><span class="c">v</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">i</span><span class="pc">n</span><span class="c">t</span> <span class="w">t</span><span class="c">;</span>
+
+	<span class="w">__a</span><span class="c">sm__</span> <span class="w">_</span><span class="c">_volatile__</span><span class="pc">(</span>
+	<span class="w">PPC_ATOMIC_ENTRY_BARRIER</span>
+<span class="pc">"</span><span class="w">1</span><span class="pc">:</span>	<span class="w">lwarx</span>	<span class="pc">%</span><span class="w">0</span><span class="pc">,</span><span class="c">0</span><span class="w">,</span><span class="pc">%</span><span class="w">1</span>		<span class="w">#</span> <span class="w">a</span><span class="c">tomic_dec_if_positive</span><span class="pc">\</span><span class="c">n</span><span class="w">\</span>
+	<span class="w">cmpwi</span>	<span class="w">%0</span><span class="c">,</span><span class="w">1\</span><span class="c">n</span><span class="w">\</span>
+	<span class="w">addi</span>	<span class="w">%0,%</span><span class="pc">0</span><span class="w">,-</span><span class="c">1\n</span><span class="pc">\</span>
+	<span class="w">blt-</span>	<span class="w">2f</span><span class="pc">\</span><span class="c">n</span><span class="pc">"</span>
+	<span class="w">PPC405_ERR77</span><span class="pc">(</span><span class="w">0,%1)</span>
+<span class="w">"</span>	<span class="w">stwcx.	%0,</span><span class="pc">0</span><span class="w">,%1</span><span class="pc">\</span><span class="c">n</span><span class="pc">\</span>
+	<span class="w">bne-</span>	<span class="w">1b"</span>
+	<span class="w">PPC_ATOMIC_EXIT_BARRIER</span>
+	<span class="w">"\</span><span class="c">n</span><span class="pc">\</span>
+<span class="w">2:"	: "=&amp;b" </span><span class="c">(</span><span class="w">t)</span>
+	<span class="w">:</span><span class="pc"> "</span><span class="w">r" (&amp;v</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">cou</span><span class="pc">nte</span><span class="c">r</span><span class="w">)</span>
+	<span class="w">:</span><span class="pc"> </span><span class="c">"</span><span class="w">cc",</span><span class="pc"> "</span><span class="w">me</span><span class="pc">mo</span><span class="c">ry</span><span class="w">"</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">t</span><span class="c">;</span>
+<span class="c">}</span>
+<span class="pc">#</span><span class="c">define</span> <span class="w">atomic_dec_if_positive</span> <span class="w">a</span><span class="pc">tomic_d</span><span class="c">ec_if_positive</span>
+
+<span class="c">#</span><span class="w">i</span><span class="pc">fd</span><span class="c">ef</span> <span class="w">__powerpc64__</span>
+
+<span class="pc">#</span><span class="c">define</span> <span class="w">ATOMIC64_INIT</span><span class="c">(</span><span class="w">i)	{ (i) }</span>
+
+<span class="w">s</span><span class="pc">ta</span><span class="c">tic</span> <span class="w">__inline__</span> <span class="w">l</span><span class="c">ong</span> <span class="w">atomic64_read</span><span class="c">(</span><span class="w">c</span><span class="pc">o</span><span class="c">nst</span> <span class="w">atomic64_t</span> <span class="c">*</span><span class="w">v</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="w">l</span><span class="c">ong</span> <span class="w">t</span><span class="pc">;</span>
+
+	<span class="w">__a</span><span class="pc">s</span><span class="c">m__</span> <span class="w">__v</span><span class="c">olatile__("</span><span class="w">l</span><span class="pc">d%</span><span class="w">U1</span><span class="pc">%</span><span class="w">X1</span> <span class="pc">%</span><span class="w">0</span><span class="pc">,</span><span class="c">%</span><span class="w">1" : "=r"(</span><span class="pc">t</span><span class="w">) : "m"(</span><span class="pc">v</span><span class="w">-</span><span class="pc">&gt;</span><span class="w">cou</span><span class="pc">nte</span><span class="c">r</span><span class="w">))</span><span class="c">;</span>
+
+	<span class="pc">re</span><span class="c">turn</span> <span class="w">t</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="w">__inline__</span> <span class="w">v</span><span class="c">oid</span> <span class="w">atomic64_set</span><span class="c">(</span><span class="pc">a</span><span class="c">tomic64_t</span> <span class="pc">*v</span><span class="c">,</span> <span class="w">l</span><span class="c">ong</span> <span class="w">i</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">__a</span><span class="c">sm__</span> <span class="w">__v</span><span class="c">olatile__("</span><span class="w">std</span><span class="c">%</span><span class="w">U0%X0</span> <span class="c">%</span><span class="w">1,</span><span class="pc">%</span><span class="w">0"</span><span class="pc"> </span><span class="c">: "=</span><span class="w">m"(v-</span><span class="pc">&gt;</span><span class="w">co</span><span class="pc">unte</span><span class="c">r</span><span class="w">) : "r"(i</span><span class="pc">))</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="pc">#</span><span class="c">define</span> <span class="w">ATOMIC64_OP</span><span class="c">(</span><span class="w">o</span><span class="pc">p</span><span class="c">,</span> <span class="w">asm_op)						\</span>
+<span class="w">s</span><span class="c">tatic</span> <span class="w">__inline__</span> <span class="w">v</span><span class="c">oid</span> <span class="w">atomic64_</span><span class="pc">#</span><span class="c">#</span><span class="w">o</span><span class="c">p</span><span class="pc">(</span><span class="w">l</span><span class="pc">o</span><span class="c">ng</span> <span class="w">a</span><span class="c">,</span> <span class="w">atomic64_t</span> <span class="pc">*v</span><span class="w">)	</span><span class="pc">	\</span>
+<span class="w">{									\</span>
+	<span class="w">l</span><span class="c">ong</span> <span class="w">t;								\</span>
+									<span class="w">\</span>
+	<span class="w">__a</span><span class="pc">s</span><span class="c">m__</span> <span class="w">__v</span><span class="c">olatile__</span><span class="w">(						\</span>
+<span class="pc">"</span><span class="w">1:</span>	<span class="w">ldarx</span>	<span class="w">%0</span><span class="pc">,</span><span class="c">0</span><span class="w">,</span><span class="pc">%</span><span class="w">3</span>		<span class="w">#</span> <span class="w">a</span><span class="pc">tomic64_</span><span class="w">" #o</span><span class="pc">p</span> <span class="w">"\</span><span class="c">n</span><span class="w">"			\</span>
+	<span class="c">#</span><span class="w">asm_op</span> <span class="w">" %0,%2,</span><span class="pc">%</span><span class="w">0\</span><span class="c">n</span><span class="w">"						\</span>
+<span class="w">"</span>	<span class="w">stdcx.	%0,</span><span class="c">0</span><span class="w">,%3</span> <span class="pc">\</span><span class="c">n</span><span class="w">"	</span><span class="pc">			</span><span class="c">		\</span>
+<span class="w">"</span>	<span class="w">bne</span><span class="pc">-</span>	<span class="w">1b\</span><span class="c">n</span><span class="w">"							\</span>
+	<span class="w">: "=&amp;r</span><span class="pc">"</span><span class="c"> (</span><span class="w">t), "+m</span><span class="pc">"</span><span class="c"> (</span><span class="w">v-</span><span class="pc">&gt;</span><span class="w">cou</span><span class="pc">nte</span><span class="c">r</span><span class="w">)	</span><span class="pc">				</span><span class="c">\</span>
+	<span class="w">:</span><span class="pc"> "</span><span class="w">r</span><span class="c">" (</span><span class="w">a)</span><span class="pc">, </span><span class="c">"</span><span class="w">r" (&amp;v-</span><span class="pc">&gt;</span><span class="w">cou</span><span class="pc">nte</span><span class="c">r</span><span class="w">)		</span><span class="pc">			</span><span class="c">\</span>
+	<span class="w">: </span><span class="pc">"</span><span class="w">cc");							\</span>
+<span class="w">}</span>
+
+<span class="w">#</span><span class="c">define</span> <span class="w">ATOMIC64_OP_RETURN</span><span class="c">(</span><span class="w">o</span><span class="c">p</span><span class="pc">,</span> <span class="w">asm_op)</span><span class="pc">					</span><span class="c">\</span>
+<span class="w">s</span><span class="c">tatic</span> <span class="w">__inline__</span> <span class="w">l</span><span class="c">ong</span> <span class="w">atomic64_</span><span class="pc">#</span><span class="c">#</span><span class="w">o</span><span class="pc">p#</span><span class="c">#</span><span class="w">_return</span><span class="c">(</span><span class="pc">l</span><span class="c">ong</span> <span class="w">a</span><span class="c">,</span> <span class="w">atomic64_t</span> <span class="w">*</span><span class="c">v</span><span class="w">)	</span><span class="pc">\</span>
+<span class="w">{									\</span>
+	<span class="w">l</span><span class="c">ong</span> <span class="w">t;								\</span>
+									<span class="w">\</span>
+	<span class="w">__a</span><span class="pc">s</span><span class="c">m__</span> <span class="w">__</span><span class="pc">v</span><span class="c">olatile__</span><span class="w">(						\</span>
+	<span class="w">PPC_ATOMIC_ENTRY_BARRIER</span>					<span class="c">\</span>
+<span class="w">"1:</span>	<span class="w">ldarx</span>	<span class="w">%0</span><span class="pc">,0</span><span class="w">,%2</span>		<span class="w">#</span> <span class="w">a</span><span class="pc">tomic64_</span><span class="w">" #o</span><span class="pc">p</span> <span class="c">"</span><span class="w">_</span><span class="c">return</span><span class="pc">\</span><span class="c">n</span><span class="w">"		\</span>
+	<span class="c">#</span><span class="w">asm_op</span> <span class="w">" %0,</span><span class="pc">%</span><span class="w">1,</span><span class="pc">%</span><span class="w">0\</span><span class="c">n</span><span class="w">"						\</span>
+<span class="w">"</span>	<span class="w">stdcx.	%0</span><span class="pc">,0</span><span class="w">,%</span><span class="pc">2</span> <span class="pc">\</span><span class="c">n</span><span class="w">"	</span><span class="pc">		</span><span class="c">			\</span>
+<span class="w">"</span>	<span class="w">bne</span><span class="pc">-</span>	<span class="w">1b\</span><span class="c">n</span><span class="w">"							\</span>
+	<span class="w">PPC_ATOMIC_EXIT_BARRIER</span>						<span class="pc">\</span>
+	<span class="w">: "=&amp;r</span><span class="pc">"</span><span class="c"> (</span><span class="w">t)							\</span>
+	<span class="w">:</span><span class="pc"> "</span><span class="w">r"</span><span class="pc"> </span><span class="c">(</span><span class="w">a),</span><span class="pc"> </span><span class="c">"</span><span class="w">r" (&amp;v-</span><span class="pc">&gt;</span><span class="w">cou</span><span class="pc">nte</span><span class="c">r</span><span class="w">)	</span><span class="pc">				\</span>
+	<span class="w">: </span><span class="pc">"</span><span class="w">cc",</span><span class="pc"> "</span><span class="w">me</span><span class="pc">mo</span><span class="c">ry</span><span class="w">");						\</span>
+									<span class="w">\</span>
+	<span class="w">r</span><span class="pc">e</span><span class="c">turn</span> <span class="w">t;							\</span>
+<span class="c">}</span>
+
+<span class="w">#</span><span class="c">define</span> <span class="w">ATOMIC64_OPS</span><span class="c">(</span><span class="w">o</span><span class="c">p,</span> <span class="w">asm_op</span><span class="c">)</span> <span class="w">ATOMIC64_OP</span><span class="c">(</span><span class="w">o</span><span class="pc">p</span><span class="c">,</span> <span class="c">asm_op</span><span class="pc">)</span> <span class="w">ATOMIC64_OP_RETURN</span><span class="c">(</span><span class="w">o</span><span class="c">p,</span> <span class="c">asm_op</span><span class="pc">)</span>
+
+<span class="w">A</span><span class="pc">TOMIC64_OPS</span><span class="c">(</span><span class="w">ad</span><span class="pc">d</span><span class="c">,</span> <span class="w">add</span><span class="pc">)</span>
+<span class="pc">A</span><span class="c">TOMIC64_OPS(</span><span class="w">sub</span><span class="c">,</span> <span class="w">subf</span><span class="pc">)</span>
+
+<span class="c">#</span><span class="pc">u</span><span class="c">ndef</span> <span class="w">A</span><span class="pc">TOMIC64_OPS</span>
+<span class="c">#undef</span> <span class="c">ATOMIC64_OP_RETURN</span>
+<span class="pc">#</span><span class="c">undef</span> <span class="pc">A</span><span class="c">TOMIC64_OP</span>
+
+<span class="c">#</span><span class="pc">d</span><span class="c">efine</span> <span class="w">atomic64_add_negative</span><span class="c">(</span><span class="w">a</span><span class="c">,</span> <span class="w">v)	</span><span class="pc">(</span><span class="w">atomic64_add_return(</span><span class="pc">(a),</span><span class="c"> (</span><span class="w">v)) </span><span class="pc">&lt;</span> <span class="c">0)</span>
+
+<span class="w">s</span><span class="c">tatic</span> <span class="w">__inline__</span> <span class="w">v</span><span class="c">oid</span> <span class="w">atomic64_inc</span><span class="c">(</span><span class="w">atomic64_t</span> <span class="w">*</span><span class="pc">v)</span>
+<span class="c">{</span>
+	<span class="w">l</span><span class="c">ong</span> <span class="w">t</span><span class="c">;</span>
+
+	<span class="w">__a</span><span class="pc">s</span><span class="c">m__</span> <span class="w">__v</span><span class="c">olatile__</span><span class="pc">(</span>
+<span class="w">"1:</span>	<span class="w">ldarx</span>	<span class="w">%0</span><span class="pc">,0</span><span class="w">,</span><span class="pc">%</span><span class="w">2</span>		<span class="w">#</span> <span class="w">a</span><span class="pc">tomic64_i</span><span class="c">nc</span><span class="pc">\</span><span class="c">n</span><span class="w">\</span>
+	<span class="w">addic</span>	<span class="w">%0,%0</span><span class="c">,</span><span class="pc">1</span><span class="w">\</span><span class="c">n</span><span class="w">\</span>
+	<span class="w">stdcx.	%0</span><span class="c">,0</span><span class="w">,%</span><span class="pc">2</span> <span class="pc">\</span><span class="c">n</span><span class="w">\</span>
+	<span class="w">bne</span><span class="pc">-</span>	<span class="w">1b"</span>
+	<span class="w">: "=&amp;r"</span><span class="pc"> </span><span class="c">(</span><span class="w">t), "+m"</span><span class="pc"> </span><span class="c">(</span><span class="w">v-</span><span class="pc">&gt;</span><span class="w">cou</span><span class="pc">nte</span><span class="c">r</span><span class="w">)</span>
+	<span class="w">:</span><span class="pc"> "</span><span class="w">r" (&amp;v</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">cou</span><span class="pc">nte</span><span class="c">r</span><span class="w">)</span>
+	<span class="w">:</span><span class="pc"> "</span><span class="w">cc",</span><span class="pc"> </span><span class="c">"</span><span class="w">xer"</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="w">__inline__</span> <span class="w">l</span><span class="c">ong</span> <span class="w">atomic64_inc_return</span><span class="c">(</span><span class="w">atomic64_t</span> <span class="pc">*</span><span class="w">v</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="w">l</span><span class="c">ong</span> <span class="w">t</span><span class="c">;</span>
+
+	<span class="w">_</span><span class="pc">_a</span><span class="c">sm__</span> <span class="w">_</span><span class="c">_volatile__</span><span class="pc">(</span>
+	<span class="w">PPC_ATOMIC_ENTRY_BARRIER</span>
+<span class="pc">"</span><span class="w">1</span><span class="c">:</span>	<span class="w">ldarx</span>	<span class="w">%0</span><span class="pc">,</span><span class="c">0</span><span class="w">,%1</span>		<span class="w">#</span> <span class="w">a</span><span class="c">tomic64_inc_return</span><span class="pc">\</span><span class="c">n</span><span class="w">\</span>
+	<span class="w">addic</span>	<span class="w">%0,%0</span><span class="pc">,1</span><span class="w">\</span><span class="c">n</span><span class="w">\</span>
+	<span class="w">stdcx.	%0</span><span class="c">,0</span><span class="w">,%1</span> <span class="pc">\</span><span class="c">n</span><span class="pc">\</span>
+	<span class="w">bne-</span>	<span class="w">1b"</span>
+	<span class="w">PPC_ATOMIC_EXIT_BARRIER</span>
+	<span class="w">: "=&amp;r"</span><span class="pc"> </span><span class="c">(</span><span class="w">t)</span>
+	<span class="w">: </span><span class="pc">"</span><span class="w">r" (&amp;v</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">cou</span><span class="pc">nte</span><span class="c">r</span><span class="w">)</span>
+	<span class="w">:</span><span class="pc"> "</span><span class="w">cc",</span><span class="pc"> "</span><span class="w">xer",</span><span class="pc"> "</span><span class="w">me</span><span class="pc">mo</span><span class="c">ry</span><span class="w">"</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">t</span><span class="c">;</span>
+<span class="c">}</span>
+
+
+<span class="pc">#</span><span class="c">define</span> <span class="w">atomic64_inc_and_test</span><span class="c">(</span><span class="w">v) </span><span class="pc">(</span><span class="w">atomic64_inc_return</span><span class="c">(</span><span class="pc">v</span><span class="w">) </span><span class="pc">=</span><span class="c">=</span> <span class="c">0)</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="w">__inline__</span> <span class="w">v</span><span class="pc">o</span><span class="c">id</span> <span class="w">atomic64_dec</span><span class="c">(</span><span class="w">atomic64_t</span> <span class="w">*</span><span class="c">v)</span>
+<span class="c">{</span>
+	<span class="w">l</span><span class="c">ong</span> <span class="w">t</span><span class="c">;</span>
+
+	<span class="w">__a</span><span class="c">sm__</span> <span class="w">_</span><span class="pc">_v</span><span class="c">olatile__</span><span class="pc">(</span>
+<span class="w">"1:</span>	<span class="w">ldarx</span>	<span class="w">%0,</span><span class="c">0</span><span class="w">,</span><span class="pc">%</span><span class="w">2</span>		<span class="w">#</span> <span class="w">a</span><span class="pc">tomic64_d</span><span class="c">ec</span><span class="pc">\</span><span class="c">n</span><span class="w">\</span>
+	<span class="w">addic</span>	<span class="w">%0,%0,-</span><span class="pc">1</span><span class="c">\n</span><span class="pc">\</span>
+	<span class="w">stdcx.	%0</span><span class="pc">,</span><span class="c">0</span><span class="w">,%</span><span class="pc">2\</span><span class="c">n</span><span class="w">\</span>
+	<span class="w">bne</span><span class="pc">-</span>	<span class="w">1b"</span>
+	<span class="w">: "=&amp;r"</span><span class="pc"> </span><span class="c">(</span><span class="w">t), "+m"</span><span class="pc"> </span><span class="c">(</span><span class="w">v-</span><span class="pc">&gt;</span><span class="w">cou</span><span class="pc">nte</span><span class="c">r</span><span class="w">)</span>
+	<span class="w">:</span><span class="pc"> "</span><span class="w">r" (&amp;v</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">cou</span><span class="pc">nte</span><span class="c">r</span><span class="w">)</span>
+	<span class="w">:</span><span class="pc"> "</span><span class="w">cc"</span><span class="pc">, </span><span class="c">"</span><span class="w">xer"</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="w">__inline__</span> <span class="w">l</span><span class="c">ong</span> <span class="w">atomic64_dec_return</span><span class="c">(</span><span class="w">atomic64_t</span> <span class="pc">*</span><span class="w">v</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="w">l</span><span class="c">ong</span> <span class="w">t</span><span class="c">;</span>
+
+	<span class="w">_</span><span class="pc">_a</span><span class="c">sm__</span> <span class="w">_</span><span class="c">_volatile__</span><span class="pc">(</span>
+	<span class="w">PPC_ATOMIC_ENTRY_BARRIER</span>
+<span class="pc">"</span><span class="w">1</span><span class="c">:</span>	<span class="w">ldarx</span>	<span class="w">%0</span><span class="pc">,</span><span class="c">0</span><span class="w">,%1</span>		<span class="w">#</span> <span class="w">a</span><span class="c">tomic64_dec_return</span><span class="pc">\</span><span class="c">n</span><span class="w">\</span>
+	<span class="w">addic</span>	<span class="w">%0,%0,-</span><span class="pc">1</span><span class="c">\n</span><span class="pc">\</span>
+	<span class="w">stdcx.	%0</span><span class="pc">,</span><span class="c">0</span><span class="w">,%1</span><span class="pc">\</span><span class="c">n</span><span class="pc">\</span>
+	<span class="w">bne-</span>	<span class="w">1b"</span>
+	<span class="w">PPC_ATOMIC_EXIT_BARRIER</span>
+	<span class="w">: "=&amp;r"</span><span class="pc"> </span><span class="c">(</span><span class="w">t)</span>
+	<span class="w">:</span><span class="pc"> "</span><span class="w">r" (&amp;v</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">cou</span><span class="pc">nte</span><span class="c">r</span><span class="w">)</span>
+	<span class="w">:</span><span class="pc"> "</span><span class="w">cc",</span><span class="pc"> "</span><span class="w">xer",</span><span class="pc"> "</span><span class="w">me</span><span class="pc">mo</span><span class="c">ry</span><span class="w">"</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">t</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="pc">#</span><span class="c">define</span> <span class="w">atomic64_sub_and_test</span><span class="c">(</span><span class="w">a</span><span class="c">,</span> <span class="w">v)	(atomic64_sub_return</span><span class="pc">((a),</span><span class="c"> (</span><span class="pc">v</span><span class="w">))</span><span class="pc"> =</span><span class="c">=</span> <span class="c">0)</span>
+<span class="c">#define</span> <span class="w">atomic64_dec_and_test</span><span class="c">(</span><span class="w">v)</span><span class="pc">	(</span><span class="w">atomic64_dec_return</span><span class="pc">((</span><span class="c">v</span><span class="w">))</span><span class="pc"> </span><span class="c">==</span> <span class="c">0)</span>
+
+
+<span class="w">s</span><span class="c">tatic</span> <span class="w">__inline__</span> <span class="w">l</span><span class="c">ong</span> <span class="w">atomic64_dec_if_positive</span><span class="c">(</span><span class="w">atomic64_t</span> <span class="w">*</span><span class="c">v</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">l</span><span class="c">ong</span> <span class="w">t</span><span class="c">;</span>
+
+	<span class="w">__a</span><span class="c">sm__</span> <span class="w">_</span><span class="pc">_v</span><span class="c">olatile__</span><span class="pc">(</span>
+	<span class="w">PPC_ATOMIC_ENTRY_BARRIER</span>
+<span class="pc">"</span><span class="w">1</span><span class="pc">:</span>	<span class="w">ldarx</span>	<span class="pc">%</span><span class="w">0</span><span class="pc">,0</span><span class="w">,</span><span class="pc">%</span><span class="w">1</span>		<span class="w">#</span> <span class="w">a</span><span class="pc">tomic64_dec_i</span><span class="c">f_positive</span><span class="pc">\</span><span class="c">n</span><span class="w">\</span>
+	<span class="w">addic.	%0,%</span><span class="pc">0</span><span class="w">,-</span><span class="pc">1</span><span class="c">\n</span><span class="w">\</span>
+	<span class="w">blt-</span>	<span class="w">2f\</span><span class="c">n</span><span class="pc">\</span>
+	<span class="w">stdcx.</span><span class="pc">	</span><span class="c">%</span><span class="w">0</span><span class="pc">,</span><span class="c">0</span><span class="w">,%</span><span class="pc">1\</span><span class="c">n</span><span class="pc">\</span>
+	<span class="w">bne-</span>	<span class="w">1b"</span>
+	<span class="w">PPC_ATOMIC_EXIT_BARRIER</span>
+	<span class="w">"\</span><span class="c">n</span><span class="pc">\</span>
+<span class="w">2:"	: "=&amp;r"</span><span class="c"> (</span><span class="w">t)</span>
+	<span class="w">: </span><span class="pc">"</span><span class="w">r" (&amp;v</span><span class="pc">-&gt;</span><span class="w">cou</span><span class="pc">nte</span><span class="c">r</span><span class="w">)</span>
+	<span class="w">:</span><span class="pc"> </span><span class="c">"</span><span class="w">cc",</span><span class="pc"> "</span><span class="w">xer",</span><span class="pc"> "</span><span class="w">m</span><span class="pc">emo</span><span class="c">ry</span><span class="w">"</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="w">r</span><span class="c">eturn</span> <span class="w">t</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="pc">#</span><span class="c">define</span> <span class="w">atomic64_cmpxchg</span><span class="c">(</span><span class="pc">v,</span> <span class="w">o</span><span class="c">,</span> <span class="w">n) (cmpxchg(&amp;((</span><span class="pc">v</span><span class="w">)</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">cou</span><span class="pc">nte</span><span class="c">r</span><span class="w">),</span><span class="c"> (</span><span class="pc">o),</span><span class="c"> (</span><span class="pc">n</span><span class="w">))</span><span class="pc">)</span>
+<span class="c">#define</span> <span class="w">atomic64_xchg</span><span class="c">(</span><span class="w">v</span><span class="pc">,</span> <span class="w">ne</span><span class="pc">w</span><span class="w">) </span><span class="pc">(</span><span class="w">xchg(&amp;</span><span class="pc">((</span><span class="w">v</span><span class="pc">)-</span><span class="c">&gt;</span><span class="w">cou</span><span class="pc">nte</span><span class="c">r</span><span class="w">),</span> <span class="w">ne</span><span class="pc">w</span><span class="w">)</span><span class="pc">)</span>
+
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="w">__inline__</span> <span class="w">i</span><span class="pc">n</span><span class="c">t</span> <span class="w">atomic64_add_unless</span><span class="c">(</span><span class="w">atomic64_t</span> <span class="pc">*</span><span class="w">v</span><span class="c">,</span> <span class="w">l</span><span class="c">ong</span> <span class="w">a</span><span class="c">,</span> <span class="w">l</span><span class="c">ong</span> <span class="w">u</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="pc">l</span><span class="c">ong</span> <span class="w">t</span><span class="pc">;</span>
+
+	<span class="w">__a</span><span class="c">sm__</span> <span class="w">_</span><span class="pc">_v</span><span class="c">olatile__</span> <span class="pc">(</span>
+	<span class="w">PPC_ATOMIC_ENTRY_BARRIER</span>
+<span class="pc">"</span><span class="w">1</span><span class="pc">:</span>	<span class="w">ldarx</span>	<span class="pc">%</span><span class="w">0</span><span class="pc">,</span><span class="c">0</span><span class="w">,</span><span class="pc">%</span><span class="w">1</span>		<span class="w">#</span> <span class="w">__atomic_add_unless</span><span class="pc">\</span><span class="c">n</span><span class="w">\</span>
+	<span class="w">cmpd</span>	<span class="w">0,</span><span class="pc">%</span><span class="w">0,</span><span class="pc">%</span><span class="w">3</span> <span class="pc">\</span><span class="c">n</span><span class="w">\</span>
+	<span class="w">beq-</span>	<span class="w">2f</span> <span class="w">\</span><span class="c">n</span><span class="pc">\</span>
+	<span class="w">add</span>	<span class="w">%0,%</span><span class="pc">2</span><span class="w">,%0</span> <span class="pc">\</span><span class="c">n</span><span class="pc">"</span>
+<span class="pc">"</span>	<span class="w">stdcx.	%0</span><span class="pc">,0</span><span class="w">,%1</span> <span class="pc">\</span><span class="c">n</span><span class="pc">\</span>
+	<span class="w">bne-</span>	<span class="w">1b</span> <span class="w">\</span><span class="c">n</span><span class="pc">"</span>
+	<span class="w">PPC_ATOMIC_EXIT_BARRIER</span>
+<span class="w">"</span>	<span class="w">subf</span>	<span class="w">%0,%2,</span><span class="pc">%</span><span class="w">0</span> <span class="pc">\</span><span class="c">n</span><span class="pc">\</span>
+<span class="w">2:"</span>
+	<span class="w">: "=&amp;r</span><span class="c">" (</span><span class="w">t)</span>
+	<span class="w">:</span><span class="pc"> "</span><span class="w">r" (&amp;v</span><span class="c">-&gt;</span><span class="w">cou</span><span class="pc">nte</span><span class="c">r</span><span class="w">),</span><span class="pc"> "</span><span class="w">r"</span><span class="pc"> (a</span><span class="w">),</span><span class="pc"> "</span><span class="w">r</span><span class="c">" (</span><span class="w">u)</span>
+	<span class="w">:</span><span class="pc"> "</span><span class="w">cc",</span><span class="pc"> </span><span class="c">"</span><span class="w">m</span><span class="pc">e</span><span class="c">mory</span><span class="w">"</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="pc">re</span><span class="c">turn</span> <span class="w">t</span> <span class="w">!</span><span class="pc">=</span> <span class="w">u;</span>
+<span class="c">}</span>
+
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="w">__inline__</span> <span class="w">l</span><span class="c">ong</span> <span class="w">atomic64_inc_not_zero</span><span class="c">(</span><span class="w">atomic64_t</span> <span class="w">*v</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="w">l</span><span class="c">ong</span> <span class="w">t1</span><span class="pc">,</span> <span class="w">t2;</span>
+
+	<span class="w">__a</span><span class="c">sm__</span> <span class="pc">_</span><span class="c">_volatile__</span> <span class="w">(</span>
+	<span class="w">PPC_ATOMIC_ENTRY_BARRIER</span>
+<span class="pc">"</span><span class="w">1:</span>	<span class="w">ldarx</span>	<span class="pc">%</span><span class="w">0</span><span class="pc">,</span><span class="c">0</span><span class="w">,%</span><span class="pc">2</span>		<span class="w">#</span> <span class="w">a</span><span class="pc">tomic64_i</span><span class="c">nc_not_zero</span><span class="pc">\</span><span class="c">n</span><span class="w">\</span>
+	<span class="w">cmpdi</span>	<span class="w">0,%0</span><span class="pc">,</span><span class="c">0</span><span class="w">\</span><span class="c">n</span><span class="pc">\</span>
+	<span class="w">beq-</span>	<span class="w">2f\</span><span class="c">n</span><span class="pc">\</span>
+	<span class="w">addic</span>	<span class="w">%1,%</span><span class="pc">0</span><span class="c">,</span><span class="pc">1</span><span class="w">\</span><span class="c">n</span><span class="pc">\</span>
+	<span class="w">stdcx.	%1</span><span class="c">,0</span><span class="w">,%</span><span class="c">2</span><span class="pc">\</span><span class="c">n</span><span class="pc">\</span>
+	<span class="w">bne-</span>	<span class="w">1b</span><span class="pc">\</span><span class="c">n</span><span class="w">"</span>
+	<span class="w">PPC_ATOMIC_EXIT_BARRIER</span>
+	<span class="w">"\</span><span class="c">n</span><span class="pc">\</span>
+<span class="w">2:"</span>
+	<span class="w">: "=&amp;r"</span><span class="pc"> </span><span class="c">(</span><span class="w">t1), "=&amp;r</span><span class="pc">"</span><span class="c"> (</span><span class="w">t2)</span>
+	<span class="w">: </span><span class="pc">"</span><span class="w">r" (&amp;v</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">cou</span><span class="pc">nte</span><span class="c">r</span><span class="w">)</span>
+	<span class="w">:</span><span class="pc"> "</span><span class="w">cc",</span><span class="pc"> </span><span class="c">"</span><span class="w">xer",</span><span class="pc"> "</span><span class="w">m</span><span class="pc">e</span><span class="c">mory</span><span class="w">"</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">t</span><span class="pc">1;</span>
+<span class="c">}</span>
+
+<span class="pc">#e</span><span class="c">ndif</span> 
+
+<span class="c">#</span><span class="w">e</span><span class="pc">n</span><span class="c">dif</span> 
+<span class="c">#</span><span class="w">e</span><span class="c">ndif</span> 
+
+</pre>
+</body>
+</html>
+

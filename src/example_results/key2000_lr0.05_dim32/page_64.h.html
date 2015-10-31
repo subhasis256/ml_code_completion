@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+<span class="w">#ifndef</span> <span class="w">_SPARC64_PAGE_H</span>
+<span class="w">#define</span> <span class="w">_SPARC64_PAGE_H</span>
+
+<span class="w">#include</span> <span class="w">&lt;linux/const.h&gt;</span>
+
+<span class="w">#define</span> <span class="w">PAGE_SHIFT</span>   <span class="w">13</span>
+
+<span class="w">#define</span> <span class="w">PAGE_SIZE</span>    <span class="w">(_AC(1,UL) &lt;&lt;</span> <span class="w">PAGE_SHIFT)</span>
+<span class="w">#define</span> <span class="w">PAGE_MASK</span>    <span class="w">(~(PAGE_SIZE-1))</span>
+
+
+<span class="w">#</span><span class="pc">i</span><span class="c">f</span> <span class="w">P</span><span class="pc">AGE_SH</span><span class="c">IFT</span> <span class="w">&lt;</span> <span class="w">14</span>
+<span class="w">#</span><span class="c">define</span> <span class="w">DCACHE_ALIASING_POSSIBLE</span>
+<span class="w">#</span><span class="pc">en</span><span class="c">dif</span>
+
+<span class="c">#define</span> <span class="w">HPAGE_SHIFT</span>		<span class="w">23</span>
+<span class="c">#define</span> <span class="w">REAL_HPAGE_SHIFT</span>	<span class="w">22</span>
+
+<span class="c">#define</span> <span class="w">REAL_HPAGE_SIZE</span>		<span class="pc">(</span><span class="w">_</span><span class="c">AC</span><span class="w">(</span><span class="pc">1,</span><span class="w">U</span><span class="c">L</span><span class="w">) &lt;</span><span class="c">&lt;</span> <span class="w">R</span><span class="c">EAL_HPAGE_SHIFT</span><span class="pc">)</span>
+
+<span class="c">#</span><span class="pc">i</span><span class="c">f</span> <span class="pc">d</span><span class="c">efined(</span><span class="w">CONFIG_HUGETLB_PAGE</span><span class="pc">) </span><span class="c">||</span> <span class="c">defined(</span><span class="w">CONFIG_TRANSPARENT_HUGEPAGE</span><span class="c">)</span>
+<span class="c">#define</span> <span class="w">HPAGE_SIZE</span>		<span class="c">(</span><span class="pc">_</span><span class="c">AC</span><span class="w">(</span><span class="pc">1</span><span class="c">,</span><span class="w">U</span><span class="c">L</span><span class="w">) &lt;</span><span class="c">&lt;</span> <span class="w">H</span><span class="pc">PAGE_SH</span><span class="c">IFT)</span>
+<span class="c">#define</span> <span class="w">HPAGE_MASK</span>		<span class="w">(~(H</span><span class="c">PAGE_SIZE</span> <span class="w">-</span> <span class="w">1U</span><span class="pc">L</span><span class="w">))</span>
+<span class="c">#define</span> <span class="w">HUGETLB_PAGE_ORDER</span>	<span class="c">(</span><span class="w">H</span><span class="pc">PAGE_S</span><span class="c">HIFT</span> <span class="w">-</span> <span class="w">P</span><span class="pc">AGE_SH</span><span class="c">IFT)</span>
+<span class="c">#define</span> <span class="w">HAVE_ARCH_HUGETLB_UNMAPPED_AREA</span>
+<span class="w">#</span><span class="pc">en</span><span class="c">dif</span>
+
+<span class="c">#</span><span class="pc">ifn</span><span class="c">def</span> <span class="w">__ASSEMBLY__</span>
+
+<span class="c">#</span><span class="pc">if</span> <span class="c">defined(</span><span class="w">CONFIG_HUGETLB_PAGE</span><span class="pc">) </span><span class="c">||</span> <span class="c">defined(</span><span class="w">CONFIG_TRANSPARENT_HUGEPAGE</span><span class="c">)</span>
+<span class="pc">str</span><span class="c">uct</span> <span class="w">pt</span><span class="c">_regs</span><span class="w">;</span>
+<span class="w">v</span><span class="c">oid</span> <span class="w">hugetlb_setup</span><span class="c">(struct</span> <span class="w">pt</span><span class="c">_regs</span> <span class="c">*regs</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">#</span><span class="pc">en</span><span class="c">dif</span>
+
+<span class="c">#</span><span class="pc">d</span><span class="c">efine</span> <span class="w">WANT_PAGE_VIRTUAL</span>
+
+<span class="w">v</span><span class="c">oid</span> <span class="w">_clear_page</span><span class="c">(</span><span class="pc">v</span><span class="c">oid</span> <span class="pc">*</span><span class="w">pa</span><span class="pc">g</span><span class="c">e</span><span class="pc">);</span>
+<span class="pc">#</span><span class="c">define</span> <span class="w">clear_page</span><span class="c">(</span><span class="w">X</span><span class="pc">)</span>	<span class="w">_</span><span class="c">clear_page</span><span class="pc">((v</span><span class="c">oid</span> <span class="pc">*)(</span><span class="w">X)</span><span class="pc">)</span>
+<span class="w">s</span><span class="pc">tr</span><span class="c">uct</span> <span class="w">p</span><span class="c">age</span><span class="w">;</span>
+<span class="c">void</span> <span class="w">clear_user_page</span><span class="c">(</span><span class="pc">v</span><span class="c">oid</span> <span class="pc">*a</span><span class="c">ddr,</span> <span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">v</span><span class="pc">ad</span><span class="c">dr,</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">p</span><span class="pc">a</span><span class="c">ge</span> <span class="c">*page</span><span class="pc">)</span><span class="c">;</span>
+<span class="pc">#d</span><span class="c">efine</span> <span class="w">copy_page</span><span class="c">(</span><span class="w">X</span><span class="c">,</span><span class="w">Y</span><span class="pc">)</span>	<span class="w">m</span><span class="c">emcpy</span><span class="pc">((</span><span class="w">v</span><span class="pc">o</span><span class="c">id</span> <span class="pc">*)(</span><span class="w">X)</span><span class="pc">,</span><span class="c"> (</span><span class="pc">v</span><span class="c">oid</span> <span class="pc">*)(Y</span><span class="w">),</span> <span class="w">P</span><span class="c">AGE_SIZE</span><span class="w">)</span>
+<span class="w">v</span><span class="c">oid</span> <span class="w">copy_user_page</span><span class="c">(</span><span class="pc">v</span><span class="c">oid</span> <span class="c">*</span><span class="w">to</span><span class="c">,</span> <span class="c">void</span> <span class="c">*</span><span class="w">f</span><span class="pc">ro</span><span class="c">m,</span> <span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">v</span><span class="pc">ad</span><span class="c">dr,</span> <span class="w">s</span><span class="c">truct</span> <span class="pc">pa</span><span class="c">ge</span> <span class="c">*</span><span class="w">topage</span><span class="pc">);</span>
+
+
+
+<span class="pc">#d</span><span class="c">efine</span> <span class="w">STRICT_MM_TYPECHECKS</span>
+
+<span class="w">#</span><span class="pc">ifd</span><span class="c">ef</span> <span class="w">S</span><span class="c">TRICT_MM_TYPECHECKS</span>
+
+<span class="w">t</span><span class="pc">yped</span><span class="c">ef</span> <span class="c">struct</span> <span class="pc">{</span> <span class="c">unsigned</span> <span class="c">long</span> <span class="w">p</span><span class="pc">t</span><span class="c">e</span><span class="w">;</span><span class="pc"> }</span> <span class="w">pt</span><span class="pc">e</span><span class="c">_t</span><span class="w">;</span>
+<span class="pc">t</span><span class="c">ypedef</span> <span class="w">s</span><span class="c">truct</span> <span class="c">{</span> <span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">iopte;</span><span class="pc"> }</span> <span class="w">iopte_t</span><span class="pc">;</span>
+<span class="c">typedef</span> <span class="pc">s</span><span class="c">truct</span> <span class="c">{</span> <span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">pm</span><span class="pc">d</span><span class="w">;</span><span class="pc"> }</span> <span class="w">pmd_t</span><span class="pc">;</span>
+<span class="c">typedef</span> <span class="pc">s</span><span class="c">truct</span> <span class="c">{</span> <span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">pud;</span><span class="pc"> }</span> <span class="w">pud_t</span><span class="c">;</span>
+<span class="c">typedef</span> <span class="pc">s</span><span class="c">truct</span> <span class="c">{</span> <span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="c">long</span> <span class="w">pg</span><span class="pc">d</span><span class="w">;</span><span class="pc"> }</span> <span class="w">pgd_t</span><span class="c">;</span>
+<span class="c">typedef</span> <span class="pc">s</span><span class="c">truct</span> <span class="c">{</span> <span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="c">long</span> <span class="w">pgprot;</span><span class="pc"> }</span> <span class="w">pgprot_t</span><span class="c">;</span>
+
+<span class="pc">#</span><span class="c">define</span> <span class="w">pte_val</span><span class="pc">(</span><span class="w">x)	</span><span class="c">((</span><span class="pc">x).</span><span class="w">pt</span><span class="pc">e</span><span class="c">)</span>
+<span class="c">#</span><span class="pc">d</span><span class="c">efine</span> <span class="w">iopte_val</span><span class="c">(x)	((x</span><span class="pc">).</span><span class="w">iopte</span><span class="c">)</span>
+<span class="c">#define</span> <span class="w">pmd_val</span><span class="c">(x</span><span class="w">)      ((</span><span class="c">x</span><span class="pc">).</span><span class="w">pm</span><span class="pc">d)</span>
+<span class="c">#define</span> <span class="w">pud_val</span><span class="c">(x</span><span class="w">) </span><span class="pc"> </span><span class="c">    ((x</span><span class="w">).pud</span><span class="pc">)</span>
+<span class="c">#define</span> <span class="w">pgd_val</span><span class="c">(x</span><span class="pc">)	</span><span class="c">((x</span><span class="pc">).</span><span class="w">pg</span><span class="pc">d</span><span class="c">)</span>
+<span class="c">#define</span> <span class="w">pgprot_val</span><span class="c">(x</span><span class="pc">)	(</span><span class="c">(x</span><span class="pc">).</span><span class="w">pgprot</span><span class="c">)</span>
+
+<span class="c">#define</span> <span class="w">__pte</span><span class="c">(x</span><span class="pc">)	(</span><span class="c">(</span><span class="w">pt</span><span class="pc">e</span><span class="c">_t</span><span class="w">) { (</span><span class="c">x</span><span class="w">) } )</span>
+<span class="pc">#</span><span class="c">define</span> <span class="w">__iopte</span><span class="c">(x</span><span class="pc">)	</span><span class="c">((</span><span class="w">iopte_t</span><span class="pc">) </span><span class="c">{ (x</span><span class="pc">)</span><span class="c"> } )</span>
+<span class="pc">#</span><span class="c">define</span> <span class="w">__pmd</span><span class="c">(x</span><span class="w">)        ((pmd_t</span><span class="pc">) </span><span class="c">{ (</span><span class="pc">x</span><span class="c">) } )</span>
+<span class="pc">#</span><span class="c">define</span> <span class="w">__pud</span><span class="c">(x</span><span class="w">) </span><span class="pc"> </span><span class="c">      ((</span><span class="w">pud_t</span><span class="pc">)</span><span class="c"> { (x) } )</span>
+<span class="pc">#</span><span class="c">define</span> <span class="w">__pgd</span><span class="c">(x</span><span class="pc">)	</span><span class="c">((</span><span class="w">pgd_t</span><span class="c">) { (x) } )</span>
+<span class="w">#</span><span class="c">define</span> <span class="w">__pgprot</span><span class="c">(x</span><span class="pc">)	(</span><span class="c">(</span><span class="w">pgprot_t</span><span class="c">) { (x) } )</span>
+
+<span class="w">#</span><span class="pc">el</span><span class="c">se</span>
+
+<span class="w">t</span><span class="c">ypedef</span> <span class="c">unsigned</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">pt</span><span class="pc">e_</span><span class="c">t</span><span class="w">;</span>
+<span class="pc">t</span><span class="c">ypedef</span> <span class="c">unsigned</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">iopte_t</span><span class="c">;</span>
+<span class="pc">t</span><span class="c">ypedef</span> <span class="c">unsigned</span> <span class="c">long</span> <span class="w">pmd_t</span><span class="c">;</span>
+<span class="pc">t</span><span class="c">ypedef</span> <span class="c">unsigned</span> <span class="c">long</span> <span class="w">pud_t</span><span class="c">;</span>
+<span class="pc">t</span><span class="c">ypedef</span> <span class="c">unsigned</span> <span class="c">long</span> <span class="pc">p</span><span class="c">gd_t;</span>
+<span class="pc">t</span><span class="c">ypedef</span> <span class="c">unsigned</span> <span class="c">long</span> <span class="w">p</span><span class="pc">g</span><span class="c">prot_t;</span>
+
+<span class="c">#</span><span class="pc">d</span><span class="c">efine</span> <span class="w">pte_val</span><span class="c">(</span><span class="w">x)	</span><span class="pc">(</span><span class="c">x</span><span class="pc">)</span>
+<span class="c">#</span><span class="pc">d</span><span class="c">efine</span> <span class="w">iopte_val</span><span class="c">(x</span><span class="w">)	</span><span class="pc">(</span><span class="c">x)</span>
+<span class="c">#define</span> <span class="w">pmd_val</span><span class="c">(x</span><span class="w">)      (</span><span class="c">x)</span>
+<span class="c">#define</span> <span class="w">pud_val</span><span class="c">(x</span><span class="w">) </span><span class="pc"> </span><span class="c">    (x)</span>
+<span class="c">#define</span> <span class="w">pgd_val</span><span class="c">(x</span><span class="pc">)	</span><span class="c">(x)</span>
+<span class="pc">#</span><span class="c">define</span> <span class="w">pgprot_val</span><span class="c">(x</span><span class="pc">)	</span><span class="c">(x)</span>
+
+<span class="pc">#</span><span class="c">define</span> <span class="w">__pte</span><span class="c">(x</span><span class="pc">)	</span><span class="c">(x)</span>
+<span class="c">#define</span> <span class="w">__iopte</span><span class="c">(x</span><span class="pc">)	</span><span class="c">(x)</span>
+<span class="c">#define</span> <span class="w">__pmd</span><span class="c">(x</span><span class="w">)        (</span><span class="c">x)</span>
+<span class="c">#define</span> <span class="w">__pud</span><span class="c">(x</span><span class="w">)  </span><span class="c">      (x)</span>
+<span class="c">#define</span> <span class="w">__pgd</span><span class="c">(x</span><span class="pc">)	</span><span class="c">(x)</span>
+<span class="pc">#</span><span class="c">define</span> <span class="w">__pgprot</span><span class="c">(x</span><span class="pc">)	</span><span class="c">(x)</span>
+
+<span class="pc">#e</span><span class="c">ndif</span> 
+
+<span class="w">t</span><span class="c">ypedef</span> <span class="w">pt</span><span class="pc">e</span><span class="c">_t</span> <span class="w">*pgtable_t</span><span class="pc">;</span>
+
+<span class="pc">e</span><span class="c">xtern</span> <span class="pc">u</span><span class="c">nsigned</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">sparc64_va_hole_top</span><span class="c">;</span>
+<span class="pc">e</span><span class="c">xtern</span> <span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">sparc64_va_hole_bottom</span><span class="c">;</span>
+
+
+<span class="pc">#d</span><span class="c">efine</span> <span class="w">VA_EXCLUDE_START</span> <span class="c">(</span><span class="pc">s</span><span class="c">parc64_va_hole_bottom</span> <span class="w">-</span><span class="pc"> </span><span class="c">(</span><span class="w">1U</span><span class="pc">L</span> <span class="c">&lt;&lt;</span> <span class="w">32UL))</span>
+<span class="c">#define</span> <span class="w">VA_EXCLUDE_END</span>   <span class="c">(</span><span class="w">s</span><span class="pc">parc64_va_hole_t</span><span class="c">op</span> <span class="w">+</span><span class="pc"> </span><span class="c">(</span><span class="w">1U</span><span class="c">L</span> <span class="c">&lt;&lt;</span> <span class="pc">3</span><span class="c">2UL))</span>
+
+<span class="c">#define</span> <span class="w">TASK_UNMAPPED_BASE</span>	<span class="c">(</span><span class="w">test_thread_flag</span><span class="pc">(</span><span class="w">TIF_32BIT) ? \</span>
+				 <span class="w">_AC</span><span class="c">(</span><span class="w">0x0000000070000000</span><span class="pc">,</span><span class="w">UL) : \</span>
+				 <span class="w">V</span><span class="pc">A_EXCLUDE_E</span><span class="c">ND</span><span class="w">)</span>
+
+<span class="c">#</span><span class="w">i</span><span class="pc">n</span><span class="c">clude</span> <span class="pc">&lt;a</span><span class="c">sm</span><span class="pc">-</span><span class="w">g</span><span class="pc">e</span><span class="c">neric/</span><span class="w">memory_model</span><span class="c">.h&gt;</span>
+
+<span class="w">e</span><span class="pc">x</span><span class="c">tern</span> <span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="c">long</span> <span class="w">PAGE_OFFSET</span><span class="c">;</span>
+
+<span class="c">#</span><span class="pc">e</span><span class="c">ndif</span> 
+
+
+<span class="c">#define</span> <span class="w">MAX_PHYS_ADDRESS_BITS</span>	<span class="w">53</span>
+
+<span class="c">#define</span> <span class="w">ILOG2_4MB</span>		<span class="w">22</span>
+<span class="c">#define</span> <span class="w">ILOG2_256MB</span>		<span class="w">28</span>
+
+<span class="c">#</span><span class="w">i</span><span class="pc">fn</span><span class="c">def</span> <span class="w">__ASSEMBLY__</span>
+
+<span class="c">#define</span> <span class="w">__pa</span><span class="c">(x</span><span class="w">)			((u</span><span class="c">nsigned</span> <span class="pc">l</span><span class="c">ong</span><span class="w">)</span><span class="pc">(x</span><span class="w">) -</span> <span class="w">P</span><span class="c">AGE_OFFSET)</span>
+<span class="c">#define</span> <span class="w">__va</span><span class="c">(x</span><span class="w">)		</span><span class="pc">	(</span><span class="c">(</span><span class="w">vo</span><span class="c">id</span> <span class="w">*)((u</span><span class="c">nsigned</span> <span class="pc">l</span><span class="c">ong</span><span class="w">)</span><span class="pc"> </span><span class="c">(x</span><span class="w">) </span><span class="c">+</span> <span class="c">PAGE_OFFSET</span><span class="w">)</span><span class="pc">)</span>
+
+<span class="c">#define</span> <span class="w">pfn_to_kaddr</span><span class="c">(</span><span class="w">pf</span><span class="pc">n</span><span class="w">)</span>	<span class="w">_</span><span class="pc">_v</span><span class="c">a</span><span class="pc">((</span><span class="w">pf</span><span class="pc">n</span><span class="w">) </span><span class="pc">&lt;</span><span class="c">&lt;</span> <span class="w">P</span><span class="c">AGE_SHIFT)</span>
+
+<span class="c">#define</span> <span class="w">virt_to_page</span><span class="c">(</span><span class="w">kaddr</span><span class="pc">)</span>	<span class="w">pfn_to_page</span><span class="c">(</span><span class="w">__pa</span><span class="pc">(</span><span class="c">kaddr</span><span class="w">)&gt;&gt;P</span><span class="pc">AGE_SH</span><span class="c">IFT)</span>
+
+<span class="c">#define</span> <span class="w">virt_addr_valid</span><span class="c">(kaddr)</span>	<span class="w">pfn_valid</span><span class="c">(</span><span class="pc">__p</span><span class="c">a</span><span class="pc">(k</span><span class="c">addr</span><span class="w">) &gt;</span><span class="c">&gt;</span> <span class="w">P</span><span class="c">AGE_SHIFT)</span>
+
+<span class="c">#define</span> <span class="w">virt_to_phys</span> <span class="w">_</span><span class="pc">_p</span><span class="c">a</span>
+<span class="pc">#</span><span class="c">define</span> <span class="w">phys_to_virt</span> <span class="w">__va</span>
+
+<span class="c">#</span><span class="pc">e</span><span class="c">ndif</span> 
+
+<span class="c">#define</span> <span class="w">VM_DATA_DEFAULT_FLAGS</span>	<span class="c">(</span><span class="w">VM_READ</span> <span class="pc">|</span> <span class="w">VM_WRITE</span> <span class="pc">|</span> <span class="w">VM_EXEC</span> <span class="pc">| </span><span class="c">\</span>
+				 <span class="w">VM_MAYREAD</span> <span class="pc">|</span> <span class="w">VM_MAYWRITE</span> <span class="c">|</span> <span class="w">VM_MAYEXEC</span><span class="pc">)</span>
+
+<span class="c">#</span><span class="pc">in</span><span class="c">clude</span> <span class="c">&lt;</span><span class="pc">a</span><span class="c">sm</span><span class="pc">-</span><span class="w">g</span><span class="c">eneric/</span><span class="w">getorder</span><span class="c">.h&gt;</span>
+
+<span class="c">#</span><span class="pc">e</span><span class="c">ndif</span> 
+
+</pre>
+</body>
+</html>
+
