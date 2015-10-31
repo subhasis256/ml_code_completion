@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+from utils import colorPrint
+import sys
+
 class Model(object):
     """
     This is a base class for holding any kind of model that we create.
@@ -31,13 +34,38 @@ class Model(object):
         """
         raise NotImplementedError, "Implement me!"
 
-    def predict(self, fileTillNow):
+    def predict(self, tokensTillNow):
         """
-        Same as above, only this time predict the next token, or a list of
-        tokens or anything model specific, but only given a list of file tokens
-        till a specific point
+        Same as above, only this time predict a ranked list of tokens
         """
         raise NotImplementedError, "Implement me!"
+
+    def testOverlap(self, fileTokens):
+        """
+        Here, we will iterate through the tokens, and will get the prediction at
+        each character granularity (i.e. filter predictions based on character
+        level match after each character)
+        """
+        annotations = []
+        for tid in range(len(fileTokens)):
+            tokensTillNow = fileTokens[:tid]
+            nextTok = fileTokens[tid]
+            sortedPreds = self.predict(tokensTillNow)
+            tokenAnn = []
+            for cid in range(len(nextTok)):
+                filteredPred = [w for w in sortedPreds
+                                if w[:cid] == nextTok[:cid]]
+                if len(filteredPred) > 0:
+                    if filteredPred[0] == nextTok:
+                        tokenAnn.append(2)
+                    elif nextTok in filteredPred[:5]:
+                        tokenAnn.append(1)
+                    else:
+                        tokenAnn.append(0)
+                else:
+                    tokenAnn.append(0)
+            annotations.append(tokenAnn)
+        return annotations
 
 
 if __name__ == '__main__':

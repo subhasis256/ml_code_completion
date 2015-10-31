@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+<span class="w">#ifndef</span> <span class="w">_OF_DEVICE_COMMON_H</span>
+<span class="w">#define</span> <span class="w">_OF_DEVICE_COMMON_H</span>
+
+<span class="w">static</span> <span class="w">inline</span> <span class="w">u64</span> <span class="w">of_read_addr(const</span> <span class="w">u32</span> <span class="w">*cell,</span> <span class="w">int</span> <span class="w">size)</span>
+<span class="w">{</span>
+	<span class="w">u64</span> <span class="w">r</span> <span class="w">=</span> <span class="w">0;</span>
+	<span class="w">while</span> <span class="w">(size--)</span>
+		<span class="w">r</span> <span class="w">= (r</span> <span class="w">&lt;&lt;</span> <span class="w">32) | *(cell++);</span>
+	<span class="w">return</span> <span class="w">r;</span>
+<span class="c">}</span>
+
+<span class="w">v</span><span class="c">oid</span> <span class="w">of_bus_default_count_cells</span><span class="c">(struct</span> <span class="w">d</span><span class="pc">evice_</span><span class="c">node</span> <span class="c">*</span><span class="w">d</span><span class="c">ev,</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">*addrc</span><span class="c">,</span>
+				<span class="c">int</span> <span class="c">*</span><span class="w">sizec</span><span class="c">);</span>
+<span class="c">int</span> <span class="w">of_out_of_range</span><span class="c">(</span><span class="pc">c</span><span class="c">onst</span> <span class="w">u</span><span class="pc">3</span><span class="c">2</span> <span class="c">*</span><span class="w">a</span><span class="pc">ddr</span><span class="c">,</span> <span class="pc">c</span><span class="c">onst</span> <span class="pc">u3</span><span class="c">2</span> <span class="c">*</span><span class="w">ba</span><span class="c">se</span><span class="pc">,</span>
+		    <span class="pc">c</span><span class="c">onst</span> <span class="pc">u</span><span class="c">32</span> <span class="c">*</span><span class="w">s</span><span class="pc">ize</span><span class="c">,</span> <span class="c">int</span> <span class="w">na</span><span class="c">,</span> <span class="c">int</span> <span class="w">ns</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">int</span> <span class="w">of_bus_default_map</span><span class="c">(</span><span class="pc">u</span><span class="c">32</span> <span class="c">*</span><span class="w">a</span><span class="pc">ddr</span><span class="c">,</span> <span class="pc">c</span><span class="c">onst</span> <span class="pc">u3</span><span class="c">2</span> <span class="c">*</span><span class="w">r</span><span class="pc">a</span><span class="c">nge,</span> <span class="c">int</span> <span class="w">n</span><span class="c">a,</span> <span class="c">int</span> <span class="w">ns</span><span class="c">,</span> <span class="c">int</span> <span class="w">pna</span><span class="pc">)</span><span class="c">;</span>
+<span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">of_bus_default_get_flags</span><span class="pc">(c</span><span class="c">onst</span> <span class="pc">u3</span><span class="c">2</span> <span class="c">*</span><span class="w">a</span><span class="c">ddr,</span> <span class="pc">u</span><span class="c">nsigned</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">f</span><span class="c">lags);</span>
+
+<span class="c">int</span> <span class="w">of_bus_sbus_match</span><span class="c">(struct</span> <span class="w">d</span><span class="pc">evice_</span><span class="c">node</span> <span class="c">*</span><span class="pc">n</span><span class="c">p</span><span class="pc">)</span><span class="c">;</span>
+<span class="pc">v</span><span class="c">oid</span> <span class="w">of_bus_sbus_count_cells</span><span class="c">(struct</span> <span class="pc">d</span><span class="c">evice_node</span> <span class="c">*</span><span class="w">chi</span><span class="pc">l</span><span class="c">d,</span> <span class="c">int</span> <span class="c">*</span><span class="w">addrc</span><span class="pc">,</span> <span class="c">int</span> <span class="c">*</span><span class="w">sizec</span><span class="c">);</span>
+
+
+<span class="pc">#d</span><span class="c">efine</span> <span class="w">OF_MAX_ADDR_CELLS</span>	<span class="w">4</span>
+
+<span class="pc">s</span><span class="c">truct</span> <span class="w">of_bus</span> <span class="pc">{</span>
+	<span class="w">c</span><span class="pc">o</span><span class="c">nst</span> <span class="pc">c</span><span class="c">har</span>	<span class="c">*name;</span>
+	<span class="pc">c</span><span class="c">onst</span> <span class="c">char</span>	<span class="c">*</span><span class="w">addr_prop_name</span><span class="c">;</span>
+	<span class="c">int</span>		<span class="pc">(</span><span class="c">*</span><span class="w">m</span><span class="c">atch)(struct</span> <span class="w">d</span><span class="pc">evice_</span><span class="c">node</span> <span class="c">*</span><span class="w">p</span><span class="c">arent</span><span class="pc">);</span>
+	<span class="pc">v</span><span class="c">oid</span>		<span class="c">(*</span><span class="w">count_cells</span><span class="c">)(struct</span> <span class="w">d</span><span class="pc">evice_</span><span class="c">node</span> <span class="c">*</span><span class="w">c</span><span class="pc">h</span><span class="c">ild</span><span class="pc">,</span>
+				       <span class="c">int</span> <span class="pc">*</span><span class="w">addrc</span><span class="pc">,</span> <span class="pc">i</span><span class="c">nt</span> <span class="pc">*</span><span class="w">sizec</span><span class="c">);</span>
+	<span class="c">int</span>		<span class="c">(*</span><span class="w">m</span><span class="pc">ap</span><span class="c">)(</span><span class="w">u</span><span class="pc">3</span><span class="c">2</span> <span class="c">*</span><span class="w">ad</span><span class="pc">dr</span><span class="c">,</span> <span class="w">c</span><span class="pc">o</span><span class="c">nst</span> <span class="w">u</span><span class="pc">3</span><span class="c">2</span> <span class="c">*</span><span class="w">ra</span><span class="pc">n</span><span class="c">ge</span><span class="pc">,</span>
+			       <span class="pc">i</span><span class="c">nt</span> <span class="w">na</span><span class="c">,</span> <span class="c">int</span> <span class="w">ns</span><span class="pc">,</span> <span class="c">int</span> <span class="w">pna</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="pc">l</span><span class="c">ong</span>	<span class="pc">(</span><span class="c">*</span><span class="w">get_flags</span><span class="c">)(</span><span class="pc">c</span><span class="c">onst</span> <span class="w">u</span><span class="pc">3</span><span class="c">2</span> <span class="c">*</span><span class="w">a</span><span class="pc">ddr</span><span class="c">,</span> <span class="pc">u</span><span class="c">nsigned</span> <span class="pc">l</span><span class="c">ong</span><span class="pc">)</span><span class="c">;</span>
+<span class="w">}</span><span class="c">;</span>
+
+<span class="c">#</span><span class="pc">e</span><span class="c">ndif</span> 
+
+</pre>
+</body>
+</html>
+

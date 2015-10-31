@@ -3,6 +3,7 @@ import sys
 import re
 import fnmatch as fn
 import os
+import cgi
 
 def matchingFiles(data_dirs, suffixes):
     globs = map(lambda x : '*.' + x, suffixes)
@@ -14,16 +15,30 @@ def matchingFiles(data_dirs, suffixes):
                     matches.append(os.path.join(root, filename))
     return matches
 
-def tokenize(fileName):
+def tokenize(fileName, retcontent=False):
     allTokens = []
     with open(fileName) as data:
         content = re.sub(r'/\*.*?\*/', '', data.read(),
                          flags=re.MULTILINE|re.DOTALL)
+
         for line in content.split('\n'):
             allTokens += [token.strip()
-                          for token in re.split('(\W+)', line)
+                          for token in re.split(r'(\W+)', line)
                           if len(token.strip()) > 0]
-    return allTokens
+    if not retcontent:
+        return allTokens
+    else:
+        return allTokens, content
+
+def matchTokensToContent(tokens, content):
+    cid = 0
+    spans = []
+    for tid,tok in enumerate(tokens):
+        while content[cid] != tok[0]:
+            cid += 1
+        spans.append((cid, cid+len(tok)))
+        cid += len(tok)
+    return spans
 
 def softmaxLossAndGrads(scores, tgts):
     deltas = scores - np.amax(scores, axis=1, keepdims=True)
@@ -46,10 +61,71 @@ def colorPrint(*args, **kwargs):
     color = kwargs['color'] if 'color' in kwargs else 'black'
     if sys.stdout.isatty():
         sys.stdout.write(cmap[color])
-        for arg in args:
+        for ii,arg in enumerate(args):
             sys.stdout.write(str(arg))
-            sys.stdout.write(' ')
+            if ii != len(args)-1:
+                sys.stdout.write(' ')
         sys.stdout.write('\033[00m')
     else:
         for arg in args:
             sys.stdout.write(str(arg))
+
+
+def HTMLHeader():
+    return """<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>"""
+
+def HTMLFooter():
+    return """</pre>
+</body>
+</html>
+"""
+
+def spanStart(annotation):
+    annClass = {0: 'w', 1: 'pc', 2: 'c'}
+    if annotation in annClass:
+        return "<span class=\"" + annClass[annotation] + "\">"
+    else:
+        return ""
+
+def spanEnd(annotation):
+    annClass = {0: 'w', 1: 'pc', 2: 'c'}
+    if annotation in annClass:
+        return "</span>"
+    else:
+        return ""
+
+def colorizedHTML(content, annotations):
+    """
+    annotation convention:
+    0 -> wrong
+    1 -> partially correct
+    2 -> correct
+    -1 -> no annotation
+    """
+    pa = None
+    s = ''
+    for c,a in zip(content, annotations):
+        if a != pa:
+            # start a new span
+            s += spanEnd(pa)
+            s += spanStart(a)
+        s += cgi.escape(c)
+        pa = a
+    s += spanEnd(pa)
+    return s

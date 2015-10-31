@@ -2,7 +2,8 @@ import fnmatch as fn
 import os
 import re
 from vectorModel import PositionDependentVectorModel
-from utils import matchingFiles, tokenize
+import utils
+import random
 
 if __name__ == '__main__':
     import cPickle as pkl
@@ -36,20 +37,20 @@ if __name__ == '__main__':
                         help='batch size')
     args = parser.parse_args()
 
-    files = matchingFiles(['../data/linux'], ['c', 'h'])
+    files = utils.matchingFiles(['../data/linux'], ['c', 'h'])
     filesAndTokens = []
 
     if args.command == 'train':
         fileSubset = files[:20000]
     else:
-        fileSubset = files[20000:22000]
+        fileSubset = files[20000:]
 
-    for i,name in enumerate(fileSubset):
-        if i % 1000 == 0:
-            print '%d files done' % i
-        filesAndTokens.append((name,tokenize(name)))
-    print len(filesAndTokens)
-    print sum([len(tokens) for name,tokens in filesAndTokens])
+#    for i,name in enumerate(fileSubset):
+#        if i % 1000 == 0:
+#            print '%d files done' % i
+#        filesAndTokens.append((name,utils.tokenize(name)))
+#    print len(filesAndTokens)
+#    print sum([len(tokens) for name,tokens in filesAndTokens])
 
     keywords = []
     with open(args.keywords) as fp:
@@ -63,30 +64,26 @@ if __name__ == '__main__':
                                          batchsize=args.batch)
     if args.command == 'test':
         model.restoreFrom(args.restore)
-        model.test(filesAndTokens)
+        print 'Restored model from %s' % args.restore
+#        model.test(filesAndTokens)
+        for _ in range(100):
+            randomFile = random.choice(fileSubset)
+            outputFile = os.path.basename(randomFile) + '.html'
+            print 'Evaluating on %s' % randomFile
+            tokens, content = utils.tokenize(randomFile, True)
+            annotations = model.testOverlap(tokens)
+            spans = utils.matchTokensToContent(tokens, content)
+            assert len(spans) == len(tokens)
+            contentAnns = [-1 for _ in range(len(content))]
+            for ann,span in zip(annotations,spans):
+                for ia,a in enumerate(ann):
+                    contentAnns[ia+span[0]] = a
+
+            print 'Generating %s' % outputFile
+
+            with open(outputFile, 'w') as fp:
+                print >> fp, utils.HTMLHeader()
+                print >> fp, utils.colorizedHTML(content, contentAnns)
+                print >> fp, utils.HTMLFooter()
     else:
         model.train(filesAndTokens, ckpt_prefix=args.ckpt)
-#    model.multiPredict([34532, 7, 99142, 93, 99142, 3, 105902, 2, 98774, 7, 233,
-#                        4, 103368, 2, 13, 1, 99142, 3, 105902, 7, 93610, 11,
-#                        99142, 3, 105902, 7, 93610, 27, 98774, 0, 99142, 3,
-#                        105902, 7, 100179, 5, 59, 2, 12, 195])
-#    model.multiPredict([4, 81, 2, 370, 3, 63638, 4, 43289, 1, 202, 5, 44487, 1,
-#                        370, 3, 44481, 3, 108, 3, 23, 0, 370, 3, 68940, 0, 370,
-#                        3, 65951, 0, 41742, 5, 43292, 1, 370, 3, 44481, 5, 127,
-#                        21, 282])
-#    model.multiPredict([26547, 1, 8, 26493, 9, 6429, 5, 26, 26548, 1, 8, 26493,
-#                        9, 6429, 5, 26, 26525, 1, 8, 26493, 9, 6429, 0, 16,
-#                        26512, 5, 26, 26551, 1, 8, 26493, 9, 6429, 5, 26499,
-#                        26552, 1, 8, 26493, 9])
-#    model.multiPredict([3, 589, 2, 691, 3, 6060, 7, 159877, 4, 159878, 2,
-#                        158333, 3, 158351, 4, 154357, 107, 158333, 3, 159703, 4,
-#                        491, 2, 158333, 3, 6127, 547, 103, 4, 159870, 27, 691,
-#                        3, 6060, 0, 159887, 5, 164, 1, 103])
-#    model.multiPredict([158592, 55, 824, 5, 12, 160, 51, 685, 27, 824, 85, 108,
-#                        4, 6390, 27, 824, 0, 8, 158290, 0, 158583, 5, 282, 27,
-#                        158554, 3, 134, 0, 69, 5, 103, 4, 158636, 1, 108, 5,
-#                        332, 27, 158554, 3])
-#    model.multiPredict([3, 37265, 5, 12, 410, 27, 250, 3, 134, 5, 12, 26, 37048,
-#                        1, 8, 36866, 9, 36867, 0, 8, 36901, 9, 215, 11, 15, 8,
-#                        37135, 9, 250, 77, 8, 37135, 116, 215, 3, 15254, 19, 14,
-#                        74, 348])

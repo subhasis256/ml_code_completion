@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+<span class="w">#include</span> <span class="w">&lt;linux/mm.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/swap.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/init.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/gfp.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux</span><span class="c">/</span><span class="w">bootmem</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">proc_fs</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">pagemap</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">percpu</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">i</span><span class="pc">o</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">memblock</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">d</span><span class="pc">m</span><span class="c">a</span><span class="pc">-</span><span class="c">mapping.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">e</span><span class="pc">x</span><span class="c">port.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;</span><span class="pc">a</span><span class="c">sm/</span><span class="w">mmu_context</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">mmzone</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">kexec</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">tlb</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">cacheflush</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">sections</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">se</span><span class="pc">t</span><span class="c">up.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">ca</span><span class="pc">che</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">sizes</span><span class="c">.h&gt;</span>
+
+<span class="w">pgd_t</span> <span class="w">swapper_pg_dir[PTRS_PER_PGD</span><span class="pc">]</span><span class="c">;</span>
+
+<span class="w">v</span><span class="c">oid</span> <span class="w">_</span><span class="pc">_in</span><span class="c">it</span> <span class="w">generic_mem_init</span><span class="c">(void)</span>
+<span class="c">{</span>
+	<span class="w">memblock_add</span><span class="c">(</span><span class="w">__MEMORY_START</span><span class="pc">,</span> <span class="w">__MEMORY_SIZE</span><span class="pc">)</span><span class="c">;</span>
+<span class="pc">}</span>
+
+<span class="c">void</span> <span class="pc">__i</span><span class="c">nit</span> <span class="w">__weak</span> <span class="w">plat_mem_setup</span><span class="c">(</span><span class="pc">v</span><span class="c">oid</span><span class="pc">)</span>
+<span class="c">{</span>
+	
+<span class="w">}</span>
+
+<span class="pc">#i</span><span class="c">fdef</span> <span class="w">CONFIG_MMU</span>
+<span class="w">s</span><span class="pc">ta</span><span class="c">tic</span> <span class="w">pt</span><span class="pc">e_</span><span class="c">t</span> <span class="pc">*</span><span class="w">__get_pte_phys</span><span class="pc">(u</span><span class="c">nsigned</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">a</span><span class="pc">ddr</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="w">pgd_t</span> <span class="w">*pg</span><span class="pc">d;</span>
+	<span class="w">pud_t</span> <span class="w">*pud</span><span class="pc">;</span>
+	<span class="w">pmd_t</span> <span class="pc">*</span><span class="w">pm</span><span class="pc">d;</span>
+
+	<span class="w">pg</span><span class="pc">d</span> <span class="pc">=</span> <span class="w">pgd_offset_k</span><span class="c">(</span><span class="w">a</span><span class="pc">dd</span><span class="c">r</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">if</span> <span class="c">(</span><span class="w">pgd_none(*pg</span><span class="pc">d</span><span class="w">)</span><span class="pc">) </span><span class="c">{</span>
+		<span class="w">pgd_ERROR(*pg</span><span class="pc">d);</span>
+		<span class="c">return</span> <span class="w">N</span><span class="c">ULL;</span>
+	<span class="c">}</span>
+
+	<span class="w">p</span><span class="c">ud</span> <span class="c">=</span> <span class="w">pud_alloc</span><span class="c">(</span><span class="w">N</span><span class="c">ULL</span><span class="pc">,</span> <span class="w">pgd</span><span class="pc">,</span> <span class="w">a</span><span class="pc">d</span><span class="c">dr);</span>
+	<span class="c">if</span> <span class="c">(</span><span class="w">u</span><span class="c">nlikely</span><span class="pc">(!</span><span class="w">p</span><span class="pc">u</span><span class="c">d</span><span class="pc">))</span><span class="c"> {</span>
+		<span class="w">pud_ERROR(*p</span><span class="pc">ud</span><span class="w">);</span>
+		<span class="c">return</span> <span class="pc">N</span><span class="c">ULL;</span>
+	<span class="c">}</span>
+
+	<span class="w">pm</span><span class="pc">d</span> <span class="c">=</span> <span class="w">pmd_alloc</span><span class="c">(</span><span class="w">N</span><span class="c">ULL</span><span class="pc">,</span> <span class="c">pud</span><span class="pc">,</span> <span class="w">a</span><span class="pc">d</span><span class="c">dr);</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">u</span><span class="c">nlikely</span><span class="pc">(!</span><span class="w">pm</span><span class="pc">d)) </span><span class="c">{</span>
+		<span class="w">pmd_ERROR(*pmd);</span>
+		<span class="c">return</span> <span class="pc">N</span><span class="c">ULL;</span>
+	<span class="c">}</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">pte_offset_kernel</span><span class="pc">(</span><span class="w">pmd</span><span class="pc">,</span> <span class="w">a</span><span class="c">ddr</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">void</span> <span class="w">set_pte_phys</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">a</span><span class="pc">d</span><span class="c">dr,</span> <span class="c">unsigned</span> <span class="c">long</span> <span class="w">ph</span><span class="pc">ys</span><span class="c">,</span> <span class="w">pgprot_t</span> <span class="w">pr</span><span class="pc">ot)</span>
+<span class="c">{</span>
+	<span class="w">pt</span><span class="pc">e_t</span> <span class="w">*pt</span><span class="pc">e;</span>
+
+	<span class="w">pt</span><span class="pc">e</span> <span class="c">=</span> <span class="w">__get_pte_phys</span><span class="c">(</span><span class="w">a</span><span class="c">ddr</span><span class="pc">)</span><span class="c">;</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="pc">(!</span><span class="w">pte_none(*pt</span><span class="pc">e</span><span class="w">))</span><span class="pc"> </span><span class="c">{</span>
+		<span class="w">pte_ERROR(*pt</span><span class="pc">e);</span>
+		<span class="pc">r</span><span class="c">eturn</span><span class="w">;</span>
+	<span class="c">}</span>
+
+	<span class="w">set_pte</span><span class="pc">(</span><span class="w">pte</span><span class="pc">,</span> <span class="w">pfn_pte</span><span class="pc">(</span><span class="w">ph</span><span class="pc">ys</span> <span class="w">&gt;</span><span class="pc">&gt;</span> <span class="w">P</span><span class="c">AGE_SHIFT</span><span class="pc">,</span> <span class="w">pr</span><span class="c">ot</span><span class="pc">))</span><span class="c">;</span>
+	<span class="w">local_flush_tlb_one</span><span class="c">(</span><span class="w">get_asid()</span><span class="pc">,</span> <span class="w">a</span><span class="pc">d</span><span class="c">dr</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="c">if</span> <span class="c">(</span><span class="w">pgprot_val</span><span class="c">(</span><span class="w">prot) &amp;</span> <span class="w">_PAGE_WIRED</span><span class="pc">)</span>
+		<span class="w">tlb_wire_entry</span><span class="c">(</span><span class="w">N</span><span class="c">ULL,</span> <span class="w">a</span><span class="c">ddr</span><span class="w">, </span><span class="pc">*</span><span class="w">pt</span><span class="pc">e</span><span class="c">);</span>
+<span class="pc">}</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">clear_pte_phys</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="pc">a</span><span class="c">ddr,</span> <span class="w">pgprot_t</span> <span class="w">pro</span><span class="pc">t)</span>
+<span class="c">{</span>
+	<span class="w">pt</span><span class="pc">e_</span><span class="c">t</span> <span class="pc">*</span><span class="w">pt</span><span class="pc">e;</span>
+
+	<span class="w">pt</span><span class="c">e</span> <span class="c">=</span> <span class="w">__get_pte_phys</span><span class="c">(</span><span class="w">a</span><span class="c">ddr</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="pc">(</span><span class="w">p</span><span class="pc">gprot_v</span><span class="c">al</span><span class="pc">(</span><span class="w">prot) &amp;</span> <span class="w">_</span><span class="pc">P</span><span class="c">AGE_WIRED)</span>
+		<span class="w">tlb_unwire_entry</span><span class="pc">()</span><span class="c">;</span>
+
+	<span class="w">set_pte</span><span class="c">(</span><span class="w">pt</span><span class="pc">e</span><span class="c">,</span> <span class="w">pfn_pte</span><span class="pc">(0,</span> <span class="w">__pgprot</span><span class="pc">(0</span><span class="w">))</span><span class="pc">);</span>
+	<span class="w">local_flush_tlb_one</span><span class="c">(</span><span class="w">get_asid()</span><span class="pc">,</span> <span class="w">a</span><span class="c">ddr);</span>
+<span class="c">}</span>
+
+<span class="w">v</span><span class="c">oid</span> <span class="w">__set_fixmap</span><span class="c">(</span><span class="w">e</span><span class="c">num</span> <span class="w">fixed_addresses</span> <span class="w">id</span><span class="pc">x</span><span class="c">,</span> <span class="pc">u</span><span class="c">nsigned</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">ph</span><span class="pc">ys</span><span class="c">,</span> <span class="w">pgprot_t</span> <span class="w">pr</span><span class="pc">ot)</span>
+<span class="c">{</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">a</span><span class="pc">ddre</span><span class="c">ss</span> <span class="pc">=</span> <span class="w">__fix_to_virt</span><span class="c">(</span><span class="w">id</span><span class="pc">x)</span><span class="c">;</span>
+
+	<span class="c">if</span> <span class="c">(</span><span class="w">id</span><span class="pc">x</span> <span class="w">&gt;</span><span class="pc">=</span> <span class="w">__end_of_fixed_addresses</span><span class="c">) {</span>
+		<span class="w">B</span><span class="pc">UG()</span><span class="c">;</span>
+		<span class="pc">r</span><span class="c">eturn</span><span class="w">;</span>
+	<span class="c">}</span>
+
+	<span class="w">set_pte_phys</span><span class="c">(</span><span class="w">ad</span><span class="pc">dre</span><span class="c">ss,</span> <span class="w">phy</span><span class="pc">s</span><span class="c">,</span> <span class="w">pr</span><span class="pc">ot)</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="pc">v</span><span class="c">oid</span> <span class="w">__clear_fixmap</span><span class="c">(</span><span class="w">e</span><span class="pc">nu</span><span class="c">m</span> <span class="w">fixed_addresses</span> <span class="w">id</span><span class="pc">x</span><span class="c">,</span> <span class="w">p</span><span class="c">gprot_t</span> <span class="w">pro</span><span class="pc">t)</span>
+<span class="c">{</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">a</span><span class="pc">ddre</span><span class="c">ss</span> <span class="pc">=</span> <span class="w">_</span><span class="pc">_f</span><span class="c">ix_to_virt</span><span class="pc">(</span><span class="w">id</span><span class="c">x</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="c">if</span> <span class="c">(</span><span class="w">i</span><span class="c">dx</span> <span class="pc">&gt;</span><span class="c">=</span> <span class="w">_</span><span class="c">_end_of_fixed_addresses</span><span class="pc">)</span><span class="c"> {</span>
+		<span class="w">B</span><span class="pc">UG()</span><span class="c">;</span>
+		<span class="pc">r</span><span class="c">eturn</span><span class="w">;</span>
+	<span class="c">}</span>
+
+	<span class="w">clear_pte_phys</span><span class="c">(</span><span class="w">ad</span><span class="pc">dre</span><span class="c">ss,</span> <span class="w">pro</span><span class="pc">t)</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="w">pmd_t</span> <span class="pc">*</span> <span class="w">_</span><span class="pc">_i</span><span class="c">nit</span> <span class="w">one_md_table_init</span><span class="c">(</span><span class="w">pud_t</span> <span class="pc">*</span><span class="w">pud</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">pud_none(*</span><span class="pc">p</span><span class="c">ud</span><span class="pc">)) </span><span class="c">{</span>
+		<span class="w">p</span><span class="pc">m</span><span class="c">d_t</span> <span class="w">*pmd</span><span class="pc">;</span>
+
+		<span class="w">pm</span><span class="pc">d</span> <span class="c">=</span> <span class="w">alloc_bootmem_pages</span><span class="c">(</span><span class="w">P</span><span class="c">AGE_SIZE);</span>
+		<span class="w">pud_populate</span><span class="pc">(&amp;</span><span class="w">init_mm</span><span class="pc">,</span> <span class="pc">p</span><span class="c">ud</span><span class="pc">,</span> <span class="w">pm</span><span class="pc">d</span><span class="c">);</span>
+		<span class="w">B</span><span class="c">UG_ON(</span><span class="w">pm</span><span class="pc">d</span> <span class="pc">!</span><span class="c">=</span> <span class="w">pmd_offset(</span><span class="c">pud</span><span class="pc">,</span> <span class="w">0</span><span class="pc">));</span>
+	<span class="pc">}</span>
+
+	<span class="w">r</span><span class="c">eturn</span> <span class="w">p</span><span class="pc">md_o</span><span class="c">ffset(</span><span class="pc">pud,</span> <span class="pc">0</span><span class="c">);</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="w">pt</span><span class="pc">e_</span><span class="c">t</span> <span class="c">*</span> <span class="w">_</span><span class="pc">_i</span><span class="c">nit</span> <span class="w">one_page_table_init</span><span class="c">(</span><span class="w">pmd_t</span> <span class="pc">*</span><span class="w">pmd</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">pmd_none(*pmd</span><span class="pc">)) </span><span class="c">{</span>
+		<span class="w">pt</span><span class="pc">e_</span><span class="c">t</span> <span class="pc">*</span><span class="w">pt</span><span class="pc">e;</span>
+
+		<span class="w">pt</span><span class="pc">e</span> <span class="c">=</span> <span class="w">alloc_bootmem_pages</span><span class="c">(</span><span class="w">P</span><span class="c">AGE_SIZE</span><span class="pc">)</span><span class="c">;</span>
+		<span class="w">pmd_populate_kernel</span><span class="pc">(&amp;</span><span class="w">init_mm</span><span class="pc">,</span> <span class="w">pmd</span><span class="pc">,</span> <span class="w">pt</span><span class="pc">e</span><span class="c">);</span>
+		<span class="w">B</span><span class="c">UG_ON(</span><span class="w">pt</span><span class="pc">e</span> <span class="w">!</span><span class="c">=</span> <span class="w">pte_offset_kernel(pm</span><span class="pc">d</span><span class="w">,</span> <span class="w">0</span><span class="pc">));</span>
+	<span class="pc">}</span>
+
+	<span class="w">r</span><span class="c">eturn</span> <span class="w">p</span><span class="pc">t</span><span class="c">e_offset_kernel(</span><span class="w">pmd</span><span class="pc">,</span> <span class="pc">0</span><span class="c">);</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="w">pt</span><span class="pc">e_t</span> <span class="c">*</span> <span class="w">_</span><span class="pc">_i</span><span class="c">nit</span> <span class="w">page_table_kmap_check</span><span class="c">(</span><span class="w">pt</span><span class="pc">e_t</span> <span class="pc">*</span><span class="w">pt</span><span class="pc">e,</span> <span class="w">pmd_t</span> <span class="c">*</span><span class="w">pm</span><span class="pc">d,</span>
+					    <span class="pc">un</span><span class="c">signed</span> <span class="c">long</span> <span class="w">v</span><span class="pc">ad</span><span class="c">dr,</span> <span class="w">pt</span><span class="pc">e_t</span> <span class="c">*</span><span class="w">lastpte</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">return</span> <span class="w">pt</span><span class="pc">e</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="w">v</span><span class="c">oid</span> <span class="w">_</span><span class="pc">_in</span><span class="c">it</span> <span class="w">page_table_range_init</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">s</span><span class="c">tart,</span> <span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">e</span><span class="c">nd</span><span class="pc">,</span>
+					 <span class="w">pgd_t</span> <span class="c">*</span><span class="w">pgd_base</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">p</span><span class="pc">gd_t</span> <span class="pc">*</span><span class="w">pg</span><span class="pc">d;</span>
+	<span class="w">pud_t</span> <span class="w">*pud</span><span class="pc">;</span>
+	<span class="w">pmd_t</span> <span class="pc">*</span><span class="w">pm</span><span class="c">d</span><span class="pc">;</span>
+	<span class="w">pt</span><span class="pc">e_</span><span class="c">t</span> <span class="c">*</span><span class="w">pt</span><span class="pc">e</span> <span class="pc">=</span> <span class="w">N</span><span class="c">ULL;</span>
+	<span class="w">i</span><span class="pc">n</span><span class="c">t</span> <span class="c">i</span><span class="pc">,</span> <span class="pc">j,</span> <span class="w">k</span><span class="pc">;</span>
+	<span class="w">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">vad</span><span class="c">dr;</span>
+
+	<span class="w">va</span><span class="pc">d</span><span class="c">dr</span> <span class="c">=</span> <span class="w">st</span><span class="pc">a</span><span class="c">rt;</span>
+	<span class="w">i</span> <span class="c">=</span> <span class="w">__pgd_offset</span><span class="pc">(</span><span class="w">va</span><span class="pc">d</span><span class="c">dr</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">j</span> <span class="c">=</span> <span class="w">__pud_offset</span><span class="c">(</span><span class="w">v</span><span class="pc">a</span><span class="c">ddr</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">k</span> <span class="c">=</span> <span class="w">__pmd_offset</span><span class="c">(</span><span class="w">va</span><span class="c">ddr</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">pg</span><span class="pc">d</span> <span class="pc">=</span> <span class="w">pgd_base</span> <span class="w">+</span> <span class="c">i;</span>
+
+	<span class="pc">f</span><span class="c">or</span> <span class="w">( ; (</span><span class="c">i</span> <span class="pc">&lt;</span> <span class="w">PTRS_PER_PGD)</span><span class="pc"> &amp;</span><span class="c">&amp; (</span><span class="w">va</span><span class="pc">d</span><span class="c">dr</span> <span class="w">!</span><span class="c">=</span> <span class="w">e</span><span class="c">nd</span><span class="w">)</span><span class="pc">;</span> <span class="w">pg</span><span class="pc">d</span><span class="w">+</span><span class="pc">+,</span> <span class="c">i</span><span class="w">+</span><span class="pc">+) </span><span class="c">{</span>
+		<span class="w">pud</span> <span class="w">=</span><span class="pc"> (</span><span class="w">pud_t</span> <span class="w">*</span><span class="c">)</span><span class="w">pg</span><span class="pc">d;</span>
+		<span class="pc">f</span><span class="c">or</span> <span class="w">( </span><span class="c">; (</span><span class="pc">j</span> <span class="w">&lt;</span> <span class="w">PTRS_PER_PUD) &amp;</span><span class="pc">&amp; </span><span class="c">(</span><span class="w">va</span><span class="pc">d</span><span class="c">dr</span> <span class="w">!</span><span class="c">=</span> <span class="w">e</span><span class="pc">n</span><span class="c">d</span><span class="w">);</span> <span class="w">p</span><span class="c">ud</span><span class="w">++</span><span class="pc">,</span> <span class="pc">j</span><span class="w">+</span><span class="pc">+)</span><span class="c"> {</span>
+			<span class="w">pmd</span> <span class="c">=</span> <span class="w">one_md_table_init</span><span class="c">(</span><span class="pc">pu</span><span class="c">d</span><span class="pc">)</span><span class="c">;</span>
+<span class="w">#i</span><span class="pc">fn</span><span class="c">def</span> <span class="w">__PAGETABLE_PMD_FOLDED</span>
+			<span class="w">pmd</span> <span class="w">+</span><span class="pc">=</span> <span class="w">k</span><span class="c">;</span>
+<span class="w">#</span><span class="c">endif</span>
+			<span class="w">f</span><span class="c">or</span> <span class="w">(; (</span><span class="pc">k</span> <span class="w">&lt;</span> <span class="w">PTRS_PER_PMD) &amp;</span><span class="pc">&amp; </span><span class="c">(</span><span class="w">va</span><span class="c">ddr</span> <span class="w">!</span><span class="c">=</span> <span class="w">e</span><span class="c">nd</span><span class="w">);</span> <span class="w">pm</span><span class="pc">d</span><span class="w">++</span><span class="pc">,</span> <span class="pc">k</span><span class="w">+</span><span class="pc">+)</span><span class="c"> {</span>
+				<span class="w">pt</span><span class="pc">e</span> <span class="c">=</span> <span class="w">page_table_kmap_check</span><span class="c">(</span><span class="w">one_page_table_init</span><span class="pc">(</span><span class="w">pmd</span><span class="pc">),</span>
+							    <span class="w">pm</span><span class="pc">d,</span> <span class="w">v</span><span class="pc">a</span><span class="c">ddr,</span> <span class="w">pt</span><span class="pc">e</span><span class="c">);</span>
+				<span class="w">va</span><span class="pc">d</span><span class="c">dr</span> <span class="pc">+</span><span class="c">=</span> <span class="w">PMD_SIZE</span><span class="pc">;</span>
+			<span class="c">}</span>
+			<span class="w">k</span> <span class="c">=</span> <span class="c">0;</span>
+		<span class="c">}</span>
+		<span class="w">j</span> <span class="c">=</span> <span class="c">0;</span>
+	<span class="c">}</span>
+<span class="w">}</span>
+<span class="w">#</span><span class="c">endif</span>	
+
+<span class="w">v</span><span class="c">oid</span> <span class="pc">_</span><span class="c">_init</span> <span class="w">allocate_pgdat</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">ni</span><span class="c">d</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">unsigned</span> <span class="c">long</span> <span class="w">start_pfn</span><span class="c">,</span> <span class="w">end_pfn</span><span class="pc">;</span>
+<span class="w">#</span><span class="c">ifdef</span> <span class="w">CONFIG_NEED_MULTIPLE_NODES</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">ph</span><span class="pc">ys</span><span class="c">;</span>
+<span class="pc">#</span><span class="c">endif</span>
+
+	<span class="w">get_pfn_range_for_nid</span><span class="c">(</span><span class="w">ni</span><span class="c">d</span><span class="pc">, </span><span class="c">&amp;start_pfn</span><span class="pc">, </span><span class="c">&amp;</span><span class="pc">e</span><span class="c">nd_pfn);</span>
+
+<span class="pc">#i</span><span class="c">fdef</span> <span class="w">C</span><span class="c">ONFIG_NEED_MULTIPLE_NODES</span>
+	<span class="w">ph</span><span class="c">ys</span> <span class="w">=</span> <span class="w">__memblock_alloc_base</span><span class="c">(</span><span class="pc">s</span><span class="c">izeof(struct</span> <span class="w">pglist_data</span><span class="pc">),</span>
+				<span class="w">SMP_CACHE_BYTES</span><span class="pc">,</span> <span class="w">e</span><span class="pc">nd</span><span class="c">_pfn</span> <span class="w">&lt;</span><span class="pc">&lt;</span> <span class="w">P</span><span class="c">AGE_SHIFT);</span>
+	
+	<span class="pc">i</span><span class="c">f</span> <span class="pc">(!</span><span class="w">ph</span><span class="pc">ys</span><span class="c">)</span>
+		<span class="w">ph</span><span class="c">ys</span> <span class="c">=</span> <span class="w">_</span><span class="c">_memblock_alloc_base</span><span class="pc">(</span><span class="w">s</span><span class="c">izeof(</span><span class="pc">s</span><span class="c">truct</span> <span class="pc">p</span><span class="c">glist_data),</span>
+					<span class="pc">S</span><span class="c">MP_CACHE_BYTES</span><span class="w">,</span> <span class="w">memblock_end_of_DRAM())</span><span class="pc">;</span>
+	<span class="c">if</span> <span class="pc">(!</span><span class="w">ph</span><span class="pc">ys</span><span class="c">)</span>
+		<span class="w">panic(</span><span class="pc">"</span><span class="w">C</span><span class="pc">a</span><span class="c">n't</span> <span class="c">allocate</span> <span class="w">pgdat</span> <span class="w">f</span><span class="c">or</span> <span class="w">no</span><span class="pc">d</span><span class="c">e</span> <span class="c">%d\n",</span> <span class="w">ni</span><span class="c">d);</span>
+
+	<span class="w">NODE_DATA</span><span class="c">(</span><span class="w">ni</span><span class="pc">d</span><span class="w">) =</span> <span class="w">__va</span><span class="c">(</span><span class="w">ph</span><span class="pc">ys)</span><span class="c">;</span>
+	<span class="w">me</span><span class="pc">ms</span><span class="c">et</span><span class="pc">(</span><span class="c">NODE_DATA</span><span class="w">(ni</span><span class="pc">d)</span><span class="c">,</span> <span class="w">0</span><span class="pc">,</span> <span class="pc">s</span><span class="c">izeof</span><span class="pc">(</span><span class="c">struct</span> <span class="w">pglist_data</span><span class="pc">))</span><span class="c">;</span>
+
+	<span class="w">N</span><span class="c">ODE_DATA</span><span class="pc">(</span><span class="w">ni</span><span class="pc">d</span><span class="w">)</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">bdata</span> <span class="w">=</span><span class="pc"> </span><span class="c">&amp;</span><span class="w">bootmem_node_data[ni</span><span class="pc">d</span><span class="c">];</span>
+<span class="w">#e</span><span class="pc">n</span><span class="c">dif</span>
+
+	<span class="w">N</span><span class="c">ODE_DATA(</span><span class="w">ni</span><span class="c">d</span><span class="w">)-</span><span class="pc">&gt;</span><span class="w">node_start_pfn</span> <span class="pc">=</span> <span class="w">start_pfn</span><span class="pc">;</span>
+	<span class="w">N</span><span class="c">ODE_DATA</span><span class="pc">(</span><span class="w">ni</span><span class="c">d</span><span class="w">)</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">node_spanned_pages</span> <span class="pc">=</span> <span class="w">end_pfn</span> <span class="w">-</span> <span class="pc">s</span><span class="c">tart_pfn;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">v</span><span class="c">oid</span> <span class="pc">_</span><span class="c">_init</span> <span class="w">bootmem_init_one_node</span><span class="c">(</span><span class="w">u</span><span class="c">nsigned</span> <span class="c">int</span> <span class="w">ni</span><span class="c">d</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">total_pages</span><span class="pc">,</span> <span class="w">pad</span><span class="pc">d</span><span class="c">r</span><span class="pc">;</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">e</span><span class="c">nd_pfn</span><span class="pc">;</span>
+	<span class="pc">st</span><span class="c">ruct</span> <span class="w">pglist_data</span> <span class="c">*</span><span class="pc">p</span><span class="c">;</span>
+
+	<span class="w">p</span> <span class="pc">=</span> <span class="w">N</span><span class="c">ODE_DATA</span><span class="pc">(</span><span class="w">ni</span><span class="c">d</span><span class="pc">)</span><span class="c">;</span>
+
+	
+	<span class="c">if</span> <span class="c">(!</span><span class="pc">p-</span><span class="c">&gt;</span><span class="w">node_spanned_pages</span><span class="pc">)</span>
+		<span class="c">return</span><span class="pc">;</span>
+
+	<span class="w">e</span><span class="c">nd_pfn</span> <span class="pc">=</span> <span class="w">pgdat_end_pfn</span><span class="c">(p);</span>
+
+	<span class="w">t</span><span class="pc">o</span><span class="c">tal_pages</span> <span class="pc">=</span> <span class="w">bootmem_bootmap_pages</span><span class="c">(p</span><span class="pc">-</span><span class="c">&gt;</span><span class="pc">n</span><span class="c">ode_spanned_pages</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="w">pad</span><span class="pc">d</span><span class="c">r</span> <span class="c">=</span> <span class="w">memblock_alloc</span><span class="c">(</span><span class="pc">t</span><span class="c">otal_pages</span> <span class="w">&lt;</span><span class="c">&lt;</span> <span class="pc">P</span><span class="c">AGE_SHIFT</span><span class="pc">,</span> <span class="w">P</span><span class="c">AGE_SIZE);</span>
+	<span class="c">if</span> <span class="pc">(!</span><span class="w">pad</span><span class="pc">d</span><span class="c">r)</span>
+		<span class="w">panic</span><span class="pc">("</span><span class="w">C</span><span class="pc">an</span><span class="c">'t</span> <span class="c">allocate</span> <span class="w">bootmap</span> <span class="pc">f</span><span class="c">or</span> <span class="w">ni</span><span class="pc">d</span><span class="w">[</span><span class="c">%</span><span class="pc">d</span><span class="w">]</span><span class="pc">\</span><span class="c">n",</span> <span class="w">ni</span><span class="c">d);</span>
+
+	<span class="w">init_bootmem_node</span><span class="c">(p</span><span class="pc">,</span> <span class="w">pad</span><span class="pc">d</span><span class="c">r</span> <span class="w">&gt;</span><span class="c">&gt;</span> <span class="w">P</span><span class="c">AGE_SHIFT</span><span class="pc">,</span> <span class="w">p</span><span class="c">-&gt;</span><span class="w">node_start_pfn</span><span class="c">,</span> <span class="w">end_pfn</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="w">free_bootmem_with_active_regions</span><span class="c">(</span><span class="w">ni</span><span class="pc">d</span><span class="c">,</span> <span class="pc">e</span><span class="c">nd_pfn</span><span class="pc">)</span><span class="c">;</span>
+
+	
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">ni</span><span class="pc">d</span> <span class="pc">=</span><span class="c">=</span> <span class="pc">0</span><span class="c">) {</span>
+		<span class="w">st</span><span class="c">ruct</span> <span class="w">memblock_region</span> <span class="c">*</span><span class="w">reg</span><span class="pc">;</span>
+
+		
+		<span class="w">for_each_memblock</span><span class="c">(</span><span class="w">rese</span><span class="pc">r</span><span class="c">ved</span><span class="pc">,</span> <span class="w">r</span><span class="c">eg</span><span class="w">) {</span>
+			<span class="w">reserve_bootmem</span><span class="c">(</span><span class="w">r</span><span class="pc">eg</span><span class="w">-</span><span class="c">&gt;</span><span class="w">b</span><span class="c">ase</span><span class="pc">,</span> <span class="c">reg</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">s</span><span class="c">ize</span><span class="pc">,</span> <span class="w">BOOTMEM_DEFAULT</span><span class="c">);</span>
+		<span class="c">}</span>
+	<span class="pc">}</span>
+
+	<span class="w">sparse_memory_present_with_active_regions</span><span class="c">(</span><span class="w">ni</span><span class="pc">d)</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">v</span><span class="c">oid</span> <span class="pc">_</span><span class="c">_init</span> <span class="w">do_init_bootmem</span><span class="c">(void)</span>
+<span class="c">{</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="pc">m</span><span class="c">emblock_region</span> <span class="c">*</span><span class="pc">r</span><span class="c">eg;</span>
+	<span class="c">int</span> <span class="pc">i</span><span class="c">;</span>
+
+	
+	<span class="w">for_each_memblock</span><span class="c">(</span><span class="w">me</span><span class="pc">mo</span><span class="c">ry,</span> <span class="w">r</span><span class="c">eg</span><span class="w">) {</span>
+		<span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">start_pfn</span><span class="pc">,</span> <span class="w">end_pfn</span><span class="pc">;</span>
+		<span class="w">st</span><span class="pc">ar</span><span class="c">t_pfn</span> <span class="pc">=</span> <span class="w">memblock_region_memory_base_pfn</span><span class="c">(</span><span class="w">r</span><span class="c">eg</span><span class="pc">)</span><span class="c">;</span>
+		<span class="pc">e</span><span class="c">nd_pfn</span> <span class="pc">=</span> <span class="w">memblock_region_memory_end_pfn</span><span class="c">(</span><span class="w">r</span><span class="c">eg</span><span class="pc">)</span><span class="c">;</span>
+		<span class="w">__add_active_range</span><span class="c">(</span><span class="w">0</span><span class="c">,</span> <span class="pc">s</span><span class="c">tart_pfn</span><span class="pc">,</span> <span class="pc">e</span><span class="c">nd_pfn</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">}</span>
+
+	
+	<span class="w">allocate_pgdat</span><span class="c">(</span><span class="w">0</span><span class="c">);</span>
+	<span class="w">node_set_online</span><span class="c">(</span><span class="w">0</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="w">plat_mem_setup(</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="w">for_each_online_node</span><span class="c">(</span><span class="w">i)</span>
+		<span class="w">bootmem_init_one_node</span><span class="c">(</span><span class="w">i</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="w">sparse_init</span><span class="pc">()</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">void</span> <span class="c">__init</span> <span class="w">early_reserve_mem</span><span class="c">(void)</span>
+<span class="c">{</span>
+	<span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="c">long</span> <span class="w">s</span><span class="pc">tar</span><span class="c">t_pfn;</span>
+	<span class="w">u</span><span class="pc">3</span><span class="c">2</span> <span class="w">zero_base</span> <span class="w">=</span><span class="pc"> </span><span class="c">(u32</span><span class="pc">)</span><span class="w">__MEMORY_START</span> <span class="w">+</span><span class="pc"> </span><span class="c">(</span><span class="w">u</span><span class="c">32</span><span class="w">)PHYSICAL_OFFSET;</span>
+	<span class="pc">u</span><span class="c">32</span> <span class="w">st</span><span class="pc">art</span> <span class="pc">=</span> <span class="pc">z</span><span class="c">ero_base</span> <span class="w">+</span><span class="pc"> </span><span class="c">(</span><span class="w">u</span><span class="c">32</span><span class="w">)CONFIG_ZERO_PAGE_OFFSET</span><span class="pc">;</span>
+
+	
+	<span class="w">s</span><span class="c">tart_pfn</span> <span class="c">=</span> <span class="w">PFN_UP</span><span class="c">(</span><span class="w">__pa</span><span class="pc">(</span><span class="w">_end</span><span class="pc">))</span><span class="c">;</span>
+
+	
+	<span class="w">memblock_reserve</span><span class="c">(</span><span class="w">star</span><span class="pc">t, (</span><span class="w">PFN_PHYS</span><span class="c">(</span><span class="w">s</span><span class="c">tart_pfn</span><span class="w">) +</span> <span class="w">P</span><span class="pc">AGE_SI</span><span class="c">ZE</span> <span class="w">-</span> <span class="pc">1</span><span class="w">) -</span> <span class="w">st</span><span class="pc">art);</span>
+
+	
+	<span class="c">if</span> <span class="c">(CONFIG_ZERO_PAGE_OFFSET</span> <span class="w">!</span><span class="c">=</span> <span class="c">0</span><span class="pc">)</span>
+		<span class="w">m</span><span class="c">emblock_reserve(</span><span class="pc">z</span><span class="c">ero_base,</span> <span class="pc">C</span><span class="c">ONFIG_ZERO_PAGE_OFFSET</span><span class="pc">)</span><span class="c">;</span>
+
+	
+	<span class="w">check_for_initrd(</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">reserve_crashkernel</span><span class="pc">()</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="w">v</span><span class="c">oid</span> <span class="w">_</span><span class="pc">_in</span><span class="c">it</span> <span class="w">paging_init</span><span class="c">(void</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">max_zone_pfns[MAX_NR_ZONES</span><span class="c">];</span>
+	<span class="c">unsigned</span> <span class="c">long</span> <span class="w">va</span><span class="pc">d</span><span class="c">dr</span><span class="pc">,</span> <span class="w">e</span><span class="pc">nd</span><span class="c">;</span>
+	<span class="pc">in</span><span class="c">t</span> <span class="w">ni</span><span class="c">d;</span>
+
+	<span class="w">sh_mv.mv_mem_init(</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="w">early_reserve_mem</span><span class="pc">()</span><span class="c">;</span>
+
+	
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(sh_mv</span><span class="w">.mv_mem_reserve</span><span class="pc">)</span>
+		<span class="pc">s</span><span class="c">h_mv</span><span class="pc">.m</span><span class="c">v_mem_reserve</span><span class="w">(</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="w">memblock_enforce_memory_limit</span><span class="pc">(</span><span class="w">memory_limit</span><span class="c">);</span>
+	<span class="w">memblock_allow_resize</span><span class="pc">()</span><span class="c">;</span>
+
+	<span class="w">memblock_dump_all</span><span class="c">();</span>
+
+	
+	<span class="w">max_low_pfn</span> <span class="pc">=</span> <span class="w">max_pfn</span> <span class="w">=</span> <span class="w">memblock_end_of_DRAM() &gt;&gt;</span> <span class="w">P</span><span class="c">AGE_SHIFT;</span>
+	<span class="w">min_low_pfn</span> <span class="pc">=</span> <span class="w">__MEMORY_START</span> <span class="w">&gt;</span><span class="c">&gt;</span> <span class="w">P</span><span class="c">AGE_SHIFT;</span>
+
+	<span class="w">nodes_clear</span><span class="pc">(</span><span class="w">node_online_map</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="w">memory_start</span> <span class="w">=</span><span class="pc"> </span><span class="c">(</span><span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="c">long</span><span class="w">)__va</span><span class="c">(</span><span class="pc">_</span><span class="c">_MEMORY_START</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">memory_end</span> <span class="pc">=</span> <span class="pc">me</span><span class="c">mory_start</span> <span class="w">+</span><span class="pc"> </span><span class="c">(memory_limit</span> <span class="w">?:</span> <span class="w">memblock_phys_mem_size()</span><span class="pc">);</span>
+
+	<span class="w">uncached_init(</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">pmb_init</span><span class="pc">()</span><span class="c">;</span>
+	<span class="w">do_init_bootmem</span><span class="c">();</span>
+	<span class="w">ioremap_fixed_init</span><span class="pc">()</span><span class="c">;</span>
+
+	
+	<span class="w">mems</span><span class="c">et(</span><span class="w">swapper_pg_dir</span><span class="c">,</span> <span class="c">0,</span> <span class="c">sizeof</span><span class="pc">(sw</span><span class="c">apper_pg_dir));</span>
+
+	
+	<span class="w">set_TTB</span><span class="c">(</span><span class="pc">s</span><span class="c">wapper_pg_dir</span><span class="pc">)</span><span class="c">;</span>
+
+	
+	<span class="w">va</span><span class="pc">d</span><span class="c">dr</span> <span class="pc">=</span> <span class="w">__fix_to_virt</span><span class="c">(</span><span class="w">__end_of_fixed_addresses</span> <span class="w">-</span> <span class="c">1</span><span class="w">) </span><span class="pc">&amp;</span> <span class="w">PMD_MASK</span><span class="c">;</span>
+	<span class="w">en</span><span class="pc">d</span> <span class="w">=</span><span class="pc"> </span><span class="c">(</span><span class="w">FIXADDR_TOP</span> <span class="w">+</span> <span class="w">PMD_SIZE</span> <span class="w">-</span> <span class="c">1</span><span class="w">)</span><span class="pc"> &amp;</span> <span class="w">P</span><span class="pc">MD_M</span><span class="c">ASK;</span>
+	<span class="w">page_table_range_init</span><span class="c">(</span><span class="w">va</span><span class="pc">d</span><span class="c">dr,</span> <span class="w">e</span><span class="pc">n</span><span class="c">d</span><span class="pc">,</span> <span class="c">swapper_pg_dir</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="w">kmap_coherent_init(</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="w">me</span><span class="pc">ms</span><span class="c">et(</span><span class="w">max_zone_pfns</span><span class="c">,</span> <span class="c">0,</span> <span class="pc">s</span><span class="c">izeof</span><span class="pc">(m</span><span class="c">ax_zone_pfns));</span>
+
+	<span class="w">for_each_online_node</span><span class="c">(</span><span class="w">ni</span><span class="c">d</span><span class="w">)</span><span class="pc"> </span><span class="c">{</span>
+		<span class="w">pg_data_t</span> <span class="w">*pgdat</span> <span class="pc">=</span> <span class="w">NODE_DATA</span><span class="c">(</span><span class="w">ni</span><span class="c">d);</span>
+		<span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="c">long</span> <span class="w">lo</span><span class="pc">w,</span> <span class="w">start_pfn</span><span class="pc">;</span>
+
+		<span class="pc">s</span><span class="c">tart_pfn</span> <span class="c">=</span> <span class="c">pgdat</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">bdata-</span><span class="pc">&gt;</span><span class="w">node_min_pfn</span><span class="pc">;</span>
+		<span class="w">lo</span><span class="pc">w</span> <span class="c">=</span> <span class="w">p</span><span class="pc">gd</span><span class="c">at-&gt;</span><span class="pc">b</span><span class="c">data</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">node_low_pfn</span><span class="c">;</span>
+
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="pc">m</span><span class="c">ax_zone_pfns</span><span class="w">[ZONE_NORMAL] &lt;</span> <span class="w">low</span><span class="pc">)</span>
+			<span class="pc">m</span><span class="c">ax_zone_pfns</span><span class="w">[</span><span class="pc">Z</span><span class="c">ONE_NORMAL</span><span class="pc">] </span><span class="c">=</span> <span class="w">lo</span><span class="pc">w</span><span class="c">;</span>
+
+		<span class="w">p</span><span class="pc">ri</span><span class="c">ntk</span><span class="pc">("</span><span class="w">Node</span> <span class="c">%</span><span class="pc">u</span><span class="w">:</span> <span class="w">s</span><span class="c">tart_pfn</span> <span class="w">=</span> <span class="c">0x%</span><span class="pc">l</span><span class="c">x</span><span class="pc">,</span> <span class="w">lo</span><span class="pc">w</span> <span class="pc">=</span> <span class="c">0x%</span><span class="pc">l</span><span class="c">x</span><span class="pc">\</span><span class="c">n",</span>
+		       <span class="w">ni</span><span class="c">d,</span> <span class="w">s</span><span class="c">tart_pfn,</span> <span class="w">low</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">}</span>
+
+	<span class="w">free_area_init_nodes</span><span class="c">(max_zone_pfns</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">}</span>
+
+
+<span class="c">static</span> <span class="pc">v</span><span class="c">oid</span> <span class="c">__init</span> <span class="w">iommu_init</span><span class="c">(void)</span>
+<span class="c">{</span>
+	<span class="w">no_iommu_init</span><span class="pc">()</span><span class="c">;</span>
+<span class="pc">}</span>
+
+<span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="c">int</span> <span class="w">mem_init_done</span> <span class="pc">=</span> <span class="c">0;</span>
+
+<span class="w">v</span><span class="c">oid</span> <span class="w">_</span><span class="pc">_in</span><span class="c">it</span> <span class="w">mem_init</span><span class="c">(void)</span>
+<span class="c">{</span>
+	<span class="w">pg_data_t</span> <span class="w">*pgdat</span><span class="pc">;</span>
+
+	<span class="w">i</span><span class="pc">o</span><span class="c">mmu_init</span><span class="pc">()</span><span class="c">;</span>
+
+	<span class="w">high_memory</span> <span class="pc">=</span> <span class="w">N</span><span class="c">ULL;</span>
+	<span class="w">for_each_online_pgdat</span><span class="pc">(p</span><span class="c">gdat</span><span class="w">)</span>
+		<span class="c">high_memory</span> <span class="pc">=</span> <span class="w">max_t</span><span class="c">(</span><span class="w">v</span><span class="pc">o</span><span class="c">id</span> <span class="w">*,</span> <span class="w">h</span><span class="c">igh_memory</span><span class="pc">,</span>
+				    <span class="w">__va(pgdat_end_pfn(</span><span class="c">pgdat</span><span class="w">) &lt;</span><span class="c">&lt;</span> <span class="w">P</span><span class="c">AGE_SHIFT</span><span class="pc">))</span><span class="c">;</span>
+
+	<span class="w">free_all_bootmem(</span><span class="pc">)</span><span class="c">;</span>
+
+	
+	<span class="w">cpu_cache_init</span><span class="pc">()</span><span class="c">;</span>
+
+	
+	<span class="w">m</span><span class="pc">ems</span><span class="c">et(</span><span class="w">empty_zero_page</span><span class="c">,</span> <span class="c">0,</span> <span class="w">P</span><span class="c">AGE_SIZE);</span>
+	<span class="w">__flush_wback_region</span><span class="c">(empty_zero_page</span><span class="pc">,</span> <span class="w">P</span><span class="c">AGE_SIZE);</span>
+
+	<span class="w">vsyscall_init</span><span class="pc">()</span><span class="c">;</span>
+
+	<span class="w">mem_init_print_info</span><span class="c">(</span><span class="w">N</span><span class="c">ULL</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">p</span><span class="pc">r</span><span class="c">_info("</span><span class="w">vi</span><span class="pc">rtu</span><span class="c">al</span> <span class="w">k</span><span class="pc">er</span><span class="c">nel</span> <span class="w">m</span><span class="pc">emo</span><span class="c">ry</span> <span class="w">layout:</span><span class="pc">\</span><span class="c">n</span><span class="pc">"</span>
+		<span class="w">"</span>    <span class="w">fixmap</span>  <span class="w">:</span> <span class="c">0x%</span><span class="w">08</span><span class="pc">l</span><span class="c">x</span> <span class="w">-</span> <span class="c">0x%</span><span class="w">08</span><span class="pc">l</span><span class="c">x</span>   <span class="w">(</span><span class="c">%</span><span class="w">4ld</span> <span class="w">kB)</span><span class="c">\n</span><span class="pc">"</span>
+<span class="w">#</span><span class="pc">ifd</span><span class="c">ef</span> <span class="w">CONFIG_HIGHMEM</span>
+		<span class="w">"</span>    <span class="w">pkmap</span>   <span class="w">:</span> <span class="c">0x%</span><span class="w">0</span><span class="pc">8l</span><span class="c">x</span> <span class="w">-</span> <span class="c">0x%</span><span class="pc">08l</span><span class="c">x</span>   <span class="w">(</span><span class="c">%</span><span class="w">4</span><span class="c">ld</span> <span class="w">k</span><span class="c">B</span><span class="w">)</span><span class="pc">\</span><span class="c">n</span><span class="pc">"</span>
+<span class="w">#</span><span class="pc">e</span><span class="c">ndif</span>
+		<span class="pc">"</span>    <span class="w">vmalloc</span> <span class="pc">:</span> <span class="pc">0</span><span class="c">x%</span><span class="w">08</span><span class="pc">l</span><span class="c">x</span> <span class="w">-</span> <span class="c">0x%</span><span class="w">0</span><span class="pc">8l</span><span class="c">x</span>   <span class="w">(</span><span class="c">%</span><span class="w">4</span><span class="c">ld</span> <span class="w">MB)</span><span class="pc">\</span><span class="c">n</span><span class="w">"</span>
+		<span class="w">"</span>    <span class="w">lowmem</span>  <span class="w">:</span> <span class="c">0x%</span><span class="w">08</span><span class="pc">l</span><span class="c">x</span> <span class="w">-</span> <span class="c">0x%</span><span class="w">08</span><span class="pc">l</span><span class="c">x</span>   <span class="w">(</span><span class="c">%</span><span class="w">4</span><span class="pc">l</span><span class="c">d</span> <span class="w">M</span><span class="c">B</span><span class="w">)</span><span class="pc"> (</span><span class="w">cached)\</span><span class="c">n</span><span class="w">"</span>
+<span class="w">#i</span><span class="pc">fd</span><span class="c">ef</span> <span class="w">CONFIG_UNCACHED_MAPPING</span>
+		<span class="w">"            :</span> <span class="w">0</span><span class="pc">x</span><span class="c">%</span><span class="w">08</span><span class="pc">l</span><span class="c">x</span> <span class="w">-</span> <span class="c">0x%</span><span class="w">08</span><span class="pc">l</span><span class="c">x</span>   <span class="w">(</span><span class="c">%</span><span class="w">4</span><span class="c">ld</span> <span class="w">M</span><span class="c">B</span><span class="w">)</span><span class="pc"> </span><span class="c">(</span><span class="w">uncached)\</span><span class="c">n</span><span class="pc">"</span>
+<span class="c">#</span><span class="pc">e</span><span class="c">ndif</span>
+		<span class="w">"      .ini</span><span class="c">t</span> <span class="c">:</span> <span class="pc">0</span><span class="c">x%</span><span class="w">0</span><span class="pc">8l</span><span class="c">x</span> <span class="w">-</span> <span class="c">0x%</span><span class="w">08</span><span class="pc">l</span><span class="c">x</span>   <span class="w">(</span><span class="c">%</span><span class="w">4</span><span class="c">ld</span> <span class="w">kB)\</span><span class="c">n</span><span class="pc">"</span>
+		<span class="w">"</span><span class="pc">      .</span><span class="w">da</span><span class="c">ta</span> <span class="w">:</span> <span class="c">0x%</span><span class="w">08</span><span class="pc">l</span><span class="c">x</span> <span class="pc">-</span> <span class="c">0x%</span><span class="w">0</span><span class="pc">8l</span><span class="c">x</span>   <span class="w">(</span><span class="c">%</span><span class="w">4</span><span class="c">ld</span> <span class="w">k</span><span class="c">B</span><span class="w">)</span><span class="pc">\</span><span class="c">n</span><span class="w">"</span>
+		<span class="c">"      .</span><span class="w">text</span> <span class="w">:</span> <span class="c">0x%</span><span class="w">0</span><span class="pc">8l</span><span class="c">x</span> <span class="w">-</span> <span class="c">0x%</span><span class="pc">08l</span><span class="c">x</span>   <span class="w">(</span><span class="c">%</span><span class="w">4</span><span class="c">ld</span> <span class="w">k</span><span class="c">B</span><span class="w">)</span><span class="pc">\</span><span class="c">n",</span>
+		<span class="w">FIXADDR_START</span><span class="pc">,</span> <span class="w">FIXADDR_TOP</span><span class="pc">,</span>
+		<span class="w">(F</span><span class="pc">IXADDR_T</span><span class="c">OP</span> <span class="w">-</span> <span class="pc">F</span><span class="c">IXADDR_START</span><span class="w">) </span><span class="pc">&gt;</span><span class="c">&gt;</span> <span class="w">1</span><span class="pc">0</span><span class="w">,</span>
+
+<span class="w">#</span><span class="pc">i</span><span class="c">fdef</span> <span class="w">CONFIG_HIGHMEM</span>
+		<span class="w">PKMAP_BASE</span><span class="c">,</span> <span class="w">P</span><span class="c">KMAP_BASE</span><span class="pc">+</span><span class="w">LAST_PKMAP*P</span><span class="pc">A</span><span class="c">GE_SIZE,</span>
+		<span class="w">(L</span><span class="c">AST_PKMAP</span><span class="pc">*</span><span class="w">P</span><span class="pc">A</span><span class="c">GE_SIZE</span><span class="w">) &gt;</span><span class="c">&gt;</span> <span class="w">1</span><span class="pc">0</span><span class="w">,</span>
+<span class="w">#</span><span class="pc">e</span><span class="c">ndif</span>
+
+		<span class="w">(u</span><span class="c">nsigned</span> <span class="c">long</span><span class="pc">)</span><span class="w">VMALLOC_START</span><span class="pc">,</span> <span class="w">VMALLOC_END</span><span class="c">,</span>
+		<span class="w">(V</span><span class="pc">MALLOC_E</span><span class="c">ND</span> <span class="w">-</span> <span class="pc">V</span><span class="c">MALLOC_START</span><span class="w">) &gt;</span><span class="c">&gt;</span> <span class="w">2</span><span class="pc">0</span><span class="w">,</span>
+
+		<span class="w">(u</span><span class="c">nsigned</span> <span class="c">long</span><span class="pc">)</span><span class="w">memory_start,</span><span class="pc"> </span><span class="c">(unsigned</span> <span class="c">long)</span><span class="w">high_memory</span><span class="pc">,</span>
+		<span class="w">(</span><span class="pc">(</span><span class="c">unsigned</span> <span class="c">long</span><span class="pc">)</span><span class="w">h</span><span class="c">igh_memory</span> <span class="w">-</span><span class="pc"> </span><span class="c">(unsigned</span> <span class="c">long</span><span class="pc">)</span><span class="w">m</span><span class="c">emory_start</span><span class="w">) </span><span class="pc">&gt;</span><span class="c">&gt;</span> <span class="w">2</span><span class="pc">0,</span>
+
+<span class="w">#</span><span class="pc">i</span><span class="c">fdef</span> <span class="w">CONFIG_UNCACHED_MAPPING</span>
+		<span class="w">uncached_start</span><span class="c">,</span> <span class="w">uncached_end</span><span class="pc">,</span> <span class="w">uncached_size</span> <span class="w">&gt;</span><span class="pc">&gt;</span> <span class="w">2</span><span class="pc">0</span><span class="c">,</span>
+<span class="w">#</span><span class="c">endif</span>
+
+		<span class="w">(u</span><span class="pc">ns</span><span class="c">igned</span> <span class="c">long</span><span class="w">)</span><span class="pc">&amp;</span><span class="w">__init_begin,</span><span class="pc"> (</span><span class="c">unsigned</span> <span class="c">long</span><span class="w">)</span><span class="pc">&amp;</span><span class="w">__init_end</span><span class="c">,</span>
+		<span class="w">(</span><span class="pc">(</span><span class="c">unsigned</span> <span class="c">long</span><span class="w">)</span><span class="pc">&amp;</span><span class="w">_</span><span class="pc">_init_e</span><span class="c">nd</span> <span class="w">-</span>
+		 <span class="w">(</span><span class="pc">uns</span><span class="c">igned</span> <span class="c">long</span><span class="w">)</span><span class="pc">&amp;</span><span class="w">_</span><span class="pc">_init_b</span><span class="c">egin</span><span class="w">) </span><span class="pc">&gt;</span><span class="c">&gt;</span> <span class="w">1</span><span class="pc">0,</span>
+
+		<span class="w">(u</span><span class="pc">ns</span><span class="c">igned</span> <span class="c">long</span><span class="w">)</span><span class="pc">&amp;</span><span class="w">_etext,</span><span class="pc"> (</span><span class="c">unsigned</span> <span class="c">long</span><span class="w">)</span><span class="pc">&amp;</span><span class="w">_edata</span><span class="c">,</span>
+		<span class="w">(</span><span class="pc">(</span><span class="c">unsigned</span> <span class="c">long</span><span class="w">)</span><span class="pc">&amp;</span><span class="w">_e</span><span class="pc">d</span><span class="c">ata</span> <span class="w">-</span><span class="pc"> </span><span class="c">(unsigned</span> <span class="c">long</span><span class="w">)&amp;_</span><span class="pc">e</span><span class="c">text</span><span class="w">) </span><span class="pc">&gt;</span><span class="c">&gt;</span> <span class="w">1</span><span class="pc">0,</span>
+
+		<span class="w">(</span><span class="c">unsigned</span> <span class="c">long</span><span class="w">)&amp;_text,</span><span class="pc"> (</span><span class="c">unsigned</span> <span class="c">long</span><span class="w">)</span><span class="pc">&amp;</span><span class="w">_</span><span class="pc">et</span><span class="c">ext,</span>
+		<span class="w">(</span><span class="pc">(</span><span class="c">unsigned</span> <span class="c">long</span><span class="w">)</span><span class="pc">&amp;_et</span><span class="c">ext</span> <span class="w">-</span><span class="pc"> </span><span class="c">(unsigned</span> <span class="c">long</span><span class="w">)</span><span class="pc">&amp;</span><span class="w">_</span><span class="pc">t</span><span class="c">ext</span><span class="w">) </span><span class="pc">&gt;</span><span class="c">&gt;</span> <span class="w">1</span><span class="pc">0</span><span class="c">);</span>
+
+	<span class="w">mem_init_done</span> <span class="pc">=</span> <span class="c">1</span><span class="pc">;</span>
+<span class="pc">}</span>
+
+<span class="w">v</span><span class="c">oid</span> <span class="w">free_initmem</span><span class="c">(</span><span class="pc">v</span><span class="c">oid</span><span class="w">)</span>
+<span class="c">{</span>
+	<span class="w">free_initmem_default(-</span><span class="c">1);</span>
+<span class="pc">}</span>
+
+<span class="pc">#i</span><span class="c">fdef</span> <span class="w">CONFIG_BLK_DEV_INITRD</span>
+<span class="pc">v</span><span class="c">oid</span> <span class="w">free_initrd_mem</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">st</span><span class="pc">ar</span><span class="c">t,</span> <span class="c">unsigned</span> <span class="c">long</span> <span class="w">e</span><span class="pc">n</span><span class="c">d</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">free_reserved_area(</span><span class="pc">(v</span><span class="c">oid</span> <span class="pc">*</span><span class="c">)</span><span class="w">st</span><span class="pc">a</span><span class="c">rt</span><span class="w">,</span><span class="pc"> </span><span class="c">(void</span> <span class="c">*)</span><span class="w">e</span><span class="c">nd</span><span class="w">, -</span><span class="c">1</span><span class="w">,</span><span class="pc"> "</span><span class="w">initrd</span><span class="pc">")</span><span class="c">;</span>
+<span class="pc">}</span>
+<span class="c">#</span><span class="pc">e</span><span class="c">ndif</span>
+
+<span class="c">#ifdef</span> <span class="w">CONFIG_MEMORY_HOTPLUG</span>
+<span class="pc">i</span><span class="c">nt</span> <span class="w">arch_add_memory</span><span class="c">(</span><span class="w">i</span><span class="c">nt</span> <span class="w">ni</span><span class="c">d,</span> <span class="w">u6</span><span class="c">4</span> <span class="w">s</span><span class="pc">t</span><span class="c">art,</span> <span class="w">u</span><span class="pc">6</span><span class="c">4</span> <span class="pc">s</span><span class="c">ize)</span>
+<span class="c">{</span>
+	<span class="w">pg_data_t</span> <span class="pc">*</span><span class="w">pgdat</span><span class="pc">;</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">start_pfn</span> <span class="pc">=</span> <span class="w">st</span><span class="pc">art</span> <span class="w">&gt;</span><span class="c">&gt;</span> <span class="w">P</span><span class="c">AGE_SHIFT;</span>
+	<span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">n</span><span class="pc">r</span><span class="c">_pages</span> <span class="c">=</span> <span class="w">s</span><span class="pc">i</span><span class="c">ze</span> <span class="w">&gt;</span><span class="c">&gt;</span> <span class="c">PAGE_SHIFT;</span>
+	<span class="pc">in</span><span class="c">t</span> <span class="pc">r</span><span class="c">et</span><span class="pc">;</span>
+
+	<span class="w">p</span><span class="c">gdat</span> <span class="c">=</span> <span class="w">NODE_DATA</span><span class="c">(</span><span class="w">ni</span><span class="c">d</span><span class="pc">)</span><span class="c">;</span>
+
+	
+	<span class="w">r</span><span class="pc">et</span> <span class="c">=</span> <span class="w">__add_pages</span><span class="c">(</span><span class="w">ni</span><span class="pc">d</span><span class="c">,</span> <span class="pc">pgd</span><span class="c">at</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">node_zones</span> <span class="pc">+</span>
+			<span class="w">zone_for_memory</span><span class="pc">(</span><span class="w">ni</span><span class="pc">d</span><span class="c">,</span> <span class="w">st</span><span class="pc">art</span><span class="c">,</span> <span class="c">size</span><span class="pc">,</span> <span class="w">ZONE_NORMAL)</span><span class="pc">,</span>
+			<span class="w">start_pfn</span><span class="pc">,</span> <span class="w">nr</span><span class="pc">_</span><span class="c">pages</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">if</span> <span class="c">(</span><span class="w">u</span><span class="c">nlikely(</span><span class="pc">r</span><span class="c">et</span><span class="w">)</span><span class="pc">)</span>
+		<span class="w">p</span><span class="pc">r</span><span class="c">intk</span><span class="pc">("%</span><span class="c">s</span><span class="pc">:</span> <span class="pc">F</span><span class="c">ailed</span><span class="w">,</span> <span class="w">_</span><span class="c">_add_pages</span><span class="w">() == %d</span><span class="c">\n",</span> <span class="pc">_</span><span class="c">_func__,</span> <span class="w">r</span><span class="c">et);</span>
+
+	<span class="c">return</span> <span class="c">ret;</span>
+<span class="c">}</span>
+<span class="w">E</span><span class="c">XPORT_SYMBOL_GPL(</span><span class="w">arch_add_memory</span><span class="c">);</span>
+
+<span class="w">#</span><span class="pc">ifd</span><span class="c">ef</span> <span class="w">CONFIG_NUMA</span>
+<span class="pc">in</span><span class="c">t</span> <span class="w">memory_add_physaddr_to_nid</span><span class="c">(</span><span class="w">u6</span><span class="c">4</span> <span class="w">a</span><span class="pc">ddr</span><span class="c">)</span>
+<span class="c">{</span>
+	
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">0</span><span class="c">;</span>
+<span class="c">}</span>
+<span class="pc">E</span><span class="c">XPORT_SYMBOL_GPL(</span><span class="pc">m</span><span class="c">emory_add_physaddr_to_nid);</span>
+<span class="pc">#</span><span class="c">endif</span>
+
+<span class="pc">#</span><span class="c">ifdef</span> <span class="w">CONFIG_MEMORY_HOTREMOVE</span>
+<span class="pc">i</span><span class="c">nt</span> <span class="w">arch_remove_memory</span><span class="c">(</span><span class="w">u</span><span class="pc">6</span><span class="c">4</span> <span class="w">st</span><span class="c">art</span><span class="pc">,</span> <span class="pc">u6</span><span class="c">4</span> <span class="pc">s</span><span class="c">ize)</span>
+<span class="c">{</span>
+	<span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="c">long</span> <span class="w">start_pfn</span> <span class="pc">=</span> <span class="w">st</span><span class="pc">art</span> <span class="w">&gt;</span><span class="c">&gt;</span> <span class="w">P</span><span class="c">AGE_SHIFT;</span>
+	<span class="w">u</span><span class="c">nsigned</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">n</span><span class="c">r_pages</span> <span class="c">=</span> <span class="pc">si</span><span class="c">ze</span> <span class="w">&gt;</span><span class="c">&gt;</span> <span class="pc">P</span><span class="c">AGE_SHIFT;</span>
+	<span class="pc">st</span><span class="c">ruct</span> <span class="w">z</span><span class="c">one</span> <span class="c">*</span><span class="w">z</span><span class="c">one</span><span class="pc">;</span>
+	<span class="c">int</span> <span class="w">r</span><span class="c">et;</span>
+
+	<span class="w">z</span><span class="pc">o</span><span class="c">ne</span> <span class="pc">=</span> <span class="w">page_zone</span><span class="c">(</span><span class="w">pfn_to_page</span><span class="pc">(</span><span class="w">st</span><span class="pc">art_</span><span class="c">pfn</span><span class="pc">))</span><span class="c">;</span>
+	<span class="w">r</span><span class="pc">et</span> <span class="c">=</span> <span class="w">__remove_pages</span><span class="c">(</span><span class="w">z</span><span class="pc">o</span><span class="c">ne,</span> <span class="c">start_pfn</span><span class="pc">,</span> <span class="w">nr</span><span class="pc">_</span><span class="c">pages</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">if</span> <span class="c">(</span><span class="pc">u</span><span class="c">nlikely(</span><span class="pc">r</span><span class="c">et</span><span class="w">)</span><span class="pc">)</span>
+		<span class="w">pr</span><span class="pc">_w</span><span class="c">arn</span><span class="pc">("%</span><span class="c">s:</span> <span class="pc">F</span><span class="c">ailed</span><span class="w">,</span> <span class="w">_</span><span class="c">_remove_pages</span><span class="w">() == %</span><span class="pc">d</span><span class="c">\n",</span> <span class="c">__func__</span><span class="pc">,</span>
+			<span class="c">ret);</span>
+
+	<span class="c">return</span> <span class="c">ret;</span>
+<span class="c">}</span>
+<span class="pc">#</span><span class="c">endif</span>
+<span class="c">#</span><span class="pc">e</span><span class="c">ndif</span> 
+
+</pre>
+</body>
+</html>
+

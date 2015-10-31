@@ -300,32 +300,32 @@ class WindowModel(Model):
                                                                                                                            non_kw_correct_rand/float(num_non_kw)*100)
 
 
-    def word(self, ID):
-        return self.IDToWord[ID] if ID in self.IDToWord else "<UNKUNK>"
+    def getWord(self, idx, window, XWinID):
+        if idx < len(self.keywordList):
+            return self.IDToWord[idx]
+        else:
+            word = "<UNKUNK>"
+            # search among the list of XWinIDs
+            for ix,x in enumerate(XWinID):
+                if x == idx:
+                    word = window[ix]
+                    break
+            return word
 
-    def multiPredict(self, XID):
-        nsteps = 20
-        beam = 100
+    def predict(self, tokensTillNow):
+        if len(tokensTillNow) < self.winSize:
+            return ['']
 
-        paths = [self.makeWindow(XID,0,True)]
-        pathProbs = np.array([1.])
-        print paths[0][0]
-        for step in range(nsteps):
-            preds, probs, _, _ = self.lossAndGrads(paths)
-            newPathProbs = probs[:,:-1] * pathProbs[:,None]
-            highestProbIdxs = np.argsort(newPathProbs, axis=None)[-beam:]
-            highestProbPathEnds = np.unravel_index(highestProbIdxs,
-                                                   newPathProbs.shape)
-            highestProbs = newPathProbs.flatten()[highestProbIdxs]
-            highestProbs /= np.sum(highestProbs)
-            newBestPaths = [paths[xid][0][1:] + [e]
-                            for xid,e in zip(*highestProbPathEnds)]
-            paths = [(p,0) for p in newBestPaths]
-            pathProbs = highestProbs
-            endProbs = collections.defaultdict(float)
-            for prob,path in zip(pathProbs,newBestPaths):
-                endProbs[path[-1]] += prob
-            print max([(p,self.word(e)) for e,p in endProbs.items()])
+        window = tokensTillNow[-self.winSize:]
+        XID = self.convertToTokenIDs(window)
+        XWinID, junk = self.makeWindow(XID, 0, True)
+
+        preds, probs, loss, _ = self.lossAndGrads([(XWinID, junk)])
+        sortedIDs = np.argsort(-probs[0])
+
+        sortedWords = [self.getWord(i, window, XWinID) for i in sortedIDs]
+
+        return sortedWords
 
 if __name__ == '__main__':
     model = WindowModel(['for', 'int', '=', '<', '>', ';', '(', ')', '{', '}'])

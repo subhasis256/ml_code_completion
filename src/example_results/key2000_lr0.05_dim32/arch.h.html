@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+<span class="w">#ifndef</span> <span class="w">_ASM_SN_ARCH_H</span>
+<span class="w">#define</span> <span class="w">_ASM_SN_ARCH_H</span>
+
+<span class="w">#include</span> <span class="w">&lt;linux/types.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;asm/sn/types.h&gt;</span>
+<span class="w">#ifdef</span> <span class="w">CONFIG_SGI_IP27</span>
+<span class="w">#include</span> <span class="w">&lt;asm/sn/sn0/arch.</span><span class="c">h&gt;</span>
+<span class="c">#</span><span class="pc">e</span><span class="c">ndif</span>
+
+<span class="w">t</span><span class="c">ypedef</span> <span class="w">u</span><span class="pc">6</span><span class="c">4</span>	<span class="w">hubreg_t</span><span class="c">;</span>
+
+<span class="pc">#</span><span class="c">define</span> <span class="w">cputonasid</span><span class="c">(</span><span class="w">cp</span><span class="c">u</span><span class="w">)	</span><span class="pc">	(</span><span class="w">sn_cpu_info[</span><span class="c">(</span><span class="w">c</span><span class="pc">pu</span><span class="w">)].p_nasid</span><span class="pc">)</span>
+<span class="c">#define</span> <span class="w">cputoslice</span><span class="c">(</span><span class="w">c</span><span class="pc">pu</span><span class="w">)	</span><span class="pc">	(</span><span class="c">sn_cpu_info</span><span class="w">[</span><span class="pc">(c</span><span class="c">pu</span><span class="w">)]</span><span class="c">.</span><span class="w">p_slice</span><span class="pc">)</span>
+<span class="c">#define</span> <span class="w">makespnum</span><span class="c">(</span><span class="w">_nasid,</span> <span class="w">_slice)		</span><span class="pc">			</span><span class="c">\</span>
+		<span class="c">(((</span><span class="pc">_n</span><span class="c">asid</span><span class="w">) &lt;</span><span class="c">&lt;</span> <span class="w">CPUS_PER_NODE_SHFT</span><span class="c">) | (</span><span class="pc">_s</span><span class="c">lice</span><span class="pc">)</span><span class="c">)</span>
+
+<span class="c">#define</span> <span class="w">INVALID_NASID</span>		<span class="c">(</span><span class="w">nasid_t)-</span><span class="c">1</span>
+<span class="w">#</span><span class="c">define</span> <span class="w">INVALID_CNODEID</span>		<span class="c">(</span><span class="w">cnodeid_t)-</span><span class="c">1</span>
+<span class="pc">#</span><span class="c">define</span> <span class="w">INVALID_PNODEID</span>		<span class="c">(</span><span class="w">pnodeid_t)-</span><span class="c">1</span>
+<span class="pc">#</span><span class="c">define</span> <span class="w">INVALID_MODULE</span>		<span class="c">(</span><span class="w">moduleid_t)-</span><span class="c">1</span>
+<span class="pc">#</span><span class="c">define</span> <span class="w">INVALID_PARTID</span>		<span class="c">(</span><span class="w">partid_t)-</span><span class="c">1</span>
+
+<span class="w">e</span><span class="c">xtern</span> <span class="w">n</span><span class="c">asid_t</span> <span class="w">get_nasid</span><span class="c">(</span><span class="w">v</span><span class="c">oid);</span>
+<span class="c">extern</span> <span class="w">c</span><span class="pc">n</span><span class="c">odeid_t</span> <span class="w">get_cpu_cnode</span><span class="c">(</span><span class="w">cpuid_t</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">extern</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">get_cpu_slice</span><span class="c">(</span><span class="pc">c</span><span class="c">puid_t);</span>
+
+
+<span class="c">extern</span> <span class="w">c</span><span class="pc">n</span><span class="c">odeid_t</span> <span class="w">nasid_to_compact_node[MAX_NASIDS</span><span class="c">];</span>
+<span class="c">extern</span> <span class="w">n</span><span class="c">asid_t</span> <span class="w">compact_to_nasid_node[MAX_COMPACT_NODES</span><span class="c">];</span>
+
+
+
+<span class="pc">#</span><span class="c">define</span> <span class="w">NASID_TO_REGION</span><span class="c">(</span><span class="w">nnode)		</span><span class="pc">\</span>
+    <span class="w">(</span><span class="pc">(</span><span class="w">n</span><span class="pc">n</span><span class="c">ode</span><span class="w">) &gt;&gt; \</span>
+     <span class="pc">(</span><span class="w">is_fine_dirmode() ?</span> <span class="w">NASID_TO_FINEREG_SHFT</span> <span class="w">:</span> <span class="w">NASID_TO_COARSEREG_SHFT)</span><span class="pc">)</span>
+
+<span class="pc">e</span><span class="c">xtern</span> <span class="w">c</span><span class="pc">n</span><span class="c">odeid_t</span> <span class="w">n</span><span class="pc">asid_to</span><span class="c">_compact_node</span><span class="w">[</span><span class="c">MAX_NASIDS];</span>
+<span class="c">extern</span> <span class="w">n</span><span class="c">asid_t</span> <span class="pc">c</span><span class="c">ompact_to_nasid_node</span><span class="pc">[</span><span class="c">MAX_COMPACT_NODES];</span>
+<span class="c">extern</span> <span class="w">c</span><span class="pc">n</span><span class="c">odeid_t</span> <span class="w">cpuid_to_compact_node</span><span class="pc">[</span><span class="w">MAXCPUS</span><span class="c">];</span>
+
+<span class="c">#define</span> <span class="w">NASID_TO_COMPACT_NODEID</span><span class="c">(</span><span class="w">n</span><span class="c">node</span><span class="w">)	(n</span><span class="pc">asid_to</span><span class="c">_compact_node</span><span class="pc">[</span><span class="w">n</span><span class="pc">n</span><span class="c">ode</span><span class="w">])</span>
+<span class="c">#define</span> <span class="w">COMPACT_TO_NASID_NODEID</span><span class="c">(</span><span class="w">cnode)	</span><span class="c">(</span><span class="w">c</span><span class="pc">o</span><span class="c">mpact_to_nasid_node[</span><span class="pc">c</span><span class="c">node</span><span class="w">])</span>
+<span class="c">#define</span> <span class="w">CPUID_TO_COMPACT_NODEID</span><span class="c">(</span><span class="w">cp</span><span class="pc">u</span><span class="w">)</span><span class="pc">	(cp</span><span class="c">uid_to_compact_node</span><span class="w">[</span><span class="pc">(cp</span><span class="c">u</span><span class="w">)])</span>
+
+<span class="w">#</span><span class="pc">e</span><span class="c">ndif</span> 
+
+</pre>
+</body>
+</html>
+

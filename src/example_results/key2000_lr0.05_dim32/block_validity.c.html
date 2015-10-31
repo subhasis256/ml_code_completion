@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+<span class="w">#include</span> <span class="w">&lt;linux/time.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/fs.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/namei.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/quotaops.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux</span><span class="c">/</span><span class="w">buff</span><span class="pc">er_</span><span class="c">head.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">swap</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">pagemap</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">blkdev</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/slab.h&gt;</span>
+<span class="c">#include</span> <span class="pc">"</span><span class="w">ext4</span><span class="c">.h"</span>
+
+<span class="pc">str</span><span class="c">uct</span> <span class="w">ext4_system_zone</span> <span class="c">{</span>
+	<span class="c">struct</span> <span class="w">r</span><span class="pc">b</span><span class="c">_node</span>	<span class="w">n</span><span class="c">ode;</span>
+	<span class="w">ext4_fsblk_t</span>	<span class="w">start_blk</span><span class="c">;</span>
+	<span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="pc">i</span><span class="c">nt</span>	<span class="w">c</span><span class="pc">o</span><span class="c">unt;</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="c">static</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">kmem_cache</span> <span class="c">*</span><span class="w">ext4_system_zone_cachep</span><span class="c">;</span>
+
+<span class="pc">i</span><span class="c">nt</span> <span class="w">_</span><span class="c">_init</span> <span class="w">ext4_init_system_zone</span><span class="c">(void)</span>
+<span class="c">{</span>
+	<span class="w">e</span><span class="c">xt4_system_zone_cachep</span> <span class="pc">=</span> <span class="w">KMEM_CACHE</span><span class="c">(</span><span class="pc">ext4_system_zone,</span> <span class="w">0</span><span class="c">);</span>
+	<span class="c">if</span> <span class="c">(</span><span class="pc">ext4_system_zone_</span><span class="c">cachep</span> <span class="pc">=</span><span class="c">=</span> <span class="c">NULL</span><span class="pc">)</span>
+		<span class="c">return</span> <span class="c">-ENOMEM;</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="pc">v</span><span class="c">oid</span> <span class="w">ext4_exit_system_zone</span><span class="c">(</span><span class="pc">v</span><span class="c">oid</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">kmem_cache_destroy</span><span class="c">(ext4_system_zone_cachep);</span>
+<span class="c">}</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="pc">inl</span><span class="c">ine</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">can_merge</span><span class="c">(struct</span> <span class="pc">ext4_system_zone</span> <span class="c">*</span><span class="w">entry1</span><span class="c">,</span>
+		     <span class="c">struct</span> <span class="pc">ext4_system_zone</span> <span class="c">*</span><span class="w">entry2</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="pc">((entry1</span><span class="c">-&gt;</span><span class="w">start_blk</span> <span class="w">+</span> <span class="pc">e</span><span class="c">ntry1</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">co</span><span class="pc">unt</span><span class="w">) =</span><span class="c">=</span> <span class="pc">e</span><span class="c">ntry2-&gt;</span><span class="pc">s</span><span class="c">tart_blk</span><span class="w">)</span>
+		<span class="c">return</span> <span class="w">1</span><span class="c">;</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+
+<span class="c">static</span> <span class="pc">int</span> <span class="w">add_system_zone</span><span class="c">(struct</span> <span class="w">ext4_sb_info</span> <span class="c">*</span><span class="w">sb</span><span class="pc">i</span><span class="c">,</span>
+			   <span class="w">ext4_fsblk_t</span> <span class="w">s</span><span class="pc">ta</span><span class="c">rt_blk,</span>
+			   <span class="pc">u</span><span class="c">nsigned</span> <span class="c">int</span> <span class="w">c</span><span class="c">ount</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">ext4_system_zone</span> <span class="c">*</span><span class="w">new_entry</span> <span class="c">=</span> <span class="pc">N</span><span class="c">ULL</span><span class="w">,</span><span class="pc"> </span><span class="c">*</span><span class="w">en</span><span class="pc">try</span><span class="c">;</span>
+	<span class="c">struct</span> <span class="w">rb</span><span class="c">_node</span> <span class="pc">**</span><span class="w">n</span> <span class="pc">= </span><span class="c">&amp;</span><span class="w">sb</span><span class="pc">i</span><span class="c">-&gt;</span><span class="w">system_blks</span><span class="pc">.</span><span class="w">rb</span><span class="c">_node</span><span class="w">,</span><span class="pc"> *</span><span class="w">n</span><span class="pc">o</span><span class="c">de;</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">r</span><span class="pc">b</span><span class="c">_node</span> <span class="c">*</span><span class="pc">p</span><span class="c">arent</span> <span class="pc">=</span> <span class="c">NULL</span><span class="w">,</span><span class="pc"> </span><span class="c">*</span><span class="w">new_node</span> <span class="pc">=</span> <span class="c">NULL;</span>
+
+	<span class="w">w</span><span class="c">hile</span> <span class="w">(</span><span class="pc">*</span><span class="w">n</span><span class="pc">)</span><span class="c"> {</span>
+		<span class="w">pa</span><span class="pc">r</span><span class="c">ent</span> <span class="w">= *n</span><span class="c">;</span>
+		<span class="w">e</span><span class="pc">n</span><span class="c">try</span> <span class="c">=</span> <span class="w">rb_entry</span><span class="pc">(p</span><span class="c">arent,</span> <span class="w">s</span><span class="pc">t</span><span class="c">ruct</span> <span class="w">ext4_system_zone</span><span class="pc">,</span> <span class="pc">n</span><span class="c">ode);</span>
+		<span class="c">if</span> <span class="c">(</span><span class="w">start_blk</span> <span class="w">&lt;</span> <span class="w">e</span><span class="pc">n</span><span class="c">try</span><span class="pc">-</span><span class="c">&gt;start_blk</span><span class="w">)</span>
+			<span class="w">n</span> <span class="w">= &amp;(*n)</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">rb_left</span><span class="pc">;</span>
+		<span class="pc">e</span><span class="c">lse</span> <span class="c">if</span> <span class="c">(start_blk</span> <span class="w">&gt;= (e</span><span class="pc">nt</span><span class="c">ry-&gt;start_blk</span> <span class="w">+</span> <span class="w">e</span><span class="pc">n</span><span class="c">try-&gt;</span><span class="w">c</span><span class="c">ount</span><span class="w">)</span><span class="pc">)</span>
+			<span class="w">n</span> <span class="w">= </span><span class="pc">&amp;(</span><span class="c">*</span><span class="w">n)</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">rb_right</span><span class="c">;</span>
+		<span class="pc">e</span><span class="c">lse</span> <span class="pc">{</span>
+			<span class="pc">i</span><span class="c">f</span> <span class="c">(start_blk</span> <span class="w">+</span> <span class="w">c</span><span class="c">ount</span> <span class="w">&gt; (e</span><span class="pc">n</span><span class="c">try-&gt;</span><span class="pc">st</span><span class="c">art_blk</span> <span class="w">+</span>
+						 <span class="w">e</span><span class="c">ntry-&gt;</span><span class="w">c</span><span class="c">ount</span><span class="w">)</span><span class="pc">)</span>
+				<span class="w">e</span><span class="pc">n</span><span class="c">try</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">c</span><span class="c">ount</span> <span class="w">=</span><span class="pc"> </span><span class="c">(</span><span class="w">s</span><span class="pc">t</span><span class="c">art_blk</span> <span class="pc">+</span> <span class="w">c</span><span class="c">ount</span> <span class="pc">-</span>
+						<span class="w">e</span><span class="c">ntry-&gt;</span><span class="pc">st</span><span class="c">art_blk</span><span class="pc">)</span><span class="c">;</span>
+			<span class="w">new_node</span> <span class="w">= </span><span class="pc">*</span><span class="w">n</span><span class="c">;</span>
+			<span class="w">new_entry</span> <span class="pc">=</span> <span class="w">rb_entry</span><span class="c">(</span><span class="w">n</span><span class="pc">ew</span><span class="c">_node</span><span class="pc">,</span> <span class="w">st</span><span class="pc">r</span><span class="c">uct</span> <span class="w">ext4_system_zone</span><span class="pc">,</span>
+					     <span class="w">n</span><span class="pc">o</span><span class="c">de);</span>
+			<span class="w">b</span><span class="c">reak;</span>
+		<span class="pc">}</span>
+	<span class="pc">}</span>
+
+	<span class="w">i</span><span class="pc">f</span> <span class="pc">(!new_e</span><span class="c">ntry</span><span class="pc">)</span><span class="c"> {</span>
+		<span class="w">n</span><span class="c">ew_entry</span> <span class="pc">=</span> <span class="w">kmem_cache_alloc</span><span class="c">(</span><span class="w">ext4_system_zone_cachep</span><span class="c">,</span>
+					     <span class="w">G</span><span class="pc">FP_K</span><span class="c">ERNEL);</span>
+		<span class="c">if</span> <span class="c">(!</span><span class="pc">n</span><span class="c">ew_entry)</span>
+			<span class="c">return</span> <span class="c">-ENOMEM;</span>
+		<span class="pc">n</span><span class="c">ew_entry-&gt;</span><span class="w">start_blk</span> <span class="c">=</span> <span class="w">s</span><span class="c">tart_blk;</span>
+		<span class="pc">n</span><span class="c">ew_entry-&gt;</span><span class="w">co</span><span class="pc">u</span><span class="c">nt</span> <span class="c">=</span> <span class="w">c</span><span class="pc">o</span><span class="c">unt;</span>
+		<span class="w">new_node</span> <span class="w">=</span><span class="pc"> &amp;</span><span class="c">new_entry-&gt;</span><span class="w">no</span><span class="pc">d</span><span class="c">e;</span>
+
+		<span class="w">rb_link_node</span><span class="pc">(</span><span class="w">n</span><span class="pc">ew_n</span><span class="c">ode</span><span class="pc">,</span> <span class="w">pa</span><span class="pc">re</span><span class="c">nt</span><span class="pc">,</span> <span class="w">n</span><span class="pc">)</span><span class="c">;</span>
+		<span class="w">rb_insert_color</span><span class="c">(new_node</span><span class="pc">, </span><span class="c">&amp;</span><span class="w">sb</span><span class="pc">i</span><span class="c">-&gt;</span><span class="w">system_blks</span><span class="c">);</span>
+	<span class="pc">}</span>
+
+	
+	<span class="w">n</span><span class="pc">od</span><span class="c">e</span> <span class="pc">=</span> <span class="w">rb_prev</span><span class="c">(</span><span class="pc">n</span><span class="c">ew_node</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">if</span> <span class="c">(</span><span class="w">n</span><span class="pc">o</span><span class="c">de</span><span class="pc">) </span><span class="c">{</span>
+		<span class="w">e</span><span class="pc">n</span><span class="c">try</span> <span class="pc">=</span> <span class="w">rb_entry</span><span class="c">(</span><span class="pc">no</span><span class="c">de,</span> <span class="w">s</span><span class="pc">t</span><span class="c">ruct</span> <span class="w">ext4_system_zone</span><span class="pc">,</span> <span class="c">node);</span>
+		<span class="c">if</span> <span class="c">(</span><span class="w">can_merge</span><span class="c">(</span><span class="w">e</span><span class="pc">nt</span><span class="c">ry,</span> <span class="w">new_entry</span><span class="c">)) {</span>
+			<span class="w">n</span><span class="pc">ew_e</span><span class="c">ntry</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">start_blk</span> <span class="c">=</span> <span class="w">e</span><span class="pc">nt</span><span class="c">ry-&gt;start_blk;</span>
+			<span class="pc">n</span><span class="c">ew_entry-&gt;</span><span class="w">c</span><span class="pc">o</span><span class="c">unt</span> <span class="w">+</span><span class="pc">=</span> <span class="w">e</span><span class="pc">nt</span><span class="c">ry</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">c</span><span class="pc">o</span><span class="c">unt;</span>
+			<span class="w">rb_erase</span><span class="c">(</span><span class="w">n</span><span class="pc">o</span><span class="c">de</span><span class="pc">, </span><span class="c">&amp;</span><span class="w">sb</span><span class="pc">i</span><span class="c">-&gt;</span><span class="w">system_blks</span><span class="c">);</span>
+			<span class="w">kmem_cache_free</span><span class="c">(</span><span class="w">ext4_system_zone_cachep</span><span class="c">,</span> <span class="w">e</span><span class="c">ntry</span><span class="pc">)</span><span class="c">;</span>
+		<span class="pc">}</span>
+	<span class="pc">}</span>
+
+	
+	<span class="w">n</span><span class="pc">o</span><span class="c">de</span> <span class="pc">=</span> <span class="w">rb_next</span><span class="c">(</span><span class="w">new_node</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">if</span> <span class="c">(</span><span class="pc">n</span><span class="c">ode</span><span class="pc">)</span><span class="c"> {</span>
+		<span class="w">e</span><span class="pc">n</span><span class="c">try</span> <span class="pc">=</span> <span class="w">rb_entry</span><span class="c">(node,</span> <span class="w">st</span><span class="pc">ru</span><span class="c">ct</span> <span class="w">ext4_system_zone</span><span class="pc">,</span> <span class="c">node);</span>
+		<span class="c">if</span> <span class="c">(</span><span class="w">can_merge</span><span class="c">(</span><span class="w">new_entry</span><span class="c">,</span> <span class="w">en</span><span class="pc">t</span><span class="c">ry)) {</span>
+			<span class="w">n</span><span class="c">ew_entry</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">co</span><span class="pc">u</span><span class="c">nt</span> <span class="w">+</span><span class="pc">=</span> <span class="w">e</span><span class="pc">nt</span><span class="c">ry</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">c</span><span class="pc">o</span><span class="c">unt;</span>
+			<span class="w">rb_erase</span><span class="c">(</span><span class="pc">no</span><span class="c">de</span><span class="pc">, </span><span class="c">&amp;</span><span class="w">sb</span><span class="pc">i</span><span class="c">-&gt;</span><span class="w">system_blks</span><span class="c">);</span>
+			<span class="w">kmem_cache_free</span><span class="c">(</span><span class="w">ext4_system_zone_cachep</span><span class="c">,</span> <span class="pc">e</span><span class="c">ntry</span><span class="pc">)</span><span class="c">;</span>
+		<span class="pc">}</span>
+	<span class="pc">}</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">void</span> <span class="w">debug_print_tree</span><span class="c">(struct</span> <span class="w">ext4_sb_info</span> <span class="c">*</span><span class="w">sb</span><span class="pc">i</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">r</span><span class="pc">b_n</span><span class="c">ode</span> <span class="c">*</span><span class="w">n</span><span class="pc">o</span><span class="c">de</span><span class="pc">;</span>
+	<span class="c">struct</span> <span class="w">ext4_system_zone</span> <span class="c">*</span><span class="w">e</span><span class="pc">n</span><span class="c">try;</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">fi</span><span class="c">rst</span> <span class="pc">=</span> <span class="w">1</span><span class="c">;</span>
+
+	<span class="w">p</span><span class="pc">rin</span><span class="c">tk(KERN_INFO</span> <span class="pc">"</span><span class="w">System</span> <span class="w">zones: ");</span>
+	<span class="w">n</span><span class="pc">od</span><span class="c">e</span> <span class="w">=</span> <span class="w">rb_first(</span><span class="pc">&amp;</span><span class="w">sb</span><span class="pc">i</span><span class="c">-&gt;</span><span class="w">system_blks</span><span class="c">);</span>
+	<span class="w">w</span><span class="c">hile</span> <span class="c">(</span><span class="w">n</span><span class="pc">o</span><span class="c">de) {</span>
+		<span class="w">en</span><span class="pc">t</span><span class="c">ry</span> <span class="c">=</span> <span class="w">rb_entry</span><span class="c">(node,</span> <span class="w">s</span><span class="pc">t</span><span class="c">ruct</span> <span class="pc">e</span><span class="c">xt4_system_zone</span><span class="pc">,</span> <span class="c">node);</span>
+		<span class="w">p</span><span class="c">rintk</span><span class="pc">("</span><span class="c">%s</span><span class="pc">%</span><span class="w">ll</span><span class="pc">u</span><span class="w">-</span><span class="c">%</span><span class="w">l</span><span class="pc">lu"</span><span class="c">,</span> <span class="w">fi</span><span class="pc">r</span><span class="c">st</span> <span class="w">? "" : ", ",</span>
+		       <span class="w">e</span><span class="pc">n</span><span class="c">try-&gt;</span><span class="w">start_blk</span><span class="pc">,</span> <span class="w">e</span><span class="c">ntry</span><span class="pc">-</span><span class="c">&gt;start_blk</span> <span class="w">+</span> <span class="w">e</span><span class="pc">n</span><span class="c">try-&gt;</span><span class="w">c</span><span class="c">ount</span> <span class="pc">-</span> <span class="c">1</span><span class="pc">)</span><span class="c">;</span>
+		<span class="w">fi</span><span class="pc">r</span><span class="c">st</span> <span class="pc">=</span> <span class="pc">0</span><span class="c">;</span>
+		<span class="w">n</span><span class="c">ode</span> <span class="pc">=</span> <span class="w">rb_next</span><span class="c">(node</span><span class="pc">)</span><span class="c">;</span>
+	<span class="pc">}</span>
+	<span class="w">p</span><span class="pc">r</span><span class="c">intk</span><span class="pc">("\</span><span class="c">n</span><span class="pc">")</span><span class="c">;</span>
+<span class="pc">}</span>
+
+<span class="w">i</span><span class="pc">n</span><span class="c">t</span> <span class="w">ext4_setup_system_zone</span><span class="c">(struct</span> <span class="w">su</span><span class="c">per_block</span> <span class="c">*</span><span class="w">s</span><span class="c">b</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">ext4_group_t</span> <span class="w">ngroups</span> <span class="pc">=</span> <span class="w">ext4_get_groups_count</span><span class="c">(</span><span class="w">sb</span><span class="pc">)</span><span class="c">;</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">ext4_sb_info</span> <span class="c">*</span><span class="w">sb</span><span class="c">i</span> <span class="c">=</span> <span class="w">EXT4_SB</span><span class="c">(</span><span class="w">sb</span><span class="c">);</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">ext4_group_desc</span> <span class="c">*</span><span class="w">gdp</span><span class="pc">;</span>
+	<span class="w">ex</span><span class="pc">t4_group_t</span> <span class="w">i</span><span class="c">;</span>
+	<span class="pc">in</span><span class="c">t</span> <span class="w">flex_size</span> <span class="pc">=</span> <span class="w">ext4_flex_bg_size</span><span class="pc">(</span><span class="w">sb</span><span class="pc">i)</span><span class="c">;</span>
+	<span class="pc">in</span><span class="c">t</span> <span class="pc">r</span><span class="c">et;</span>
+
+	<span class="pc">if</span> <span class="c">(!</span><span class="w">test_opt</span><span class="c">(</span><span class="w">sb</span><span class="pc">,</span> <span class="w">BLOCK_VALIDITY</span><span class="pc">))</span><span class="c"> {</span>
+		<span class="c">if</span> <span class="c">(</span><span class="w">E</span><span class="c">XT4_SB</span><span class="pc">(</span><span class="w">sb)-</span><span class="c">&gt;</span><span class="w">system_blks.rb</span><span class="pc">_</span><span class="c">node</span><span class="pc">)</span>
+			<span class="w">ext4_release_system_zone</span><span class="c">(</span><span class="w">sb</span><span class="pc">)</span><span class="c">;</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="pc">0</span><span class="c">;</span>
+	<span class="c">}</span>
+	<span class="w">i</span><span class="pc">f</span> <span class="c">(</span><span class="w">E</span><span class="c">XT4_SB(</span><span class="w">sb)-</span><span class="c">&gt;system_blks</span><span class="pc">.</span><span class="w">rb</span><span class="pc">_</span><span class="c">node</span><span class="pc">)</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="pc">0</span><span class="c">;</span>
+
+	<span class="w">f</span><span class="c">or</span> <span class="c">(i=0;</span> <span class="c">i</span> <span class="c">&lt;</span> <span class="w">ngroups</span><span class="c">;</span> <span class="c">i++) {</span>
+		<span class="c">if</span> <span class="c">(</span><span class="w">ext4_bg_has_super</span><span class="c">(</span><span class="w">sb</span><span class="pc">,</span> <span class="c">i</span><span class="w">) &amp;</span><span class="pc">&amp;</span>
+		    <span class="w">(</span><span class="pc">(</span><span class="w">i</span> <span class="w">&lt;</span> <span class="w">5) || ((</span><span class="c">i</span> <span class="w">%</span> <span class="w">flex_size) =</span><span class="c">=</span> <span class="c">0</span><span class="w">))</span><span class="pc">)</span>
+			<span class="w">add_system_zone</span><span class="c">(</span><span class="w">sb</span><span class="c">i</span><span class="pc">,</span> <span class="w">ext4_group_first_block_no</span><span class="pc">(</span><span class="w">sb</span><span class="pc">,</span> <span class="pc">i),</span>
+					<span class="w">ext4_bg_num_gdb</span><span class="c">(</span><span class="w">sb</span><span class="c">,</span> <span class="c">i</span><span class="w">) +</span> <span class="pc">1);</span>
+		<span class="w">gdp</span> <span class="pc">=</span> <span class="w">ext4_get_group_desc</span><span class="c">(</span><span class="w">sb</span><span class="c">,</span> <span class="pc">i</span><span class="c">,</span> <span class="w">N</span><span class="c">ULL</span><span class="pc">)</span><span class="c">;</span>
+		<span class="w">r</span><span class="pc">et</span> <span class="c">=</span> <span class="pc">a</span><span class="c">dd_system_zone(</span><span class="w">sb</span><span class="pc">i</span><span class="c">,</span> <span class="w">ext4_block_bitmap</span><span class="pc">(</span><span class="w">sb</span><span class="c">,</span> <span class="c">gdp</span><span class="pc">),</span> <span class="w">1</span><span class="pc">)</span><span class="c">;</span>
+		<span class="c">if</span> <span class="c">(ret</span><span class="pc">)</span>
+			<span class="c">return</span> <span class="c">ret;</span>
+		<span class="c">ret</span> <span class="c">=</span> <span class="pc">a</span><span class="c">dd_system_zone(</span><span class="w">sb</span><span class="pc">i</span><span class="c">,</span> <span class="w">ext4_inode_bitmap</span><span class="pc">(</span><span class="w">sb</span><span class="c">,</span> <span class="pc">g</span><span class="c">dp</span><span class="pc">),</span> <span class="w">1</span><span class="c">);</span>
+		<span class="c">if</span> <span class="c">(ret</span><span class="pc">)</span>
+			<span class="c">return</span> <span class="c">ret;</span>
+		<span class="c">ret</span> <span class="c">=</span> <span class="pc">a</span><span class="c">dd_system_zone(</span><span class="w">sb</span><span class="c">i,</span> <span class="w">ext4_inode_table</span><span class="pc">(</span><span class="w">sb</span><span class="c">,</span> <span class="w">g</span><span class="c">dp</span><span class="pc">),</span>
+				<span class="w">sb</span><span class="c">i-&gt;</span><span class="w">s_itb_per_group</span><span class="pc">)</span><span class="c">;</span>
+		<span class="c">if</span> <span class="c">(ret</span><span class="pc">)</span>
+			<span class="pc">r</span><span class="c">eturn</span> <span class="c">ret;</span>
+	<span class="pc">}</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">test_opt</span><span class="c">(</span><span class="w">sb</span><span class="pc">,</span> <span class="w">DE</span><span class="c">BUG</span><span class="pc">))</span>
+		<span class="w">debug_print_tree</span><span class="c">(</span><span class="w">EXT4_SB</span><span class="c">(</span><span class="w">sb</span><span class="pc">))</span><span class="c">;</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+
+<span class="w">v</span><span class="c">oid</span> <span class="w">ext4_release_system_zone</span><span class="c">(struct</span> <span class="w">su</span><span class="c">per_block</span> <span class="c">*</span><span class="pc">s</span><span class="c">b</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">ext4_system_zone</span>	<span class="c">*</span><span class="w">e</span><span class="pc">n</span><span class="c">try</span><span class="pc">,</span><span class="c"> *</span><span class="w">n</span><span class="c">;</span>
+
+	<span class="w">rbtree_postorder_for_each_entry_safe</span><span class="c">(</span><span class="w">e</span><span class="pc">n</span><span class="c">try,</span> <span class="w">n</span><span class="pc">,</span>
+			<span class="w">&amp;</span><span class="pc">E</span><span class="c">XT4_SB</span><span class="w">(sb</span><span class="pc">)-</span><span class="c">&gt;</span><span class="w">system_blks</span><span class="pc">,</span> <span class="w">n</span><span class="pc">o</span><span class="c">de</span><span class="pc">)</span>
+		<span class="w">kmem_cache_free</span><span class="c">(</span><span class="w">ext4_system_zone_cachep</span><span class="c">,</span> <span class="w">e</span><span class="pc">n</span><span class="c">try</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="w">E</span><span class="c">XT4_SB(</span><span class="w">sb)</span><span class="pc">-</span><span class="c">&gt;</span><span class="pc">s</span><span class="c">ystem_blks</span> <span class="w">=</span> <span class="w">RB_ROOT</span><span class="pc">;</span>
+<span class="c">}</span>
+
+
+<span class="w">i</span><span class="pc">n</span><span class="c">t</span> <span class="w">ext4_data_block_valid</span><span class="c">(struct</span> <span class="w">ext4_sb_info</span> <span class="c">*</span><span class="w">sb</span><span class="pc">i</span><span class="c">,</span> <span class="w">ext4_fsblk_t</span> <span class="w">start_blk</span><span class="c">,</span>
+			  <span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="c">int</span> <span class="w">c</span><span class="pc">o</span><span class="c">unt</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">ext4_system_zone</span> <span class="c">*</span><span class="w">e</span><span class="pc">n</span><span class="c">try</span><span class="pc">;</span>
+	<span class="c">struct</span> <span class="w">r</span><span class="pc">b</span><span class="c">_node</span> <span class="c">*</span><span class="w">n</span> <span class="pc">=</span> <span class="w">sb</span><span class="pc">i</span><span class="c">-&gt;</span><span class="w">s</span><span class="pc">y</span><span class="c">stem_blks</span><span class="pc">.</span><span class="w">rb</span><span class="pc">_</span><span class="c">node</span><span class="pc">;</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="pc">((</span><span class="w">s</span><span class="pc">t</span><span class="c">art_blk</span> <span class="w">&lt;</span><span class="pc">=</span> <span class="w">le3</span><span class="c">2_to_cpu(</span><span class="w">sb</span><span class="pc">i-</span><span class="c">&gt;</span><span class="w">s_es-</span><span class="c">&gt;</span><span class="w">s_first_data_block)) </span><span class="pc">|</span><span class="c">|</span>
+	    <span class="c">(</span><span class="pc">st</span><span class="c">art_blk</span> <span class="w">+</span> <span class="w">cou</span><span class="c">nt</span> <span class="w">&lt;</span> <span class="w">s</span><span class="pc">t</span><span class="c">art_blk</span><span class="w">) </span><span class="pc">|</span><span class="c">|</span>
+	    <span class="c">(</span><span class="pc">st</span><span class="c">art_blk</span> <span class="w">+</span> <span class="w">c</span><span class="pc">ou</span><span class="c">nt</span> <span class="w">&gt;</span> <span class="w">ext4_blocks_count</span><span class="pc">(</span><span class="w">sb</span><span class="c">i-&gt;</span><span class="pc">s_e</span><span class="c">s</span><span class="w">))</span><span class="pc">) </span><span class="c">{</span>
+		<span class="w">sb</span><span class="pc">i</span><span class="c">-&gt;</span><span class="pc">s_</span><span class="c">es</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">s_last_error_block</span> <span class="w">=</span> <span class="w">cpu_to_le64</span><span class="c">(start_blk</span><span class="pc">)</span><span class="c">;</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="pc">0</span><span class="c">;</span>
+	<span class="c">}</span>
+	<span class="w">w</span><span class="c">hile</span> <span class="c">(</span><span class="w">n</span><span class="pc">)</span><span class="c"> {</span>
+		<span class="w">en</span><span class="pc">t</span><span class="c">ry</span> <span class="pc">=</span> <span class="w">rb_entry</span><span class="c">(</span><span class="w">n</span><span class="c">,</span> <span class="w">st</span><span class="pc">ru</span><span class="c">ct</span> <span class="w">ext4_system_zone</span><span class="pc">,</span> <span class="w">n</span><span class="pc">o</span><span class="c">de);</span>
+		<span class="c">if</span> <span class="c">(</span><span class="pc">st</span><span class="c">art_blk</span> <span class="w">+</span> <span class="w">c</span><span class="pc">ou</span><span class="c">nt</span> <span class="w">-</span> <span class="c">1</span> <span class="w">&lt;</span> <span class="w">e</span><span class="pc">nt</span><span class="c">ry-&gt;</span><span class="pc">st</span><span class="c">art_blk</span><span class="w">)</span>
+			<span class="w">n</span> <span class="pc">=</span> <span class="w">n</span><span class="c">-&gt;</span><span class="w">rb_left</span><span class="c">;</span>
+		<span class="pc">e</span><span class="c">lse</span> <span class="c">if</span> <span class="c">(</span><span class="pc">s</span><span class="c">tart_blk</span> <span class="w">&gt;= (en</span><span class="pc">t</span><span class="c">ry-&gt;</span><span class="pc">s</span><span class="c">tart_blk</span> <span class="w">+</span> <span class="w">e</span><span class="pc">n</span><span class="c">try-&gt;</span><span class="w">c</span><span class="c">ount</span><span class="w">)</span><span class="pc">)</span>
+			<span class="w">n</span> <span class="pc">=</span> <span class="w">n</span><span class="c">-&gt;</span><span class="w">rb_right</span><span class="c">;</span>
+		<span class="pc">e</span><span class="c">lse</span> <span class="pc">{</span>
+			<span class="w">sb</span><span class="pc">i</span><span class="c">-&gt;</span><span class="w">s_es</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">s_last_error_block</span> <span class="pc">=</span> <span class="w">cpu_to_le64</span><span class="pc">(</span><span class="w">s</span><span class="pc">t</span><span class="c">art_blk</span><span class="pc">)</span><span class="c">;</span>
+			<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+		<span class="c">}</span>
+	<span class="pc">}</span>
+	<span class="w">r</span><span class="c">eturn</span> <span class="w">1</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="pc">i</span><span class="c">nt</span> <span class="w">ext4_check_blockref</span><span class="c">(</span><span class="w">c</span><span class="c">onst</span> <span class="pc">c</span><span class="c">har</span> <span class="c">*</span><span class="w">fu</span><span class="pc">nct</span><span class="c">ion</span><span class="pc">,</span> <span class="pc">u</span><span class="c">nsigned</span> <span class="c">int</span> <span class="w">l</span><span class="pc">i</span><span class="c">ne</span><span class="pc">,</span>
+			<span class="pc">s</span><span class="c">truct</span> <span class="w">i</span><span class="pc">no</span><span class="c">de</span> <span class="c">*inode,</span> <span class="w">__l</span><span class="pc">e3</span><span class="c">2</span> <span class="c">*</span><span class="w">p</span><span class="pc">,</span> <span class="pc">u</span><span class="c">nsigned</span> <span class="c">int</span> <span class="w">m</span><span class="pc">ax)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">ext4_super_block</span> <span class="c">*</span><span class="w">es</span> <span class="pc">=</span> <span class="w">EXT4_SB</span><span class="c">(</span><span class="w">i</span><span class="pc">no</span><span class="c">de-&gt;</span><span class="w">i</span><span class="pc">_</span><span class="c">sb</span><span class="w">)-</span><span class="c">&gt;</span><span class="w">s_es</span><span class="c">;</span>
+	<span class="w">__l</span><span class="c">e32</span> <span class="c">*</span><span class="w">bref</span> <span class="pc">=</span> <span class="w">p</span><span class="pc">;</span>
+	<span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="c">int</span> <span class="w">bl</span><span class="pc">k</span><span class="c">;</span>
+
+	<span class="w">w</span><span class="c">hile</span> <span class="c">(</span><span class="pc">b</span><span class="c">ref</span> <span class="w">&lt;</span> <span class="w">p+m</span><span class="pc">ax</span><span class="c">) {</span>
+		<span class="w">bl</span><span class="pc">k</span> <span class="c">=</span> <span class="w">l</span><span class="pc">e</span><span class="c">32_to_cpu</span><span class="w">(</span><span class="pc">*</span><span class="c">bref</span><span class="w">+</span><span class="pc">+</span><span class="c">);</span>
+		<span class="c">if</span> <span class="c">(</span><span class="w">bl</span><span class="pc">k</span> <span class="w">&amp;</span><span class="pc">&amp;</span>
+		    <span class="w">unl</span><span class="pc">i</span><span class="c">kely</span><span class="w">(</span><span class="pc">!</span><span class="w">ext4_data_block_valid(</span><span class="pc">E</span><span class="c">XT4_SB</span><span class="w">(ino</span><span class="c">de</span><span class="w">-</span><span class="c">&gt;</span><span class="w">i_</span><span class="pc">s</span><span class="c">b</span><span class="w">),</span>
+						    <span class="w">bl</span><span class="pc">k,</span> <span class="w">1))</span><span class="pc">) </span><span class="c">{</span>
+			<span class="w">es</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">s_last_error_block</span> <span class="c">=</span> <span class="w">cpu_to_le64</span><span class="c">(</span><span class="w">bl</span><span class="c">k</span><span class="pc">)</span><span class="c">;</span>
+			<span class="w">ext4_error_inode</span><span class="c">(</span><span class="w">ino</span><span class="c">de,</span> <span class="w">fu</span><span class="pc">nct</span><span class="c">ion</span><span class="pc">,</span> <span class="w">lin</span><span class="pc">e,</span> <span class="w">bl</span><span class="pc">k,</span>
+					 <span class="w">"inv</span><span class="c">alid</span> <span class="w">bl</span><span class="pc">ock</span><span class="w">")</span><span class="pc">;</span>
+			<span class="pc">r</span><span class="c">eturn</span> <span class="pc">-</span><span class="w">EI</span><span class="pc">O</span><span class="c">;</span>
+		<span class="c">}</span>
+	<span class="pc">}</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+
+</pre>
+</body>
+</html>
+

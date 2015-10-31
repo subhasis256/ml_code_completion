@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+<span class="w">#define</span> <span class="w">_GNU_SOURCE</span>
+<span class="w">#define</span> <span class="w">__EXPORTED_HEADERS__</span>
+
+<span class="w">#include</span> <span class="w">&lt;errno.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;inttypes.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;limits.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/falloc.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux</span><span class="c">/</span><span class="w">fcntl</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">memfd</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;</span><span class="w">sch</span><span class="pc">e</span><span class="c">d</span><span class="pc">.</span><span class="c">h</span><span class="pc">&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;</span><span class="w">stdio</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;</span><span class="w">stdlib</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;</span><span class="w">sig</span><span class="pc">n</span><span class="c">al.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;</span><span class="w">str</span><span class="pc">i</span><span class="c">ng.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;</span><span class="pc">s</span><span class="c">ys/</span><span class="w">mman</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;</span><span class="pc">s</span><span class="c">ys/</span><span class="w">sta</span><span class="pc">t</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;sys/</span><span class="w">syscall</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;</span><span class="pc">sy</span><span class="c">s/</span><span class="w">w</span><span class="c">ait.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;</span><span class="w">unistd</span><span class="pc">.</span><span class="c">h&gt;</span>
+
+<span class="c">#</span><span class="pc">d</span><span class="c">efine</span> <span class="w">MFD_DEF_SIZE</span> <span class="w">8192</span>
+<span class="c">#define</span> <span class="w">STACK_SIZE</span> <span class="w">65535</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">sys_memfd_create</span><span class="c">(</span><span class="pc">c</span><span class="c">onst</span> <span class="pc">c</span><span class="c">har</span> <span class="c">*name,</span>
+			    <span class="pc">u</span><span class="c">nsigned</span> <span class="c">int</span> <span class="w">f</span><span class="c">lags)</span>
+<span class="c">{</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">syscall</span><span class="pc">(</span><span class="w">__NR_memfd_create</span><span class="c">,</span> <span class="w">n</span><span class="c">ame,</span> <span class="w">f</span><span class="c">lags);</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">int</span> <span class="w">mfd_assert_new</span><span class="c">(</span><span class="pc">c</span><span class="c">onst</span> <span class="pc">c</span><span class="c">har</span> <span class="c">*name,</span> <span class="w">l</span><span class="pc">of</span><span class="c">f_t</span> <span class="w">sz</span><span class="pc">,</span> <span class="pc">u</span><span class="c">nsigned</span> <span class="c">int</span> <span class="w">f</span><span class="c">lags)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">r</span><span class="pc">,</span> <span class="w">fd</span><span class="pc">;</span>
+
+	<span class="w">f</span><span class="pc">d</span> <span class="c">=</span> <span class="w">sys_memfd_create</span><span class="c">(</span><span class="w">n</span><span class="pc">a</span><span class="c">me,</span> <span class="w">f</span><span class="pc">l</span><span class="c">ags);</span>
+	<span class="c">if</span> <span class="c">(</span><span class="w">f</span><span class="c">d</span> <span class="pc">&lt;</span> <span class="c">0</span><span class="pc">) </span><span class="c">{</span>
+		<span class="w">p</span><span class="pc">rintf</span><span class="c">("</span><span class="w">memfd_create(\"%s\", %u)</span> <span class="w">f</span><span class="pc">a</span><span class="c">iled</span><span class="pc">:</span><span class="c"> %</span><span class="w">m</span><span class="c">\n",</span>
+		       <span class="w">n</span><span class="c">ame</span><span class="pc">,</span> <span class="w">f</span><span class="pc">lags</span><span class="c">);</span>
+		<span class="w">abort</span><span class="pc">()</span><span class="c">;</span>
+	<span class="c">}</span>
+
+	<span class="w">r</span> <span class="c">=</span> <span class="w">ftruncate</span><span class="c">(</span><span class="w">f</span><span class="pc">d,</span> <span class="w">sz</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">if</span> <span class="c">(</span><span class="w">r</span> <span class="pc">&lt;</span> <span class="c">0) {</span>
+		<span class="w">pri</span><span class="pc">ntf</span><span class="c">("</span><span class="w">f</span><span class="pc">t</span><span class="c">runcate</span><span class="w">(</span><span class="pc">%</span><span class="w">l</span><span class="pc">l</span><span class="c">u)</span> <span class="w">f</span><span class="pc">a</span><span class="c">iled</span><span class="pc">:</span><span class="c"> %</span><span class="w">m</span><span class="c">\n</span><span class="w">"</span><span class="pc">, </span><span class="c">(</span><span class="w">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="pc">l</span><span class="c">ong)</span><span class="w">sz)</span><span class="pc">;</span>
+		<span class="w">a</span><span class="c">bort</span><span class="w">(</span><span class="pc">)</span><span class="c">;</span>
+	<span class="pc">}</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">fd</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="w">_</span><span class="pc">_u</span><span class="c">64</span> <span class="w">mfd_assert_get_seals</span><span class="c">(</span><span class="w">i</span><span class="c">nt</span> <span class="w">f</span><span class="pc">d)</span>
+<span class="c">{</span>
+	<span class="w">l</span><span class="c">ong</span> <span class="w">r</span><span class="pc">;</span>
+
+	<span class="w">r</span> <span class="c">=</span> <span class="w">fcntl</span><span class="c">(</span><span class="pc">f</span><span class="c">d</span><span class="pc">,</span> <span class="w">F_GET_SEALS</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">if</span> <span class="c">(r</span> <span class="pc">&lt;</span> <span class="c">0</span><span class="pc">) </span><span class="c">{</span>
+		<span class="w">p</span><span class="pc">rintf</span><span class="c">("</span><span class="w">GET_SEALS(</span><span class="pc">%</span><span class="c">d)</span> <span class="w">fa</span><span class="c">iled</span><span class="w">:</span><span class="c"> %</span><span class="w">m</span><span class="c">\n",</span> <span class="w">fd</span><span class="pc">)</span><span class="c">;</span>
+		<span class="w">abort</span><span class="pc">()</span><span class="c">;</span>
+	<span class="pc">}</span>
+
+	<span class="w">r</span><span class="c">eturn</span> <span class="pc">r</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">void</span> <span class="w">mfd_assert_has_seals</span><span class="c">(</span><span class="pc">i</span><span class="c">nt</span> <span class="w">f</span><span class="c">d,</span> <span class="w">_</span><span class="pc">_u6</span><span class="c">4</span> <span class="w">seals</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">_</span><span class="c">_u64</span> <span class="w">s</span><span class="pc">;</span>
+
+	<span class="w">s</span> <span class="c">=</span> <span class="w">mfd_assert_get_seals</span><span class="c">(</span><span class="w">fd</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">if</span> <span class="pc">(</span><span class="w">s</span> <span class="w">!</span><span class="c">=</span> <span class="pc">s</span><span class="c">eals) {</span>
+		<span class="w">pri</span><span class="pc">ntf("%</span><span class="w">l</span><span class="pc">l</span><span class="c">u</span> <span class="w">!= %l</span><span class="pc">l</span><span class="c">u</span> <span class="w">=</span> <span class="w">GET_SEALS(%</span><span class="c">d)\n",</span>
+		       <span class="w">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="c">long)</span><span class="w">s</span><span class="pc">e</span><span class="c">als</span><span class="w">,</span><span class="pc"> </span><span class="c">(unsigned</span> <span class="c">long</span> <span class="c">long)</span><span class="w">s,</span> <span class="w">fd</span><span class="c">);</span>
+		<span class="w">abort</span><span class="pc">()</span><span class="c">;</span>
+	<span class="c">}</span>
+<span class="w">}</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="c">void</span> <span class="w">mfd_assert_add_seals</span><span class="c">(</span><span class="pc">i</span><span class="c">nt</span> <span class="pc">f</span><span class="c">d,</span> <span class="w">_</span><span class="c">_u64</span> <span class="w">s</span><span class="pc">e</span><span class="c">als</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">l</span><span class="c">ong</span> <span class="w">r</span><span class="pc">;</span>
+	<span class="w">_</span><span class="c">_u64</span> <span class="w">s</span><span class="c">;</span>
+
+	<span class="w">s</span> <span class="c">=</span> <span class="w">mfd_assert_get_seals</span><span class="c">(</span><span class="w">f</span><span class="pc">d)</span><span class="c">;</span>
+	<span class="w">r</span> <span class="c">=</span> <span class="w">fcntl</span><span class="c">(</span><span class="w">f</span><span class="pc">d</span><span class="c">,</span> <span class="w">F_ADD_SEALS</span><span class="c">,</span> <span class="c">seals);</span>
+	<span class="c">if</span> <span class="c">(r</span> <span class="pc">&lt;</span> <span class="c">0</span><span class="pc">) </span><span class="c">{</span>
+		<span class="w">p</span><span class="pc">rintf</span><span class="c">("</span><span class="w">ADD_SEALS(</span><span class="pc">%</span><span class="c">d</span><span class="pc">,</span><span class="c"> %</span><span class="w">l</span><span class="pc">l</span><span class="c">u</span> <span class="w">-&gt; %ll</span><span class="pc">u</span><span class="w">)</span> <span class="w">f</span><span class="pc">a</span><span class="c">iled</span><span class="w">:</span><span class="c"> %</span><span class="w">m</span><span class="c">\n",</span>
+		       <span class="w">fd</span><span class="pc">, </span><span class="c">(</span><span class="w">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="pc">l</span><span class="c">ong)</span><span class="w">s,</span><span class="pc"> </span><span class="c">(unsigned</span> <span class="c">long</span> <span class="c">long)</span><span class="w">s</span><span class="pc">e</span><span class="c">als</span><span class="w">)</span><span class="c">;</span>
+		<span class="w">abort</span><span class="pc">()</span><span class="c">;</span>
+	<span class="pc">}</span>
+<span class="w">}</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="pc">int</span> <span class="w">mfd_busy_add_seals</span><span class="c">(</span><span class="pc">i</span><span class="c">nt</span> <span class="pc">f</span><span class="c">d,</span> <span class="w">_</span><span class="c">_u64</span> <span class="pc">se</span><span class="c">als</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">l</span><span class="c">ong</span> <span class="w">r</span><span class="pc">;</span>
+	<span class="pc">_</span><span class="c">_u64</span> <span class="w">s</span><span class="c">;</span>
+
+	<span class="w">r</span> <span class="c">=</span> <span class="w">fcntl</span><span class="c">(</span><span class="w">f</span><span class="c">d</span><span class="pc">,</span> <span class="w">F_GET_SEALS</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">if</span> <span class="c">(</span><span class="pc">r</span> <span class="pc">&lt;</span> <span class="c">0</span><span class="pc">)</span>
+		<span class="w">s</span> <span class="c">=</span> <span class="pc">0</span><span class="c">;</span>
+	<span class="pc">e</span><span class="c">lse</span>
+		<span class="w">s</span> <span class="c">=</span> <span class="w">r</span><span class="c">;</span>
+
+	<span class="w">r</span> <span class="c">=</span> <span class="w">f</span><span class="c">cntl(</span><span class="w">fd</span><span class="c">,</span> <span class="w">F_ADD_SEALS</span><span class="c">,</span> <span class="w">s</span><span class="pc">e</span><span class="c">als</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">if</span> <span class="c">(r</span> <span class="pc">&lt;</span> <span class="c">0</span> <span class="pc">&amp;</span><span class="c">&amp;</span> <span class="w">er</span><span class="pc">rn</span><span class="c">o</span> <span class="pc">!</span><span class="c">=</span> <span class="w">EB</span><span class="c">USY</span><span class="pc">) </span><span class="c">{</span>
+		<span class="w">pri</span><span class="pc">ntf</span><span class="c">("</span><span class="w">ADD_SEALS(</span><span class="pc">%</span><span class="c">d</span><span class="pc">, </span><span class="c">%</span><span class="w">l</span><span class="pc">l</span><span class="c">u</span> <span class="w">-&gt; %ll</span><span class="pc">u</span><span class="w">)</span> <span class="w">didn'</span><span class="pc">t</span> <span class="w">fa</span><span class="pc">il</span> <span class="w">as</span> <span class="w">expected</span> <span class="w">w</span><span class="pc">i</span><span class="c">th</span> <span class="w">EB</span><span class="c">USY: %</span><span class="w">m</span><span class="c">\n",</span>
+		       <span class="w">fd,</span><span class="pc"> (u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="c">long)</span><span class="w">s,</span><span class="pc"> (</span><span class="c">unsigned</span> <span class="c">long</span> <span class="c">long)</span><span class="w">seals)</span><span class="pc">;</span>
+		<span class="w">abort</span><span class="pc">()</span><span class="c">;</span>
+	<span class="pc">}</span>
+
+	<span class="w">r</span><span class="c">eturn</span> <span class="w">r</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">void</span> <span class="pc">*</span><span class="w">mfd_assert_mmap_shared</span><span class="c">(</span><span class="pc">i</span><span class="c">nt</span> <span class="w">f</span><span class="c">d</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">v</span><span class="c">oid</span> <span class="c">*</span><span class="pc">p;</span>
+
+	<span class="w">p</span> <span class="c">=</span> <span class="w">mmap</span><span class="c">(</span><span class="w">N</span><span class="c">ULL</span><span class="pc">,</span>
+		 <span class="w">MFD_DEF_SIZE</span><span class="pc">,</span>
+		 <span class="w">PROT_READ</span> <span class="w">|</span> <span class="w">PROT_WRITE</span><span class="pc">,</span>
+		 <span class="w">MAP_SHARED</span><span class="pc">,</span>
+		 <span class="w">f</span><span class="pc">d,</span>
+		 <span class="c">0</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">if</span> <span class="c">(</span><span class="w">p</span> <span class="pc">=</span><span class="c">=</span> <span class="w">MAP_FAILED</span><span class="c">) {</span>
+		<span class="w">pri</span><span class="pc">ntf</span><span class="c">("</span><span class="pc">m</span><span class="c">map</span><span class="pc">(</span><span class="c">)</span> <span class="pc">f</span><span class="c">ailed</span><span class="w">:</span><span class="c"> %</span><span class="w">m</span><span class="c">\n</span><span class="pc">")</span><span class="c">;</span>
+		<span class="w">abort</span><span class="pc">()</span><span class="c">;</span>
+	<span class="pc">}</span>
+
+	<span class="w">r</span><span class="c">eturn</span> <span class="w">p</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">void</span> <span class="pc">*</span><span class="w">mfd_assert_mmap_private</span><span class="c">(</span><span class="pc">i</span><span class="c">nt</span> <span class="w">f</span><span class="pc">d)</span>
+<span class="c">{</span>
+	<span class="w">v</span><span class="c">oid</span> <span class="c">*p</span><span class="pc">;</span>
+
+	<span class="w">p</span> <span class="c">=</span> <span class="w">m</span><span class="pc">m</span><span class="c">ap(</span><span class="w">N</span><span class="c">ULL</span><span class="pc">,</span>
+		 <span class="w">MFD_DEF_SIZE</span><span class="pc">,</span>
+		 <span class="w">PROT_READ</span> <span class="w">|</span> <span class="w">PROT_WRITE</span><span class="pc">,</span>
+		 <span class="w">MAP_PRIVATE</span><span class="pc">,</span>
+		 <span class="w">fd</span><span class="pc">,</span>
+		 <span class="c">0</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">if</span> <span class="c">(</span><span class="pc">p</span> <span class="pc">=</span><span class="c">=</span> <span class="w">MAP_FAILED</span><span class="c">) {</span>
+		<span class="w">pri</span><span class="pc">ntf</span><span class="c">("</span><span class="pc">m</span><span class="c">map</span><span class="pc">(</span><span class="c">)</span> <span class="pc">f</span><span class="c">ailed</span><span class="w">:</span><span class="c"> %</span><span class="w">m</span><span class="c">\n</span><span class="pc">")</span><span class="c">;</span>
+		<span class="w">abort</span><span class="pc">()</span><span class="c">;</span>
+	<span class="pc">}</span>
+
+	<span class="w">r</span><span class="c">eturn</span> <span class="w">p</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">global_mfd</span> <span class="w">=</span><span class="pc"> -</span><span class="c">1;</span>
+<span class="w">s</span><span class="c">tatic</span> <span class="pc">v</span><span class="c">oid</span> <span class="c">*</span><span class="w">global_p</span> <span class="pc">=</span> <span class="pc">N</span><span class="c">ULL;</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="c">int</span> <span class="w">sealing_thread_fn</span><span class="c">(</span><span class="pc">v</span><span class="c">oid</span> <span class="c">*</span><span class="pc">a</span><span class="c">rg)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">si</span><span class="pc">g,</span> <span class="w">r</span><span class="pc">;</span>
+
+	
+
+	
+	<span class="w">usleep</span><span class="c">(</span><span class="w">200000</span><span class="pc">)</span><span class="c">;</span>
+
+	
+	<span class="w">munmap</span><span class="c">(</span><span class="w">g</span><span class="c">lobal_p,</span> <span class="w">MFD_DEF_SIZE</span><span class="pc">)</span><span class="c">;</span>
+
+	
+	<span class="w">r</span> <span class="c">=</span> <span class="w">mfd_busy_add_seals</span><span class="c">(</span><span class="w">g</span><span class="pc">lobal_m</span><span class="c">fd,</span> <span class="w">F_SEAL_WRITE</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">if</span> <span class="c">(</span><span class="pc">r</span> <span class="w">&gt;</span><span class="c">=</span> <span class="c">0) {</span>
+		<span class="w">pri</span><span class="pc">ntf</span><span class="c">("</span><span class="w">HURRAY!</span> <span class="w">This</span> <span class="w">k</span><span class="pc">er</span><span class="c">nel</span> <span class="w">fixed</span> <span class="w">GUP</span> <span class="w">races!</span><span class="c">\n");</span>
+	<span class="pc">}</span> <span class="c">else</span> <span class="c">{</span>
+		
+		<span class="w">sleep</span><span class="c">(</span><span class="w">1</span><span class="pc">)</span><span class="c">;</span>
+
+		
+		<span class="w">mfd_assert_add_seals</span><span class="pc">(global_m</span><span class="c">fd,</span> <span class="c">F_SEAL_WRITE</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">}</span>
+
+	<span class="w">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="w">pid_t</span> <span class="w">spawn_sealing_thread</span><span class="c">(</span><span class="pc">v</span><span class="c">oid</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">ui</span><span class="pc">nt8</span><span class="c">_t</span> <span class="c">*</span><span class="w">stack</span><span class="c">;</span>
+	<span class="w">p</span><span class="c">id_t</span> <span class="w">pi</span><span class="pc">d</span><span class="c">;</span>
+
+	<span class="w">s</span><span class="pc">ta</span><span class="c">ck</span> <span class="c">=</span> <span class="w">malloc</span><span class="c">(</span><span class="w">STACK_SIZE</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">if</span> <span class="pc">(!</span><span class="c">stack</span><span class="pc">) </span><span class="c">{</span>
+		<span class="w">pri</span><span class="pc">ntf</span><span class="c">("</span><span class="w">m</span><span class="pc">a</span><span class="c">lloc</span><span class="w">(</span><span class="pc">S</span><span class="c">TACK_SIZE</span><span class="pc">)</span> <span class="w">f</span><span class="pc">a</span><span class="c">iled</span><span class="w">:</span><span class="c"> %</span><span class="w">m</span><span class="c">\n</span><span class="pc">")</span><span class="c">;</span>
+		<span class="w">abort</span><span class="pc">()</span><span class="c">;</span>
+	<span class="c">}</span>
+
+	<span class="w">pi</span><span class="pc">d</span> <span class="pc">=</span> <span class="w">clone</span><span class="c">(</span><span class="w">sealing_thread_fn</span><span class="c">,</span>
+		    <span class="w">s</span><span class="c">tack</span> <span class="w">+</span> <span class="pc">S</span><span class="c">TACK_SIZE,</span>
+		    <span class="w">SIGCHLD</span> <span class="w">|</span> <span class="w">CLONE_FILES</span> <span class="c">|</span> <span class="w">CLONE_FS</span> <span class="pc">|</span> <span class="w">CLONE_VM</span><span class="c">,</span>
+		    <span class="w">N</span><span class="c">ULL);</span>
+	<span class="c">if</span> <span class="c">(</span><span class="w">pi</span><span class="pc">d</span> <span class="pc">&lt;</span> <span class="c">0</span><span class="pc">) </span><span class="c">{</span>
+		<span class="w">p</span><span class="pc">rintf</span><span class="c">("</span><span class="w">c</span><span class="c">lone</span><span class="w">(</span><span class="c">)</span> <span class="pc">f</span><span class="c">ailed</span><span class="w">:</span><span class="c"> %</span><span class="w">m</span><span class="c">\n</span><span class="pc">")</span><span class="c">;</span>
+		<span class="w">a</span><span class="c">bort</span><span class="w">(</span><span class="pc">)</span><span class="c">;</span>
+	<span class="pc">}</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">pi</span><span class="c">d;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">void</span> <span class="w">join_sealing_thread</span><span class="c">(</span><span class="w">pid_t</span> <span class="w">pi</span><span class="pc">d</span><span class="w">)</span>
+<span class="c">{</span>
+	<span class="w">waitpid</span><span class="c">(</span><span class="w">pi</span><span class="pc">d</span><span class="c">,</span> <span class="pc">N</span><span class="c">ULL,</span> <span class="c">0);</span>
+<span class="c">}</span>
+
+<span class="w">i</span><span class="c">nt</span> <span class="w">main</span><span class="c">(</span><span class="pc">i</span><span class="c">nt</span> <span class="w">a</span><span class="pc">r</span><span class="c">gc,</span> <span class="pc">c</span><span class="c">har</span> <span class="c">**argv)</span>
+<span class="c">{</span>
+	<span class="w">s</span><span class="pc">ta</span><span class="c">tic</span> <span class="pc">c</span><span class="c">onst</span> <span class="c">char</span> <span class="w">zero</span><span class="pc">[</span><span class="w">MFD_DEF_SIZE</span><span class="pc">];</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">fd</span><span class="pc">,</span> <span class="w">mfd</span><span class="pc">,</span> <span class="w">r;</span>
+	<span class="w">v</span><span class="pc">o</span><span class="c">id</span> <span class="c">*</span><span class="pc">p;</span>
+	<span class="c">int</span> <span class="w">was_sealed</span><span class="pc">;</span>
+	<span class="w">pid_t</span> <span class="w">pi</span><span class="pc">d</span><span class="c">;</span>
+
+	<span class="pc">if</span> <span class="pc">(</span><span class="w">ar</span><span class="pc">gc</span> <span class="c">&lt;</span> <span class="pc">2</span><span class="c">) {</span>
+		<span class="w">p</span><span class="pc">rintf</span><span class="c">("</span><span class="w">e</span><span class="pc">r</span><span class="c">ror</span><span class="w">:</span> <span class="w">please</span> <span class="w">pass</span> <span class="w">pat</span><span class="c">h</span> <span class="w">t</span><span class="c">o</span> <span class="w">fil</span><span class="pc">e</span> <span class="w">i</span><span class="pc">n</span> <span class="w">fuse_mnt</span> <span class="w">mount-point</span><span class="pc">\</span><span class="c">n");</span>
+		<span class="w">abort</span><span class="pc">()</span><span class="c">;</span>
+	<span class="c">}</span>
+
+	
+	<span class="w">pr</span><span class="pc">intf</span><span class="c">("</span><span class="w">opening:</span><span class="pc"> </span><span class="c">%</span><span class="pc">s</span><span class="c">\n",</span> <span class="w">a</span><span class="pc">r</span><span class="c">gv</span><span class="pc">[1])</span><span class="c">;</span>
+	<span class="w">fd</span> <span class="pc">=</span> <span class="w">o</span><span class="pc">pen</span><span class="c">(</span><span class="pc">a</span><span class="c">rgv[</span><span class="pc">1],</span> <span class="w">O_RDONLY</span> <span class="w">|</span> <span class="w">O_CLOEXEC</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">if</span> <span class="c">(</span><span class="w">f</span><span class="c">d</span> <span class="pc">&lt;</span> <span class="c">0</span><span class="pc">) </span><span class="c">{</span>
+		<span class="w">pri</span><span class="pc">ntf</span><span class="c">("</span><span class="w">c</span><span class="pc">a</span><span class="c">nnot</span> <span class="w">ope</span><span class="pc">n</span><span class="w">(\"%s\"): %m</span><span class="pc">\</span><span class="c">n</span><span class="pc">",</span> <span class="w">a</span><span class="c">rgv</span><span class="pc">[</span><span class="w">1</span><span class="c">]);</span>
+		<span class="w">abort</span><span class="pc">()</span><span class="c">;</span>
+	<span class="c">}</span>
+
+	
+	<span class="w">mfd</span> <span class="pc">=</span> <span class="w">mfd_assert_new</span><span class="pc">("</span><span class="w">kern_memfd_fuse</span><span class="pc">",</span>
+			     <span class="w">MFD_DEF_SIZE</span><span class="c">,</span>
+			     <span class="w">MFD_CLOEXEC</span> <span class="pc">|</span> <span class="w">MFD_ALLOW_SEALING</span><span class="pc">)</span><span class="c">;</span>
+
+	
+	<span class="w">p</span> <span class="c">=</span> <span class="w">mfd_assert_mmap_shared</span><span class="c">(mfd</span><span class="pc">)</span><span class="c">;</span>
+
+	
+	<span class="w">global_mfd</span> <span class="pc">=</span> <span class="w">m</span><span class="pc">f</span><span class="c">d</span><span class="pc">;</span>
+	<span class="w">global_p</span> <span class="c">=</span> <span class="w">p</span><span class="pc">;</span>
+	<span class="w">pi</span><span class="c">d</span> <span class="c">=</span> <span class="w">spawn_sealing_thread</span><span class="pc">()</span><span class="c">;</span>
+
+	
+	<span class="w">r</span> <span class="c">=</span> <span class="w">rea</span><span class="pc">d</span><span class="c">(</span><span class="w">f</span><span class="pc">d</span><span class="c">,</span> <span class="w">p</span><span class="c">,</span> <span class="w">M</span><span class="c">FD_DEF_SIZE);</span>
+	<span class="c">if</span> <span class="c">(</span><span class="pc">r</span> <span class="pc">&lt;</span> <span class="c">0) {</span>
+		<span class="w">pri</span><span class="pc">ntf</span><span class="c">("</span><span class="w">r</span><span class="pc">ea</span><span class="c">d</span><span class="pc">(</span><span class="c">)</span> <span class="c">failed</span><span class="pc">:</span><span class="c"> %</span><span class="w">m</span><span class="c">\n</span><span class="pc">")</span><span class="c">;</span>
+		<span class="w">abort</span><span class="pc">()</span><span class="c">;</span>
+	<span class="pc">}</span> <span class="pc">e</span><span class="c">lse</span> <span class="pc">i</span><span class="c">f</span> <span class="pc">(!r) </span><span class="c">{</span>
+		<span class="w">pri</span><span class="pc">ntf</span><span class="c">("</span><span class="w">unexpected</span> <span class="w">EOF</span> <span class="w">o</span><span class="c">n</span> <span class="w">r</span><span class="c">ead</span><span class="w">()\n</span><span class="c">");</span>
+		<span class="w">a</span><span class="c">bort</span><span class="w">(</span><span class="pc">)</span><span class="c">;</span>
+	<span class="pc">}</span>
+
+	<span class="w">was_sealed</span> <span class="pc">=</span> <span class="w">mfd_assert_get_seals</span><span class="c">(</span><span class="w">mfd) &amp;</span> <span class="w">F_SEAL_WRITE</span><span class="pc">;</span>
+
+	
+	<span class="w">join_sealing_thread</span><span class="c">(</span><span class="w">pi</span><span class="pc">d)</span><span class="c">;</span>
+	<span class="w">mfd_assert_has_seals</span><span class="c">(</span><span class="pc">m</span><span class="c">fd,</span> <span class="pc">F</span><span class="c">_SEAL_WRITE);</span>
+
+	
+
+	<span class="w">p</span> <span class="pc">=</span> <span class="w">mfd_assert_mmap_private</span><span class="c">(</span><span class="pc">m</span><span class="c">fd);</span>
+	<span class="c">if</span> <span class="c">(was_sealed</span> <span class="w">&amp;</span><span class="pc">&amp;</span> <span class="w">me</span><span class="c">mcmp(</span><span class="w">p</span><span class="c">,</span> <span class="w">zero</span><span class="c">,</span> <span class="w">MFD_DEF_SIZE</span><span class="pc">))</span><span class="c"> {</span>
+		<span class="w">pri</span><span class="pc">ntf</span><span class="c">("</span><span class="w">memfd</span> <span class="w">sealed</span> <span class="w">during</span> <span class="w">r</span><span class="pc">ea</span><span class="c">d</span><span class="w">()</span> <span class="w">but</span> <span class="w">da</span><span class="c">ta</span> <span class="w">no</span><span class="pc">t</span> <span class="w">discarded</span><span class="pc">\</span><span class="c">n</span><span class="pc">")</span><span class="c">;</span>
+		<span class="w">abort</span><span class="pc">()</span><span class="c">;</span>
+	<span class="c">}</span> <span class="pc">e</span><span class="c">lse</span> <span class="pc">i</span><span class="c">f</span> <span class="pc">(!</span><span class="w">w</span><span class="c">as_sealed</span> <span class="w">&amp;&amp;</span><span class="pc"> !</span><span class="w">mem</span><span class="pc">cm</span><span class="c">p(</span><span class="w">p</span><span class="c">,</span> <span class="c">zero,</span> <span class="c">MFD_DEF_SIZE</span><span class="pc">))</span><span class="c"> {</span>
+		<span class="w">pri</span><span class="pc">ntf</span><span class="c">("</span><span class="w">m</span><span class="c">emfd</span> <span class="w">s</span><span class="c">ealed</span> <span class="w">after</span> <span class="w">rea</span><span class="c">d</span><span class="w">()</span> <span class="pc">b</span><span class="c">ut</span> <span class="w">da</span><span class="c">ta</span> <span class="w">d</span><span class="pc">i</span><span class="c">scarded\n</span><span class="pc">")</span><span class="c">;</span>
+		<span class="w">a</span><span class="c">bort</span><span class="w">(</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">}</span>
+
+	<span class="w">clo</span><span class="pc">s</span><span class="c">e(</span><span class="w">mfd</span><span class="c">);</span>
+	<span class="w">clo</span><span class="pc">s</span><span class="c">e(</span><span class="w">fd</span><span class="c">);</span>
+
+	<span class="w">pri</span><span class="pc">ntf</span><span class="c">("</span><span class="w">fuse</span><span class="c">:</span> <span class="w">DONE\</span><span class="c">n");</span>
+
+	<span class="c">return</span> <span class="pc">0</span><span class="c">;</span>
+<span class="c">}</span>
+
+</pre>
+</body>
+</html>
+

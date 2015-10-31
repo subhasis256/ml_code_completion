@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+<span class="w">#include</span> <span class="w">&lt;linux/clk.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/err.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/kernel.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/module.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux</span><span class="c">/</span><span class="w">of_platform</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="pc">p</span><span class="c">latform_device.h&gt;</span>
+
+<span class="pc">s</span><span class="c">truct</span> <span class="w">at91_ramc_caps</span> <span class="c">{</span>
+	<span class="w">b</span><span class="c">ool</span> <span class="w">has_ddrck</span><span class="c">;</span>
+	<span class="pc">b</span><span class="c">ool</span> <span class="w">has_mpddr_clk</span><span class="c">;</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="c">const</span> <span class="c">struct</span> <span class="pc">a</span><span class="c">t91_ramc_caps</span> <span class="w">at91rm9200_caps</span> <span class="w">= { };</span>
+
+<span class="w">s</span><span class="c">tatic</span> <span class="pc">c</span><span class="c">onst</span> <span class="c">struct</span> <span class="c">at91_ramc_caps</span> <span class="w">at91sam9g45_caps</span> <span class="c">= {</span>
+	<span class="c">.</span><span class="w">h</span><span class="pc">as_d</span><span class="c">drck</span> <span class="c">=</span> <span class="pc">1</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">h</span><span class="pc">as_m</span><span class="c">pddr_clk</span> <span class="c">=</span> <span class="w">0</span><span class="c">,</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="c">static</span> <span class="c">const</span> <span class="c">struct</span> <span class="pc">at91_</span><span class="c">ramc_caps</span> <span class="w">sama5d3_caps</span> <span class="c">= {</span>
+	<span class="c">.</span><span class="w">h</span><span class="c">as_ddrck</span> <span class="c">=</span> <span class="c">1,</span>
+	<span class="c">.</span><span class="w">h</span><span class="c">as_mpddr_clk</span> <span class="c">=</span> <span class="pc">1</span><span class="c">,</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="c">static</span> <span class="pc">c</span><span class="c">onst</span> <span class="c">struct</span> <span class="pc">o</span><span class="c">f_device_id</span> <span class="w">atmel_ramc_of_match</span><span class="c">[] = {</span>
+	<span class="c">{ .compatible</span> <span class="c">= "</span><span class="w">atmel</span><span class="c">,</span><span class="w">at91rm9200</span><span class="c">-</span><span class="w">sdramc</span><span class="pc">", </span><span class="c">.</span><span class="pc">d</span><span class="c">ata</span> <span class="pc">= </span><span class="c">&amp;</span><span class="w">at91rm9200_caps</span><span class="pc">, </span><span class="c">},</span>
+	<span class="c">{ .compatible</span> <span class="c">= "</span><span class="w">a</span><span class="pc">tm</span><span class="c">el,</span><span class="w">at91sam9260</span><span class="c">-</span><span class="w">s</span><span class="pc">d</span><span class="c">ramc", .data</span> <span class="pc">= </span><span class="c">&amp;</span><span class="w">a</span><span class="pc">t91rm9200_</span><span class="c">caps, },</span>
+	<span class="c">{ .compatible</span> <span class="c">= "atmel</span><span class="pc">,</span><span class="w">at91sam9g45</span><span class="c">-</span><span class="w">ddramc</span><span class="c">", .data</span> <span class="c">= &amp;</span><span class="w">at91sam9g45_caps</span><span class="c">, },</span>
+	<span class="c">{ .compatible</span> <span class="c">= "atmel,</span><span class="w">sama5d3</span><span class="c">-</span><span class="pc">d</span><span class="c">dramc", .data</span> <span class="pc">= </span><span class="c">&amp;</span><span class="w">sama5d3_caps</span><span class="c">, },</span>
+	<span class="w">{},</span>
+<span class="pc">}</span><span class="c">;</span>
+<span class="c">MODULE_DEVICE_TABLE(of,</span> <span class="w">atmel_ramc_of_match</span><span class="c">);</span>
+
+<span class="c">static</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">atmel_ramc_probe</span><span class="c">(struct</span> <span class="c">platform_device</span> <span class="c">*pdev)</span>
+<span class="c">{</span>
+	<span class="pc">c</span><span class="c">onst</span> <span class="c">struct</span> <span class="c">of_device_id</span> <span class="c">*</span><span class="w">m</span><span class="pc">a</span><span class="c">tch;</span>
+	<span class="pc">c</span><span class="c">onst</span> <span class="c">struct</span> <span class="w">at91_ramc_caps</span> <span class="c">*</span><span class="w">ca</span><span class="pc">ps</span><span class="c">;</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">c</span><span class="c">lk</span> <span class="c">*clk;</span>
+
+	<span class="w">m</span><span class="pc">a</span><span class="c">tch</span> <span class="c">=</span> <span class="w">of_match_device</span><span class="c">(</span><span class="w">a</span><span class="pc">tmel_ramc_o</span><span class="c">f_match</span><span class="w">,</span><span class="pc"> &amp;p</span><span class="c">dev-&gt;dev</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">ca</span><span class="pc">p</span><span class="c">s</span> <span class="pc">=</span> <span class="w">m</span><span class="c">atch-&gt;</span><span class="w">d</span><span class="pc">a</span><span class="c">ta;</span>
+
+	<span class="c">if</span> <span class="c">(</span><span class="w">cap</span><span class="c">s-&gt;</span><span class="w">has_ddrck</span><span class="pc">) </span><span class="c">{</span>
+		<span class="w">cl</span><span class="c">k</span> <span class="c">=</span> <span class="w">devm_clk_get</span><span class="pc">(&amp;</span><span class="c">pdev-&gt;dev</span><span class="pc">, </span><span class="c">"</span><span class="w">ddrck</span><span class="c">");</span>
+		<span class="c">if</span> <span class="c">(IS_ERR(clk</span><span class="pc">))</span>
+			<span class="c">return</span> <span class="c">PTR_ERR(</span><span class="w">c</span><span class="c">lk);</span>
+		<span class="w">clk_prepare_enable</span><span class="c">(</span><span class="w">c</span><span class="pc">l</span><span class="c">k);</span>
+	<span class="c">}</span>
+
+	<span class="w">i</span><span class="c">f</span> <span class="c">(</span><span class="w">ca</span><span class="pc">p</span><span class="c">s-&gt;</span><span class="w">has_mpddr_clk</span><span class="pc">) </span><span class="c">{</span>
+		<span class="w">c</span><span class="c">lk</span> <span class="c">=</span> <span class="w">d</span><span class="pc">e</span><span class="c">vm_clk_get</span><span class="pc">(&amp;</span><span class="c">pdev-&gt;dev, "</span><span class="w">mpddr</span><span class="c">");</span>
+		<span class="c">if</span> <span class="c">(IS_ERR(clk)) {</span>
+			<span class="pc">p</span><span class="c">r_err("</span><span class="w">AT91</span> <span class="w">RAMC:</span> <span class="w">couldn'</span><span class="c">t</span> <span class="w">g</span><span class="c">et</span> <span class="w">m</span><span class="c">pddr</span> <span class="w">c</span><span class="pc">lo</span><span class="c">ck\n");</span>
+			<span class="c">return</span> <span class="pc">P</span><span class="c">TR_ERR(</span><span class="pc">cl</span><span class="c">k);</span>
+		<span class="c">}</span>
+		<span class="w">clk_prepare_enable</span><span class="c">(clk);</span>
+	<span class="c">}</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">0</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">s</span><span class="c">truct</span> <span class="c">platform_driver</span> <span class="w">atmel_ramc_driver</span> <span class="c">= {</span>
+	<span class="c">.</span><span class="pc">p</span><span class="c">robe</span>		<span class="c">=</span> <span class="w">atmel_ramc_probe</span><span class="c">,</span>
+	<span class="c">.</span><span class="pc">d</span><span class="c">river</span>		<span class="c">= {</span>
+		<span class="c">.name</span>	<span class="c">= "</span><span class="w">atmel</span><span class="pc">-</span><span class="w">ramc</span><span class="c">",</span>
+		<span class="c">.</span><span class="w">of_match_table</span> <span class="c">=</span> <span class="w">atmel_ramc_of_match</span><span class="c">,</span>
+	<span class="pc">}</span><span class="c">,</span>
+<span class="c">};</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="c">int</span> <span class="c">__init</span> <span class="w">atmel_ramc_init</span><span class="c">(void)</span>
+<span class="c">{</span>
+	<span class="c">return</span> <span class="w">platform_driver_register</span><span class="c">(&amp;atmel_ramc_driver</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">}</span>
+<span class="pc">m</span><span class="c">odule_init(atmel_ramc_init);</span>
+
+<span class="pc">M</span><span class="c">ODULE_LICENSE("GPL</span> <span class="pc">v</span><span class="c">2");</span>
+<span class="pc">M</span><span class="c">ODULE_AUTHOR("</span><span class="w">Alexandre</span> <span class="w">Belloni</span> <span class="c">&lt;</span><span class="w">alexandre</span><span class="pc">.</span><span class="w">belloni</span><span class="c">@</span><span class="w">f</span><span class="c">ree</span><span class="pc">-</span><span class="w">electrons</span><span class="c">.com&gt;");</span>
+<span class="c">MODULE_DESCRIPTION("</span><span class="w">Atmel</span> <span class="w">(Multi-po</span><span class="pc">r</span><span class="c">t</span> <span class="w">DDR-)SDRAM</span> <span class="w">C</span><span class="pc">o</span><span class="c">ntroller");</span>
+
+</pre>
+</body>
+</html>
+

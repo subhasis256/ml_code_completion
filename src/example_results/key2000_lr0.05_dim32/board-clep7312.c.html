@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+<span class="w">#include</span> <span class="w">&lt;linux/init.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/types.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/string.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/memblock.h&gt;</span>
+
+<span class="w">#include</span> <span class="w">&lt;asm</span><span class="c">/</span><span class="w">se</span><span class="pc">t</span><span class="c">up.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="pc">m</span><span class="c">ach</span><span class="pc">-</span><span class="w">t</span><span class="c">ypes.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/mach/</span><span class="w">arc</span><span class="c">h.h&gt;</span>
+
+<span class="c">#include</span> <span class="pc">"</span><span class="w">c</span><span class="pc">om</span><span class="c">mon.h"</span>
+<span class="c">#include</span> <span class="c">"</span><span class="w">devi</span><span class="pc">ces</span><span class="c">.h"</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="pc">v</span><span class="c">oid</span> <span class="pc">__in</span><span class="c">it</span>
+<span class="w">fixup_clep7312</span><span class="c">(</span><span class="pc">s</span><span class="c">truct</span> <span class="w">ta</span><span class="pc">g</span> <span class="c">*</span><span class="w">tags</span><span class="pc">,</span> <span class="w">c</span><span class="pc">h</span><span class="c">ar</span> <span class="pc">**</span><span class="w">cmdline</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="w">memblock_add</span><span class="c">(</span><span class="w">0xc0000000</span><span class="c">,</span> <span class="w">0x01000000</span><span class="pc">)</span><span class="c">;</span>
+<span class="pc">}</span>
+
+<span class="w">MACHINE_START</span><span class="c">(</span><span class="w">CLEP7212,</span><span class="pc"> "</span><span class="w">Cirrus</span> <span class="w">Logic</span> <span class="w">7212/7312")</span>
+	
+	<span class="w">.atag_offset</span>	<span class="c">=</span> <span class="w">0x01</span><span class="pc">00</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">fixup</span>		<span class="c">=</span> <span class="w">f</span><span class="c">ixup_clep7312,</span>
+	<span class="c">.</span><span class="w">map_io</span>		<span class="c">=</span> <span class="w">clps711x_map_io</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">init_irq</span>	<span class="c">=</span> <span class="w">clps711x_init_irq</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">init_time</span>	<span class="c">=</span> <span class="w">clps711x_timer_init</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">init_machine</span>	<span class="c">=</span> <span class="w">clps711x_devices_init</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">restart</span>	<span class="c">=</span> <span class="w">clps711x_restart</span><span class="c">,</span>
+<span class="w">MACHINE_END</span>
+
+</pre>
+</body>
+</html>
+

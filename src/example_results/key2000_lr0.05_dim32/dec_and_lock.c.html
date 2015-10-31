@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+<span class="w">#include</span> <span class="w">&lt;linux/spinlock.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/atomic.h&gt;</span>
+
+  <span class="w">asm</span> <span class="w">(".text</span>					<span class="w">\n\</span>
+	<span class="w">.global</span> <span class="w">_atomic_dec_and_lock</span>		<span class="w">\n\</span>
+	<span class="w">.ent</span> <span class="w">_atomic_dec_and_lock</span>		<span class="w">\n\</span>
+	<span class="w">.align</span>	<span class="w">4</span>				<span class="w">\</span><span class="c">n</span><span class="w">\</span>
+<span class="w">_</span><span class="c">atomic_dec_and_lock</span><span class="w">:				\n\</span>
+	<span class="pc">.</span><span class="w">prologue</span> <span class="w">0</span>				<span class="pc">\</span><span class="c">n</span><span class="w">\</span>
+<span class="w">1:</span>	<span class="w">ldl_l</span>	<span class="w">$1,</span> <span class="c">0</span><span class="w">($1</span><span class="pc">6</span><span class="w">)	</span><span class="pc">		\n</span><span class="c">\</span>
+	<span class="w">subl</span>	<span class="w">$1,</span> <span class="pc">1</span><span class="w">, $</span><span class="pc">1</span>			<span class="c">\n</span><span class="pc">\</span>
+	<span class="w">beq</span>	<span class="w">$1,</span> <span class="w">2f</span>				<span class="pc">\</span><span class="c">n</span><span class="pc">\</span>
+	<span class="w">stl_c</span>	<span class="w">$1</span><span class="pc">,</span> <span class="c">0</span><span class="w">(</span><span class="c">$</span><span class="w">16)	</span><span class="c">		\</span><span class="w">n</span><span class="c">\</span>
+	<span class="w">b</span><span class="c">eq</span>	<span class="w">$</span><span class="pc">1</span><span class="w">,</span> <span class="w">4f</span>				<span class="pc">\</span><span class="c">n\</span>
+	<span class="w">mb</span>					<span class="c">\n</span><span class="pc">\</span>
+	<span class="w">clr</span>	<span class="w">$0</span>				<span class="c">\n</span><span class="pc">\</span>
+	<span class="w">r</span><span class="pc">et</span>					<span class="pc">\</span><span class="c">n</span><span class="pc">\</span>
+<span class="w">2</span><span class="pc">:</span>	<span class="w">br</span>	<span class="w">$29,</span> <span class="w">3f</span>				<span class="c">\n</span><span class="pc">\</span>
+<span class="w">3</span><span class="pc">:</span>	<span class="w">ldgp</span>	<span class="w">$29,</span> <span class="c">0</span><span class="w">($29)	</span><span class="c">		\</span><span class="pc">n</span><span class="c">\</span>
+	<span class="w">b</span><span class="pc">r</span>	<span class="w">$atomic_dec_and_lock_1..ng</span>	<span class="c">\n</span><span class="pc">\</span>
+	<span class="w">.subsection</span> <span class="w">2</span>				<span class="pc">\</span><span class="c">n</span><span class="w">\</span>
+<span class="w">4</span><span class="c">:</span>	<span class="w">br</span>	<span class="w">1b</span>				<span class="w">\n\</span>
+	<span class="w">.previous</span>				<span class="w">\</span><span class="c">n</span><span class="pc">\</span>
+	<span class="w">.e</span><span class="pc">n</span><span class="c">d</span> <span class="w">_atomic_dec_and_lock"</span><span class="pc">)</span><span class="c">;</span>
+
+<span class="w">s</span><span class="pc">tati</span><span class="c">c</span> <span class="c">int</span> <span class="w">__used</span> <span class="w">a</span><span class="c">tomic_dec_and_lock_1</span><span class="pc">(</span><span class="w">at</span><span class="pc">omic_t</span> <span class="pc">*</span><span class="w">atomic</span><span class="c">,</span> <span class="w">sp</span><span class="c">inlock_t</span> <span class="c">*</span><span class="w">l</span><span class="pc">o</span><span class="c">ck</span><span class="pc">)</span>
+<span class="c">{</span>
+	
+	<span class="w">sp</span><span class="pc">in_</span><span class="c">lock</span><span class="pc">(</span><span class="w">l</span><span class="c">ock);</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">atomic_dec_and_test</span><span class="pc">(</span><span class="w">a</span><span class="pc">t</span><span class="c">omic</span><span class="w">)</span><span class="pc">)</span>
+		<span class="c">return</span> <span class="w">1</span><span class="c">;</span>
+	<span class="w">sp</span><span class="pc">in_unlock(</span><span class="w">l</span><span class="c">ock);</span>
+	<span class="c">return</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+</pre>
+</body>
+</html>
+

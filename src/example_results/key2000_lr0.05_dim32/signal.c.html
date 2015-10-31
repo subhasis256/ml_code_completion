@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+<span class="w">#define</span> <span class="w">pr_fmt(fmt)</span> <span class="w">KBUILD_MODNAME</span> <span class="w">": "</span> <span class="w">fmt</span>
+
+<span class="w">#include</span> <span class="w">&lt;linux/sched.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/mm.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/smp.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux</span><span class="c">/kernel.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="pc">e</span><span class="c">rrno.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">w</span><span class="c">ait.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">tracehook</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">unistd</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">stddef</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">personality</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/uaccess.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">u</span><span class="pc">se</span><span class="c">r</span><span class="pc">-</span><span class="w">ret</span><span class="c">urn-</span><span class="w">notifier</span><span class="pc">.</span><span class="c">h&gt;</span>
+<span class="c">#</span><span class="pc">i</span><span class="c">nclude</span> <span class="pc">&lt;</span><span class="c">linux/</span><span class="w">uprobes</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">context_tracking</span><span class="c">.h&gt;</span>
+
+<span class="c">#include</span> <span class="c">&lt;</span><span class="pc">a</span><span class="c">sm/</span><span class="w">processor</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">ucontext</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">fpu</span><span class="pc">/</span><span class="w">in</span><span class="pc">tern</span><span class="c">al.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/fpu/</span><span class="w">sig</span><span class="pc">n</span><span class="c">al.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">vdso</span><span class="pc">.</span><span class="c">h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">mce</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">sighandling</span><span class="c">.h&gt;</span>
+
+<span class="c">#</span><span class="w">i</span><span class="pc">fd</span><span class="c">ef</span> <span class="w">CONFIG_X86_64</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">pr</span><span class="pc">oto</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">ia32_unistd</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">sys_ia32</span><span class="c">.h&gt;</span>
+<span class="c">#</span><span class="pc">e</span><span class="c">ndif</span> 
+
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">syscall</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">syscalls</span><span class="c">.h&gt;</span>
+
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">sigframe</span><span class="c">.h&gt;</span>
+
+<span class="c">#</span><span class="pc">d</span><span class="c">efine</span> <span class="w">COPY</span><span class="c">(</span><span class="w">x</span><span class="pc">)</span>			<span class="w">d</span><span class="c">o</span> <span class="w">{			\</span>
+	<span class="w">get_user_ex</span><span class="c">(</span><span class="w">reg</span><span class="pc">s-</span><span class="c">&gt;</span><span class="w">x,</span><span class="pc"> &amp;</span><span class="w">sc</span><span class="c">-&gt;</span><span class="w">x);			\</span>
+<span class="w">}</span> <span class="pc">w</span><span class="c">hile</span> <span class="c">(0)</span>
+
+<span class="c">#define</span> <span class="w">GET_SEG</span><span class="c">(</span><span class="w">seg)		({			\</span>
+	<span class="w">u</span><span class="c">nsigned</span> <span class="w">s</span><span class="c">hort</span> <span class="w">tm</span><span class="c">p</span><span class="w">;				\</span>
+	<span class="w">g</span><span class="c">et_user_ex</span><span class="pc">(</span><span class="w">tm</span><span class="pc">p</span><span class="w">,</span><span class="pc"> </span><span class="c">&amp;</span><span class="w">sc</span><span class="c">-&gt;</span><span class="w">se</span><span class="pc">g</span><span class="w">);</span><span class="pc">		</span><span class="c">	\</span>
+	<span class="w">t</span><span class="c">mp</span><span class="w">;						\</span>
+<span class="w">})</span>
+
+<span class="w">#</span><span class="pc">d</span><span class="c">efine</span> <span class="w">COPY_SEG</span><span class="c">(</span><span class="w">seg)</span>		<span class="c">do</span> <span class="w">{			\</span>
+	<span class="w">re</span><span class="pc">g</span><span class="c">s</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">se</span><span class="pc">g</span> <span class="pc">=</span> <span class="w">G</span><span class="c">ET_SEG(</span><span class="w">seg);</span><span class="pc">	</span><span class="c">		\</span>
+<span class="w">}</span> <span class="c">while</span> <span class="c">(0)</span>
+
+<span class="c">#define</span> <span class="w">COPY_SEG_CPL3</span><span class="c">(</span><span class="w">seg</span><span class="c">)</span>	<span class="c">do</span> <span class="w">{</span><span class="pc">	</span><span class="c">		\</span>
+	<span class="w">reg</span><span class="c">s</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">se</span><span class="pc">g</span> <span class="pc">=</span> <span class="w">G</span><span class="c">ET_SEG(</span><span class="w">seg) |</span> <span class="w">3;			\</span>
+<span class="w">}</span> <span class="pc">w</span><span class="c">hile</span> <span class="c">(0)</span>
+
+<span class="w">i</span><span class="c">nt</span> <span class="w">restore_sigcontext</span><span class="c">(struct</span> <span class="w">p</span><span class="pc">t</span><span class="c">_regs</span> <span class="c">*</span><span class="w">re</span><span class="pc">gs,</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">sigcontext</span> <span class="w">_</span><span class="c">_user</span> <span class="c">*</span><span class="w">sc</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">v</span><span class="c">oid</span> <span class="pc">__u</span><span class="c">ser</span> <span class="c">*</span><span class="pc">buf</span><span class="c">;</span>
+	<span class="w">u</span><span class="c">nsigned</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">tmpflags</span><span class="c">;</span>
+	<span class="c">unsigned</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">e</span><span class="pc">r</span><span class="c">r</span> <span class="pc">=</span> <span class="c">0;</span>
+
+	
+	<span class="w">cu</span><span class="pc">rre</span><span class="c">nt-&gt;</span><span class="w">restart_block.fn</span> <span class="c">=</span> <span class="w">do_no_restart_syscall</span><span class="c">;</span>
+
+	<span class="w">get_user_try</span> <span class="w">{</span>
+
+<span class="w">#</span><span class="c">ifdef</span> <span class="w">CONFIG_X86_32</span>
+		<span class="w">set_user_gs</span><span class="c">(</span><span class="w">r</span><span class="pc">eg</span><span class="c">s,</span> <span class="w">GET_SEG(gs</span><span class="pc">))</span><span class="c">;</span>
+		<span class="w">COPY_SEG</span><span class="c">(</span><span class="w">fs</span><span class="pc">)</span><span class="c">;</span>
+		<span class="w">C</span><span class="pc">OP</span><span class="c">Y_SEG(</span><span class="w">es</span><span class="c">);</span>
+		<span class="pc">C</span><span class="c">OPY_SEG(</span><span class="w">ds</span><span class="c">);</span>
+<span class="w">#</span><span class="pc">e</span><span class="c">ndif</span> 
+
+		<span class="w">COPY</span><span class="c">(</span><span class="w">di</span><span class="c">);</span> <span class="w">C</span><span class="pc">OPY</span><span class="c">(</span><span class="w">si</span><span class="pc">)</span><span class="c">;</span> <span class="pc">C</span><span class="c">OPY(</span><span class="w">b</span><span class="c">p);</span> <span class="pc">C</span><span class="c">OPY(</span><span class="w">sp</span><span class="c">);</span> <span class="pc">C</span><span class="c">OPY(</span><span class="w">bx</span><span class="c">);</span>
+		<span class="pc">C</span><span class="c">OPY(</span><span class="w">dx</span><span class="c">);</span> <span class="c">COPY(</span><span class="w">cx</span><span class="c">);</span> <span class="pc">C</span><span class="c">OPY(</span><span class="w">ip</span><span class="c">);</span> <span class="c">COPY(</span><span class="w">ax</span><span class="c">);</span>
+
+<span class="w">#</span><span class="c">ifdef</span> <span class="w">CONFIG_X86_64</span>
+		<span class="w">C</span><span class="c">OPY</span><span class="pc">(</span><span class="w">r8</span><span class="pc">)</span><span class="c">;</span>
+		<span class="w">C</span><span class="c">OPY(</span><span class="w">r9</span><span class="pc">)</span><span class="c">;</span>
+		<span class="pc">C</span><span class="c">OPY(</span><span class="w">r10</span><span class="c">);</span>
+		<span class="pc">C</span><span class="c">OPY(</span><span class="w">r11</span><span class="c">);</span>
+		<span class="pc">C</span><span class="c">OPY(</span><span class="w">r12</span><span class="c">);</span>
+		<span class="pc">C</span><span class="c">OPY(</span><span class="w">r13</span><span class="c">);</span>
+		<span class="pc">C</span><span class="c">OPY(</span><span class="w">r14</span><span class="c">);</span>
+		<span class="pc">C</span><span class="c">OPY(</span><span class="w">r15</span><span class="c">);</span>
+<span class="pc">#e</span><span class="c">ndif</span> 
+
+<span class="c">#ifdef</span> <span class="w">CONFIG_X86_32</span>
+		<span class="w">COPY_SEG_CPL3</span><span class="c">(</span><span class="w">c</span><span class="pc">s)</span><span class="c">;</span>
+		<span class="w">C</span><span class="pc">OPY_</span><span class="c">SEG_CPL3(</span><span class="w">ss</span><span class="c">);</span>
+<span class="pc">#el</span><span class="c">se</span> 
+		
+		<span class="w">C</span><span class="pc">OPY_</span><span class="c">SEG_CPL3(</span><span class="w">c</span><span class="c">s</span><span class="pc">)</span><span class="c">;</span>
+<span class="pc">#</span><span class="c">endif</span> 
+
+		<span class="w">get_user_ex</span><span class="c">(</span><span class="w">tmpflags,</span><span class="pc"> </span><span class="c">&amp;</span><span class="w">sc</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">f</span><span class="c">lags);</span>
+		<span class="w">reg</span><span class="pc">s-</span><span class="c">&gt;</span><span class="pc">f</span><span class="c">lags</span> <span class="w">=</span><span class="pc"> </span><span class="c">(</span><span class="w">re</span><span class="pc">g</span><span class="c">s-&gt;</span><span class="pc">f</span><span class="c">lags</span> <span class="w">&amp; </span><span class="pc">~</span><span class="w">FIX_EFLAGS) |</span><span class="pc"> </span><span class="c">(</span><span class="pc">t</span><span class="c">mpflags</span> <span class="w">&amp;</span> <span class="w">F</span><span class="c">IX_EFLAGS);</span>
+		<span class="w">reg</span><span class="pc">s</span><span class="c">-&gt;</span><span class="w">orig_ax</span> <span class="w">= </span><span class="pc">-</span><span class="c">1;</span>		
+
+		<span class="w">g</span><span class="pc">e</span><span class="c">t_user_ex</span><span class="pc">(</span><span class="w">bu</span><span class="pc">f, </span><span class="c">&amp;</span><span class="w">sc</span><span class="c">-&gt;</span><span class="w">fpstate</span><span class="c">);</span>
+	<span class="c">}</span> <span class="w">get_user_catch</span><span class="c">(</span><span class="w">er</span><span class="pc">r</span><span class="c">);</span>
+
+	<span class="w">e</span><span class="c">rr</span> <span class="pc">|</span><span class="c">=</span> <span class="w">fpu__restore_sig</span><span class="c">(</span><span class="w">b</span><span class="c">uf,</span> <span class="w">config_enabled</span><span class="pc">(</span><span class="w">CONFIG_X86_32</span><span class="pc">))</span><span class="c">;</span>
+
+	<span class="w">force_iret</span><span class="pc">()</span><span class="c">;</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">e</span><span class="c">rr;</span>
+<span class="c">}</span>
+
+<span class="pc">i</span><span class="c">nt</span> <span class="w">setup_sigcontext</span><span class="c">(struct</span> <span class="w">sigcontext</span> <span class="w">_</span><span class="c">_user</span> <span class="c">*</span><span class="w">sc</span><span class="c">,</span> <span class="pc">v</span><span class="c">oid</span> <span class="pc">_</span><span class="c">_user</span> <span class="c">*</span><span class="w">f</span><span class="pc">ps</span><span class="c">tate</span><span class="pc">,</span>
+		     <span class="pc">st</span><span class="c">ruct</span> <span class="w">p</span><span class="pc">t</span><span class="c">_regs</span> <span class="c">*</span><span class="w">re</span><span class="pc">g</span><span class="c">s,</span> <span class="pc">u</span><span class="c">nsigned</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">m</span><span class="c">ask</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">e</span><span class="c">rr</span> <span class="pc">=</span> <span class="c">0;</span>
+
+	<span class="w">put_user_try</span> <span class="w">{</span>
+
+<span class="w">#</span><span class="c">ifdef</span> <span class="w">CONFIG_X86_32</span>
+		<span class="w">put_user_ex</span><span class="pc">(</span><span class="w">get_user_gs</span><span class="pc">(</span><span class="w">r</span><span class="pc">egs</span><span class="w">),</span><span class="pc"> </span><span class="c">(unsigned</span> <span class="w">i</span><span class="c">nt</span> <span class="w">_</span><span class="pc">_u</span><span class="c">ser</span> <span class="w">*</span><span class="pc">)&amp;</span><span class="w">sc</span><span class="c">-&gt;</span><span class="w">gs</span><span class="pc">)</span><span class="c">;</span>
+		<span class="w">p</span><span class="c">ut_user_ex(</span><span class="w">reg</span><span class="pc">s</span><span class="c">-&gt;</span><span class="w">fs,</span><span class="pc"> (</span><span class="c">unsigned</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">_</span><span class="pc">_u</span><span class="c">ser</span> <span class="w">*)</span><span class="pc">&amp;</span><span class="w">sc</span><span class="c">-&gt;</span><span class="w">fs</span><span class="c">);</span>
+		<span class="pc">p</span><span class="c">ut_user_ex(</span><span class="w">r</span><span class="pc">e</span><span class="c">gs-&gt;</span><span class="w">es,</span><span class="pc"> (</span><span class="c">unsigned</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">_</span><span class="c">_user</span> <span class="w">*</span><span class="pc">)&amp;</span><span class="w">sc</span><span class="c">-&gt;</span><span class="w">es</span><span class="c">);</span>
+		<span class="pc">p</span><span class="c">ut_user_ex(</span><span class="w">r</span><span class="pc">egs</span><span class="c">-&gt;</span><span class="w">ds</span><span class="pc">, </span><span class="c">(unsigned</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">_</span><span class="c">_user</span> <span class="w">*</span><span class="pc">)&amp;</span><span class="w">sc</span><span class="c">-&gt;</span><span class="w">ds</span><span class="c">);</span>
+<span class="w">#</span><span class="c">endif</span> 
+
+		<span class="w">p</span><span class="pc">u</span><span class="c">t_user_ex(</span><span class="w">r</span><span class="c">egs-&gt;</span><span class="w">di</span><span class="pc">, </span><span class="c">&amp;</span><span class="w">sc</span><span class="c">-&gt;</span><span class="w">di</span><span class="c">);</span>
+		<span class="w">p</span><span class="pc">u</span><span class="c">t_user_ex(</span><span class="w">r</span><span class="pc">eg</span><span class="c">s-&gt;</span><span class="w">si</span><span class="pc">, </span><span class="c">&amp;</span><span class="w">s</span><span class="pc">c</span><span class="c">-&gt;</span><span class="w">si</span><span class="pc">)</span><span class="c">;</span>
+		<span class="w">p</span><span class="c">ut_user_ex(</span><span class="pc">r</span><span class="c">egs-&gt;</span><span class="w">b</span><span class="pc">p, </span><span class="c">&amp;</span><span class="w">s</span><span class="pc">c</span><span class="c">-&gt;</span><span class="w">b</span><span class="pc">p)</span><span class="c">;</span>
+		<span class="pc">p</span><span class="c">ut_user_ex(</span><span class="w">r</span><span class="c">egs-&gt;</span><span class="w">sp</span><span class="pc">, </span><span class="c">&amp;</span><span class="w">s</span><span class="pc">c</span><span class="c">-&gt;</span><span class="w">sp</span><span class="pc">)</span><span class="c">;</span>
+		<span class="pc">p</span><span class="c">ut_user_ex</span><span class="pc">(</span><span class="w">r</span><span class="pc">e</span><span class="c">gs-&gt;</span><span class="w">bx</span><span class="pc">, </span><span class="c">&amp;</span><span class="w">s</span><span class="pc">c</span><span class="c">-&gt;</span><span class="pc">b</span><span class="c">x);</span>
+		<span class="pc">p</span><span class="c">ut_user_ex(</span><span class="w">r</span><span class="pc">e</span><span class="c">gs-&gt;</span><span class="w">dx</span><span class="pc">, </span><span class="c">&amp;</span><span class="w">s</span><span class="c">c-&gt;</span><span class="pc">d</span><span class="c">x);</span>
+		<span class="c">put_user_ex(</span><span class="w">r</span><span class="pc">e</span><span class="c">gs-&gt;</span><span class="w">cx</span><span class="pc">, </span><span class="c">&amp;</span><span class="w">s</span><span class="pc">c</span><span class="c">-&gt;</span><span class="w">cx</span><span class="pc">)</span><span class="c">;</span>
+		<span class="c">put_user_ex(</span><span class="w">r</span><span class="pc">e</span><span class="c">gs-&gt;</span><span class="w">ax</span><span class="pc">, </span><span class="c">&amp;</span><span class="w">s</span><span class="pc">c</span><span class="c">-&gt;</span><span class="pc">a</span><span class="c">x);</span>
+<span class="w">#</span><span class="c">ifdef</span> <span class="w">CONFIG_X86_64</span>
+		<span class="w">p</span><span class="c">ut_user_ex</span><span class="pc">(</span><span class="w">r</span><span class="pc">eg</span><span class="c">s-&gt;</span><span class="w">r8,</span><span class="pc"> </span><span class="c">&amp;</span><span class="w">s</span><span class="pc">c</span><span class="c">-&gt;r8);</span>
+		<span class="w">p</span><span class="c">ut_user_ex</span><span class="pc">(</span><span class="w">re</span><span class="pc">g</span><span class="c">s-&gt;</span><span class="w">r9</span><span class="pc">, </span><span class="c">&amp;</span><span class="pc">s</span><span class="c">c-&gt;</span><span class="pc">r9</span><span class="c">);</span>
+		<span class="pc">p</span><span class="c">ut_user_ex</span><span class="pc">(</span><span class="w">r</span><span class="pc">e</span><span class="c">gs-&gt;</span><span class="w">r10</span><span class="pc">, </span><span class="c">&amp;</span><span class="w">s</span><span class="c">c-&gt;</span><span class="pc">r1</span><span class="c">0);</span>
+		<span class="w">p</span><span class="c">ut_user_ex</span><span class="pc">(</span><span class="w">r</span><span class="pc">e</span><span class="c">gs-&gt;</span><span class="w">r11</span><span class="pc">, </span><span class="c">&amp;</span><span class="w">s</span><span class="pc">c</span><span class="c">-&gt;</span><span class="pc">r1</span><span class="c">1);</span>
+		<span class="c">put_user_ex</span><span class="pc">(r</span><span class="c">egs-&gt;</span><span class="w">r12</span><span class="pc">, </span><span class="c">&amp;</span><span class="w">s</span><span class="c">c-&gt;</span><span class="pc">r1</span><span class="c">2);</span>
+		<span class="c">put_user_ex</span><span class="pc">(r</span><span class="c">egs-&gt;</span><span class="w">r13</span><span class="pc">, </span><span class="c">&amp;</span><span class="w">s</span><span class="c">c-&gt;</span><span class="pc">r1</span><span class="c">3);</span>
+		<span class="c">put_user_ex</span><span class="pc">(r</span><span class="c">egs-&gt;</span><span class="w">r14</span><span class="pc">, </span><span class="c">&amp;</span><span class="w">s</span><span class="c">c-&gt;</span><span class="pc">r1</span><span class="c">4);</span>
+		<span class="c">put_user_ex</span><span class="pc">(r</span><span class="c">egs-&gt;</span><span class="w">r15</span><span class="pc">, </span><span class="c">&amp;</span><span class="w">s</span><span class="c">c-&gt;</span><span class="pc">r1</span><span class="c">5);</span>
+<span class="w">#</span><span class="c">endif</span> 
+
+		<span class="w">p</span><span class="c">ut_user_ex(</span><span class="w">cu</span><span class="pc">rr</span><span class="c">ent-&gt;</span><span class="w">th</span><span class="c">read</span><span class="w">.trap_nr,</span><span class="pc"> </span><span class="c">&amp;</span><span class="w">s</span><span class="c">c-&gt;</span><span class="w">trapno</span><span class="c">);</span>
+		<span class="w">p</span><span class="c">ut_user_ex</span><span class="pc">(</span><span class="w">cu</span><span class="pc">rr</span><span class="c">ent-&gt;</span><span class="w">th</span><span class="c">read</span><span class="pc">.</span><span class="w">error_code,</span><span class="pc"> </span><span class="c">&amp;</span><span class="w">s</span><span class="c">c-&gt;</span><span class="w">er</span><span class="pc">r</span><span class="c">);</span>
+		<span class="pc">p</span><span class="c">ut_user_ex(</span><span class="w">reg</span><span class="pc">s</span><span class="c">-&gt;</span><span class="w">ip</span><span class="pc">, </span><span class="c">&amp;</span><span class="w">s</span><span class="pc">c</span><span class="c">-&gt;</span><span class="w">ip</span><span class="pc">)</span><span class="c">;</span>
+<span class="w">#</span><span class="c">ifdef</span> <span class="w">CONFIG_X86_32</span>
+		<span class="w">p</span><span class="c">ut_user_ex(</span><span class="w">re</span><span class="pc">gs</span><span class="c">-&gt;</span><span class="w">cs,</span><span class="pc"> (u</span><span class="c">nsigned</span> <span class="w">i</span><span class="c">nt</span> <span class="w">__u</span><span class="c">ser</span> <span class="w">*</span><span class="pc">)&amp;</span><span class="w">sc</span><span class="c">-&gt;</span><span class="w">cs</span><span class="pc">)</span><span class="c">;</span>
+		<span class="w">p</span><span class="c">ut_user_ex(</span><span class="w">re</span><span class="pc">g</span><span class="c">s-&gt;</span><span class="w">f</span><span class="c">lags</span><span class="w">,</span><span class="pc"> </span><span class="c">&amp;</span><span class="w">s</span><span class="pc">c</span><span class="c">-&gt;</span><span class="w">f</span><span class="c">lags);</span>
+		<span class="w">p</span><span class="c">ut_user_ex(</span><span class="w">r</span><span class="pc">e</span><span class="c">gs-&gt;</span><span class="w">sp,</span><span class="pc"> </span><span class="c">&amp;</span><span class="w">s</span><span class="c">c-&gt;</span><span class="w">sp_at_signal</span><span class="c">);</span>
+		<span class="w">p</span><span class="c">ut_user_ex(</span><span class="w">r</span><span class="c">egs-&gt;</span><span class="w">ss,</span><span class="pc"> (u</span><span class="c">nsigned</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">_</span><span class="pc">_u</span><span class="c">ser</span> <span class="w">*</span><span class="pc">)&amp;</span><span class="w">sc</span><span class="c">-&gt;</span><span class="w">ss</span><span class="pc">)</span><span class="c">;</span>
+<span class="w">#</span><span class="pc">el</span><span class="c">se</span> 
+		<span class="pc">p</span><span class="c">ut_user_ex(</span><span class="w">r</span><span class="pc">eg</span><span class="c">s-&gt;</span><span class="w">f</span><span class="c">lags</span><span class="w">,</span><span class="pc"> </span><span class="c">&amp;</span><span class="w">s</span><span class="pc">c</span><span class="c">-&gt;</span><span class="pc">f</span><span class="c">lags);</span>
+		<span class="w">p</span><span class="c">ut_user_ex(</span><span class="w">r</span><span class="pc">eg</span><span class="c">s-&gt;</span><span class="w">cs</span><span class="pc">, </span><span class="c">&amp;</span><span class="w">s</span><span class="pc">c</span><span class="c">-&gt;</span><span class="w">cs</span><span class="pc">)</span><span class="c">;</span>
+		<span class="w">p</span><span class="c">ut_user_ex(</span><span class="w">0</span><span class="pc">, &amp;</span><span class="w">s</span><span class="pc">c</span><span class="c">-&gt;</span><span class="w">gs</span><span class="c">);</span>
+		<span class="w">p</span><span class="c">ut_user_ex(</span><span class="w">0</span><span class="pc">, </span><span class="c">&amp;</span><span class="w">s</span><span class="pc">c</span><span class="c">-&gt;</span><span class="w">fs</span><span class="c">);</span>
+<span class="w">#</span><span class="c">endif</span> 
+
+		<span class="w">p</span><span class="c">ut_user_ex(</span><span class="w">fpstate</span><span class="pc">, </span><span class="c">&amp;</span><span class="w">s</span><span class="pc">c</span><span class="c">-&gt;fpstate);</span>
+
+		
+		<span class="pc">p</span><span class="c">ut_user_ex(</span><span class="w">m</span><span class="pc">as</span><span class="c">k</span><span class="pc">, </span><span class="c">&amp;</span><span class="pc">s</span><span class="c">c-&gt;</span><span class="w">oldmask</span><span class="c">);</span>
+		<span class="w">p</span><span class="c">ut_user_ex(</span><span class="w">cu</span><span class="c">rrent</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">th</span><span class="pc">r</span><span class="c">ead</span><span class="w">.cr2,</span><span class="pc"> </span><span class="c">&amp;</span><span class="w">sc</span><span class="c">-&gt;</span><span class="pc">c</span><span class="c">r2);</span>
+	<span class="c">}</span> <span class="w">put_user_catch</span><span class="c">(</span><span class="w">er</span><span class="c">r);</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">e</span><span class="c">rr;</span>
+<span class="c">}</span>
+
+
+
+
+<span class="c">static</span> <span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">align_sigframe</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">sp</span><span class="c">)</span>
+<span class="c">{</span>
+<span class="w">#</span><span class="c">ifdef</span> <span class="w">CONFIG_X86_32</span>
+	
+	<span class="w">sp</span> <span class="w">= </span><span class="pc">((</span><span class="w">sp</span> <span class="w">+</span> <span class="w">4) &amp; -16ul) -</span> <span class="w">4</span><span class="c">;</span>
+<span class="pc">#el</span><span class="c">se</span> 
+	<span class="w">sp</span> <span class="w">=</span> <span class="w">round_down</span><span class="c">(</span><span class="w">sp</span><span class="pc">,</span> <span class="w">1</span><span class="pc">6</span><span class="w">) -</span> <span class="pc">8</span><span class="c">;</span>
+<span class="pc">#</span><span class="c">endif</span>
+	<span class="w">r</span><span class="c">eturn</span> <span class="w">sp</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">inline</span> <span class="c">void</span> <span class="w">_</span><span class="pc">_u</span><span class="c">ser</span> <span class="c">*</span>
+<span class="w">get_sigframe</span><span class="c">(</span><span class="pc">s</span><span class="c">truct</span> <span class="w">k_sigaction</span> <span class="c">*</span><span class="w">ka</span><span class="pc">,</span> <span class="c">struct</span> <span class="w">p</span><span class="pc">t</span><span class="c">_regs</span> <span class="c">*</span><span class="w">r</span><span class="pc">e</span><span class="c">gs,</span> <span class="w">s</span><span class="pc">i</span><span class="c">ze_t</span> <span class="w">frame_size</span><span class="c">,</span>
+	     <span class="pc">v</span><span class="c">oid</span> <span class="pc">_</span><span class="c">_user</span> <span class="pc">**</span><span class="w">fpstate</span><span class="pc">)</span>
+<span class="c">{</span>
+	
+	<span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="c">long</span> <span class="w">math_size</span> <span class="pc">=</span> <span class="pc">0</span><span class="c">;</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">sp</span> <span class="pc">=</span> <span class="w">r</span><span class="pc">eg</span><span class="c">s</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">sp</span><span class="pc">;</span>
+	<span class="c">unsigned</span> <span class="c">long</span> <span class="w">buf_fx</span> <span class="pc">=</span> <span class="c">0;</span>
+	<span class="pc">in</span><span class="c">t</span> <span class="w">onsigstack</span> <span class="c">=</span> <span class="w">on_sig_stack</span><span class="pc">(</span><span class="w">sp</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">s</span><span class="pc">t</span><span class="c">ruct</span> <span class="w">fpu</span> <span class="c">*fpu</span> <span class="pc">= &amp;</span><span class="w">cu</span><span class="pc">rr</span><span class="c">ent-&gt;</span><span class="w">th</span><span class="pc">r</span><span class="c">ead</span><span class="w">.</span><span class="c">fpu;</span>
+
+	
+	<span class="c">if</span> <span class="c">(</span><span class="w">config_enabled</span><span class="c">(</span><span class="w">CONFIG_X86_64</span><span class="pc">))</span>
+		<span class="w">sp</span> <span class="w">-</span><span class="pc">=</span> <span class="w">12</span><span class="c">8;</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="pc">(!o</span><span class="c">nsigstack) {</span>
+		
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">ka-</span><span class="c">&gt;</span><span class="w">sa.sa_flags</span> <span class="w">&amp;</span> <span class="w">SA_ONSTACK</span><span class="pc">) {</span>
+			<span class="c">if</span> <span class="c">(</span><span class="w">cu</span><span class="pc">rre</span><span class="c">nt-&gt;</span><span class="w">sas_ss_size</span><span class="pc">)</span>
+				<span class="w">sp</span> <span class="pc">=</span> <span class="w">cu</span><span class="c">rrent-&gt;</span><span class="w">sas_ss_sp</span> <span class="w">+</span> <span class="w">cu</span><span class="pc">rr</span><span class="c">ent-&gt;</span><span class="pc">s</span><span class="c">as_ss_size;</span>
+		<span class="c">}</span> <span class="c">else</span> <span class="c">if</span> <span class="c">(</span><span class="w">config_enabled</span><span class="c">(</span><span class="w">CONFIG_X86_32</span><span class="pc">) </span><span class="c">&amp;&amp;</span>
+			   <span class="c">(</span><span class="w">reg</span><span class="pc">s</span><span class="c">-&gt;</span><span class="w">ss</span> <span class="pc">&amp;</span> <span class="w">0</span><span class="c">xffff</span><span class="w">) </span><span class="pc">!</span><span class="c">=</span> <span class="w">__USER_DS</span> <span class="w">&amp;</span><span class="c">&amp;</span>
+			   <span class="pc">!(</span><span class="w">ka</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">sa</span><span class="pc">.</span><span class="w">sa_flags</span> <span class="pc">&amp;</span> <span class="w">SA_RESTORER</span><span class="pc">) </span><span class="c">&amp;&amp;</span>
+			   <span class="pc">k</span><span class="c">a-&gt;</span><span class="w">sa</span><span class="c">.</span><span class="w">sa_restorer)</span><span class="c"> {</span>
+				
+				<span class="w">sp</span> <span class="w">=</span><span class="pc"> (</span><span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="c">long</span><span class="w">)</span> <span class="pc">k</span><span class="c">a</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">sa</span><span class="pc">.sa_r</span><span class="c">estorer</span><span class="pc">;</span>
+		<span class="pc">}</span>
+	<span class="w">}</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">fpu</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">fpstate_active</span><span class="c">) {</span>
+		<span class="w">sp</span> <span class="pc">=</span> <span class="w">fpu__alloc_mathframe</span><span class="pc">(</span><span class="w">sp</span><span class="pc">,</span> <span class="w">config_enabled(CONFIG_X86_32</span><span class="pc">),</span>
+					  <span class="w">&amp;buf_fx,</span><span class="pc"> </span><span class="c">&amp;</span><span class="w">math_size</span><span class="pc">)</span><span class="c">;</span>
+		<span class="w">*fpstate</span> <span class="pc">= </span><span class="c">(</span><span class="pc">v</span><span class="c">oid</span> <span class="w">_</span><span class="pc">_u</span><span class="c">ser</span> <span class="c">*)</span><span class="w">sp</span><span class="pc">;</span>
+	<span class="c">}</span>
+
+	<span class="w">sp</span> <span class="pc">=</span> <span class="w">align_sigframe</span><span class="c">(</span><span class="w">sp</span> <span class="w">-</span> <span class="w">frame_size</span><span class="pc">);</span>
+
+	
+	<span class="c">if</span> <span class="c">(</span><span class="w">onsigstack</span> <span class="w">&amp;</span><span class="pc">&amp; </span><span class="c">!</span><span class="w">lik</span><span class="c">ely(</span><span class="w">on_sig_stack</span><span class="pc">(</span><span class="w">sp))</span><span class="pc">)</span>
+		<span class="c">return</span> <span class="pc">(</span><span class="w">v</span><span class="pc">o</span><span class="c">id</span> <span class="w">_</span><span class="c">_user</span> <span class="w">*)-1L;</span>
+
+	
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">fpu-</span><span class="c">&gt;</span><span class="w">fpstate_active</span> <span class="w">&amp;</span><span class="c">&amp;</span>
+	    <span class="w">copy_fpstate_to_sigframe(*fpstate,</span><span class="pc"> </span><span class="c">(void</span> <span class="pc">_</span><span class="c">_user</span> <span class="pc">*)</span><span class="w">buf_fx</span><span class="c">,</span> <span class="w">math_size) &lt;</span> <span class="c">0)</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="w">(v</span><span class="c">oid</span> <span class="w">_</span><span class="pc">_u</span><span class="c">ser</span> <span class="w">*</span><span class="pc">)-</span><span class="w">1L;</span>
+
+	<span class="w">r</span><span class="c">eturn</span> <span class="w">(</span><span class="pc">v</span><span class="c">oid</span> <span class="pc">_</span><span class="c">_user</span> <span class="pc">*)</span><span class="w">sp</span><span class="pc">;</span>
+<span class="c">}</span>
+
+<span class="pc">#i</span><span class="c">fdef</span> <span class="w">CONFIG_X86_32</span>
+<span class="pc">sta</span><span class="c">tic</span> <span class="w">c</span><span class="c">onst</span> <span class="c">struct</span> <span class="w">{</span>
+	<span class="w">u1</span><span class="c">6</span> <span class="w">poplmovl</span><span class="pc">;</span>
+	<span class="w">u</span><span class="pc">3</span><span class="c">2</span> <span class="w">v</span><span class="pc">al</span><span class="c">;</span>
+	<span class="w">u</span><span class="pc">1</span><span class="c">6</span> <span class="w">int80</span><span class="c">;</span>
+<span class="w">}</span> <span class="w">_</span><span class="pc">_a</span><span class="c">ttribute__((packed</span><span class="w">)</span><span class="pc">)</span> <span class="w">retcode</span> <span class="w">= {</span>
+	<span class="w">0xb858,</span>		
+	<span class="w">__NR_sigreturn</span><span class="c">,</span>
+	<span class="w">0x80cd</span><span class="c">,</span>		
+<span class="w">}</span><span class="c">;</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="pc">c</span><span class="c">onst</span> <span class="c">struct</span> <span class="w">{</span>
+	<span class="w">u</span><span class="pc">8</span>  <span class="w">movl</span><span class="pc">;</span>
+	<span class="w">u</span><span class="pc">3</span><span class="c">2</span> <span class="w">v</span><span class="pc">al</span><span class="c">;</span>
+	<span class="pc">u</span><span class="c">16</span> <span class="pc">i</span><span class="c">nt80;</span>
+	<span class="w">u</span><span class="pc">8</span>  <span class="w">p</span><span class="pc">ad</span><span class="c">;</span>
+<span class="pc">}</span> <span class="w">_</span><span class="pc">_a</span><span class="c">ttribute__((packed</span><span class="w">)</span><span class="pc">)</span> <span class="w">rt_retcode</span> <span class="w">= {</span>
+	<span class="w">0xb8,</span>		
+	<span class="w">__NR_rt_sigreturn</span><span class="c">,</span>
+	<span class="w">0</span><span class="pc">x8</span><span class="c">0cd,</span>		
+	<span class="pc">0</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="pc">int</span>
+<span class="w">__setup_frame</span><span class="c">(</span><span class="pc">i</span><span class="c">nt</span> <span class="w">si</span><span class="pc">g</span><span class="c">,</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">ksignal</span> <span class="c">*</span><span class="w">ksig</span><span class="c">,</span> <span class="w">sigset_t</span> <span class="c">*</span><span class="w">se</span><span class="c">t</span><span class="pc">,</span>
+	      <span class="pc">s</span><span class="c">truct</span> <span class="w">p</span><span class="pc">t</span><span class="c">_regs</span> <span class="c">*</span><span class="w">r</span><span class="pc">e</span><span class="c">gs</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">sigframe</span> <span class="w">_</span><span class="pc">_u</span><span class="c">ser</span> <span class="c">*</span><span class="w">fr</span><span class="pc">a</span><span class="c">me</span><span class="pc">;</span>
+	<span class="w">v</span><span class="c">oid</span> <span class="pc">__u</span><span class="c">ser</span> <span class="c">*</span><span class="w">restorer</span><span class="c">;</span>
+	<span class="c">int</span> <span class="w">e</span><span class="c">rr</span> <span class="pc">=</span> <span class="c">0;</span>
+	<span class="w">v</span><span class="c">oid</span> <span class="pc">__u</span><span class="c">ser</span> <span class="c">*</span><span class="w">fpstate</span> <span class="pc">=</span> <span class="w">N</span><span class="c">ULL;</span>
+
+	<span class="w">fr</span><span class="pc">a</span><span class="c">me</span> <span class="pc">=</span> <span class="w">get_sigframe</span><span class="pc">(&amp;</span><span class="c">ksig-&gt;</span><span class="w">ka</span><span class="pc">,</span> <span class="w">reg</span><span class="pc">s</span><span class="c">,</span> <span class="w">s</span><span class="pc">izeo</span><span class="c">f</span><span class="pc">(*</span><span class="w">fr</span><span class="pc">a</span><span class="c">me</span><span class="pc">), </span><span class="c">&amp;</span><span class="pc">f</span><span class="c">pstate);</span>
+
+	<span class="c">if</span> <span class="pc">(!</span><span class="w">access_ok</span><span class="pc">(</span><span class="w">VERIFY_WRITE</span><span class="pc">,</span> <span class="w">fr</span><span class="pc">a</span><span class="c">me,</span> <span class="w">s</span><span class="pc">izeo</span><span class="c">f(*</span><span class="w">fr</span><span class="pc">a</span><span class="c">me)))</span>
+		<span class="c">return</span> <span class="c">-EFAULT;</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">__p</span><span class="c">ut_user(</span><span class="w">sig,</span><span class="pc"> </span><span class="c">&amp;</span><span class="w">fr</span><span class="pc">a</span><span class="c">me-&gt;</span><span class="w">sig</span><span class="pc">))</span>
+		<span class="c">return</span> <span class="c">-EFAULT;</span>
+
+	<span class="c">if</span> <span class="c">(</span><span class="w">setup_sigcontext</span><span class="pc">(&amp;</span><span class="w">fr</span><span class="c">ame-&gt;</span><span class="w">sc</span><span class="pc">,</span> <span class="w">f</span><span class="pc">p</span><span class="c">state</span><span class="pc">,</span> <span class="w">regs</span><span class="pc">,</span> <span class="w">se</span><span class="pc">t-</span><span class="c">&gt;</span><span class="w">sig[</span><span class="c">0</span><span class="w">]))</span>
+		<span class="w">r</span><span class="c">eturn</span> <span class="c">-</span><span class="w">EF</span><span class="c">AULT;</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">_NSIG_WORDS</span> <span class="w">&gt;</span> <span class="pc">1) </span><span class="c">{</span>
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">__copy_to_user</span><span class="pc">(&amp;</span><span class="w">fr</span><span class="pc">a</span><span class="c">me-&gt;</span><span class="w">extramask,</span><span class="pc"> </span><span class="c">&amp;</span><span class="w">se</span><span class="pc">t</span><span class="c">-&gt;</span><span class="w">sig[</span><span class="pc">1</span><span class="c">],</span>
+				   <span class="w">s</span><span class="pc">i</span><span class="c">zeof(</span><span class="w">f</span><span class="pc">ra</span><span class="c">me-&gt;</span><span class="w">e</span><span class="c">xtramask</span><span class="w">))</span><span class="pc">)</span>
+			<span class="c">return</span> <span class="c">-</span><span class="pc">EF</span><span class="c">AULT;</span>
+	<span class="c">}</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">cu</span><span class="pc">rre</span><span class="c">nt-&gt;</span><span class="w">mm</span><span class="c">-&gt;</span><span class="w">cont</span><span class="pc">e</span><span class="c">xt</span><span class="pc">.</span><span class="w">vdso</span><span class="pc">)</span>
+		<span class="w">restorer</span> <span class="pc">=</span> <span class="w">cu</span><span class="pc">rr</span><span class="c">ent-&gt;</span><span class="w">mm</span><span class="c">-&gt;</span><span class="w">c</span><span class="pc">ont</span><span class="c">ext</span><span class="pc">.</span><span class="c">vdso</span> <span class="w">+</span>
+			<span class="w">selected_vdso32</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">sym___kernel_sigreturn</span><span class="pc">;</span>
+	<span class="w">e</span><span class="pc">l</span><span class="c">se</span>
+		<span class="w">r</span><span class="pc">es</span><span class="c">torer</span> <span class="w">=</span><span class="pc"> </span><span class="c">&amp;</span><span class="w">f</span><span class="pc">r</span><span class="c">ame-&gt;</span><span class="w">retcode</span><span class="c">;</span>
+	<span class="c">if</span> <span class="c">(</span><span class="w">ksig</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">ka</span><span class="pc">.</span><span class="w">sa</span><span class="pc">.</span><span class="w">sa_flags</span> <span class="w">&amp;</span> <span class="w">SA_RESTORER</span><span class="c">)</span>
+		<span class="w">r</span><span class="pc">es</span><span class="c">torer</span> <span class="pc">=</span> <span class="pc">ks</span><span class="c">ig-&gt;ka.</span><span class="w">sa</span><span class="c">.</span><span class="w">sa_restorer</span><span class="pc">;</span>
+
+	
+	<span class="w">e</span><span class="pc">r</span><span class="c">r</span> <span class="pc">|</span><span class="c">=</span> <span class="w">_</span><span class="pc">_p</span><span class="c">ut_user(</span><span class="w">r</span><span class="c">estorer</span><span class="pc">,</span><span class="c"> &amp;</span><span class="w">fr</span><span class="pc">a</span><span class="c">me-&gt;</span><span class="w">pretcode</span><span class="pc">)</span><span class="c">;</span>
+
+	
+	<span class="pc">e</span><span class="c">rr</span> <span class="pc">|</span><span class="c">=</span> <span class="w">_</span><span class="c">_put_user</span><span class="w">(*((u6</span><span class="c">4</span> <span class="w">*</span><span class="pc">)&amp;r</span><span class="c">etcode</span><span class="w">),</span><span class="pc"> (</span><span class="w">u</span><span class="pc">6</span><span class="c">4</span> <span class="c">*)</span><span class="w">fra</span><span class="c">me-&gt;</span><span class="w">r</span><span class="pc">et</span><span class="c">code);</span>
+
+	<span class="c">if</span> <span class="c">(</span><span class="pc">e</span><span class="c">rr)</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="pc">-EF</span><span class="c">AULT;</span>
+
+	
+	<span class="w">regs</span><span class="c">-&gt;</span><span class="w">sp</span> <span class="w">=</span><span class="pc"> (u</span><span class="c">nsigned</span> <span class="c">long</span><span class="w">)fr</span><span class="pc">a</span><span class="c">me</span><span class="pc">;</span>
+	<span class="w">regs</span><span class="c">-&gt;</span><span class="w">ip</span> <span class="w">=</span><span class="pc"> </span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span><span class="pc">)</span><span class="w">ksig-</span><span class="c">&gt;</span><span class="w">ka.sa</span><span class="pc">.</span><span class="w">sa_handler</span><span class="pc">;</span>
+	<span class="w">reg</span><span class="pc">s</span><span class="c">-&gt;</span><span class="w">ax</span> <span class="w">=</span><span class="pc"> (u</span><span class="c">nsigned</span> <span class="c">long</span><span class="pc">)</span><span class="w">si</span><span class="pc">g;</span>
+	<span class="w">reg</span><span class="pc">s</span><span class="c">-&gt;</span><span class="w">dx</span> <span class="c">=</span> <span class="pc">0</span><span class="c">;</span>
+	<span class="w">r</span><span class="pc">eg</span><span class="c">s-&gt;</span><span class="w">cx</span> <span class="pc">=</span> <span class="pc">0</span><span class="c">;</span>
+
+	<span class="w">r</span><span class="pc">eg</span><span class="c">s-&gt;</span><span class="w">ds</span> <span class="c">=</span> <span class="w">__USER_DS</span><span class="c">;</span>
+	<span class="w">re</span><span class="pc">g</span><span class="c">s-&gt;</span><span class="w">es</span> <span class="c">=</span> <span class="w">_</span><span class="c">_USER_DS;</span>
+	<span class="w">r</span><span class="c">egs-&gt;</span><span class="w">ss</span> <span class="c">=</span> <span class="pc">_</span><span class="c">_USER_DS;</span>
+	<span class="c">regs-&gt;</span><span class="w">cs</span> <span class="pc">=</span> <span class="w">__USER_CS</span><span class="c">;</span>
+
+	<span class="w">r</span><span class="pc">et</span><span class="c">urn</span> <span class="pc">0</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">__setup_rt_frame</span><span class="c">(</span><span class="pc">i</span><span class="c">nt</span> <span class="w">si</span><span class="pc">g</span><span class="c">,</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">ksignal</span> <span class="c">*</span><span class="w">ksig</span><span class="pc">,</span>
+			    <span class="w">sigset_t</span> <span class="c">*</span><span class="w">se</span><span class="pc">t,</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">pt</span><span class="c">_regs</span> <span class="c">*</span><span class="pc">reg</span><span class="c">s)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">rt_sigframe</span> <span class="w">_</span><span class="pc">_u</span><span class="c">ser</span> <span class="c">*</span><span class="w">fr</span><span class="pc">a</span><span class="c">me;</span>
+	<span class="w">v</span><span class="c">oid</span> <span class="pc">__u</span><span class="c">ser</span> <span class="c">*</span><span class="w">restorer</span><span class="c">;</span>
+	<span class="c">int</span> <span class="w">e</span><span class="c">rr</span> <span class="pc">=</span> <span class="c">0;</span>
+	<span class="w">v</span><span class="c">oid</span> <span class="pc">__u</span><span class="c">ser</span> <span class="c">*</span><span class="w">fpstate</span> <span class="pc">=</span> <span class="w">N</span><span class="c">ULL;</span>
+
+	<span class="w">fr</span><span class="pc">a</span><span class="c">me</span> <span class="pc">=</span> <span class="w">get_sigframe</span><span class="pc">(&amp;</span><span class="c">ksig-&gt;</span><span class="w">ka</span><span class="pc">,</span> <span class="w">reg</span><span class="pc">s</span><span class="c">,</span> <span class="w">s</span><span class="pc">izeo</span><span class="c">f</span><span class="pc">(*</span><span class="w">fr</span><span class="pc">a</span><span class="c">me</span><span class="pc">), </span><span class="c">&amp;</span><span class="pc">f</span><span class="c">pstate);</span>
+
+	<span class="c">if</span> <span class="pc">(!</span><span class="w">access_ok</span><span class="pc">(</span><span class="w">VERIFY_WRITE</span><span class="pc">,</span> <span class="w">fr</span><span class="pc">a</span><span class="c">me,</span> <span class="w">s</span><span class="pc">izeo</span><span class="c">f(*</span><span class="w">fr</span><span class="pc">a</span><span class="c">me)))</span>
+		<span class="c">return</span> <span class="c">-EFAULT;</span>
+
+	<span class="w">put_user_try</span> <span class="w">{</span>
+		<span class="w">put_user_ex</span><span class="pc">(</span><span class="w">sig</span><span class="pc">, </span><span class="c">&amp;</span><span class="w">fr</span><span class="pc">a</span><span class="c">me</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">sig</span><span class="pc">)</span><span class="c">;</span>
+		<span class="w">p</span><span class="pc">ut_user_e</span><span class="c">x</span><span class="pc">(&amp;</span><span class="w">fr</span><span class="pc">a</span><span class="c">me-&gt;</span><span class="w">i</span><span class="c">nfo</span><span class="pc">, </span><span class="c">&amp;</span><span class="w">fr</span><span class="c">ame</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">pinfo</span><span class="c">);</span>
+		<span class="w">p</span><span class="pc">ut_user_e</span><span class="c">x(&amp;</span><span class="w">fr</span><span class="c">ame-&gt;</span><span class="w">uc</span><span class="pc">,</span><span class="c"> &amp;</span><span class="w">fr</span><span class="c">ame-&gt;</span><span class="w">puc</span><span class="c">);</span>
+
+		
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">cpu_has_xsave)</span>
+			<span class="w">p</span><span class="pc">ut_user_e</span><span class="c">x</span><span class="pc">(</span><span class="w">UC_FP_XSTATE</span><span class="pc">, </span><span class="c">&amp;</span><span class="w">f</span><span class="pc">r</span><span class="c">ame-&gt;</span><span class="w">u</span><span class="c">c</span><span class="w">.uc_flags</span><span class="c">);</span>
+		<span class="pc">e</span><span class="c">lse</span>
+			<span class="w">p</span><span class="pc">ut</span><span class="c">_user_ex</span><span class="pc">(</span><span class="w">0</span><span class="pc">,</span><span class="c"> &amp;</span><span class="w">fr</span><span class="pc">a</span><span class="c">me-&gt;</span><span class="w">u</span><span class="pc">c.</span><span class="w">u</span><span class="pc">c_</span><span class="c">flags);</span>
+		<span class="w">p</span><span class="pc">ut</span><span class="c">_user_ex</span><span class="pc">(</span><span class="w">0</span><span class="pc">, </span><span class="c">&amp;</span><span class="w">fr</span><span class="c">ame-&gt;</span><span class="pc">uc.</span><span class="w">uc_link</span><span class="c">);</span>
+		<span class="w">save_altstack_ex</span><span class="pc">(&amp;</span><span class="w">f</span><span class="pc">r</span><span class="c">ame-&gt;</span><span class="pc">u</span><span class="c">c.</span><span class="w">uc_stack</span><span class="pc">,</span> <span class="w">reg</span><span class="pc">s</span><span class="c">-&gt;</span><span class="w">sp</span><span class="pc">)</span><span class="c">;</span>
+
+		
+		<span class="w">restorer</span> <span class="w">=</span> <span class="w">cu</span><span class="pc">rr</span><span class="c">ent-&gt;</span><span class="w">mm</span><span class="c">-&gt;</span><span class="w">con</span><span class="pc">te</span><span class="c">xt</span><span class="pc">.</span><span class="w">vdso</span> <span class="w">+</span>
+			<span class="w">selected_vdso32</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">sym___kernel_rt_sigreturn</span><span class="pc">;</span>
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">ksig</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">ka</span><span class="pc">.</span><span class="w">sa</span><span class="pc">.</span><span class="w">sa_flags</span> <span class="w">&amp;</span> <span class="w">SA_RESTORER</span><span class="pc">)</span>
+			<span class="w">r</span><span class="pc">es</span><span class="c">torer</span> <span class="pc">=</span> <span class="pc">ks</span><span class="c">ig-&gt;ka.</span><span class="w">sa</span><span class="c">.</span><span class="w">sa_restorer</span><span class="pc">;</span>
+		<span class="w">put_user_ex</span><span class="pc">(r</span><span class="c">estorer</span><span class="w">,</span><span class="pc"> &amp;</span><span class="w">fr</span><span class="c">ame-&gt;</span><span class="w">pretcode</span><span class="c">);</span>
+
+		
+		<span class="w">p</span><span class="c">ut_user_ex</span><span class="w">(*((u6</span><span class="c">4</span> <span class="w">*</span><span class="pc">)</span><span class="c">&amp;</span><span class="w">rt_retcode),</span><span class="pc"> (</span><span class="w">u</span><span class="pc">6</span><span class="c">4</span> <span class="pc">*)</span><span class="w">fr</span><span class="pc">a</span><span class="c">me-&gt;</span><span class="w">retcode</span><span class="c">);</span>
+	<span class="pc">}</span> <span class="w">put_user_catch</span><span class="c">(</span><span class="w">er</span><span class="c">r);</span>
+	
+	<span class="w">e</span><span class="c">rr</span> <span class="w">|</span><span class="c">=</span> <span class="w">copy_siginfo_to_user</span><span class="pc">(&amp;</span><span class="w">fr</span><span class="pc">am</span><span class="c">e-&gt;</span><span class="w">in</span><span class="pc">f</span><span class="c">o</span><span class="pc">, </span><span class="c">&amp;</span><span class="w">ksig</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">i</span><span class="pc">nf</span><span class="c">o</span><span class="pc">)</span><span class="c">;</span>
+	<span class="pc">e</span><span class="c">rr</span> <span class="pc">|</span><span class="c">=</span> <span class="w">setup_sigcontext</span><span class="c">(&amp;</span><span class="w">fr</span><span class="pc">a</span><span class="c">me-&gt;</span><span class="w">uc</span><span class="pc">.</span><span class="w">uc_mcontext</span><span class="pc">,</span> <span class="w">fpstate</span><span class="c">,</span>
+				<span class="w">reg</span><span class="pc">s,</span> <span class="w">se</span><span class="pc">t-</span><span class="c">&gt;</span><span class="w">si</span><span class="pc">g</span><span class="w">[</span><span class="c">0</span><span class="pc">])</span><span class="c">;</span>
+	<span class="pc">e</span><span class="c">rr</span> <span class="pc">|</span><span class="c">=</span> <span class="w">__copy_to_user</span><span class="c">(&amp;</span><span class="w">fr</span><span class="pc">a</span><span class="c">me-&gt;uc</span><span class="pc">.</span><span class="w">uc_sigmask</span><span class="c">,</span> <span class="w">set</span><span class="c">,</span> <span class="w">s</span><span class="pc">i</span><span class="c">zeof</span><span class="pc">(*</span><span class="w">se</span><span class="pc">t))</span><span class="c">;</span>
+
+	<span class="c">if</span> <span class="c">(err</span><span class="pc">)</span>
+		<span class="c">return</span> <span class="pc">-</span><span class="w">E</span><span class="pc">F</span><span class="c">AULT;</span>
+
+	
+	<span class="w">regs</span><span class="c">-&gt;</span><span class="w">sp</span> <span class="w">=</span><span class="pc"> (u</span><span class="c">nsigned</span> <span class="c">long</span><span class="w">)fr</span><span class="pc">a</span><span class="c">me</span><span class="pc">;</span>
+	<span class="w">regs</span><span class="c">-&gt;</span><span class="w">ip</span> <span class="w">=</span><span class="pc"> (un</span><span class="c">signed</span> <span class="c">long</span><span class="pc">)</span><span class="w">ksig</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">ka.sa.sa_handler</span><span class="pc">;</span>
+	<span class="w">reg</span><span class="pc">s</span><span class="c">-&gt;</span><span class="w">ax</span> <span class="w">=</span><span class="pc"> (</span><span class="c">unsigned</span> <span class="c">long</span><span class="pc">)</span><span class="w">si</span><span class="pc">g;</span>
+	<span class="w">reg</span><span class="pc">s</span><span class="c">-&gt;</span><span class="w">dx</span> <span class="pc">= </span><span class="c">(unsigned</span> <span class="c">long</span><span class="pc">)&amp;</span><span class="w">f</span><span class="pc">r</span><span class="c">ame-&gt;</span><span class="w">in</span><span class="pc">f</span><span class="c">o</span><span class="w">;</span>
+	<span class="w">r</span><span class="pc">eg</span><span class="c">s-&gt;</span><span class="w">cx</span> <span class="pc">= </span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span><span class="w">)</span><span class="pc">&amp;</span><span class="w">fr</span><span class="pc">a</span><span class="c">me-&gt;</span><span class="w">uc;</span>
+
+	<span class="w">reg</span><span class="pc">s</span><span class="c">-&gt;</span><span class="w">ds</span> <span class="pc">=</span> <span class="w">__USER_DS</span><span class="c">;</span>
+	<span class="w">r</span><span class="pc">eg</span><span class="c">s-&gt;</span><span class="w">es</span> <span class="pc">=</span> <span class="w">_</span><span class="c">_USER_DS;</span>
+	<span class="pc">r</span><span class="c">egs-&gt;</span><span class="w">ss</span> <span class="c">=</span> <span class="pc">_</span><span class="c">_USER_DS;</span>
+	<span class="c">regs-&gt;</span><span class="w">cs</span> <span class="pc">=</span> <span class="w">__USER_CS</span><span class="c">;</span>
+
+	<span class="w">r</span><span class="pc">et</span><span class="c">urn</span> <span class="pc">0</span><span class="c">;</span>
+<span class="c">}</span>
+<span class="pc">#el</span><span class="c">se</span> 
+<span class="c">static</span> <span class="pc">int</span> <span class="w">__setup_rt_frame</span><span class="c">(</span><span class="pc">i</span><span class="c">nt</span> <span class="w">si</span><span class="pc">g,</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">ksignal</span> <span class="c">*</span><span class="w">ksig</span><span class="pc">,</span>
+			    <span class="w">sigset_t</span> <span class="c">*</span><span class="w">se</span><span class="pc">t,</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">pt</span><span class="c">_regs</span> <span class="c">*</span><span class="pc">r</span><span class="c">egs</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">rt_sigframe</span> <span class="w">_</span><span class="pc">_u</span><span class="c">ser</span> <span class="c">*</span><span class="w">fr</span><span class="pc">a</span><span class="c">me;</span>
+	<span class="w">v</span><span class="c">oid</span> <span class="pc">_</span><span class="c">_user</span> <span class="c">*</span><span class="w">fp</span> <span class="pc">=</span> <span class="w">N</span><span class="c">ULL;</span>
+	<span class="c">int</span> <span class="w">e</span><span class="c">rr</span> <span class="pc">=</span> <span class="c">0;</span>
+
+	<span class="w">fr</span><span class="pc">a</span><span class="c">me</span> <span class="pc">=</span> <span class="w">get_sigframe</span><span class="pc">(&amp;ksig</span><span class="c">-&gt;</span><span class="w">ka</span><span class="pc">,</span> <span class="w">regs</span><span class="pc">,</span> <span class="w">s</span><span class="pc">izeo</span><span class="c">f(struct</span> <span class="w">r</span><span class="c">t_sigframe</span><span class="w">),</span><span class="pc"> </span><span class="c">&amp;</span><span class="w">fp</span><span class="c">);</span>
+
+	<span class="c">if</span> <span class="pc">(!</span><span class="w">access_ok</span><span class="c">(</span><span class="w">VERIFY_WRITE</span><span class="c">,</span> <span class="w">fr</span><span class="pc">a</span><span class="c">me,</span> <span class="pc">s</span><span class="c">izeof(*</span><span class="w">fr</span><span class="pc">a</span><span class="c">me</span><span class="pc">)))</span>
+		<span class="c">return</span> <span class="c">-EFAULT;</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(ksig-&gt;</span><span class="pc">ka</span><span class="c">.</span><span class="w">sa.sa_flags</span> <span class="w">&amp;</span> <span class="w">SA_SIGINFO</span><span class="pc">) {</span>
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">copy_siginfo_to_user</span><span class="pc">(&amp;</span><span class="w">fr</span><span class="c">ame-&gt;</span><span class="w">in</span><span class="pc">f</span><span class="c">o</span><span class="pc">, </span><span class="c">&amp;ksig-&gt;</span><span class="w">i</span><span class="pc">n</span><span class="c">fo</span><span class="pc">))</span>
+			<span class="c">return</span> <span class="c">-EFAULT;</span>
+	<span class="c">}</span>
+
+	<span class="w">put_user_try</span> <span class="w">{</span>
+		
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">cpu_has_xsave)</span>
+			<span class="w">put_user_ex</span><span class="c">(</span><span class="w">UC_FP_XSTATE</span><span class="pc">, </span><span class="c">&amp;</span><span class="w">fr</span><span class="c">ame-&gt;</span><span class="w">uc</span><span class="pc">.</span><span class="w">uc_flags</span><span class="pc">);</span>
+		<span class="pc">e</span><span class="c">lse</span>
+			<span class="w">p</span><span class="pc">ut_user_e</span><span class="c">x(</span><span class="w">0</span><span class="pc">, </span><span class="c">&amp;</span><span class="w">fr</span><span class="pc">a</span><span class="c">me-&gt;</span><span class="w">u</span><span class="pc">c</span><span class="w">.u</span><span class="c">c_flags);</span>
+		<span class="w">p</span><span class="pc">ut_user_e</span><span class="c">x</span><span class="pc">(</span><span class="w">0</span><span class="pc">, &amp;</span><span class="w">fr</span><span class="c">ame-&gt;uc</span><span class="pc">.</span><span class="w">uc_link</span><span class="c">);</span>
+		<span class="w">save_altstack_ex</span><span class="pc">(&amp;</span><span class="w">f</span><span class="pc">r</span><span class="c">ame-&gt;</span><span class="pc">u</span><span class="c">c.</span><span class="w">uc_stack</span><span class="pc">,</span> <span class="w">reg</span><span class="pc">s</span><span class="c">-&gt;</span><span class="w">sp</span><span class="pc">)</span><span class="c">;</span>
+
+		
+		
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">ksig</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">ka</span><span class="pc">.</span><span class="w">sa</span><span class="c">.</span><span class="w">sa_flags</span> <span class="w">&amp;</span> <span class="w">SA_RESTORER</span><span class="c">) {</span>
+			<span class="w">p</span><span class="pc">u</span><span class="c">t_user_ex</span><span class="pc">(ks</span><span class="c">ig-&gt;ka.</span><span class="w">sa</span><span class="c">.</span><span class="w">sa_restorer,</span><span class="pc"> </span><span class="c">&amp;</span><span class="w">fr</span><span class="pc">a</span><span class="c">me-&gt;</span><span class="w">pretcode</span><span class="pc">)</span><span class="c">;</span>
+		<span class="c">}</span> <span class="pc">e</span><span class="c">lse</span> <span class="c">{</span>
+			
+			<span class="w">e</span><span class="c">rr</span> <span class="w">|= -E</span><span class="pc">F</span><span class="c">AULT</span><span class="pc">;</span>
+		<span class="c">}</span>
+	<span class="pc">}</span> <span class="w">put_user_catch</span><span class="c">(</span><span class="w">e</span><span class="pc">r</span><span class="c">r</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="w">e</span><span class="c">rr</span> <span class="w">|</span><span class="c">=</span> <span class="w">setup_sigcontext</span><span class="pc">(&amp;</span><span class="w">fr</span><span class="pc">a</span><span class="c">me-&gt;</span><span class="w">uc</span><span class="pc">.</span><span class="w">uc_mcontext</span><span class="c">,</span> <span class="w">f</span><span class="pc">p</span><span class="c">,</span> <span class="w">reg</span><span class="pc">s,</span> <span class="w">set</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">si</span><span class="pc">g</span><span class="w">[</span><span class="c">0</span><span class="pc">])</span><span class="c">;</span>
+	<span class="pc">e</span><span class="c">rr</span> <span class="pc">|</span><span class="c">=</span> <span class="w">__copy_to_user</span><span class="c">(&amp;</span><span class="w">fr</span><span class="pc">a</span><span class="c">me-&gt;uc</span><span class="pc">.</span><span class="w">uc_sigmask</span><span class="c">,</span> <span class="w">se</span><span class="pc">t</span><span class="c">,</span> <span class="w">s</span><span class="pc">i</span><span class="c">zeof</span><span class="pc">(*</span><span class="w">se</span><span class="pc">t))</span><span class="c">;</span>
+
+	<span class="c">if</span> <span class="c">(err</span><span class="pc">)</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="w">-E</span><span class="pc">F</span><span class="c">AULT;</span>
+
+	
+	<span class="w">regs</span><span class="c">-&gt;</span><span class="w">di</span> <span class="pc">=</span> <span class="w">sig</span><span class="pc">;</span>
+	
+	<span class="w">reg</span><span class="pc">s</span><span class="c">-&gt;</span><span class="w">ax</span> <span class="c">=</span> <span class="pc">0</span><span class="c">;</span>
+
+	
+	<span class="w">reg</span><span class="pc">s</span><span class="c">-&gt;</span><span class="w">si</span> <span class="w">=</span><span class="pc"> (u</span><span class="c">nsigned</span> <span class="c">long</span><span class="w">)</span><span class="pc">&amp;</span><span class="w">f</span><span class="c">rame-&gt;</span><span class="w">in</span><span class="pc">f</span><span class="c">o</span><span class="w">;</span>
+	<span class="w">reg</span><span class="c">s-&gt;</span><span class="w">dx</span> <span class="pc">= </span><span class="c">(unsigned</span> <span class="c">long</span><span class="pc">)</span><span class="c">&amp;</span><span class="w">f</span><span class="pc">ra</span><span class="c">me-&gt;</span><span class="w">uc</span><span class="pc">;</span>
+	<span class="w">reg</span><span class="pc">s</span><span class="c">-&gt;</span><span class="w">ip</span> <span class="pc">= </span><span class="c">(unsigned</span> <span class="c">long</span><span class="w">)</span> <span class="w">ksig</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">ka.sa.sa_handler</span><span class="pc">;</span>
+
+	<span class="w">re</span><span class="pc">g</span><span class="c">s-&gt;</span><span class="w">sp</span> <span class="pc">=</span><span class="c"> (</span><span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span><span class="w">)fr</span><span class="pc">a</span><span class="c">me</span><span class="pc">;</span>
+
+	
+	<span class="w">reg</span><span class="c">s-&gt;</span><span class="w">cs</span> <span class="pc">=</span> <span class="w">__USER_CS</span><span class="pc">;</span>
+
+	<span class="c">return</span> <span class="pc">0</span><span class="c">;</span>
+<span class="c">}</span>
+<span class="pc">#</span><span class="c">endif</span> 
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="c">int</span> <span class="w">x32_setup_rt_frame</span><span class="c">(struct</span> <span class="w">ksignal</span> <span class="c">*</span><span class="pc">k</span><span class="c">sig,</span>
+			      <span class="w">compat_sigset_t</span> <span class="c">*</span><span class="w">se</span><span class="c">t,</span>
+			      <span class="pc">s</span><span class="c">truct</span> <span class="w">p</span><span class="c">t_regs</span> <span class="c">*regs)</span>
+<span class="c">{</span>
+<span class="w">#</span><span class="c">ifdef</span> <span class="w">CONFIG_X86_X32_ABI</span>
+	<span class="c">struct</span> <span class="w">rt_sigframe_x32</span> <span class="w">_</span><span class="pc">_u</span><span class="c">ser</span> <span class="c">*</span><span class="w">fr</span><span class="c">ame;</span>
+	<span class="w">v</span><span class="c">oid</span> <span class="pc">__u</span><span class="c">ser</span> <span class="c">*</span><span class="w">restorer</span><span class="c">;</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">e</span><span class="c">rr</span> <span class="pc">=</span> <span class="c">0;</span>
+	<span class="w">v</span><span class="c">oid</span> <span class="pc">__u</span><span class="c">ser</span> <span class="c">*</span><span class="w">fpstate</span> <span class="pc">=</span> <span class="w">N</span><span class="c">ULL;</span>
+
+	<span class="w">fr</span><span class="pc">a</span><span class="c">me</span> <span class="pc">=</span> <span class="w">get_sigframe</span><span class="pc">(&amp;</span><span class="w">ksig</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">ka</span><span class="pc">,</span> <span class="w">reg</span><span class="pc">s,</span> <span class="w">s</span><span class="pc">izeo</span><span class="c">f</span><span class="pc">(*</span><span class="w">fr</span><span class="pc">a</span><span class="c">me</span><span class="w">),</span><span class="pc"> </span><span class="c">&amp;</span><span class="w">f</span><span class="pc">p</span><span class="c">state);</span>
+
+	<span class="c">if</span> <span class="pc">(!</span><span class="w">access_ok</span><span class="pc">(</span><span class="w">VERIFY_WRITE</span><span class="pc">,</span> <span class="w">fr</span><span class="pc">a</span><span class="c">me,</span> <span class="w">s</span><span class="pc">izeo</span><span class="c">f(*</span><span class="w">fr</span><span class="pc">a</span><span class="c">me)))</span>
+		<span class="c">return</span> <span class="c">-EFAULT;</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="pc">k</span><span class="c">sig-&gt;ka</span><span class="pc">.</span><span class="w">sa</span><span class="pc">.</span><span class="w">sa_flags</span> <span class="w">&amp;</span> <span class="w">SA_SIGINFO</span><span class="pc">) {</span>
+		<span class="c">if</span> <span class="c">(</span><span class="w">copy_siginfo_to_user32</span><span class="pc">(&amp;</span><span class="w">fr</span><span class="c">ame-&gt;</span><span class="w">i</span><span class="pc">nf</span><span class="c">o</span><span class="pc">, </span><span class="c">&amp;ksig-&gt;</span><span class="w">i</span><span class="pc">n</span><span class="c">fo</span><span class="pc">))</span>
+			<span class="c">return</span> <span class="c">-EFAULT;</span>
+	<span class="c">}</span>
+
+	<span class="w">put_user_try</span> <span class="w">{</span>
+		
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">cpu_has_xsave)</span>
+			<span class="w">put_user_ex</span><span class="c">(</span><span class="w">UC_FP_XSTATE</span><span class="pc">, </span><span class="c">&amp;</span><span class="w">fr</span><span class="c">ame-&gt;</span><span class="w">uc</span><span class="pc">.</span><span class="w">uc_flags</span><span class="pc">);</span>
+		<span class="pc">e</span><span class="c">lse</span>
+			<span class="w">p</span><span class="pc">ut_user_e</span><span class="c">x(</span><span class="w">0</span><span class="pc">, </span><span class="c">&amp;</span><span class="w">fr</span><span class="pc">a</span><span class="c">me-&gt;</span><span class="w">u</span><span class="pc">c</span><span class="w">.u</span><span class="c">c_flags);</span>
+		<span class="w">p</span><span class="pc">ut_user_e</span><span class="c">x</span><span class="pc">(</span><span class="w">0</span><span class="pc">, &amp;</span><span class="w">fr</span><span class="c">ame-&gt;uc</span><span class="pc">.</span><span class="w">uc_link</span><span class="c">);</span>
+		<span class="w">compat_save_altstack_ex</span><span class="pc">(&amp;</span><span class="w">f</span><span class="pc">r</span><span class="c">ame-&gt;</span><span class="pc">u</span><span class="c">c.</span><span class="w">uc_stack</span><span class="pc">,</span> <span class="w">reg</span><span class="pc">s</span><span class="c">-&gt;</span><span class="w">sp</span><span class="pc">)</span><span class="c">;</span>
+		<span class="w">p</span><span class="c">ut_user_ex</span><span class="pc">(</span><span class="w">0</span><span class="pc">, </span><span class="c">&amp;</span><span class="w">fr</span><span class="pc">a</span><span class="c">me-&gt;uc</span><span class="pc">.</span><span class="w">uc__pad0</span><span class="c">);</span>
+
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">ksig</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">ka</span><span class="c">.</span><span class="w">sa</span><span class="c">.</span><span class="w">sa_flags</span> <span class="w">&amp;</span> <span class="w">SA_RESTORER</span><span class="c">) {</span>
+			<span class="w">restorer</span> <span class="w">=</span> <span class="pc">ks</span><span class="c">ig-&gt;ka.</span><span class="w">sa</span><span class="c">.</span><span class="w">sa_restorer</span><span class="pc">;</span>
+		<span class="c">}</span> <span class="pc">e</span><span class="c">lse</span> <span class="c">{</span>
+			
+			<span class="pc">r</span><span class="c">estorer</span> <span class="c">=</span> <span class="w">N</span><span class="c">ULL;</span>
+			<span class="w">e</span><span class="pc">r</span><span class="c">r</span> <span class="w">|= -E</span><span class="pc">F</span><span class="c">AULT</span><span class="pc">;</span>
+		<span class="c">}</span>
+		<span class="w">put_user_ex</span><span class="pc">(</span><span class="w">r</span><span class="c">estorer</span><span class="pc">,</span><span class="c"> &amp;</span><span class="w">fr</span><span class="pc">a</span><span class="c">me-&gt;</span><span class="w">pretcode</span><span class="c">);</span>
+	<span class="c">}</span> <span class="w">put_user_catch</span><span class="c">(</span><span class="w">e</span><span class="pc">r</span><span class="c">r);</span>
+
+	<span class="w">e</span><span class="c">rr</span> <span class="w">|</span><span class="c">=</span> <span class="w">setup_sigcontext</span><span class="pc">(&amp;</span><span class="w">fra</span><span class="pc">m</span><span class="c">e-&gt;</span><span class="w">uc</span><span class="pc">.</span><span class="w">uc_mcontext</span><span class="pc">,</span> <span class="w">fpstate</span><span class="c">,</span>
+				<span class="w">reg</span><span class="pc">s,</span> <span class="w">set</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">si</span><span class="pc">g</span><span class="w">[</span><span class="c">0</span><span class="pc">])</span><span class="c">;</span>
+	<span class="pc">e</span><span class="c">rr</span> <span class="pc">|</span><span class="c">=</span> <span class="w">__copy_to_user</span><span class="c">(&amp;</span><span class="w">fra</span><span class="c">me-&gt;uc</span><span class="pc">.</span><span class="w">uc_sigmask</span><span class="c">,</span> <span class="w">se</span><span class="pc">t</span><span class="c">,</span> <span class="w">s</span><span class="pc">i</span><span class="c">zeof</span><span class="pc">(*</span><span class="w">se</span><span class="pc">t))</span><span class="c">;</span>
+
+	<span class="c">if</span> <span class="c">(err</span><span class="pc">)</span>
+		<span class="c">return</span> <span class="pc">-</span><span class="w">E</span><span class="pc">F</span><span class="c">AULT;</span>
+
+	
+	<span class="w">regs</span><span class="c">-&gt;</span><span class="w">sp</span> <span class="w">=</span><span class="pc"> (u</span><span class="c">nsigned</span> <span class="c">long</span><span class="w">)</span> <span class="w">fr</span><span class="pc">a</span><span class="c">me</span><span class="pc">;</span>
+	<span class="w">regs</span><span class="c">-&gt;</span><span class="w">ip</span> <span class="w">=</span><span class="pc"> (un</span><span class="c">signed</span> <span class="c">long</span><span class="pc">)</span> <span class="w">ksig</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">ka.sa.sa_handler</span><span class="pc">;</span>
+
+	
+	<span class="w">reg</span><span class="pc">s</span><span class="c">-&gt;</span><span class="w">di</span> <span class="pc">=</span> <span class="pc">ks</span><span class="c">ig-&gt;</span><span class="w">sig</span><span class="c">;</span>
+	<span class="w">r</span><span class="pc">eg</span><span class="c">s-&gt;</span><span class="w">si</span> <span class="w">=</span><span class="pc"> </span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span><span class="w">) &amp;f</span><span class="pc">ra</span><span class="c">me-&gt;</span><span class="w">inf</span><span class="c">o</span><span class="pc">;</span>
+	<span class="w">re</span><span class="pc">g</span><span class="c">s-&gt;</span><span class="w">dx</span> <span class="pc">= </span><span class="c">(unsigned</span> <span class="c">long</span><span class="w">) &amp;f</span><span class="pc">ra</span><span class="c">me-&gt;</span><span class="w">uc</span><span class="pc">;</span>
+
+	<span class="w">loadsegment</span><span class="c">(</span><span class="w">ds</span><span class="pc">,</span> <span class="w">__USER_DS</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">l</span><span class="c">oadsegment</span><span class="pc">(</span><span class="w">es</span><span class="pc">,</span> <span class="pc">_</span><span class="c">_USER_DS);</span>
+
+	<span class="w">r</span><span class="pc">eg</span><span class="c">s-&gt;</span><span class="w">cs</span> <span class="pc">=</span> <span class="w">__USER_CS</span><span class="pc">;</span>
+	<span class="w">r</span><span class="pc">eg</span><span class="c">s-&gt;</span><span class="w">ss</span> <span class="pc">=</span> <span class="pc">_</span><span class="c">_USER_DS;</span>
+<span class="w">#</span><span class="c">endif</span>	
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+
+<span class="pc">#i</span><span class="c">fdef</span> <span class="w">CONFIG_X86_32</span>
+<span class="w">asm</span><span class="pc">l</span><span class="c">inkage</span> <span class="w">u</span><span class="pc">ns</span><span class="c">igned</span> <span class="c">long</span> <span class="w">sys_sigreturn</span><span class="pc">(v</span><span class="c">oid)</span>
+<span class="c">{</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">p</span><span class="pc">t</span><span class="c">_regs</span> <span class="c">*regs</span> <span class="pc">=</span> <span class="w">current_pt_regs(</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">s</span><span class="c">truct</span> <span class="w">sigframe</span> <span class="pc">_</span><span class="c">_user</span> <span class="c">*</span><span class="w">fr</span><span class="pc">a</span><span class="c">me;</span>
+	<span class="w">sigset_t</span> <span class="w">se</span><span class="pc">t</span><span class="c">;</span>
+
+	<span class="w">fr</span><span class="c">ame</span> <span class="pc">= </span><span class="c">(</span><span class="pc">s</span><span class="c">truct</span> <span class="w">s</span><span class="pc">igf</span><span class="c">rame</span> <span class="pc">_</span><span class="c">_user</span> <span class="pc">*)(</span><span class="w">r</span><span class="c">egs-&gt;</span><span class="w">sp</span> <span class="w">-</span> <span class="w">8</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="pc">(!</span><span class="w">access_ok</span><span class="c">(</span><span class="w">VERIFY_READ</span><span class="c">,</span> <span class="w">fr</span><span class="c">ame</span><span class="pc">,</span> <span class="pc">s</span><span class="c">izeof(*</span><span class="w">fr</span><span class="pc">a</span><span class="c">me)))</span>
+		<span class="pc">g</span><span class="c">oto</span> <span class="w">badframe</span><span class="c">;</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">__get_user</span><span class="c">(</span><span class="w">set.sig[</span><span class="c">0</span><span class="pc">],</span><span class="c"> &amp;</span><span class="w">fr</span><span class="pc">a</span><span class="c">me-&gt;</span><span class="w">sc</span><span class="pc">.</span><span class="w">oldmask) |</span><span class="pc">| </span><span class="c">(</span><span class="w">_NSIG_WORDS</span> <span class="w">&gt;</span> <span class="pc">1</span>
+		<span class="w">&amp;</span><span class="c">&amp;</span> <span class="w">__copy_from_user</span><span class="pc">(&amp;</span><span class="w">se</span><span class="pc">t.</span><span class="w">sig[</span><span class="pc">1</span><span class="w">],</span><span class="pc"> </span><span class="c">&amp;</span><span class="w">f</span><span class="c">rame-&gt;</span><span class="w">extramask</span><span class="pc">,</span>
+				    <span class="pc">s</span><span class="c">izeof(</span><span class="w">fr</span><span class="c">ame-&gt;extramask</span><span class="w">))))</span>
+		<span class="w">g</span><span class="pc">o</span><span class="c">to</span> <span class="w">badframe</span><span class="c">;</span>
+
+	<span class="w">set_current_blocked</span><span class="pc">(&amp;</span><span class="w">set</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="pc">(</span><span class="w">restore_sigcontext</span><span class="pc">(</span><span class="w">reg</span><span class="pc">s, </span><span class="c">&amp;</span><span class="w">fr</span><span class="pc">a</span><span class="c">me-&gt;</span><span class="w">sc</span><span class="pc">))</span>
+		<span class="pc">g</span><span class="c">oto</span> <span class="w">b</span><span class="c">adframe;</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">reg</span><span class="pc">s</span><span class="c">-&gt;</span><span class="w">ax</span><span class="c">;</span>
+
+<span class="w">b</span><span class="c">adframe</span><span class="pc">:</span>
+	<span class="w">signal_fault</span><span class="c">(</span><span class="w">r</span><span class="pc">eg</span><span class="c">s</span><span class="pc">,</span> <span class="w">fr</span><span class="pc">a</span><span class="c">me</span><span class="w">,</span><span class="pc"> "</span><span class="w">sigreturn</span><span class="c">");</span>
+
+	<span class="c">return</span> <span class="pc">0</span><span class="c">;</span>
+<span class="c">}</span>
+<span class="pc">#e</span><span class="c">ndif</span> 
+
+<span class="w">asm</span><span class="pc">l</span><span class="c">inkage</span> <span class="w">l</span><span class="c">ong</span> <span class="w">sys_rt_sigreturn</span><span class="c">(</span><span class="pc">v</span><span class="c">oid</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">p</span><span class="pc">t</span><span class="c">_regs</span> <span class="c">*regs</span> <span class="pc">=</span> <span class="w">current_pt_regs(</span><span class="pc">)</span><span class="c">;</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">rt_sigframe</span> <span class="w">_</span><span class="c">_user</span> <span class="c">*</span><span class="w">fr</span><span class="pc">a</span><span class="c">me;</span>
+	<span class="w">sigset_t</span> <span class="w">se</span><span class="pc">t</span><span class="c">;</span>
+
+	<span class="w">fr</span><span class="c">ame</span> <span class="pc">= (s</span><span class="c">truct</span> <span class="w">r</span><span class="pc">t</span><span class="c">_sigframe</span> <span class="w">_</span><span class="c">_user</span> <span class="w">*</span><span class="pc">)(</span><span class="w">r</span><span class="pc">egs</span><span class="c">-&gt;</span><span class="w">sp</span> <span class="w">-</span> <span class="pc">siz</span><span class="c">eof</span><span class="pc">(</span><span class="w">l</span><span class="pc">o</span><span class="c">ng));</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="pc">(!</span><span class="w">access_ok</span><span class="pc">(</span><span class="w">VERIFY_READ</span><span class="pc">,</span> <span class="w">fr</span><span class="pc">am</span><span class="c">e</span><span class="pc">,</span> <span class="c">sizeof(*</span><span class="w">fr</span><span class="pc">a</span><span class="c">me)))</span>
+		<span class="w">g</span><span class="c">oto</span> <span class="w">badframe</span><span class="c">;</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">__copy_from_user</span><span class="pc">(&amp;</span><span class="w">se</span><span class="pc">t</span><span class="w">,</span><span class="pc"> </span><span class="c">&amp;</span><span class="w">fr</span><span class="pc">a</span><span class="c">me-&gt;</span><span class="w">uc.uc_sigmask</span><span class="c">,</span> <span class="c">sizeof(</span><span class="w">set))</span><span class="pc">)</span>
+		<span class="pc">g</span><span class="c">oto</span> <span class="w">b</span><span class="c">adframe;</span>
+
+	<span class="w">set_current_blocked</span><span class="pc">(&amp;</span><span class="w">se</span><span class="pc">t)</span><span class="c">;</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">restore_sigcontext</span><span class="c">(</span><span class="w">reg</span><span class="pc">s, </span><span class="c">&amp;</span><span class="w">fr</span><span class="pc">a</span><span class="c">me-&gt;</span><span class="pc">u</span><span class="c">c</span><span class="w">.uc_mcontext</span><span class="pc">))</span>
+		<span class="pc">g</span><span class="c">oto</span> <span class="pc">b</span><span class="c">adframe;</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">restore_altstack</span><span class="pc">(&amp;</span><span class="w">fr</span><span class="pc">a</span><span class="c">me-&gt;</span><span class="w">u</span><span class="pc">c</span><span class="c">.</span><span class="w">uc_stack</span><span class="c">))</span>
+		<span class="pc">g</span><span class="c">oto</span> <span class="w">b</span><span class="c">adframe;</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">reg</span><span class="pc">s</span><span class="c">-&gt;</span><span class="w">ax</span><span class="c">;</span>
+
+<span class="w">b</span><span class="c">adframe</span><span class="pc">:</span>
+	<span class="w">signal_fault</span><span class="c">(</span><span class="w">re</span><span class="pc">g</span><span class="c">s</span><span class="pc">,</span> <span class="w">fr</span><span class="pc">a</span><span class="c">me</span><span class="w">,</span><span class="pc"> "</span><span class="w">rt_sigreturn</span><span class="pc">"</span><span class="c">);</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">inl</span><span class="c">ine</span> <span class="c">int</span> <span class="w">is_ia32_compat_frame</span><span class="c">(</span><span class="pc">v</span><span class="c">oid)</span>
+<span class="c">{</span>
+	<span class="c">return</span> <span class="w">config_enabled</span><span class="pc">(</span><span class="w">CONFIG_IA32_EMULATION) &amp;</span><span class="pc">&amp;</span>
+	       <span class="w">test_thread_flag</span><span class="c">(</span><span class="w">TIF_IA32</span><span class="pc">);</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">inline</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">is_ia32_frame</span><span class="c">(</span><span class="pc">v</span><span class="c">oid)</span>
+<span class="c">{</span>
+	<span class="c">return</span> <span class="w">c</span><span class="c">onfig_enabled(</span><span class="w">CONFIG_X86_32) |</span><span class="pc">|</span> <span class="w">i</span><span class="pc">s_ia32_c</span><span class="c">ompat_frame</span><span class="w">(</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">inline</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">is_x32_frame</span><span class="c">(</span><span class="pc">v</span><span class="c">oid)</span>
+<span class="c">{</span>
+	<span class="c">return</span> <span class="w">c</span><span class="c">onfig_enabled(</span><span class="w">CONFIG_X86_X32_ABI) &amp;</span><span class="pc">&amp;</span> <span class="w">t</span><span class="c">est_thread_flag(</span><span class="w">TIF_X32</span><span class="pc">);</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">int</span>
+<span class="w">setup_rt_frame</span><span class="c">(struct</span> <span class="w">ksignal</span> <span class="c">*</span><span class="w">ksig</span><span class="pc">,</span> <span class="c">struct</span> <span class="w">p</span><span class="pc">t</span><span class="c">_regs</span> <span class="c">*</span><span class="w">r</span><span class="c">egs</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">usig</span> <span class="pc">=</span> <span class="pc">ksig-</span><span class="c">&gt;</span><span class="w">sig</span><span class="c">;</span>
+	<span class="w">sigset_t</span> <span class="w">*se</span><span class="pc">t</span> <span class="c">=</span> <span class="w">sigmask_to_save</span><span class="pc">()</span><span class="c">;</span>
+	<span class="w">compat_sigset_t</span> <span class="w">*cset</span> <span class="pc">= </span><span class="c">(</span><span class="w">c</span><span class="pc">om</span><span class="c">pat_sigset_t</span> <span class="w">*</span><span class="pc">)</span> <span class="w">set</span><span class="pc">;</span>
+
+	
+	<span class="c">if</span> <span class="c">(</span><span class="w">is_ia32_frame(</span><span class="pc">)</span><span class="c">) {</span>
+		<span class="c">if</span> <span class="c">(</span><span class="w">k</span><span class="pc">sig</span><span class="c">-&gt;</span><span class="w">ka.sa.sa_flags</span> <span class="w">&amp;</span> <span class="w">SA_SIGINFO)</span>
+			<span class="c">return</span> <span class="w">ia32_setup_rt_frame</span><span class="c">(</span><span class="pc">u</span><span class="c">sig,</span> <span class="pc">k</span><span class="c">sig,</span> <span class="pc">c</span><span class="c">set</span><span class="pc">,</span> <span class="w">reg</span><span class="pc">s)</span><span class="c">;</span>
+		<span class="w">e</span><span class="c">lse</span>
+			<span class="pc">r</span><span class="c">eturn</span> <span class="w">ia32_setup_frame</span><span class="c">(</span><span class="w">u</span><span class="c">sig,</span> <span class="c">ksig,</span> <span class="w">c</span><span class="pc">s</span><span class="c">et,</span> <span class="w">r</span><span class="pc">egs)</span><span class="c">;</span>
+	<span class="c">}</span> <span class="w">e</span><span class="c">lse</span> <span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">is_x32_frame()</span><span class="c">) {</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="w">x32_setup_rt_frame</span><span class="c">(</span><span class="pc">ks</span><span class="c">ig,</span> <span class="c">cset,</span> <span class="w">r</span><span class="pc">egs)</span><span class="c">;</span>
+	<span class="c">}</span> <span class="pc">e</span><span class="c">lse</span> <span class="c">{</span>
+		<span class="w">r</span><span class="c">eturn</span> <span class="w">__setup_rt_frame</span><span class="pc">(k</span><span class="c">sig</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">si</span><span class="pc">g</span><span class="c">,</span> <span class="pc">k</span><span class="c">sig,</span> <span class="w">se</span><span class="c">t,</span> <span class="w">reg</span><span class="pc">s)</span><span class="c">;</span>
+	<span class="c">}</span>
+<span class="pc">}</span>
+
+<span class="c">static</span> <span class="c">void</span>
+<span class="w">handle_signal</span><span class="c">(struct</span> <span class="w">ksignal</span> <span class="c">*</span><span class="pc">k</span><span class="c">sig,</span> <span class="c">struct</span> <span class="w">p</span><span class="c">t_regs</span> <span class="c">*</span><span class="pc">r</span><span class="c">egs</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">b</span><span class="pc">o</span><span class="c">ol</span> <span class="w">stepping</span><span class="pc">,</span> <span class="w">fa</span><span class="pc">i</span><span class="c">led</span><span class="pc">;</span>
+	<span class="w">s</span><span class="pc">tr</span><span class="c">uct</span> <span class="w">fpu</span> <span class="c">*</span><span class="pc">f</span><span class="c">pu</span> <span class="pc">= </span><span class="c">&amp;</span><span class="w">cu</span><span class="pc">rre</span><span class="c">nt-&gt;</span><span class="w">th</span><span class="pc">r</span><span class="c">ead</span><span class="w">.</span><span class="c">fpu;</span>
+
+	
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">syscall_get_nr</span><span class="c">(</span><span class="w">cu</span><span class="pc">rr</span><span class="c">ent</span><span class="pc">,</span> <span class="w">reg</span><span class="pc">s</span><span class="w">) &gt;</span><span class="c">=</span> <span class="pc">0) </span><span class="c">{</span>
+		
+		<span class="w">s</span><span class="pc">w</span><span class="c">itch</span> <span class="c">(</span><span class="w">syscall_get_error</span><span class="pc">(</span><span class="w">cu</span><span class="c">rrent</span><span class="pc">,</span> <span class="w">reg</span><span class="pc">s)) </span><span class="c">{</span>
+		<span class="c">case</span> <span class="w">-ERESTART_RESTARTBLOCK</span><span class="pc">:</span>
+		<span class="w">c</span><span class="c">ase</span> <span class="c">-</span><span class="w">ERESTARTNOHAND</span><span class="c">:</span>
+			<span class="w">reg</span><span class="pc">s</span><span class="c">-&gt;</span><span class="w">ax</span> <span class="w">=</span><span class="pc"> -</span><span class="w">EINTR</span><span class="c">;</span>
+			<span class="pc">b</span><span class="c">reak;</span>
+
+		<span class="c">case</span> <span class="w">-ERESTARTSYS</span><span class="c">:</span>
+			<span class="w">i</span><span class="c">f</span> <span class="pc">(!(</span><span class="w">ksig</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">ka.sa.sa_flags</span> <span class="w">&amp;</span> <span class="w">SA_RESTART))</span><span class="pc"> </span><span class="c">{</span>
+				<span class="w">reg</span><span class="pc">s</span><span class="c">-&gt;</span><span class="pc">a</span><span class="c">x</span> <span class="w">= </span><span class="pc">-</span><span class="w">E</span><span class="pc">INT</span><span class="c">R;</span>
+				<span class="pc">b</span><span class="c">reak;</span>
+			<span class="c">}</span>
+		
+		<span class="w">c</span><span class="pc">a</span><span class="c">se</span> <span class="w">-ERESTARTNOINTR</span><span class="c">:</span>
+			<span class="w">reg</span><span class="pc">s</span><span class="c">-&gt;</span><span class="w">a</span><span class="c">x</span> <span class="pc">=</span> <span class="w">reg</span><span class="pc">s</span><span class="c">-&gt;</span><span class="w">orig_ax</span><span class="c">;</span>
+			<span class="w">re</span><span class="pc">gs</span><span class="c">-&gt;</span><span class="w">ip</span> <span class="w">-</span><span class="pc">=</span> <span class="w">2</span><span class="c">;</span>
+			<span class="w">b</span><span class="c">reak;</span>
+		<span class="c">}</span>
+	<span class="pc">}</span>
+
+	
+	<span class="w">stepping</span> <span class="pc">=</span> <span class="w">test_thread_flag</span><span class="c">(</span><span class="w">TIF_SINGLESTEP</span><span class="pc">)</span><span class="c">;</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(stepping</span><span class="pc">)</span>
+		<span class="w">user_disable_single_step</span><span class="c">(</span><span class="w">c</span><span class="pc">u</span><span class="c">rrent</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="w">fa</span><span class="pc">ile</span><span class="c">d</span> <span class="w">=</span><span class="pc"> </span><span class="c">(</span><span class="w">setup_rt_frame</span><span class="c">(</span><span class="w">ksig</span><span class="pc">,</span> <span class="w">re</span><span class="pc">gs</span><span class="w">) </span><span class="pc">&lt;</span> <span class="c">0</span><span class="pc">);</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="pc">(!</span><span class="w">fa</span><span class="pc">ile</span><span class="c">d</span><span class="pc">) </span><span class="c">{</span>
+		
+		<span class="w">reg</span><span class="pc">s</span><span class="c">-&gt;flags</span> <span class="w">&amp;=</span><span class="pc"> ~(</span><span class="w">X86_EFLAGS_DF</span><span class="c">|</span><span class="w">X86_EFLAGS_RF</span><span class="c">|</span><span class="w">X86_EFLAGS_TF</span><span class="c">);</span>
+		
+		<span class="c">if</span> <span class="c">(</span><span class="w">fpu</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">fpstate_active</span><span class="pc">)</span>
+			<span class="w">fpu__clear</span><span class="c">(fpu</span><span class="pc">)</span><span class="c">;</span>
+	<span class="pc">}</span>
+	<span class="w">signal_setup_done</span><span class="c">(</span><span class="w">fa</span><span class="pc">i</span><span class="c">led</span><span class="pc">,</span> <span class="c">ksig</span><span class="pc">,</span> <span class="w">stepping</span><span class="c">);</span>
+<span class="c">}</span>
+
+<span class="pc">#i</span><span class="c">fdef</span> <span class="w">CONFIG_X86_32</span>
+<span class="pc">#</span><span class="c">define</span> <span class="w">NR_restart_syscall</span>	<span class="w">__NR_restart_syscall</span>
+<span class="pc">#el</span><span class="c">se</span> 
+<span class="c">#define</span> <span class="c">NR_restart_syscall</span>	<span class="w">\</span>
+	<span class="w">test_thread_flag</span><span class="pc">(</span><span class="w">TIF_IA32) </span><span class="pc">?</span> <span class="w">__NR_ia32_restart_syscall</span> <span class="c">:</span> <span class="w">_</span><span class="c">_NR_restart_syscall</span>
+<span class="w">#</span><span class="pc">e</span><span class="c">ndif</span> 
+
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">do_signal</span><span class="c">(struct</span> <span class="w">pt</span><span class="c">_regs</span> <span class="c">*</span><span class="w">r</span><span class="c">egs</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">ksignal</span> <span class="w">k</span><span class="c">sig;</span>
+
+	<span class="w">i</span><span class="pc">f</span> <span class="c">(</span><span class="w">get_signal</span><span class="pc">(&amp;</span><span class="w">k</span><span class="pc">sig</span><span class="w">)</span><span class="pc">) </span><span class="c">{</span>
+		
+		<span class="w">handle_signal</span><span class="pc">(&amp;</span><span class="w">k</span><span class="pc">sig,</span> <span class="w">r</span><span class="pc">egs</span><span class="c">);</span>
+		<span class="pc">r</span><span class="c">eturn</span><span class="w">;</span>
+	<span class="c">}</span>
+
+	
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">syscall_get_nr</span><span class="c">(</span><span class="w">cu</span><span class="c">rrent</span><span class="pc">,</span> <span class="w">re</span><span class="pc">gs</span><span class="w">) &gt;</span><span class="pc">=</span> <span class="c">0</span><span class="pc">) </span><span class="c">{</span>
+		
+		<span class="w">s</span><span class="c">witch</span> <span class="c">(</span><span class="w">syscall_get_error</span><span class="pc">(</span><span class="w">cu</span><span class="c">rrent</span><span class="pc">,</span> <span class="w">reg</span><span class="pc">s))</span><span class="c"> {</span>
+		<span class="c">case</span> <span class="w">-ERESTARTNOHAND</span><span class="pc">:</span>
+		<span class="w">c</span><span class="c">ase</span> <span class="c">-</span><span class="w">ERESTARTSYS</span><span class="c">:</span>
+		<span class="pc">c</span><span class="c">ase</span> <span class="c">-</span><span class="w">ERESTARTNOINTR</span><span class="c">:</span>
+			<span class="w">reg</span><span class="pc">s</span><span class="c">-&gt;</span><span class="w">ax</span> <span class="c">=</span> <span class="w">reg</span><span class="pc">s</span><span class="c">-&gt;</span><span class="w">orig_ax</span><span class="c">;</span>
+			<span class="w">reg</span><span class="pc">s</span><span class="c">-&gt;</span><span class="w">ip</span> <span class="w">-</span><span class="pc">=</span> <span class="pc">2</span><span class="c">;</span>
+			<span class="pc">b</span><span class="c">reak;</span>
+
+		<span class="c">case</span> <span class="w">-ERESTART_RESTARTBLOCK</span><span class="c">:</span>
+			<span class="w">reg</span><span class="pc">s</span><span class="c">-&gt;</span><span class="pc">a</span><span class="c">x</span> <span class="pc">=</span> <span class="w">NR_restart_syscall</span><span class="c">;</span>
+			<span class="w">re</span><span class="pc">gs</span><span class="c">-&gt;</span><span class="w">ip</span> <span class="w">-</span><span class="pc">=</span> <span class="pc">2</span><span class="c">;</span>
+			<span class="c">break;</span>
+		<span class="c">}</span>
+	<span class="c">}</span>
+
+	
+	<span class="w">restore_saved_sigmask(</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">}</span>
+
+
+<span class="w">__visible</span> <span class="w">v</span><span class="c">oid</span>
+<span class="w">do_notify_resume</span><span class="c">(struct</span> <span class="w">p</span><span class="pc">t</span><span class="c">_regs</span> <span class="c">*regs,</span> <span class="w">v</span><span class="c">oid</span> <span class="c">*</span><span class="w">unused</span><span class="pc">,</span> <span class="w">_</span><span class="pc">_u</span><span class="c">32</span> <span class="w">thread_info_flags</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">user_exit(</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="c">if</span> <span class="c">(thread_info_flags</span> <span class="pc">&amp;</span> <span class="w">_TIF_UPROBE</span><span class="pc">)</span>
+		<span class="w">uprobe_notify_resume</span><span class="c">(</span><span class="w">r</span><span class="pc">eg</span><span class="c">s</span><span class="pc">)</span><span class="c">;</span>
+
+	
+	<span class="c">if</span> <span class="c">(</span><span class="pc">t</span><span class="c">hread_info_flags</span> <span class="w">&amp;</span> <span class="w">_TIF_SIGPENDING</span><span class="c">)</span>
+		<span class="w">do_signal</span><span class="c">(</span><span class="w">re</span><span class="pc">gs);</span>
+
+	<span class="c">if</span> <span class="c">(</span><span class="pc">t</span><span class="c">hread_info_flags</span> <span class="pc">&amp;</span> <span class="w">_TIF_NOTIFY_RESUME</span><span class="pc">) </span><span class="c">{</span>
+		<span class="w">clear_thread_flag</span><span class="c">(</span><span class="w">TIF_NOTIFY_RESUME</span><span class="pc">)</span><span class="c">;</span>
+		<span class="w">tracehook_notify_resume</span><span class="c">(</span><span class="w">r</span><span class="c">egs</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">}</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(thread_info_flags</span> <span class="pc">&amp;</span> <span class="w">_TIF_USER_RETURN_NOTIFY</span><span class="c">)</span>
+		<span class="w">fire_user_return_notifiers</span><span class="pc">()</span><span class="c">;</span>
+
+	<span class="w">user_enter</span><span class="pc">()</span><span class="c">;</span>
+<span class="pc">}</span>
+
+<span class="w">v</span><span class="c">oid</span> <span class="w">signal_fault</span><span class="c">(struct</span> <span class="w">p</span><span class="pc">t</span><span class="c">_regs</span> <span class="c">*</span><span class="w">r</span><span class="c">egs,</span> <span class="w">v</span><span class="c">oid</span> <span class="w">_</span><span class="pc">_u</span><span class="c">ser</span> <span class="c">*</span><span class="w">fr</span><span class="pc">a</span><span class="c">me,</span> <span class="w">c</span><span class="c">har</span> <span class="c">*</span><span class="w">wh</span><span class="c">ere</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">t</span><span class="pc">a</span><span class="c">sk_struct</span> <span class="c">*</span><span class="w">me</span> <span class="c">=</span> <span class="w">cu</span><span class="c">rrent</span><span class="pc">;</span>
+
+	<span class="c">if</span> <span class="c">(</span><span class="w">show_unhandled_signals</span> <span class="w">&amp;</span><span class="pc">&amp;</span> <span class="w">printk_ratelimit()</span><span class="pc">) </span><span class="c">{</span>
+		<span class="w">pr</span><span class="pc">intk("%</span><span class="c">s</span><span class="pc">"</span>
+		       <span class="w">"</span><span class="pc">%</span><span class="c">s</span><span class="w">[</span><span class="c">%</span><span class="pc">d</span><span class="w">]</span> <span class="w">b</span><span class="pc">a</span><span class="c">d</span> <span class="w">fr</span><span class="pc">a</span><span class="c">me</span> <span class="w">i</span><span class="pc">n</span> <span class="pc">%s</span> <span class="w">f</span><span class="pc">r</span><span class="c">ame</span><span class="w">:</span><span class="pc">%</span><span class="w">p</span> <span class="w">ip:</span><span class="c">%</span><span class="w">l</span><span class="pc">x</span> <span class="w">sp:</span><span class="pc">%</span><span class="w">l</span><span class="pc">x</span> <span class="w">orax</span><span class="pc">:</span><span class="c">%</span><span class="w">l</span><span class="pc">x</span><span class="w">"</span><span class="c">,</span>
+		       <span class="w">task_pid_nr</span><span class="pc">(</span><span class="w">cu</span><span class="c">rrent</span><span class="w">) &gt;</span> <span class="w">1</span> <span class="w">?</span> <span class="w">K</span><span class="pc">ERN_I</span><span class="c">NFO</span> <span class="w">:</span> <span class="w">KERN_EMERG</span><span class="pc">,</span>
+		       <span class="w">me-</span><span class="c">&gt;</span><span class="w">comm</span><span class="c">,</span> <span class="w">m</span><span class="pc">e-</span><span class="c">&gt;</span><span class="w">pi</span><span class="c">d,</span> <span class="w">wh</span><span class="pc">e</span><span class="c">re</span><span class="pc">,</span> <span class="w">fr</span><span class="c">ame</span><span class="pc">,</span>
+		       <span class="w">re</span><span class="pc">g</span><span class="c">s-&gt;</span><span class="w">i</span><span class="pc">p</span><span class="c">,</span> <span class="w">reg</span><span class="c">s-&gt;</span><span class="w">sp</span><span class="pc">,</span> <span class="w">r</span><span class="pc">egs</span><span class="c">-&gt;</span><span class="w">orig_ax</span><span class="pc">)</span><span class="c">;</span>
+		<span class="w">print_vma_addr</span><span class="pc">("</span> <span class="w">in</span> <span class="c">",</span> <span class="w">r</span><span class="pc">eg</span><span class="c">s-&gt;</span><span class="w">ip</span><span class="pc">)</span><span class="c">;</span>
+		<span class="w">pr_cont("</span><span class="pc">\</span><span class="c">n");</span>
+	<span class="pc">}</span>
+
+	<span class="w">force_sig</span><span class="c">(</span><span class="w">SIGSEGV</span><span class="c">,</span> <span class="pc">m</span><span class="c">e</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="w">#</span><span class="pc">i</span><span class="c">fdef</span> <span class="w">CONFIG_X86_X32_ABI</span>
+<span class="w">asm</span><span class="pc">l</span><span class="c">inkage</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">sys32_x32_rt_sigreturn</span><span class="c">(</span><span class="pc">v</span><span class="c">oid)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">pt</span><span class="c">_regs</span> <span class="c">*</span><span class="pc">r</span><span class="c">egs</span> <span class="pc">=</span> <span class="w">current_pt_regs(</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">struct</span> <span class="w">rt_sigframe_x32</span> <span class="pc">_</span><span class="c">_user</span> <span class="c">*</span><span class="w">fr</span><span class="pc">a</span><span class="c">me;</span>
+	<span class="w">sigset_t</span> <span class="w">se</span><span class="pc">t</span><span class="c">;</span>
+
+	<span class="w">fr</span><span class="c">ame</span> <span class="w">=</span><span class="pc"> (s</span><span class="c">truct</span> <span class="w">r</span><span class="c">t_sigframe_x32</span> <span class="w">_</span><span class="c">_user</span> <span class="w">*</span><span class="pc">)(</span><span class="w">r</span><span class="pc">egs</span><span class="c">-&gt;</span><span class="w">sp</span> <span class="w">-</span> <span class="w">8</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="pc">(!</span><span class="w">access_ok</span><span class="c">(</span><span class="w">VERIFY_READ</span><span class="pc">,</span> <span class="w">fr</span><span class="c">ame</span><span class="pc">,</span> <span class="pc">s</span><span class="c">izeof(*</span><span class="w">fr</span><span class="pc">a</span><span class="c">me)))</span>
+		<span class="pc">g</span><span class="c">oto</span> <span class="w">badframe</span><span class="c">;</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">__copy_from_user</span><span class="pc">(&amp;</span><span class="w">set,</span><span class="pc"> </span><span class="c">&amp;</span><span class="w">fr</span><span class="c">ame-&gt;</span><span class="w">uc.uc_sigmask</span><span class="c">,</span> <span class="c">sizeof(</span><span class="w">se</span><span class="pc">t)))</span>
+		<span class="pc">g</span><span class="c">oto</span> <span class="w">b</span><span class="c">adframe;</span>
+
+	<span class="w">set_current_blocked</span><span class="pc">(&amp;</span><span class="w">se</span><span class="pc">t)</span><span class="c">;</span>
+
+	<span class="c">if</span> <span class="c">(</span><span class="w">restore_sigcontext</span><span class="c">(</span><span class="w">reg</span><span class="pc">s, </span><span class="c">&amp;</span><span class="w">fr</span><span class="pc">a</span><span class="c">me-&gt;</span><span class="pc">u</span><span class="c">c</span><span class="w">.uc_mcontext</span><span class="pc">))</span>
+		<span class="pc">g</span><span class="c">oto</span> <span class="pc">b</span><span class="c">adframe;</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">compat_restore_altstack</span><span class="pc">(&amp;</span><span class="w">fr</span><span class="pc">a</span><span class="c">me-&gt;</span><span class="w">u</span><span class="pc">c</span><span class="c">.</span><span class="w">uc_stack</span><span class="c">))</span>
+		<span class="pc">g</span><span class="c">oto</span> <span class="w">b</span><span class="c">adframe;</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">reg</span><span class="pc">s</span><span class="c">-&gt;</span><span class="w">ax</span><span class="c">;</span>
+
+<span class="w">b</span><span class="c">adframe</span><span class="pc">:</span>
+	<span class="w">signal_fault</span><span class="c">(</span><span class="w">re</span><span class="pc">g</span><span class="c">s</span><span class="pc">,</span> <span class="w">fr</span><span class="pc">a</span><span class="c">me</span><span class="w">,</span><span class="pc"> "</span><span class="w">x32</span> <span class="w">rt_sigreturn</span><span class="pc">"</span><span class="c">);</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+<span class="pc">#</span><span class="c">endif</span>
+
+</pre>
+</body>
+</html>
+

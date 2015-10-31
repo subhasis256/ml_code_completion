@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+<span class="w">#include</span> <span class="w">&lt;linux/oprofile.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/smp.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/cpumask.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/threads.h&gt;</span>
+
+<span class="w">#include</span> <span class="w">"oprofile_stats</span><span class="c">.h"</span>
+<span class="c">#include</span> <span class="c">"</span><span class="w">cpu_buffer</span><span class="c">.h"</span>
+
+<span class="pc">str</span><span class="c">uct</span> <span class="w">oprofile_stat_struct</span> <span class="w">o</span><span class="pc">profile_stats</span><span class="c">;</span>
+
+<span class="w">v</span><span class="c">oid</span> <span class="w">oprofile_reset_stats</span><span class="c">(</span><span class="pc">v</span><span class="c">oid</span><span class="pc">)</span>
+<span class="pc">{</span>
+	<span class="c">struct</span> <span class="w">oprofile_cpu_buffer</span> <span class="c">*</span><span class="w">cpu_buf</span><span class="c">;</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="pc">i</span><span class="c">;</span>
+
+	<span class="w">for_each_possible_cpu</span><span class="c">(</span><span class="w">i)</span><span class="pc"> </span><span class="c">{</span>
+		<span class="c">cpu_buf</span> <span class="w">=</span><span class="pc"> &amp;</span><span class="w">per_cpu</span><span class="pc">(</span><span class="w">op_cpu_buffer</span><span class="pc">,</span> <span class="w">i</span><span class="c">);</span>
+		<span class="pc">c</span><span class="c">pu_buf</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">sample_received</span> <span class="c">=</span> <span class="pc">0</span><span class="c">;</span>
+		<span class="w">c</span><span class="c">pu_buf-&gt;</span><span class="w">sample_lost_overflow</span> <span class="c">=</span> <span class="pc">0</span><span class="c">;</span>
+		<span class="c">cpu_buf-&gt;</span><span class="w">backtrace_aborted</span> <span class="c">=</span> <span class="c">0;</span>
+		<span class="c">cpu_buf-&gt;</span><span class="w">sample_invalid_eip</span> <span class="c">=</span> <span class="c">0;</span>
+	<span class="pc">}</span>
+
+	<span class="w">a</span><span class="pc">tomic_s</span><span class="c">et(&amp;</span><span class="w">oprofile_stats.sample_lost_no_mm</span><span class="c">,</span> <span class="c">0</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">at</span><span class="pc">omic_s</span><span class="c">et(&amp;</span><span class="pc">o</span><span class="c">profile_stats</span><span class="pc">.</span><span class="w">sample_lost_no_mapping</span><span class="c">,</span> <span class="c">0);</span>
+	<span class="w">a</span><span class="c">tomic_set(&amp;oprofile_stats</span><span class="pc">.</span><span class="w">event_lost_overflow</span><span class="c">,</span> <span class="c">0);</span>
+	<span class="w">a</span><span class="c">tomic_set(&amp;oprofile_stats</span><span class="pc">.</span><span class="w">bt_lost_no_mapping</span><span class="c">,</span> <span class="c">0);</span>
+	<span class="w">a</span><span class="c">tomic_set(&amp;oprofile_stats</span><span class="pc">.</span><span class="w">multiplex_counter</span><span class="c">,</span> <span class="c">0);</span>
+<span class="c">}</span>
+
+
+<span class="w">v</span><span class="c">oid</span> <span class="w">oprofile_create_stats_files</span><span class="c">(struct</span> <span class="w">d</span><span class="pc">en</span><span class="c">try</span> <span class="c">*</span><span class="w">ro</span><span class="c">ot</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">oprofile_cpu_buffer</span> <span class="c">*</span><span class="w">cpu_buf</span><span class="pc">;</span>
+	<span class="c">struct</span> <span class="w">d</span><span class="pc">en</span><span class="c">try</span> <span class="c">*</span><span class="w">cpudir</span><span class="c">;</span>
+	<span class="c">struct</span> <span class="pc">d</span><span class="c">entry</span> <span class="c">*</span><span class="w">di</span><span class="pc">r</span><span class="c">;</span>
+	<span class="pc">ch</span><span class="c">ar</span> <span class="w">b</span><span class="pc">u</span><span class="c">f[</span><span class="w">1</span><span class="pc">0</span><span class="c">];</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="c">i;</span>
+
+	<span class="w">di</span><span class="pc">r</span> <span class="c">=</span> <span class="w">oprofilefs_mkdir</span><span class="pc">(</span><span class="w">ro</span><span class="c">ot</span><span class="w">,</span><span class="pc"> "</span><span class="w">sta</span><span class="pc">ts</span><span class="w">"</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">if</span> <span class="c">(!</span><span class="w">di</span><span class="pc">r</span><span class="c">)</span>
+		<span class="c">return</span><span class="pc">;</span>
+
+	<span class="w">for_each_possible_cpu</span><span class="c">(</span><span class="w">i)</span><span class="pc"> </span><span class="c">{</span>
+		<span class="pc">c</span><span class="c">pu_buf</span> <span class="pc">= </span><span class="c">&amp;</span><span class="w">per_cpu</span><span class="pc">(</span><span class="w">op_cpu_buffer</span><span class="pc">,</span> <span class="pc">i</span><span class="c">);</span>
+		<span class="w">sn</span><span class="c">printf(buf,</span> <span class="w">10</span><span class="pc">, "</span><span class="w">cp</span><span class="pc">u%</span><span class="c">d</span><span class="pc">"</span><span class="c">,</span> <span class="pc">i)</span><span class="c">;</span>
+		<span class="w">cpudir</span> <span class="pc">=</span> <span class="w">o</span><span class="pc">pr</span><span class="c">ofilefs_mkdir(</span><span class="w">di</span><span class="pc">r</span><span class="c">,</span> <span class="w">b</span><span class="c">uf</span><span class="pc">)</span><span class="c">;</span>
+
+		
+		<span class="w">oprofilefs_create_ro_ulong</span><span class="c">(cpudir</span><span class="w">,</span><span class="pc"> "</span><span class="w">sample_received</span><span class="pc">",</span>
+			<span class="w">&amp;</span><span class="pc">cpu_</span><span class="c">buf-&gt;</span><span class="w">s</span><span class="pc">a</span><span class="c">mple_received</span><span class="pc">)</span><span class="c">;</span>
+		<span class="w">o</span><span class="c">profilefs_create_ro_ulong(</span><span class="pc">c</span><span class="c">pudir</span><span class="pc">, </span><span class="c">"</span><span class="w">sample_lost_overflow</span><span class="c">",</span>
+			<span class="pc">&amp;</span><span class="w">c</span><span class="pc">pu_</span><span class="c">buf-&gt;</span><span class="w">s</span><span class="pc">ample_l</span><span class="c">ost_overflow</span><span class="pc">)</span><span class="c">;</span>
+		<span class="w">o</span><span class="pc">profilefs_c</span><span class="c">reate_ro_ulong(cpudir</span><span class="pc">, "</span><span class="w">backtrace_aborted</span><span class="c">",</span>
+			<span class="w">&amp;</span><span class="c">cpu_buf-&gt;</span><span class="w">b</span><span class="pc">a</span><span class="c">cktrace_aborted</span><span class="pc">)</span><span class="c">;</span>
+		<span class="pc">o</span><span class="c">profilefs_create_ro_ulong</span><span class="pc">(</span><span class="c">cpudir</span><span class="pc">, </span><span class="c">"</span><span class="w">sample_invalid_eip</span><span class="c">",</span>
+			<span class="w">&amp;</span><span class="c">cpu_buf-&gt;</span><span class="w">sa</span><span class="pc">mple_i</span><span class="c">nvalid_eip</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">}</span>
+
+	<span class="w">oprofilefs_create_ro_atomic</span><span class="c">(</span><span class="w">di</span><span class="pc">r, "</span><span class="w">sample_lost_no_mm</span><span class="pc">"</span><span class="c">,</span>
+		<span class="w">&amp;oprofile_stats.s</span><span class="pc">ample_lost_n</span><span class="c">o_mm</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">o</span><span class="pc">profilefs_create_ro_a</span><span class="c">tomic</span><span class="pc">(</span><span class="w">di</span><span class="pc">r, </span><span class="c">"</span><span class="w">sample_lost_no_mapping</span><span class="c">",</span>
+		<span class="w">&amp;o</span><span class="pc">profile_</span><span class="c">stats</span><span class="w">.sa</span><span class="pc">mple_lost_no_ma</span><span class="c">pping</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">o</span><span class="pc">profilefs_create_ro_a</span><span class="c">tomic(</span><span class="w">di</span><span class="pc">r</span><span class="c">, "</span><span class="w">event_lost_overflow</span><span class="c">",</span>
+		<span class="w">&amp;</span><span class="pc">oprofile_</span><span class="c">stats</span><span class="w">.e</span><span class="pc">vent_</span><span class="c">lost_overflow</span><span class="pc">)</span><span class="c">;</span>
+	<span class="pc">o</span><span class="c">profilefs_create_ro_atomic</span><span class="pc">(</span><span class="w">di</span><span class="pc">r, </span><span class="c">"</span><span class="w">bt_lost_no_mapping</span><span class="c">",</span>
+		<span class="w">&amp;</span><span class="c">oprofile_stats</span><span class="w">.b</span><span class="pc">t</span><span class="c">_lost_no_mapping</span><span class="pc">)</span><span class="c">;</span>
+<span class="w">#</span><span class="pc">i</span><span class="c">fdef</span> <span class="w">CONFIG_OPROFILE_EVENT_MULTIPLEX</span>
+	<span class="c">oprofilefs_create_ro_atomic(</span><span class="w">di</span><span class="pc">r</span><span class="c">, "</span><span class="w">multiplex_counter</span><span class="pc">",</span>
+		<span class="w">&amp;</span><span class="pc">o</span><span class="c">profile_stats</span><span class="w">.m</span><span class="c">ultiplex_counter</span><span class="pc">)</span><span class="c">;</span>
+<span class="pc">#en</span><span class="c">dif</span>
+<span class="c">}</span>
+
+</pre>
+</body>
+</html>
+

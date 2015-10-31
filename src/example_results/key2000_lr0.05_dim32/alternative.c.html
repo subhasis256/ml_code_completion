@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+<span class="w">#define</span> <span class="w">pr_fmt(fmt) "alternatives: "</span> <span class="w">fmt</span>
+
+<span class="w">#include</span> <span class="w">&lt;linux/init.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/cpu.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;asm/cacheflush.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;asm</span><span class="c">/</span><span class="w">alternative</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">cpufeature</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">ins</span><span class="c">n.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;</span><span class="pc">l</span><span class="c">inux/</span><span class="w">stop_machine</span><span class="c">.h&gt;</span>
+
+<span class="c">#</span><span class="pc">d</span><span class="c">efine</span> <span class="w">__ALT_PTR</span><span class="c">(</span><span class="w">a</span><span class="c">,</span><span class="w">f)		(u</span><span class="pc">3</span><span class="c">2</span> <span class="w">*)((v</span><span class="c">oid</span> <span class="w">*)&amp;(a)</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">f</span> <span class="w">+</span><span class="pc"> </span><span class="c">(a</span><span class="w">)</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">f</span><span class="pc">)</span>
+<span class="c">#define</span> <span class="w">ALT_ORIG_PTR</span><span class="c">(a</span><span class="pc">)</span>		<span class="w">_</span><span class="c">_ALT_PTR(a</span><span class="pc">,</span> <span class="w">orig_offset)</span>
+<span class="c">#define</span> <span class="w">ALT_REPL_PTR</span><span class="c">(a</span><span class="pc">)</span>		<span class="w">_</span><span class="c">_ALT_PTR(a,</span> <span class="w">alt_offset</span><span class="c">)</span>
+
+<span class="pc">e</span><span class="c">xtern</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">alt_instr</span> <span class="w">__alt_instructions[],</span> <span class="w">__alt_instructions_end[</span><span class="c">];</span>
+
+<span class="pc">s</span><span class="c">truct</span> <span class="w">alt_region</span> <span class="pc">{</span>
+	<span class="c">struct</span> <span class="c">alt_instr</span> <span class="c">*</span><span class="w">be</span><span class="c">gin;</span>
+	<span class="c">struct</span> <span class="pc">alt_i</span><span class="c">nstr</span> <span class="c">*</span><span class="w">en</span><span class="pc">d</span><span class="c">;</span>
+<span class="w">}</span><span class="c">;</span>
+
+
+<span class="pc">sta</span><span class="c">tic</span> <span class="w">b</span><span class="c">ool</span> <span class="w">branch_insn_requires_update</span><span class="c">(struct</span> <span class="c">alt_instr</span> <span class="c">*</span><span class="w">alt</span><span class="pc">,</span> <span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">pc</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">replptr</span><span class="c">;</span>
+
+	<span class="w">i</span><span class="pc">f</span> <span class="c">(</span><span class="w">kernel_text_address</span><span class="c">(</span><span class="w">pc</span><span class="pc">))</span>
+		<span class="c">return</span> <span class="pc">1</span><span class="c">;</span>
+
+	<span class="w">r</span><span class="pc">ep</span><span class="c">lptr</span> <span class="pc">= </span><span class="c">(</span><span class="w">u</span><span class="c">nsigned</span> <span class="c">long</span><span class="w">)ALT_REPL_PTR</span><span class="c">(alt</span><span class="pc">)</span><span class="c">;</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">pc</span> <span class="w">&gt;</span><span class="pc">=</span> <span class="w">r</span><span class="c">eplptr</span> <span class="pc">&amp;</span><span class="c">&amp;</span> <span class="w">pc</span> <span class="w">&lt;= (r</span><span class="c">eplptr</span> <span class="w">+</span> <span class="pc">a</span><span class="c">lt-&gt;</span><span class="w">alt_len)</span><span class="pc">)</span>
+		<span class="c">return</span> <span class="pc">0</span><span class="c">;</span>
+
+	
+	<span class="w">B</span><span class="pc">UG(</span><span class="c">);</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="w">u</span><span class="pc">3</span><span class="c">2</span> <span class="w">get_alt_insn</span><span class="c">(struct</span> <span class="w">alt_instr</span> <span class="c">*</span><span class="pc">alt,</span> <span class="pc">u3</span><span class="c">2</span> <span class="pc">*</span><span class="w">insnptr</span><span class="pc">,</span> <span class="pc">u3</span><span class="c">2</span> <span class="c">*</span><span class="w">altinsnptr</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="pc">u</span><span class="c">32</span> <span class="w">ins</span><span class="pc">n;</span>
+
+	<span class="w">ins</span><span class="pc">n</span> <span class="pc">=</span> <span class="w">le</span><span class="pc">3</span><span class="c">2_to_cpu</span><span class="w">(</span><span class="pc">*</span><span class="c">altinsnptr</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="pc">if</span> <span class="c">(</span><span class="w">aarch64_insn_is_branch_imm</span><span class="c">(</span><span class="w">ins</span><span class="pc">n</span><span class="w">)</span><span class="pc">) </span><span class="c">{</span>
+		<span class="w">s3</span><span class="c">2</span> <span class="w">o</span><span class="c">ffset</span> <span class="pc">=</span> <span class="w">aarch64_get_branch_offset</span><span class="c">(</span><span class="w">ins</span><span class="pc">n)</span><span class="c">;</span>
+		<span class="w">u</span><span class="c">nsigned</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">t</span><span class="pc">a</span><span class="c">rget;</span>
+
+		<span class="w">ta</span><span class="pc">r</span><span class="c">get</span> <span class="w">=</span><span class="pc"> </span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span><span class="w">)</span><span class="pc">a</span><span class="c">ltinsnptr</span> <span class="w">+</span> <span class="w">o</span><span class="c">ffset</span><span class="pc">;</span>
+
+		
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">branch_insn_requires_update</span><span class="c">(</span><span class="w">alt</span><span class="pc">,</span> <span class="w">ta</span><span class="c">rget</span><span class="w">))</span><span class="pc"> {</span>
+			<span class="w">o</span><span class="c">ffset</span> <span class="c">=</span> <span class="w">t</span><span class="pc">a</span><span class="c">rget</span> <span class="w">-</span><span class="pc"> </span><span class="c">(</span><span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="c">long</span><span class="w">)insnptr</span><span class="pc">;</span>
+			<span class="w">ins</span><span class="pc">n</span> <span class="pc">=</span> <span class="w">aarch64_set_branch_offset</span><span class="pc">(</span><span class="w">in</span><span class="pc">sn</span><span class="c">,</span> <span class="w">o</span><span class="c">ffset);</span>
+		<span class="c">}</span>
+	<span class="w">}</span>
+
+	<span class="w">r</span><span class="c">eturn</span> <span class="w">i</span><span class="pc">nsn;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">int</span> <span class="w">__apply_alternatives</span><span class="c">(</span><span class="pc">v</span><span class="c">oid</span> <span class="c">*</span><span class="w">alt_region</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">alt_instr</span> <span class="c">*</span><span class="w">a</span><span class="c">lt</span><span class="pc">;</span>
+	<span class="c">struct</span> <span class="pc">alt_r</span><span class="c">egion</span> <span class="c">*</span><span class="w">reg</span><span class="pc">i</span><span class="c">on</span> <span class="pc">=</span> <span class="pc">alt_r</span><span class="c">egion;</span>
+	<span class="w">u</span><span class="pc">3</span><span class="c">2</span> <span class="c">*</span><span class="w">origptr,</span><span class="pc"> </span><span class="c">*</span><span class="w">replptr</span><span class="c">;</span>
+
+	<span class="w">f</span><span class="c">or</span> <span class="c">(</span><span class="pc">a</span><span class="c">lt</span> <span class="c">=</span> <span class="w">reg</span><span class="pc">i</span><span class="c">on-&gt;</span><span class="w">be</span><span class="pc">g</span><span class="c">in;</span> <span class="c">alt</span> <span class="w">&lt;</span> <span class="w">reg</span><span class="c">ion-&gt;</span><span class="w">en</span><span class="pc">d</span><span class="c">;</span> <span class="pc">a</span><span class="c">lt</span><span class="pc">+</span><span class="c">+) {</span>
+		<span class="w">u</span><span class="pc">3</span><span class="c">2</span> <span class="w">ins</span><span class="c">n</span><span class="pc">;</span>
+		<span class="w">i</span><span class="pc">n</span><span class="c">t</span> <span class="c">i</span><span class="pc">,</span> <span class="w">nr_inst</span><span class="c">;</span>
+
+		<span class="pc">i</span><span class="c">f</span> <span class="pc">(!</span><span class="w">cpus_have_cap</span><span class="pc">(</span><span class="w">a</span><span class="pc">lt</span><span class="c">-&gt;</span><span class="w">cpufeature</span><span class="c">))</span>
+			<span class="w">c</span><span class="c">ontinue;</span>
+
+		<span class="w">B</span><span class="c">UG_ON(</span><span class="pc">a</span><span class="c">lt-&gt;</span><span class="w">alt_len</span> <span class="w">!</span><span class="c">=</span> <span class="pc">a</span><span class="c">lt-&gt;</span><span class="w">orig_len</span><span class="c">);</span>
+
+		<span class="w">pr_info_once(</span><span class="pc">"</span><span class="w">patching</span> <span class="w">k</span><span class="pc">er</span><span class="c">nel</span> <span class="w">cod</span><span class="pc">e\</span><span class="c">n");</span>
+
+		<span class="w">origptr</span> <span class="pc">=</span> <span class="w">ALT_ORIG_PTR</span><span class="c">(alt</span><span class="pc">)</span><span class="c">;</span>
+		<span class="w">replptr</span> <span class="pc">=</span> <span class="w">ALT_REPL_PTR</span><span class="c">(</span><span class="pc">a</span><span class="c">lt</span><span class="pc">)</span><span class="c">;</span>
+		<span class="w">nr_inst</span> <span class="pc">=</span> <span class="c">alt-&gt;</span><span class="w">a</span><span class="pc">lt_</span><span class="c">len</span> <span class="w">/</span> <span class="w">s</span><span class="pc">i</span><span class="c">zeof(</span><span class="w">ins</span><span class="pc">n)</span><span class="c">;</span>
+
+		<span class="w">f</span><span class="c">or</span> <span class="c">(i</span> <span class="c">=</span> <span class="c">0;</span> <span class="c">i</span> <span class="c">&lt;</span> <span class="pc">n</span><span class="c">r_inst;</span> <span class="c">i++) {</span>
+			<span class="w">ins</span><span class="pc">n</span> <span class="pc">=</span> <span class="w">get_alt_insn</span><span class="pc">(a</span><span class="c">lt</span><span class="pc">,</span> <span class="pc">o</span><span class="c">rigptr</span> <span class="pc">+</span> <span class="pc">i,</span> <span class="w">r</span><span class="c">eplptr</span> <span class="pc">+</span> <span class="c">i);</span>
+			<span class="w">*</span><span class="pc">(</span><span class="w">o</span><span class="c">rigptr</span> <span class="c">+</span> <span class="c">i</span><span class="w">) =</span> <span class="w">c</span><span class="pc">p</span><span class="c">u_to_le32(</span><span class="w">in</span><span class="pc">s</span><span class="c">n</span><span class="pc">)</span><span class="c">;</span>
+		<span class="pc">}</span>
+
+		<span class="w">flush_icache_range((uintptr_t)o</span><span class="c">rigptr</span><span class="w">,</span>
+				   <span class="w">(u</span><span class="pc">i</span><span class="c">ntptr_t</span><span class="w">)(</span><span class="pc">o</span><span class="c">rigptr</span> <span class="w">+</span> <span class="w">n</span><span class="c">r_inst</span><span class="w">)</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">}</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">0</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="pc">v</span><span class="c">oid</span> <span class="w">apply_alternatives_all</span><span class="c">(</span><span class="pc">v</span><span class="c">oid</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">alt_region</span> <span class="w">reg</span><span class="pc">io</span><span class="c">n</span> <span class="pc">=</span><span class="c"> {</span>
+		<span class="c">.</span><span class="w">be</span><span class="pc">g</span><span class="c">in</span>	<span class="c">=</span> <span class="w">__alt_instructions</span><span class="c">,</span>
+		<span class="c">.</span><span class="w">e</span><span class="pc">nd</span>	<span class="c">=</span> <span class="w">__alt_instructions_end</span><span class="c">,</span>
+	<span class="pc">}</span><span class="c">;</span>
+
+	
+	<span class="w">stop_machine</span><span class="c">(</span><span class="w">__apply_alternatives</span><span class="pc">, </span><span class="c">&amp;</span><span class="w">re</span><span class="pc">gi</span><span class="c">on</span><span class="pc">,</span> <span class="w">N</span><span class="c">ULL</span><span class="pc">)</span><span class="c">;</span>
+<span class="pc">}</span>
+
+<span class="pc">v</span><span class="c">oid</span> <span class="w">apply_alternatives</span><span class="c">(</span><span class="pc">v</span><span class="c">oid</span> <span class="pc">*</span><span class="w">s</span><span class="pc">ta</span><span class="c">rt,</span> <span class="w">s</span><span class="pc">i</span><span class="c">ze_t</span> <span class="w">l</span><span class="pc">eng</span><span class="c">th)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="c">alt_region</span> <span class="w">reg</span><span class="pc">ion</span> <span class="pc">=</span><span class="c"> {</span>
+		<span class="c">.</span><span class="w">be</span><span class="pc">g</span><span class="c">in</span>	<span class="c">=</span> <span class="w">sta</span><span class="pc">r</span><span class="c">t,</span>
+		<span class="c">.</span><span class="w">e</span><span class="pc">n</span><span class="c">d</span>	<span class="c">=</span> <span class="w">s</span><span class="pc">tar</span><span class="c">t</span> <span class="w">+</span> <span class="w">l</span><span class="pc">eng</span><span class="c">th,</span>
+	<span class="w">}</span><span class="c">;</span>
+
+	<span class="w">_</span><span class="pc">_ap</span><span class="c">ply_alternatives</span><span class="w">(</span><span class="pc">&amp;</span><span class="w">regi</span><span class="pc">on</span><span class="c">);</span>
+<span class="pc">}</span>
+
+<span class="pc">v</span><span class="c">oid</span> <span class="w">free_alternatives_memory</span><span class="c">(</span><span class="pc">v</span><span class="c">oid</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">free_reserved_area</span><span class="c">(</span><span class="w">__alt_instructions</span><span class="c">,</span> <span class="w">__alt_instructions_end</span><span class="c">,</span>
+			   <span class="pc">0</span><span class="w">,</span><span class="pc"> "</span><span class="w">alternatives</span><span class="pc">");</span>
+<span class="pc">}</span>
+
+</pre>
+</body>
+</html>
+
