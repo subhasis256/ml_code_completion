@@ -17,7 +17,7 @@ class WindowModel(Model):
     current window. this only contains boilerplate code useful for all such
     models.
     """
-    def __init__(self, keywords, winSize=100, stepsize=0.05, batchsize=32):
+    def __init__(self, keywords, winSize=100, stepsize=0.05, reg=0.01, batchsize=32):
         """
         @keywords: same as Model
         @winSize: length of window to consider for each word
@@ -32,6 +32,7 @@ class WindowModel(Model):
             self.IDToWord[i] = k
         self.params = {}
         self.stepsize = stepsize
+        self.reg = reg
         self.batchsize = batchsize
         self.opt = updates.AdagradOptimizer(self.stepsize)
 
@@ -259,7 +260,7 @@ class WindowModel(Model):
             filtXyIDs = [(XID,yID)
                          for XID,yID,(XWinID,yWinID) in zip(XIDs,yIDs,XyWinIDs)
                          if yWinID != len(self.keywordList) + self.winSize]
-            preds, probs, loss, grads = self.lossAndGrads(filtXyWinIDs)
+            preds, probs, loss = self.lossAndGrads(filtXyWinIDs, False)
 
             yWinIDs = np.array([yWinID for XWinID,yWinID in filtXyWinIDs])
             XWinIDs = np.array([XWinID for XWinID,yWinID in filtXyWinIDs])
@@ -320,7 +321,7 @@ class WindowModel(Model):
         XID = self.convertToTokenIDs(window)
         XWinID, junk = self.makeWindow(XID, 0, True)
 
-        preds, probs, loss, _ = self.lossAndGrads([(XWinID, junk)])
+        preds, probs, loss = self.lossAndGrads([(XWinID, junk)], False)
         sortedIDs = np.argsort(-probs[0])
 
         sortedWords = [self.getWord(i, window, XWinID) for i in sortedIDs]

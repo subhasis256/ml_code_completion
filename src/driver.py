@@ -1,7 +1,7 @@
 import fnmatch as fn
 import os
 import re
-from vectorModel import PositionDependentVectorModel
+from vectorModel import *
 import utils
 import random
 
@@ -20,19 +20,31 @@ if __name__ == '__main__':
     parser.add_argument('--ckpt',
                         default='',
                         help='prefix of checkpoint files')
-    parser.add_argument('--win', type=int,
+    parser.add_argument('--win',
+                        type=int,
                         default=40,
                         help='window size')
-    parser.add_argument('--dim', type=int,
+    parser.add_argument('--dim',
+                        type=int,
                         default=32,
                         help='word vector dimensions')
+    parser.add_argument('--zdim',
+                        type=int,
+                        default=512,
+                        help='intermediate vector dimensions')
     parser.add_argument('--keywords',
                         default='../key_words/c',
                         help='file containing key words and their frequencies')
     parser.add_argument('--lr',
+                        type=float,
                         default=0.05,
                         help='learning rate')
+    parser.add_argument('--reg',
+                        type=float,
+                        default=0.0,
+                        help='regularization constant')
     parser.add_argument('--batch',
+                        type=int,
                         default=32,
                         help='batch size')
     args = parser.parse_args()
@@ -62,9 +74,19 @@ if __name__ == '__main__':
             keywords.append(kw)
     print keywords
 
-    model = PositionDependentVectorModel(keywords, winSize=args.win,
-                                         wdim=args.dim, stepsize=args.lr,
-                                         batchsize=args.batch)
+#    model = PositionDependentVectorModel(keywords, winSize=args.win,
+#                                         wdim=args.dim, stepsize=args.lr,
+#                                         reg=args.reg,
+#                                         batchsize=args.batch)
+#    model = ConstantAttentionVectorModel(keywords, winSize=args.win,
+#                                         wdim=args.dim, stepsize=args.lr,
+#                                         reg=args.reg,
+#                                         batchsize=args.batch)
+    model = NonLinearVectorModel(keywords, winSize=args.win,
+                                 wdim=args.dim, zdim=args.zdim,
+                                 stepsize=args.lr,
+                                 reg=args.reg,
+                                 batchsize=args.batch)
     if args.restore is not None:
         model.restoreFrom(args.restore)
         print 'Restored model from %s' % args.restore
