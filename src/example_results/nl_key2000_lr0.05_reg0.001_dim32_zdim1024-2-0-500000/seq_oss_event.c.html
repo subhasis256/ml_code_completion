@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+<span class="w">#include</span> <span class="w">"seq_oss_device.h"</span>
+<span class="w">#include</span> <span class="w">"seq_oss_synth.h"</span>
+<span class="w">#include</span> <span class="w">"seq_oss_midi.h"</span>
+<span class="w">#include</span> <span class="w">"seq_oss_event.h"</span>
+<span class="w">#include</span> <span class="w">"seq_oss_timer.h"</span>
+<span class="w">#include</span> <span class="w">&lt;sound/seq_oss_legacy</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="pc">"</span><span class="w">seq_oss_readq</span><span class="c">.h"</span>
+<span class="c">#include</span> <span class="c">"</span><span class="w">seq_oss_writeq</span><span class="c">.h"</span>
+
+
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">extended_event</span><span class="c">(struct</span> <span class="w">seq_oss_devinfo</span> <span class="c">*</span><span class="w">dp</span><span class="c">,</span> <span class="w">u</span><span class="pc">ni</span><span class="c">on</span> <span class="w">evrec</span> <span class="c">*</span><span class="w">q</span><span class="c">,</span> <span class="c">struct</span> <span class="w">snd_seq_event</span> <span class="c">*</span><span class="w">e</span><span class="pc">v);</span>
+<span class="c">static</span> <span class="pc">int</span> <span class="w">chn_voice_event</span><span class="c">(struct</span> <span class="c">seq_oss_devinfo</span> <span class="c">*</span><span class="w">dp</span><span class="c">,</span> <span class="w">un</span><span class="pc">i</span><span class="c">on</span> <span class="pc">e</span><span class="c">vrec</span> <span class="c">*</span><span class="w">event_rec</span><span class="pc">,</span> <span class="c">struct</span> <span class="pc">sn</span><span class="c">d_seq_event</span> <span class="c">*</span><span class="w">e</span><span class="pc">v);</span>
+<span class="c">static</span> <span class="pc">int</span> <span class="w">chn_common_event</span><span class="c">(struct</span> <span class="c">seq_oss_devinfo</span> <span class="c">*</span><span class="w">dp</span><span class="c">,</span> <span class="w">un</span><span class="pc">i</span><span class="c">on</span> <span class="c">evrec</span> <span class="c">*</span><span class="pc">e</span><span class="c">vent_rec,</span> <span class="c">struct</span> <span class="pc">sn</span><span class="c">d_seq_event</span> <span class="c">*</span><span class="w">e</span><span class="pc">v</span><span class="c">);</span>
+<span class="pc">s</span><span class="c">tatic</span> <span class="pc">int</span> <span class="w">timing_event</span><span class="c">(struct</span> <span class="c">seq_oss_devinfo</span> <span class="c">*</span><span class="w">dp</span><span class="c">,</span> <span class="w">un</span><span class="pc">i</span><span class="c">on</span> <span class="c">evrec</span> <span class="c">*event_rec,</span> <span class="c">struct</span> <span class="pc">sn</span><span class="c">d_seq_event</span> <span class="c">*</span><span class="w">e</span><span class="pc">v</span><span class="c">);</span>
+<span class="pc">s</span><span class="c">tatic</span> <span class="pc">int</span> <span class="w">local_event</span><span class="c">(struct</span> <span class="c">seq_oss_devinfo</span> <span class="c">*</span><span class="w">dp</span><span class="c">,</span> <span class="w">un</span><span class="pc">i</span><span class="c">on</span> <span class="c">evrec</span> <span class="c">*event_rec,</span> <span class="c">struct</span> <span class="pc">sn</span><span class="c">d_seq_event</span> <span class="c">*</span><span class="w">e</span><span class="pc">v</span><span class="c">);</span>
+<span class="pc">s</span><span class="c">tatic</span> <span class="pc">int</span> <span class="w">old_event</span><span class="c">(struct</span> <span class="c">seq_oss_devinfo</span> <span class="c">*</span><span class="w">dp</span><span class="c">,</span> <span class="w">un</span><span class="pc">i</span><span class="c">on</span> <span class="c">evrec</span> <span class="c">*</span><span class="w">q</span><span class="c">,</span> <span class="c">struct</span> <span class="pc">sn</span><span class="c">d_seq_event</span> <span class="c">*</span><span class="w">e</span><span class="pc">v</span><span class="c">);</span>
+<span class="c">static</span> <span class="pc">int</span> <span class="w">note_on_event</span><span class="c">(struct</span> <span class="c">seq_oss_devinfo</span> <span class="c">*</span><span class="w">dp</span><span class="c">,</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">dev</span><span class="c">,</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">c</span><span class="pc">h</span><span class="c">,</span> <span class="c">int</span> <span class="w">note</span><span class="c">,</span> <span class="c">int</span> <span class="w">vel</span><span class="c">,</span> <span class="c">struct</span> <span class="pc">sn</span><span class="c">d_seq_event</span> <span class="c">*</span><span class="w">ev</span><span class="c">);</span>
+<span class="pc">s</span><span class="c">tatic</span> <span class="pc">int</span> <span class="w">note_off_event</span><span class="c">(struct</span> <span class="c">seq_oss_devinfo</span> <span class="c">*</span><span class="w">dp</span><span class="c">,</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">de</span><span class="pc">v</span><span class="c">,</span> <span class="c">int</span> <span class="w">c</span><span class="pc">h</span><span class="c">,</span> <span class="c">int</span> <span class="w">n</span><span class="pc">ote</span><span class="c">,</span> <span class="c">int</span> <span class="pc">v</span><span class="c">el</span><span class="pc">,</span> <span class="pc">s</span><span class="c">truct</span> <span class="pc">sn</span><span class="c">d_seq_event</span> <span class="c">*</span><span class="w">ev</span><span class="c">);</span>
+<span class="pc">s</span><span class="c">tatic</span> <span class="c">int</span> <span class="w">set_note_event</span><span class="c">(struct</span> <span class="c">seq_oss_devinfo</span> <span class="c">*</span><span class="w">dp</span><span class="c">,</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">de</span><span class="pc">v</span><span class="c">,</span> <span class="c">int</span> <span class="w">t</span><span class="c">ype,</span> <span class="c">int</span> <span class="w">c</span><span class="pc">h,</span> <span class="c">int</span> <span class="w">n</span><span class="c">ote</span><span class="pc">,</span> <span class="c">int</span> <span class="c">vel</span><span class="pc">,</span> <span class="pc">s</span><span class="c">truct</span> <span class="c">snd_seq_event</span> <span class="c">*</span><span class="w">e</span><span class="pc">v</span><span class="c">);</span>
+<span class="w">s</span><span class="pc">ta</span><span class="c">tic</span> <span class="c">int</span> <span class="w">set_control_event</span><span class="c">(struct</span> <span class="c">seq_oss_devinfo</span> <span class="c">*</span><span class="w">dp</span><span class="c">,</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">dev</span><span class="c">,</span> <span class="c">int</span> <span class="w">t</span><span class="c">ype,</span> <span class="c">int</span> <span class="w">ch</span><span class="pc">,</span> <span class="c">int</span> <span class="w">pa</span><span class="pc">r</span><span class="c">am</span><span class="pc">,</span> <span class="c">int</span> <span class="w">v</span><span class="pc">a</span><span class="c">l</span><span class="pc">,</span> <span class="pc">s</span><span class="c">truct</span> <span class="pc">sn</span><span class="c">d_seq_event</span> <span class="c">*</span><span class="w">e</span><span class="pc">v</span><span class="c">);</span>
+<span class="w">s</span><span class="pc">ta</span><span class="c">tic</span> <span class="c">int</span> <span class="w">set_echo_event</span><span class="c">(struct</span> <span class="c">seq_oss_devinfo</span> <span class="c">*</span><span class="w">dp</span><span class="c">,</span> <span class="w">un</span><span class="pc">i</span><span class="c">on</span> <span class="w">evrec</span> <span class="c">*</span><span class="w">rec</span><span class="c">,</span> <span class="pc">s</span><span class="c">truct</span> <span class="pc">sn</span><span class="c">d_seq_event</span> <span class="c">*</span><span class="w">e</span><span class="pc">v)</span><span class="c">;</span>
+
+
+
+
+<span class="c">int</span>
+<span class="w">snd_seq_oss_process_event</span><span class="c">(struct</span> <span class="c">seq_oss_devinfo</span> <span class="c">*</span><span class="w">dp</span><span class="c">,</span> <span class="w">un</span><span class="pc">i</span><span class="c">on</span> <span class="c">evrec</span> <span class="c">*</span><span class="w">q</span><span class="c">,</span> <span class="c">struct</span> <span class="pc">sn</span><span class="c">d_seq_event</span> <span class="c">*</span><span class="w">e</span><span class="c">v</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">s</span><span class="pc">w</span><span class="c">itch</span> <span class="c">(</span><span class="w">q</span><span class="c">-&gt;</span><span class="w">s</span><span class="pc">.</span><span class="w">c</span><span class="c">ode</span><span class="w">)</span><span class="pc"> </span><span class="c">{</span>
+	<span class="c">case</span> <span class="w">SEQ_EXTENDED</span><span class="c">:</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="w">extended_event</span><span class="c">(</span><span class="w">d</span><span class="pc">p</span><span class="c">,</span> <span class="w">q</span><span class="pc">,</span> <span class="w">e</span><span class="pc">v)</span><span class="c">;</span>
+
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">EV_CHN_VOICE</span><span class="c">:</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="w">chn_voice_event</span><span class="pc">(</span><span class="w">d</span><span class="pc">p</span><span class="c">,</span> <span class="w">q</span><span class="pc">,</span> <span class="w">e</span><span class="pc">v)</span><span class="c">;</span>
+
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">EV_CHN_COMMON</span><span class="c">:</span>
+		<span class="c">return</span> <span class="w">chn_common_event</span><span class="c">(</span><span class="w">d</span><span class="pc">p</span><span class="c">,</span> <span class="w">q</span><span class="c">,</span> <span class="w">e</span><span class="pc">v</span><span class="c">);</span>
+
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">EV_TIMING</span><span class="c">:</span>
+		<span class="c">return</span> <span class="w">timing_event</span><span class="c">(</span><span class="w">dp</span><span class="c">,</span> <span class="w">q</span><span class="c">,</span> <span class="w">e</span><span class="pc">v</span><span class="c">);</span>
+
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">EV_SEQ_LOCAL</span><span class="c">:</span>
+		<span class="c">return</span> <span class="w">local_event</span><span class="c">(</span><span class="w">dp</span><span class="c">,</span> <span class="w">q</span><span class="c">,</span> <span class="w">e</span><span class="pc">v</span><span class="c">);</span>
+
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">EV_SYSEX</span><span class="c">:</span>
+		<span class="c">return</span> <span class="w">snd_seq_oss_synth_sysex</span><span class="c">(</span><span class="w">dp</span><span class="c">,</span> <span class="w">q</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">x</span><span class="pc">.</span><span class="w">de</span><span class="pc">v</span><span class="c">,</span> <span class="w">q</span><span class="c">-&gt;</span><span class="w">x</span><span class="pc">.</span><span class="w">bu</span><span class="pc">f</span><span class="c">,</span> <span class="w">e</span><span class="pc">v)</span><span class="c">;</span>
+
+	<span class="w">c</span><span class="pc">a</span><span class="c">se</span> <span class="w">SEQ_MIDIPUTC</span><span class="c">:</span>
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">dp</span><span class="c">-&gt;</span><span class="w">seq_mode</span> <span class="c">==</span> <span class="w">SNDRV_SEQ_OSS_MODE_MUSIC</span><span class="c">)</span>
+			<span class="c">return</span> <span class="c">-EINVAL;</span>
+		
+		<span class="c">if</span> <span class="pc">(!</span> <span class="w">is_write_mode</span><span class="c">(</span><span class="w">d</span><span class="pc">p-</span><span class="c">&gt;</span><span class="w">file_mode</span><span class="c">))</span>
+			<span class="pc">b</span><span class="c">reak;</span>
+		<span class="c">if</span> <span class="c">(</span><span class="w">snd_seq_oss_midi_open</span><span class="c">(</span><span class="w">d</span><span class="pc">p,</span> <span class="w">q</span><span class="c">-&gt;</span><span class="w">s</span><span class="pc">.</span><span class="w">dev</span><span class="c">,</span> <span class="w">SNDRV_SEQ_OSS_FILE_WRITE</span><span class="c">))</span>
+			<span class="pc">b</span><span class="c">reak;</span>
+		<span class="c">if</span> <span class="c">(</span><span class="w">snd_seq_oss_midi_filemode</span><span class="c">(</span><span class="w">d</span><span class="pc">p</span><span class="c">,</span> <span class="w">q</span><span class="c">-&gt;</span><span class="w">s</span><span class="c">.</span><span class="w">d</span><span class="pc">e</span><span class="c">v</span><span class="w">) &amp;</span> <span class="w">S</span><span class="c">NDRV_SEQ_OSS_FILE_WRITE)</span>
+			<span class="c">return</span> <span class="w">snd_seq_oss_midi_putc</span><span class="c">(</span><span class="w">dp</span><span class="c">,</span> <span class="w">q</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">s</span><span class="c">.</span><span class="w">d</span><span class="pc">e</span><span class="c">v,</span> <span class="w">q</span><span class="c">-&gt;</span><span class="pc">s</span><span class="c">.</span><span class="w">parm1</span><span class="c">,</span> <span class="w">ev</span><span class="pc">)</span><span class="c">;</span>
+		<span class="w">b</span><span class="c">reak;</span>
+
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">SEQ_ECHO</span><span class="c">:</span>
+		<span class="c">if</span> <span class="c">(</span><span class="w">dp</span><span class="c">-&gt;</span><span class="w">seq_mode</span> <span class="c">==</span> <span class="w">SNDRV_SEQ_OSS_MODE_MUSIC</span><span class="c">)</span>
+			<span class="c">return</span> <span class="c">-EINVAL;</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="w">set_echo_event</span><span class="c">(</span><span class="w">dp</span><span class="c">,</span> <span class="w">q</span><span class="pc">,</span> <span class="w">e</span><span class="pc">v)</span><span class="c">;</span>
+
+	<span class="w">c</span><span class="c">ase</span> <span class="w">SEQ_PRIVATE</span><span class="c">:</span>
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">dp</span><span class="c">-&gt;seq_mode</span> <span class="c">==</span> <span class="c">SNDRV_SEQ_OSS_MODE_MUSIC)</span>
+			<span class="c">return</span> <span class="c">-EINVAL;</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="w">snd_seq_oss_synth_raw_event</span><span class="c">(</span><span class="w">d</span><span class="pc">p</span><span class="c">,</span> <span class="w">q</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">c</span><span class="pc">[1</span><span class="c">],</span> <span class="w">q</span><span class="c">-&gt;</span><span class="w">c</span><span class="c">,</span> <span class="w">e</span><span class="pc">v)</span><span class="c">;</span>
+
+	<span class="w">de</span><span class="pc">f</span><span class="c">ault:</span>
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">dp</span><span class="c">-&gt;</span><span class="w">s</span><span class="pc">e</span><span class="c">q_mode</span> <span class="pc">=</span><span class="c">=</span> <span class="pc">S</span><span class="c">NDRV_SEQ_OSS_MODE_MUSIC)</span>
+			<span class="c">return</span> <span class="c">-EINVAL;</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="w">old_event</span><span class="c">(</span><span class="w">dp</span><span class="c">,</span> <span class="w">q</span><span class="pc">,</span> <span class="w">e</span><span class="pc">v)</span><span class="c">;</span>
+	<span class="c">}</span>
+	<span class="w">r</span><span class="c">eturn</span> <span class="pc">-</span><span class="c">EINVAL;</span>
+<span class="c">}</span>
+
+
+<span class="c">static</span> <span class="c">int</span>
+<span class="w">o</span><span class="c">ld_event(struct</span> <span class="w">seq_oss_devinfo</span> <span class="c">*</span><span class="w">dp</span><span class="c">,</span> <span class="w">un</span><span class="pc">i</span><span class="c">on</span> <span class="w">evrec</span> <span class="c">*</span><span class="w">q</span><span class="c">,</span> <span class="c">struct</span> <span class="w">snd_seq_event</span> <span class="c">*</span><span class="w">e</span><span class="pc">v</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="w">s</span><span class="pc">w</span><span class="c">itch</span> <span class="c">(</span><span class="w">q</span><span class="c">-&gt;</span><span class="w">s.c</span><span class="c">ode</span><span class="w">)</span><span class="c"> {</span>
+	<span class="c">case</span> <span class="w">SEQ_NOTEOFF</span><span class="c">:</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="w">note_off_event</span><span class="c">(</span><span class="w">d</span><span class="pc">p</span><span class="c">,</span> <span class="w">0</span><span class="c">,</span> <span class="w">q</span><span class="c">-&gt;</span><span class="w">n</span><span class="c">.</span><span class="w">chn</span><span class="c">,</span> <span class="w">q</span><span class="c">-&gt;</span><span class="pc">n</span><span class="c">.</span><span class="w">note</span><span class="c">,</span> <span class="c">q-&gt;</span><span class="pc">n</span><span class="c">.</span><span class="w">vel</span><span class="c">,</span> <span class="w">e</span><span class="pc">v)</span><span class="c">;</span>
+
+	<span class="w">ca</span><span class="pc">s</span><span class="c">e</span> <span class="w">SEQ_NOTEON</span><span class="c">:</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="w">note_on_event</span><span class="pc">(</span><span class="w">d</span><span class="pc">p</span><span class="c">,</span> <span class="w">0</span><span class="c">,</span> <span class="w">q</span><span class="c">-&gt;n.</span><span class="pc">c</span><span class="c">hn</span><span class="pc">,</span> <span class="pc">q</span><span class="c">-&gt;n.note,</span> <span class="pc">q</span><span class="c">-&gt;n.</span><span class="pc">v</span><span class="c">el,</span> <span class="w">ev</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="w">ca</span><span class="pc">s</span><span class="c">e</span> <span class="w">SEQ_WAIT</span><span class="c">:</span>
+		
+		<span class="w">b</span><span class="c">reak;</span>
+
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">SEQ_PGMCHANGE</span><span class="c">:</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="w">set_control_event</span><span class="pc">(</span><span class="w">d</span><span class="pc">p</span><span class="c">,</span> <span class="pc">0,</span> <span class="w">SNDRV_SEQ_EVENT_PGMCHANGE</span><span class="pc">,</span>
+					 <span class="w">q</span><span class="c">-&gt;</span><span class="pc">n.c</span><span class="c">hn</span><span class="pc">,</span> <span class="c">0,</span> <span class="w">q</span><span class="c">-&gt;n.</span><span class="w">n</span><span class="pc">o</span><span class="c">te,</span> <span class="w">ev</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="w">ca</span><span class="pc">s</span><span class="c">e</span> <span class="w">SEQ_SYNCTIMER</span><span class="c">:</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="w">snd_seq_oss_timer_reset</span><span class="pc">(</span><span class="w">d</span><span class="pc">p-</span><span class="c">&gt;</span><span class="w">ti</span><span class="pc">mer)</span><span class="c">;</span>
+	<span class="pc">}</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">-</span><span class="c">EINVAL;</span>
+<span class="c">}</span>
+
+
+<span class="c">static</span> <span class="c">int</span>
+<span class="w">extended_event</span><span class="c">(struct</span> <span class="w">seq_oss_devinfo</span> <span class="c">*</span><span class="w">dp</span><span class="c">,</span> <span class="w">un</span><span class="pc">i</span><span class="c">on</span> <span class="w">evrec</span> <span class="c">*</span><span class="w">q</span><span class="c">,</span> <span class="c">struct</span> <span class="w">snd_seq_event</span> <span class="c">*</span><span class="w">e</span><span class="pc">v)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">v</span><span class="c">al;</span>
+
+	<span class="w">s</span><span class="pc">w</span><span class="c">itch</span> <span class="c">(</span><span class="w">q</span><span class="c">-&gt;</span><span class="w">e</span><span class="c">.</span><span class="w">c</span><span class="pc">m</span><span class="c">d</span><span class="pc">) </span><span class="c">{</span>
+	<span class="c">case</span> <span class="w">SEQ_NOTEOFF</span><span class="c">:</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="w">note_off_event</span><span class="c">(</span><span class="w">d</span><span class="pc">p</span><span class="c">,</span> <span class="w">q</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">e</span><span class="c">.</span><span class="w">d</span><span class="pc">e</span><span class="c">v,</span> <span class="w">q</span><span class="c">-&gt;</span><span class="w">e</span><span class="c">.</span><span class="w">chn</span><span class="c">,</span> <span class="pc">q</span><span class="c">-&gt;</span><span class="w">e</span><span class="c">.</span><span class="w">p1</span><span class="pc">,</span> <span class="pc">q</span><span class="c">-&gt;</span><span class="pc">e</span><span class="c">.</span><span class="w">p2</span><span class="pc">,</span> <span class="w">e</span><span class="pc">v)</span><span class="c">;</span>
+
+	<span class="w">cas</span><span class="c">e</span> <span class="w">SEQ_NOTEON</span><span class="c">:</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="w">note_on_event</span><span class="c">(</span><span class="w">dp</span><span class="c">,</span> <span class="pc">q</span><span class="c">-&gt;</span><span class="w">e</span><span class="c">.</span><span class="w">de</span><span class="pc">v,</span> <span class="c">q-&gt;</span><span class="w">e</span><span class="c">.</span><span class="pc">c</span><span class="c">hn,</span> <span class="c">q-&gt;</span><span class="pc">e</span><span class="c">.</span><span class="w">p1</span><span class="pc">,</span> <span class="pc">q</span><span class="c">-&gt;</span><span class="pc">e</span><span class="c">.</span><span class="pc">p</span><span class="c">2,</span> <span class="w">e</span><span class="pc">v)</span><span class="c">;</span>
+
+	<span class="w">cas</span><span class="c">e</span> <span class="w">SEQ_PGMCHANGE</span><span class="c">:</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="w">set_control_event</span><span class="c">(</span><span class="w">dp</span><span class="c">,</span> <span class="pc">q</span><span class="c">-&gt;</span><span class="w">e</span><span class="c">.</span><span class="w">de</span><span class="pc">v,</span> <span class="w">SNDRV_SEQ_EVENT_PGMCHANGE</span><span class="c">,</span>
+					 <span class="pc">q</span><span class="c">-&gt;</span><span class="w">e</span><span class="c">.</span><span class="pc">c</span><span class="c">hn</span><span class="pc">,</span> <span class="w">0</span><span class="pc">,</span> <span class="pc">q</span><span class="c">-&gt;</span><span class="pc">e</span><span class="c">.</span><span class="w">p1</span><span class="pc">,</span> <span class="w">e</span><span class="pc">v)</span><span class="c">;</span>
+
+	<span class="w">cas</span><span class="c">e</span> <span class="w">SEQ_AFTERTOUCH</span><span class="c">:</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="w">s</span><span class="pc">e</span><span class="c">t_control_event(</span><span class="w">dp</span><span class="c">,</span> <span class="w">q</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">e</span><span class="c">.</span><span class="w">de</span><span class="pc">v,</span> <span class="w">SNDRV_SEQ_EVENT_CHANPRESS</span><span class="c">,</span>
+					 <span class="pc">q</span><span class="c">-&gt;</span><span class="w">e</span><span class="c">.</span><span class="pc">c</span><span class="c">hn</span><span class="pc">,</span> <span class="w">0</span><span class="c">,</span> <span class="w">q</span><span class="c">-&gt;</span><span class="pc">e</span><span class="c">.</span><span class="w">p1</span><span class="pc">,</span> <span class="w">e</span><span class="pc">v)</span><span class="c">;</span>
+
+	<span class="w">cas</span><span class="c">e</span> <span class="w">SEQ_BALANCE</span><span class="c">:</span>
+		
+		<span class="w">v</span><span class="pc">a</span><span class="c">l</span> <span class="pc">= </span><span class="c">(</span><span class="w">ch</span><span class="pc">ar</span><span class="w">)q</span><span class="c">-&gt;</span><span class="w">e</span><span class="c">.</span><span class="w">p1</span><span class="pc">;</span>
+		<span class="w">v</span><span class="c">al</span> <span class="pc">= </span><span class="c">(</span><span class="w">v</span><span class="c">al</span> <span class="pc">+</span> <span class="w">12</span><span class="c">8</span><span class="w">)</span><span class="pc"> /</span> <span class="pc">2</span><span class="c">;</span>
+		<span class="w">r</span><span class="c">eturn</span> <span class="w">set_control_event</span><span class="c">(</span><span class="w">d</span><span class="pc">p</span><span class="c">,</span> <span class="w">q</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">e</span><span class="c">.</span><span class="w">de</span><span class="pc">v,</span> <span class="w">SNDRV_SEQ_EVENT_CONTROLLER</span><span class="c">,</span>
+					 <span class="w">q</span><span class="c">-&gt;</span><span class="w">e</span><span class="c">.</span><span class="w">chn</span><span class="c">,</span> <span class="w">CTL_PAN</span><span class="pc">,</span> <span class="w">v</span><span class="c">al</span><span class="pc">,</span> <span class="w">ev</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="w">ca</span><span class="c">se</span> <span class="w">SEQ_CONTROLLER</span><span class="c">:</span>
+		<span class="w">v</span><span class="c">al</span> <span class="w">=</span><span class="pc"> ((</span><span class="w">sh</span><span class="pc">o</span><span class="c">rt</span><span class="pc">)</span><span class="w">q</span><span class="c">-&gt;</span><span class="w">e</span><span class="c">.</span><span class="w">p3</span> <span class="w">&lt;</span><span class="c">&lt;</span> <span class="pc">8</span><span class="w">)</span><span class="pc"> </span><span class="c">| (</span><span class="w">sh</span><span class="pc">o</span><span class="c">rt</span><span class="pc">)q</span><span class="c">-&gt;</span><span class="w">e</span><span class="c">.</span><span class="w">p2</span><span class="pc">;</span>
+		<span class="w">s</span><span class="pc">w</span><span class="c">itch</span> <span class="c">(</span><span class="pc">q</span><span class="c">-&gt;</span><span class="w">e</span><span class="c">.</span><span class="w">p1</span><span class="pc">)</span><span class="c"> {</span>
+		<span class="c">case</span> <span class="w">CTRL_PITCH_BENDER</span><span class="c">:</span> 
+			
+			<span class="pc">r</span><span class="c">eturn</span> <span class="w">set_control_event</span><span class="c">(</span><span class="w">d</span><span class="pc">p</span><span class="c">,</span> <span class="w">q</span><span class="c">-&gt;</span><span class="w">e</span><span class="c">.</span><span class="w">de</span><span class="pc">v,</span>
+						 <span class="w">SNDRV_SEQ_EVENT_PITCHBEND</span><span class="pc">,</span>
+						 <span class="w">q</span><span class="c">-&gt;</span><span class="w">e</span><span class="c">.</span><span class="w">chn</span><span class="pc">,</span> <span class="pc">0,</span> <span class="w">v</span><span class="pc">a</span><span class="c">l</span><span class="pc">,</span> <span class="w">e</span><span class="pc">v)</span><span class="c">;</span>
+		<span class="w">c</span><span class="pc">a</span><span class="c">se</span> <span class="w">CTRL_PITCH_BENDER_RANGE</span><span class="c">:</span>
+			
+			<span class="c">return</span> <span class="w">s</span><span class="pc">e</span><span class="c">t_control_event(</span><span class="w">dp</span><span class="c">,</span> <span class="pc">q</span><span class="c">-&gt;</span><span class="w">e</span><span class="c">.</span><span class="w">d</span><span class="pc">e</span><span class="c">v,</span>
+						 <span class="w">SNDRV_SEQ_EVENT_REGPARAM</span><span class="c">,</span>
+						 <span class="pc">q</span><span class="c">-&gt;</span><span class="w">e</span><span class="c">.</span><span class="w">c</span><span class="c">hn</span><span class="pc">,</span> <span class="w">0</span><span class="c">,</span> <span class="w">v</span><span class="pc">a</span><span class="c">l</span><span class="w">*12</span><span class="c">8</span><span class="w">/10</span><span class="pc">0,</span> <span class="w">e</span><span class="pc">v)</span><span class="c">;</span>
+		<span class="w">d</span><span class="pc">ef</span><span class="c">ault:</span>
+			<span class="c">return</span> <span class="w">s</span><span class="pc">e</span><span class="c">t_control_event</span><span class="pc">(</span><span class="w">dp</span><span class="c">,</span> <span class="w">q</span><span class="c">-&gt;</span><span class="w">e</span><span class="c">.</span><span class="w">de</span><span class="pc">v</span><span class="c">,</span>
+						  <span class="w">SNDRV_SEQ_EVENT_CONTROL14</span><span class="pc">,</span>
+						  <span class="pc">q</span><span class="c">-&gt;</span><span class="w">e</span><span class="c">.</span><span class="w">c</span><span class="c">hn</span><span class="pc">,</span> <span class="pc">q</span><span class="c">-&gt;</span><span class="w">e</span><span class="c">.</span><span class="w">p1</span><span class="pc">,</span> <span class="w">v</span><span class="c">al</span><span class="pc">,</span> <span class="w">e</span><span class="pc">v)</span><span class="c">;</span>
+		<span class="c">}</span>
+
+	<span class="w">ca</span><span class="c">se</span> <span class="w">SEQ_VOLMODE</span><span class="c">:</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="w">snd_seq_oss_synth_raw_event</span><span class="c">(</span><span class="w">dp</span><span class="c">,</span> <span class="w">q</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">e</span><span class="c">.</span><span class="w">de</span><span class="pc">v</span><span class="c">,</span> <span class="pc">q</span><span class="c">-&gt;</span><span class="w">c</span><span class="pc">,</span> <span class="w">e</span><span class="pc">v)</span><span class="c">;</span>
+
+	<span class="c">}</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">-</span><span class="c">EINVAL;</span>
+<span class="c">}</span>
+
+
+<span class="c">static</span> <span class="c">int</span>
+<span class="w">chn_voice_event</span><span class="c">(struct</span> <span class="w">seq_oss_devinfo</span> <span class="c">*</span><span class="w">dp</span><span class="c">,</span> <span class="w">un</span><span class="pc">i</span><span class="c">on</span> <span class="w">evrec</span> <span class="c">*</span><span class="w">q</span><span class="c">,</span> <span class="c">struct</span> <span class="w">snd_seq_event</span> <span class="c">*</span><span class="w">e</span><span class="pc">v</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="pc">if</span> <span class="c">(q-&gt;</span><span class="w">v.chn</span> <span class="w">&gt;</span><span class="c">=</span> <span class="w">3</span><span class="c">2)</span>
+		<span class="c">return</span> <span class="c">-EINVAL;</span>
+	<span class="pc">s</span><span class="c">witch</span> <span class="c">(</span><span class="w">q</span><span class="c">-&gt;</span><span class="w">v</span><span class="c">.</span><span class="w">cm</span><span class="c">d</span><span class="pc">)</span><span class="c"> {</span>
+	<span class="c">case</span> <span class="w">MIDI_NOTEON</span><span class="c">:</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="w">note_on_event</span><span class="c">(</span><span class="w">d</span><span class="pc">p</span><span class="c">,</span> <span class="w">q</span><span class="c">-&gt;</span><span class="w">v</span><span class="c">.</span><span class="w">de</span><span class="pc">v,</span> <span class="w">q</span><span class="c">-&gt;</span><span class="w">v</span><span class="c">.chn</span><span class="pc">,</span> <span class="w">q</span><span class="c">-&gt;</span><span class="pc">v</span><span class="c">.</span><span class="w">note</span><span class="c">,</span> <span class="w">q</span><span class="c">-&gt;</span><span class="w">v</span><span class="c">.</span><span class="w">parm</span><span class="pc">,</span> <span class="w">e</span><span class="pc">v)</span><span class="c">;</span>
+
+	<span class="w">ca</span><span class="pc">s</span><span class="c">e</span> <span class="w">MIDI_NOTEOFF</span><span class="c">:</span>
+		<span class="pc">re</span><span class="c">turn</span> <span class="w">note_off_event</span><span class="c">(</span><span class="w">dp</span><span class="c">,</span> <span class="pc">q-</span><span class="c">&gt;</span><span class="w">v</span><span class="c">.</span><span class="w">d</span><span class="pc">e</span><span class="c">v</span><span class="pc">,</span> <span class="pc">q</span><span class="c">-&gt;</span><span class="w">v</span><span class="c">.</span><span class="pc">c</span><span class="c">hn</span><span class="pc">,</span> <span class="pc">q</span><span class="c">-&gt;</span><span class="w">v</span><span class="c">.</span><span class="w">n</span><span class="c">ote</span><span class="pc">,</span> <span class="pc">q</span><span class="c">-&gt;</span><span class="w">v</span><span class="c">.</span><span class="pc">p</span><span class="c">arm</span><span class="pc">,</span> <span class="w">e</span><span class="pc">v)</span><span class="c">;</span>
+
+	<span class="w">ca</span><span class="pc">s</span><span class="c">e</span> <span class="w">MIDI_KEY_PRESSURE</span><span class="c">:</span>
+		<span class="c">return</span> <span class="w">set_note_event</span><span class="c">(</span><span class="w">dp</span><span class="c">,</span> <span class="pc">q-</span><span class="c">&gt;</span><span class="w">v</span><span class="c">.</span><span class="w">d</span><span class="pc">e</span><span class="c">v</span><span class="pc">,</span> <span class="w">SNDRV_SEQ_EVENT_KEYPRESS</span><span class="c">,</span>
+				       <span class="w">q</span><span class="c">-&gt;</span><span class="w">v</span><span class="c">.</span><span class="pc">c</span><span class="c">hn</span><span class="pc">,</span> <span class="w">q</span><span class="c">-&gt;</span><span class="w">v</span><span class="c">.</span><span class="w">n</span><span class="c">ote</span><span class="pc">,</span> <span class="pc">q</span><span class="c">-&gt;</span><span class="w">v</span><span class="c">.parm</span><span class="pc">,</span> <span class="w">e</span><span class="pc">v)</span><span class="c">;</span>
+
+	<span class="c">}</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">-</span><span class="c">EINVAL;</span>
+<span class="c">}</span>
+
+
+<span class="c">static</span> <span class="c">int</span>
+<span class="w">chn_common_event</span><span class="c">(struct</span> <span class="w">seq_oss_devinfo</span> <span class="c">*</span><span class="w">dp</span><span class="c">,</span> <span class="w">un</span><span class="pc">i</span><span class="c">on</span> <span class="w">evrec</span> <span class="c">*</span><span class="w">q</span><span class="c">,</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">snd_seq_event</span> <span class="c">*</span><span class="w">e</span><span class="pc">v</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="pc">if</span> <span class="c">(</span><span class="pc">q</span><span class="c">-&gt;</span><span class="w">l.chn</span> <span class="w">&gt;</span><span class="c">=</span> <span class="w">3</span><span class="c">2)</span>
+		<span class="c">return</span> <span class="c">-EINVAL;</span>
+	<span class="pc">s</span><span class="c">witch</span> <span class="c">(</span><span class="w">q</span><span class="c">-&gt;</span><span class="w">l</span><span class="pc">.</span><span class="w">cm</span><span class="c">d</span><span class="pc">)</span><span class="c"> {</span>
+	<span class="c">case</span> <span class="w">MIDI_PGM_CHANGE</span><span class="c">:</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="w">set_control_event</span><span class="c">(</span><span class="w">d</span><span class="pc">p</span><span class="c">,</span> <span class="pc">q</span><span class="c">-&gt;</span><span class="w">l</span><span class="c">.</span><span class="w">de</span><span class="pc">v,</span> <span class="w">SNDRV_SEQ_EVENT_PGMCHANGE</span><span class="c">,</span>
+					  <span class="w">q</span><span class="c">-&gt;</span><span class="w">l</span><span class="c">.chn</span><span class="pc">,</span> <span class="w">0</span><span class="pc">,</span> <span class="w">q</span><span class="c">-&gt;</span><span class="w">l</span><span class="c">.</span><span class="w">p1</span><span class="pc">,</span> <span class="w">ev</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="w">ca</span><span class="pc">s</span><span class="c">e</span> <span class="w">MIDI_CTL_CHANGE</span><span class="c">:</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="w">s</span><span class="c">et_control_event</span><span class="pc">(</span><span class="w">d</span><span class="pc">p</span><span class="c">,</span> <span class="w">q</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">l</span><span class="c">.</span><span class="w">d</span><span class="pc">ev</span><span class="c">,</span> <span class="w">SNDRV_SEQ_EVENT_CONTROLLER</span><span class="c">,</span>
+					  <span class="pc">q</span><span class="c">-&gt;</span><span class="w">l</span><span class="c">.</span><span class="w">c</span><span class="c">hn</span><span class="pc">,</span> <span class="pc">q</span><span class="c">-&gt;</span><span class="pc">l</span><span class="c">.</span><span class="w">p1</span><span class="pc">,</span> <span class="c">q-&gt;</span><span class="pc">l</span><span class="c">.</span><span class="w">v</span><span class="pc">a</span><span class="c">l</span><span class="pc">,</span> <span class="w">ev</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="w">ca</span><span class="pc">s</span><span class="c">e</span> <span class="w">MIDI_PITCH_BEND</span><span class="c">:</span>
+		
+		<span class="pc">r</span><span class="c">eturn</span> <span class="w">s</span><span class="c">et_control_event</span><span class="pc">(</span><span class="w">dp</span><span class="c">,</span> <span class="pc">q</span><span class="c">-&gt;</span><span class="w">l</span><span class="c">.</span><span class="w">d</span><span class="pc">e</span><span class="c">v,</span> <span class="w">SNDRV_SEQ_EVENT_PITCHBEND</span><span class="c">,</span>
+					  <span class="c">q-&gt;</span><span class="pc">l</span><span class="c">.</span><span class="pc">c</span><span class="c">hn</span><span class="pc">,</span> <span class="w">0</span><span class="pc">,</span> <span class="w">q</span><span class="c">-&gt;</span><span class="w">l</span><span class="c">.</span><span class="w">v</span><span class="pc">a</span><span class="c">l</span> <span class="w">-</span> <span class="w">8192</span><span class="pc">,</span> <span class="w">ev</span><span class="pc">)</span><span class="c">;</span>
+		
+	<span class="w">ca</span><span class="pc">s</span><span class="c">e</span> <span class="w">MIDI_CHN_PRESSURE</span><span class="c">:</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="w">se</span><span class="c">t_control_event</span><span class="pc">(</span><span class="w">dp</span><span class="c">,</span> <span class="w">q</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">l</span><span class="c">.</span><span class="w">d</span><span class="pc">e</span><span class="c">v,</span> <span class="w">SNDRV_SEQ_EVENT_CHANPRESS</span><span class="c">,</span>
+					  <span class="w">q</span><span class="c">-&gt;</span><span class="w">l</span><span class="c">.chn</span><span class="pc">,</span> <span class="w">0</span><span class="c">,</span> <span class="w">q</span><span class="c">-&gt;</span><span class="w">l</span><span class="c">.</span><span class="w">v</span><span class="c">al</span><span class="pc">,</span> <span class="w">ev</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">}</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">-</span><span class="c">EINVAL;</span>
+<span class="c">}</span>
+
+
+<span class="c">static</span> <span class="c">int</span>
+<span class="w">timing_event</span><span class="c">(struct</span> <span class="w">seq_oss_devinfo</span> <span class="c">*</span><span class="w">dp</span><span class="c">,</span> <span class="w">un</span><span class="pc">i</span><span class="c">on</span> <span class="w">evrec</span> <span class="c">*</span><span class="w">q</span><span class="c">,</span> <span class="c">struct</span> <span class="w">snd_seq_event</span> <span class="c">*</span><span class="w">ev</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="w">s</span><span class="pc">w</span><span class="c">itch</span> <span class="c">(</span><span class="w">q</span><span class="c">-&gt;</span><span class="w">t</span><span class="pc">.</span><span class="w">c</span><span class="pc">m</span><span class="c">d</span><span class="w">)</span><span class="c"> {</span>
+	<span class="c">case</span> <span class="w">TMR_ECHO</span><span class="c">:</span>
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">dp</span><span class="c">-&gt;</span><span class="w">seq_mode</span> <span class="c">==</span> <span class="w">SNDRV_SEQ_OSS_MODE_MUSIC</span><span class="pc">)</span>
+			<span class="c">return</span> <span class="w">set_echo_event</span><span class="c">(</span><span class="w">d</span><span class="pc">p</span><span class="c">,</span> <span class="w">q</span><span class="pc">,</span> <span class="w">ev</span><span class="pc">)</span><span class="c">;</span>
+		<span class="pc">e</span><span class="c">lse</span> <span class="pc">{</span>
+			<span class="w">un</span><span class="pc">i</span><span class="c">on</span> <span class="w">evrec</span> <span class="pc">tm</span><span class="c">p;</span>
+			<span class="pc">mems</span><span class="c">et</span><span class="pc">(&amp;</span><span class="w">t</span><span class="c">mp,</span> <span class="c">0,</span> <span class="c">sizeof(</span><span class="pc">t</span><span class="c">mp));</span>
+			
+			<span class="w">t</span><span class="c">mp.</span><span class="w">echo</span> <span class="pc">= </span><span class="c">(</span><span class="w">q</span><span class="c">-&gt;</span><span class="w">t</span><span class="c">.</span><span class="w">t</span><span class="pc">i</span><span class="c">me</span> <span class="w">&lt;</span><span class="c">&lt;</span> <span class="w">8</span><span class="pc">) </span><span class="c">|</span> <span class="w">SEQ_ECHO</span><span class="c">;</span>
+			<span class="w">r</span><span class="c">eturn</span> <span class="w">s</span><span class="pc">e</span><span class="c">t_echo_event</span><span class="pc">(</span><span class="w">dp</span><span class="pc">, </span><span class="c">&amp;</span><span class="pc">t</span><span class="c">mp,</span> <span class="w">ev</span><span class="pc">)</span><span class="c">;</span>
+		<span class="c">}</span> 
+
+	<span class="w">c</span><span class="pc">a</span><span class="c">se</span> <span class="w">TMR_STOP</span><span class="c">:</span>
+		<span class="c">if</span> <span class="c">(</span><span class="w">dp</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">seq_mode)</span>
+			<span class="c">return</span> <span class="w">snd_seq_oss_timer_stop</span><span class="pc">(</span><span class="w">d</span><span class="pc">p-</span><span class="c">&gt;</span><span class="w">t</span><span class="pc">imer</span><span class="c">);</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="pc">0</span><span class="c">;</span>
+
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">TMR_CONTINUE</span><span class="c">:</span>
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">dp</span><span class="c">-&gt;</span><span class="pc">seq</span><span class="c">_mode</span><span class="w">)</span>
+			<span class="c">return</span> <span class="w">snd_seq_oss_timer_continue</span><span class="pc">(</span><span class="w">d</span><span class="pc">p-</span><span class="c">&gt;</span><span class="w">t</span><span class="pc">imer)</span><span class="c">;</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="pc">0</span><span class="c">;</span>
+
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">TMR_TEMPO</span><span class="c">:</span>
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">d</span><span class="pc">p</span><span class="c">-&gt;seq_mode</span><span class="pc">)</span>
+			<span class="c">return</span> <span class="w">snd_seq_oss_timer_tempo</span><span class="pc">(</span><span class="w">d</span><span class="pc">p</span><span class="c">-&gt;</span><span class="w">t</span><span class="pc">i</span><span class="c">mer</span><span class="pc">,</span> <span class="w">q</span><span class="c">-&gt;</span><span class="w">t</span><span class="pc">.</span><span class="w">ti</span><span class="pc">me</span><span class="c">);</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+	<span class="c">}</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">-</span><span class="c">EINVAL;</span>
+<span class="c">}</span>
+
+
+<span class="c">static</span> <span class="pc">i</span><span class="c">nt</span>
+<span class="w">local_event</span><span class="c">(struct</span> <span class="w">seq_oss_devinfo</span> <span class="c">*</span><span class="w">dp</span><span class="c">,</span> <span class="w">un</span><span class="pc">i</span><span class="c">on</span> <span class="w">evrec</span> <span class="c">*</span><span class="w">q</span><span class="pc">,</span> <span class="c">struct</span> <span class="w">snd_seq_event</span> <span class="c">*</span><span class="w">ev</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="w">r</span><span class="c">eturn</span> <span class="c">-EINVAL;</span>
+<span class="c">}</span>
+
+
+<span class="c">static</span> <span class="c">int</span>
+<span class="w">note_on_event</span><span class="c">(struct</span> <span class="c">seq_oss_devinfo</span> <span class="c">*</span><span class="w">dp</span><span class="c">,</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">d</span><span class="pc">ev</span><span class="c">,</span> <span class="c">int</span> <span class="w">ch</span><span class="c">,</span> <span class="c">int</span> <span class="w">note</span><span class="c">,</span> <span class="c">int</span> <span class="w">vel</span><span class="c">,</span> <span class="pc">s</span><span class="c">truct</span> <span class="pc">sn</span><span class="c">d_seq_event</span> <span class="c">*</span><span class="w">e</span><span class="pc">v</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">seq_oss_synthinfo</span> <span class="c">*</span><span class="w">i</span><span class="c">nfo</span><span class="pc">;</span>
+
+	<span class="pc">if</span> <span class="pc">(!</span><span class="w">snd_seq_oss_synth_is_valid</span><span class="c">(</span><span class="w">dp</span><span class="c">,</span> <span class="pc">d</span><span class="c">ev</span><span class="pc">)</span><span class="c">)</span>
+		<span class="c">return</span> <span class="c">-</span><span class="w">EN</span><span class="pc">X</span><span class="c">IO;</span>
+
+	<span class="w">i</span><span class="pc">nf</span><span class="c">o</span> <span class="pc">= </span><span class="c">&amp;</span><span class="w">dp</span><span class="c">-&gt;</span><span class="w">synths</span><span class="c">[</span><span class="w">d</span><span class="c">ev</span><span class="pc">]</span><span class="c">;</span>
+	<span class="w">s</span><span class="c">witch</span> <span class="c">(info-&gt;</span><span class="w">ar</span><span class="c">g</span><span class="pc">.</span><span class="w">event_passing</span><span class="c">) {</span>
+	<span class="c">case</span> <span class="w">SNDRV_SEQ_OSS_PROCESS_EVENTS</span><span class="c">:</span>
+		<span class="pc">i</span><span class="c">f</span> <span class="pc">(!</span> <span class="c">info-&gt;</span><span class="w">ch</span> <span class="w">|</span><span class="c">|</span> <span class="w">ch</span> <span class="w">&lt;</span> <span class="c">0</span> <span class="pc">|</span><span class="c">|</span> <span class="w">ch</span> <span class="pc">&gt;=</span> <span class="w">i</span><span class="c">nfo-&gt;</span><span class="w">nr_voices</span><span class="pc">) </span><span class="c">{</span>
+			
+			<span class="w">r</span><span class="c">eturn</span> <span class="w">set_note_event</span><span class="pc">(</span><span class="w">d</span><span class="pc">p,</span> <span class="w">d</span><span class="pc">e</span><span class="c">v,</span> <span class="w">SNDRV_SEQ_EVENT_NOTEON</span><span class="c">,</span> <span class="w">ch</span><span class="c">,</span> <span class="w">note</span><span class="pc">,</span> <span class="w">vel</span><span class="pc">,</span> <span class="w">e</span><span class="pc">v</span><span class="c">);</span>
+		<span class="c">}</span>
+
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">n</span><span class="pc">o</span><span class="c">te</span> <span class="c">==</span> <span class="w">2</span><span class="pc">55</span> <span class="pc">&amp;</span><span class="c">&amp;</span> <span class="w">i</span><span class="c">nfo-&gt;</span><span class="w">ch[c</span><span class="pc">h</span><span class="c">].note</span> <span class="w">&gt;</span><span class="pc">=</span> <span class="pc">0) </span><span class="c">{</span>
+			
+			<span class="w">i</span><span class="pc">n</span><span class="c">t</span> <span class="w">ty</span><span class="pc">pe;</span>
+			<span class="w">/</span><span class="c">/</span><span class="pc">i</span><span class="c">f</span> <span class="c">(!</span> <span class="w">v</span><span class="c">el</span><span class="pc">)</span>
+				
+			<span class="w">/</span><span class="c">/</span>	<span class="w">t</span><span class="pc">y</span><span class="c">pe</span> <span class="c">=</span> <span class="w">SNDRV_SEQ_EVENT_NOTEOFF</span><span class="pc">;</span>
+			<span class="w">/</span><span class="c">/</span><span class="pc">e</span><span class="c">lse</span>
+				<span class="c">if</span> <span class="c">(</span><span class="pc">i</span><span class="c">nfo-&gt;</span><span class="w">ch[c</span><span class="pc">h</span><span class="c">].</span><span class="pc">v</span><span class="c">el)</span>
+				
+				<span class="w">ty</span><span class="c">pe</span> <span class="c">=</span> <span class="w">SNDRV_SEQ_EVENT_KEYPRESS</span><span class="c">;</span>
+			<span class="c">else</span>
+				
+				<span class="w">t</span><span class="pc">y</span><span class="c">pe</span> <span class="c">=</span> <span class="w">SNDRV_SEQ_EVENT_NOTEON</span><span class="c">;</span>
+			<span class="w">i</span><span class="pc">n</span><span class="c">fo-&gt;</span><span class="w">ch</span><span class="pc">[</span><span class="w">ch</span><span class="pc">].v</span><span class="c">el</span> <span class="c">=</span> <span class="pc">v</span><span class="c">el;</span>
+			<span class="pc">r</span><span class="c">eturn</span> <span class="w">set_note_event</span><span class="pc">(</span><span class="w">dp</span><span class="c">,</span> <span class="w">d</span><span class="pc">e</span><span class="c">v,</span> <span class="w">ty</span><span class="c">pe,</span> <span class="w">c</span><span class="pc">h</span><span class="c">,</span> <span class="w">i</span><span class="pc">n</span><span class="c">fo</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">ch</span><span class="pc">[</span><span class="w">ch</span><span class="c">].</span><span class="w">note</span><span class="c">,</span> <span class="c">vel</span><span class="pc">,</span> <span class="w">e</span><span class="pc">v</span><span class="c">);</span>
+		<span class="c">}</span> <span class="pc">e</span><span class="c">lse</span> <span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">n</span><span class="c">ote</span> <span class="pc">&gt;=</span> <span class="w">12</span><span class="pc">8</span><span class="c">)</span>
+			<span class="c">return</span> <span class="c">-EINVAL;</span> 
+
+		<span class="c">if</span> <span class="c">(</span><span class="pc">n</span><span class="c">ote</span> <span class="w">!</span><span class="c">=</span> <span class="w">i</span><span class="c">nfo-&gt;</span><span class="w">ch</span><span class="pc">[</span><span class="w">c</span><span class="pc">h</span><span class="c">].note</span> <span class="w">&amp;</span><span class="pc">&amp;</span> <span class="w">i</span><span class="c">nfo-&gt;</span><span class="pc">c</span><span class="c">h</span><span class="pc">[c</span><span class="c">h].note</span> <span class="w">&gt;</span><span class="pc">=</span> <span class="c">0)</span>
+			
+			<span class="w">set_note_event</span><span class="c">(</span><span class="w">dp</span><span class="c">,</span> <span class="w">d</span><span class="pc">e</span><span class="c">v,</span> <span class="w">SNDRV_SEQ_EVENT_NOTEOFF</span><span class="c">,</span> <span class="pc">c</span><span class="c">h</span><span class="pc">,</span> <span class="w">i</span><span class="pc">n</span><span class="c">fo-&gt;</span><span class="w">c</span><span class="pc">h[</span><span class="w">c</span><span class="pc">h</span><span class="c">].note,</span> <span class="w">0</span><span class="c">,</span> <span class="w">ev</span><span class="pc">)</span><span class="c">;</span>
+		
+		<span class="w">in</span><span class="pc">f</span><span class="c">o-&gt;</span><span class="w">c</span><span class="c">h</span><span class="pc">[</span><span class="w">c</span><span class="pc">h</span><span class="c">].note</span> <span class="c">=</span> <span class="w">n</span><span class="c">ote;</span>
+		<span class="w">in</span><span class="pc">f</span><span class="c">o-&gt;</span><span class="pc">ch[</span><span class="w">c</span><span class="c">h].</span><span class="w">vel</span> <span class="c">=</span> <span class="w">v</span><span class="c">el;</span>
+		<span class="w">i</span><span class="c">f</span> <span class="c">(</span><span class="w">v</span><span class="c">el</span><span class="w">)</span> 
+			<span class="c">return</span> <span class="w">set_note_event</span><span class="pc">(</span><span class="w">dp</span><span class="c">,</span> <span class="w">d</span><span class="pc">e</span><span class="c">v</span><span class="pc">,</span> <span class="w">SNDRV_SEQ_EVENT_NOTEON</span><span class="pc">,</span> <span class="w">c</span><span class="pc">h,</span> <span class="w">n</span><span class="c">ote</span><span class="pc">,</span> <span class="pc">v</span><span class="c">el</span><span class="pc">,</span> <span class="w">ev</span><span class="c">);</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="pc">-</span><span class="c">EINVAL;</span>
+		
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">SNDRV_SEQ_OSS_PASS_EVENTS</span><span class="c">:</span>
+		
+		<span class="pc">r</span><span class="c">eturn</span> <span class="w">s</span><span class="c">et_note_event</span><span class="pc">(</span><span class="w">dp</span><span class="c">,</span> <span class="pc">d</span><span class="c">ev,</span> <span class="c">SNDRV_SEQ_EVENT_NOTEON,</span> <span class="w">ch</span><span class="c">,</span> <span class="c">note,</span> <span class="w">v</span><span class="c">el,</span> <span class="w">ev</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="w">c</span><span class="c">ase</span> <span class="w">SNDRV_SEQ_OSS_PROCESS_KEYPRESS</span><span class="c">:</span>
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(note</span> <span class="pc">&gt;</span><span class="c">=</span> <span class="w">12</span><span class="pc">8</span><span class="c">)</span> 
+			<span class="c">return</span> <span class="w">s</span><span class="c">et_note_event</span><span class="pc">(</span><span class="w">dp</span><span class="c">,</span> <span class="w">d</span><span class="pc">e</span><span class="c">v,</span> <span class="w">SNDRV_SEQ_EVENT_KEYPRESS</span><span class="c">,</span> <span class="w">ch</span><span class="pc">,</span> <span class="w">n</span><span class="c">ote</span> <span class="w">-</span> <span class="w">12</span><span class="pc">8</span><span class="c">,</span> <span class="w">v</span><span class="pc">e</span><span class="c">l</span><span class="pc">,</span> <span class="w">ev</span><span class="pc">)</span><span class="c">;</span>
+		<span class="w">e</span><span class="c">lse</span> 
+			<span class="pc">r</span><span class="c">eturn</span> <span class="w">s</span><span class="c">et_note_event(</span><span class="w">d</span><span class="pc">p</span><span class="c">,</span> <span class="w">d</span><span class="pc">e</span><span class="c">v,</span> <span class="w">SNDRV_SEQ_EVENT_NOTEON</span><span class="c">,</span> <span class="w">ch</span><span class="c">,</span> <span class="c">note,</span> <span class="w">v</span><span class="c">el</span><span class="pc">,</span> <span class="w">ev</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">}</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">-</span><span class="c">EINVAL;</span>
+<span class="c">}</span>
+
+
+<span class="c">static</span> <span class="c">int</span>
+<span class="w">note_off_event</span><span class="c">(struct</span> <span class="w">seq_oss_devinfo</span> <span class="c">*</span><span class="w">dp</span><span class="c">,</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">dev</span><span class="c">,</span> <span class="c">int</span> <span class="w">c</span><span class="pc">h</span><span class="c">,</span> <span class="c">int</span> <span class="w">n</span><span class="pc">ote</span><span class="c">,</span> <span class="c">int</span> <span class="w">v</span><span class="pc">e</span><span class="c">l,</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">snd_seq_event</span> <span class="c">*</span><span class="w">e</span><span class="pc">v</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">seq_oss_synthinfo</span> <span class="c">*</span><span class="w">i</span><span class="pc">n</span><span class="c">fo</span><span class="pc">;</span>
+
+	<span class="pc">if</span> <span class="pc">(!</span><span class="w">snd_seq_oss_synth_is_valid</span><span class="c">(</span><span class="w">dp</span><span class="c">,</span> <span class="pc">d</span><span class="c">ev</span><span class="pc">)</span><span class="c">)</span>
+		<span class="c">return</span> <span class="c">-</span><span class="w">EN</span><span class="pc">X</span><span class="c">IO;</span>
+
+	<span class="w">i</span><span class="pc">nf</span><span class="c">o</span> <span class="pc">= </span><span class="c">&amp;</span><span class="w">dp</span><span class="c">-&gt;</span><span class="w">synths</span><span class="c">[</span><span class="w">d</span><span class="c">ev</span><span class="pc">]</span><span class="c">;</span>
+	<span class="w">s</span><span class="c">witch</span> <span class="c">(info-&gt;</span><span class="w">ar</span><span class="c">g</span><span class="pc">.</span><span class="w">event_passing</span><span class="c">) {</span>
+	<span class="c">case</span> <span class="w">SNDRV_SEQ_OSS_PROCESS_EVENTS</span><span class="c">:</span>
+		<span class="pc">i</span><span class="c">f</span> <span class="pc">(!</span> <span class="c">info-&gt;</span><span class="w">ch</span> <span class="w">|</span><span class="c">|</span> <span class="w">ch</span> <span class="w">&lt;</span> <span class="c">0</span> <span class="pc">|</span><span class="c">|</span> <span class="w">ch</span> <span class="pc">&gt;=</span> <span class="w">i</span><span class="c">nfo-&gt;</span><span class="w">nr_voices</span><span class="pc">) </span><span class="c">{</span>
+			
+			<span class="w">r</span><span class="c">eturn</span> <span class="w">set_note_event</span><span class="pc">(</span><span class="w">d</span><span class="pc">p,</span> <span class="w">d</span><span class="pc">e</span><span class="c">v,</span> <span class="w">SNDRV_SEQ_EVENT_NOTEON</span><span class="c">,</span> <span class="w">ch</span><span class="c">,</span> <span class="w">note</span><span class="pc">,</span> <span class="w">vel</span><span class="pc">,</span> <span class="w">e</span><span class="pc">v</span><span class="c">);</span>
+		<span class="c">}</span>
+
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">i</span><span class="c">nfo-&gt;</span><span class="w">ch[ch</span><span class="c">].</span><span class="pc">n</span><span class="c">ote</span> <span class="pc">&gt;</span><span class="c">=</span> <span class="pc">0) </span><span class="c">{</span>
+			<span class="w">n</span><span class="c">ote</span> <span class="c">=</span> <span class="w">i</span><span class="pc">n</span><span class="c">fo-&gt;</span><span class="w">c</span><span class="pc">h</span><span class="c">[</span><span class="w">c</span><span class="pc">h</span><span class="c">].note;</span>
+			<span class="w">i</span><span class="pc">nf</span><span class="c">o-&gt;</span><span class="pc">ch[</span><span class="w">c</span><span class="pc">h</span><span class="c">].</span><span class="w">v</span><span class="pc">e</span><span class="c">l</span> <span class="pc">=</span> <span class="pc">0</span><span class="c">;</span>
+			<span class="w">in</span><span class="pc">f</span><span class="c">o-&gt;</span><span class="pc">c</span><span class="c">h[</span><span class="pc">ch</span><span class="c">].</span><span class="pc">n</span><span class="c">ote</span> <span class="w">= </span><span class="pc">-</span><span class="c">1;</span>
+			<span class="w">r</span><span class="pc">e</span><span class="c">turn</span> <span class="w">set_note_event</span><span class="c">(</span><span class="w">dp</span><span class="c">,</span> <span class="w">d</span><span class="pc">e</span><span class="c">v</span><span class="pc">,</span> <span class="w">SNDRV_SEQ_EVENT_NOTEOFF</span><span class="c">,</span> <span class="w">c</span><span class="pc">h</span><span class="c">,</span> <span class="w">n</span><span class="c">ote</span><span class="pc">,</span> <span class="w">v</span><span class="pc">e</span><span class="c">l</span><span class="pc">,</span> <span class="w">ev</span><span class="c">);</span>
+		<span class="c">}</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="pc">-</span><span class="c">EINVAL;</span> 
+
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">SNDRV_SEQ_OSS_PASS_EVENTS</span><span class="c">:</span>
+	<span class="c">case</span> <span class="w">SNDRV_SEQ_OSS_PROCESS_KEYPRESS</span><span class="c">:</span>
+		
+		<span class="pc">r</span><span class="c">eturn</span> <span class="w">s</span><span class="pc">e</span><span class="c">t_note_event(</span><span class="w">dp</span><span class="c">,</span> <span class="w">d</span><span class="pc">ev,</span> <span class="pc">S</span><span class="c">NDRV_SEQ_EVENT_NOTEOFF,</span> <span class="w">ch</span><span class="pc">,</span> <span class="c">note,</span> <span class="c">vel,</span> <span class="w">ev</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="c">}</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">-</span><span class="c">EINVAL;</span>
+<span class="c">}</span>
+
+
+<span class="c">static</span> <span class="c">int</span>
+<span class="w">s</span><span class="c">et_note_event(struct</span> <span class="w">seq_oss_devinfo</span> <span class="c">*</span><span class="w">dp</span><span class="c">,</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">dev</span><span class="c">,</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">t</span><span class="c">ype,</span> <span class="c">int</span> <span class="w">ch</span><span class="c">,</span> <span class="c">int</span> <span class="w">n</span><span class="c">ote,</span> <span class="c">int</span> <span class="w">v</span><span class="pc">e</span><span class="c">l,</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">snd_seq_event</span> <span class="c">*</span><span class="w">e</span><span class="pc">v</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="pc">if</span> <span class="pc">(!</span> <span class="w">snd_seq_oss_synth_is_valid</span><span class="c">(</span><span class="w">dp</span><span class="pc">,</span> <span class="pc">d</span><span class="c">ev</span><span class="pc">)</span><span class="c">)</span>
+		<span class="c">return</span> <span class="c">-</span><span class="w">EN</span><span class="pc">X</span><span class="c">IO;</span>
+	
+	<span class="w">ev</span><span class="pc">-</span><span class="c">&gt;type</span> <span class="c">=</span> <span class="w">t</span><span class="c">ype;</span>
+	<span class="w">snd_seq_oss_synth_addr</span><span class="c">(</span><span class="w">dp</span><span class="c">,</span> <span class="pc">d</span><span class="c">ev</span><span class="pc">,</span> <span class="w">e</span><span class="pc">v)</span><span class="c">;</span>
+	<span class="w">e</span><span class="pc">v</span><span class="c">-&gt;</span><span class="w">d</span><span class="pc">at</span><span class="c">a</span><span class="pc">.</span><span class="w">note.ch</span><span class="pc">ann</span><span class="c">el</span> <span class="c">=</span> <span class="w">ch</span><span class="pc">;</span>
+	<span class="w">e</span><span class="c">v</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">d</span><span class="c">ata.note.</span><span class="w">n</span><span class="pc">o</span><span class="c">te</span> <span class="pc">=</span> <span class="pc">n</span><span class="c">ote;</span>
+	<span class="w">e</span><span class="c">v</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">d</span><span class="c">ata.note.</span><span class="w">velocity</span> <span class="c">=</span> <span class="w">vel</span><span class="c">;</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+
+<span class="c">static</span> <span class="c">int</span>
+<span class="w">set_control_event</span><span class="c">(struct</span> <span class="w">seq_oss_devinfo</span> <span class="c">*</span><span class="w">dp</span><span class="c">,</span> <span class="w">i</span><span class="c">nt</span> <span class="w">d</span><span class="pc">ev</span><span class="c">,</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">t</span><span class="c">ype,</span> <span class="c">int</span> <span class="w">ch</span><span class="pc">,</span> <span class="c">int</span> <span class="w">pa</span><span class="pc">r</span><span class="c">am</span><span class="pc">,</span> <span class="c">int</span> <span class="pc">v</span><span class="c">al</span><span class="pc">,</span> <span class="w">s</span><span class="c">truct</span> <span class="w">snd_seq_event</span> <span class="c">*</span><span class="w">e</span><span class="pc">v</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="pc">if</span> <span class="pc">(!</span> <span class="w">snd_seq_oss_synth_is_valid</span><span class="c">(</span><span class="w">dp</span><span class="pc">,</span> <span class="w">d</span><span class="c">ev</span><span class="pc">)</span><span class="c">)</span>
+		<span class="c">return</span> <span class="c">-</span><span class="w">EN</span><span class="pc">X</span><span class="c">IO;</span>
+	
+	<span class="w">ev</span><span class="pc">-</span><span class="c">&gt;</span><span class="pc">t</span><span class="c">ype</span> <span class="c">=</span> <span class="w">t</span><span class="c">ype;</span>
+	<span class="w">snd_seq_oss_synth_addr</span><span class="c">(</span><span class="w">dp</span><span class="c">,</span> <span class="w">d</span><span class="pc">e</span><span class="c">v</span><span class="pc">,</span> <span class="w">e</span><span class="pc">v</span><span class="c">);</span>
+	<span class="w">e</span><span class="pc">v</span><span class="c">-&gt;</span><span class="w">d</span><span class="pc">at</span><span class="c">a</span><span class="pc">.</span><span class="w">co</span><span class="pc">nt</span><span class="c">rol</span><span class="pc">.</span><span class="w">ch</span><span class="pc">ann</span><span class="c">el</span> <span class="c">=</span> <span class="w">ch</span><span class="pc">;</span>
+	<span class="w">e</span><span class="c">v</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">d</span><span class="c">ata.</span><span class="w">co</span><span class="pc">nt</span><span class="c">rol.</span><span class="w">pa</span><span class="pc">ram</span> <span class="pc">=</span> <span class="w">p</span><span class="pc">aram</span><span class="c">;</span>
+	<span class="pc">e</span><span class="c">v</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">d</span><span class="c">ata.</span><span class="w">c</span><span class="pc">ont</span><span class="c">rol.</span><span class="w">v</span><span class="c">alue</span> <span class="c">=</span> <span class="w">v</span><span class="pc">al</span><span class="c">;</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+
+<span class="c">static</span> <span class="c">int</span>
+<span class="w">set_echo_event</span><span class="c">(struct</span> <span class="w">seq_oss_devinfo</span> <span class="c">*</span><span class="w">dp</span><span class="c">,</span> <span class="w">un</span><span class="pc">i</span><span class="c">on</span> <span class="w">evrec</span> <span class="c">*</span><span class="w">rec</span><span class="c">,</span> <span class="c">struct</span> <span class="w">snd_seq_event</span> <span class="c">*</span><span class="w">e</span><span class="c">v)</span>
+<span class="c">{</span>
+	<span class="w">e</span><span class="pc">v</span><span class="c">-&gt;</span><span class="w">t</span><span class="c">ype</span> <span class="c">=</span> <span class="w">SNDRV_SEQ_EVENT_ECHO</span><span class="pc">;</span>
+	
+	<span class="w">snd_seq_oss_fill_addr</span><span class="c">(</span><span class="w">dp</span><span class="c">,</span> <span class="w">e</span><span class="c">v</span><span class="pc">,</span> <span class="w">dp</span><span class="c">-&gt;</span><span class="w">a</span><span class="c">ddr</span><span class="pc">.</span><span class="w">cl</span><span class="pc">i</span><span class="c">ent,</span> <span class="w">dp</span><span class="c">-&gt;</span><span class="w">a</span><span class="c">ddr</span><span class="pc">.</span><span class="w">p</span><span class="pc">or</span><span class="c">t</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">m</span><span class="pc">e</span><span class="c">mcpy</span><span class="pc">(&amp;e</span><span class="c">v-&gt;</span><span class="w">d</span><span class="pc">ata,</span> <span class="w">r</span><span class="c">ec</span><span class="pc">,</span> <span class="w">LONG_EVENT_SIZE</span><span class="c">);</span>
+	<span class="w">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+
+<span class="w">i</span><span class="pc">n</span><span class="c">t</span>
+<span class="w">snd_seq_oss_event_input</span><span class="c">(struct</span> <span class="w">snd_seq_event</span> <span class="c">*</span><span class="w">e</span><span class="c">v,</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">direct</span><span class="c">,</span> <span class="w">v</span><span class="c">oid</span> <span class="c">*</span><span class="w">pr</span><span class="pc">iva</span><span class="c">te_data</span><span class="pc">,</span>
+			<span class="c">int</span> <span class="w">atomic</span><span class="c">,</span> <span class="c">int</span> <span class="w">hop</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">seq_oss_devinfo</span> <span class="c">*</span><span class="w">dp</span> <span class="pc">= </span><span class="c">(struct</span> <span class="c">seq_oss_devinfo</span> <span class="c">*)</span><span class="w">pri</span><span class="pc">vate_</span><span class="c">data;</span>
+	<span class="w">u</span><span class="pc">ni</span><span class="c">on</span> <span class="w">evrec</span> <span class="c">*</span><span class="w">rec</span><span class="pc">;</span>
+
+	<span class="w">i</span><span class="pc">f</span> <span class="c">(</span><span class="w">e</span><span class="pc">v</span><span class="c">-&gt;type</span> <span class="pc">!</span><span class="c">=</span> <span class="w">SNDRV_SEQ_EVENT_ECHO</span><span class="c">)</span>
+		<span class="c">return</span> <span class="w">snd_seq_oss_midi_input</span><span class="c">(</span><span class="w">e</span><span class="pc">v,</span> <span class="w">direct</span><span class="c">,</span> <span class="w">priv</span><span class="pc">ate_d</span><span class="c">ata</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">e</span><span class="c">v-&gt;</span><span class="w">s</span><span class="pc">o</span><span class="c">urce</span><span class="pc">.</span><span class="w">cl</span><span class="pc">i</span><span class="c">ent</span> <span class="pc">!</span><span class="c">=</span> <span class="w">dp</span><span class="c">-&gt;</span><span class="w">cseq</span><span class="pc">)</span>
+		<span class="c">return</span> <span class="pc">0</span><span class="c">;</span> 
+
+	<span class="w">rec</span> <span class="w">=</span><span class="pc"> (</span><span class="w">un</span><span class="pc">i</span><span class="c">on</span> <span class="c">evrec</span><span class="pc">*)&amp;e</span><span class="c">v-&gt;</span><span class="pc">d</span><span class="c">ata;</span>
+	<span class="c">if</span> <span class="c">(</span><span class="w">r</span><span class="c">ec-&gt;</span><span class="w">s</span><span class="c">.</span><span class="w">co</span><span class="pc">d</span><span class="c">e</span> <span class="c">==</span> <span class="w">SEQ_SYNCTIMER</span><span class="pc">) </span><span class="c">{</span>
+		
+		<span class="w">snd_seq_oss_writeq_wakeup</span><span class="c">(</span><span class="w">dp</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">writeq</span><span class="c">,</span> <span class="w">r</span><span class="pc">ec</span><span class="c">-&gt;</span><span class="w">t</span><span class="c">.</span><span class="w">ti</span><span class="c">me);</span>
+		
+	<span class="c">}</span> <span class="c">else</span> <span class="c">{</span>
+		
+		<span class="c">if</span> <span class="c">(</span><span class="w">dp</span><span class="c">-&gt;</span><span class="w">readq</span> <span class="c">==</span> <span class="pc">N</span><span class="c">ULL</span><span class="pc">)</span>
+			<span class="pc">r</span><span class="c">eturn</span> <span class="pc">0</span><span class="c">;</span>
+		<span class="w">snd_seq_oss_readq_put_event</span><span class="c">(</span><span class="w">dp</span><span class="pc">-</span><span class="c">&gt;readq,</span> <span class="w">re</span><span class="pc">c)</span><span class="c">;</span>
+	<span class="c">}</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+
+</pre>
+</body>
+</html>
+

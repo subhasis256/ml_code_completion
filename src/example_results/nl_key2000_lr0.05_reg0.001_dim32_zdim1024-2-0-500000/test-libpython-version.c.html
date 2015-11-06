@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+<span class="w">#include</span> <span class="w">&lt;Python.h&gt;</span>
+
+<span class="w">#if</span> <span class="w">PY_VERSION_HEX</span> <span class="w">&gt;=</span> <span class="w">0x03000000</span>
+	<span class="w">#error</span>
+<span class="w">#endif</span>
+
+<span class="w">int</span> <span class="w">main(void)</span>
+<span class="w">{</span>
+	<span class="w">return</span> <span class="w">0;</span>
+<span class="w">}</span>
+
+</pre>
+</body>
+</html>
+

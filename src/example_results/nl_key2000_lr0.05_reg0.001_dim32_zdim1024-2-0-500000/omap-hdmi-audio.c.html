@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+<span class="w">#include</span> <span class="w">&lt;linux/kernel.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/module.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/err.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/string.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux</span><span class="c">/</span><span class="pc">p</span><span class="c">latform_device.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;</span><span class="w">s</span><span class="pc">o</span><span class="c">und/</span><span class="w">so</span><span class="pc">c</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;</span><span class="w">s</span><span class="pc">o</span><span class="c">und/</span><span class="w">pcm_params</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;</span><span class="w">s</span><span class="pc">o</span><span class="c">und/</span><span class="w">dmaengine_pcm</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;</span><span class="w">uapi</span><span class="c">/</span><span class="w">so</span><span class="pc">u</span><span class="c">nd/</span><span class="w">asound</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;</span><span class="w">s</span><span class="pc">o</span><span class="c">und/</span><span class="w">asoundef</span><span class="pc">.</span><span class="c">h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;</span><span class="w">s</span><span class="pc">o</span><span class="c">und/</span><span class="w">omap</span><span class="pc">-</span><span class="w">pc</span><span class="pc">m</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;</span><span class="w">s</span><span class="c">ound/omap</span><span class="pc">-</span><span class="w">hd</span><span class="pc">m</span><span class="c">i</span><span class="pc">-</span><span class="w">au</span><span class="c">dio.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;</span><span class="w">v</span><span class="c">ideo/</span><span class="w">omapdss</span><span class="c">.h&gt;</span>
+
+<span class="c">#</span><span class="pc">d</span><span class="c">efine</span> <span class="c">DRV_NAME</span> <span class="c">"</span><span class="w">o</span><span class="pc">map</span><span class="c">-</span><span class="w">hd</span><span class="pc">m</span><span class="c">i</span><span class="pc">-</span><span class="w">a</span><span class="pc">u</span><span class="c">dio</span><span class="pc">"</span>
+
+<span class="pc">str</span><span class="c">uct</span> <span class="w">hdmi_audio_data</span> <span class="pc">{</span>
+	<span class="c">struct</span> <span class="w">snd_soc_card</span> <span class="c">*</span><span class="w">ca</span><span class="c">rd;</span>
+
+	<span class="w">c</span><span class="c">onst</span> <span class="c">struct</span> <span class="w">omap_hdmi_audio_ops</span> <span class="c">*</span><span class="w">o</span><span class="pc">p</span><span class="c">s;</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">d</span><span class="pc">evice</span> <span class="c">*</span><span class="w">dssdev</span><span class="c">;</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">snd_dmaengine_dai_dma_data</span> <span class="w">dma_data</span><span class="c">;</span>
+	<span class="c">struct</span> <span class="w">omap_dss_audio</span> <span class="w">dss_audio</span><span class="c">;</span>
+	<span class="c">struct</span> <span class="w">snd_aes_iec958</span> <span class="w">iec</span><span class="c">;</span>
+	<span class="c">struct</span> <span class="w">snd_cea_861_aud_if</span> <span class="w">cea</span><span class="c">;</span>
+
+	<span class="c">struct</span> <span class="w">m</span><span class="c">utex</span> <span class="w">current_stream_lock</span><span class="c">;</span>
+	<span class="c">struct</span> <span class="w">sn</span><span class="pc">d_p</span><span class="c">cm_substream</span> <span class="c">*</span><span class="w">current_stream</span><span class="c">;</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="pc">sta</span><span class="c">tic</span>
+<span class="pc">s</span><span class="c">truct</span> <span class="w">hdmi_audio_data</span> <span class="c">*</span><span class="w">card_drvdata_substream</span><span class="c">(struct</span> <span class="w">s</span><span class="pc">nd_p</span><span class="c">cm_substream</span> <span class="c">*</span><span class="w">ss</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">snd_soc_pcm_runtime</span> <span class="c">*</span><span class="w">rtd</span> <span class="c">=</span> <span class="w">ss</span><span class="c">-&gt;</span><span class="pc">private_</span><span class="c">data;</span>
+
+	<span class="w">r</span><span class="pc">e</span><span class="c">turn</span> <span class="w">snd_soc_card_get_drvdata</span><span class="c">(rtd</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">car</span><span class="pc">d)</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">void</span> <span class="w">hdmi_dai_abort</span><span class="c">(struct</span> <span class="pc">d</span><span class="c">evice</span> <span class="c">*dev)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="c">hdmi_audio_data</span> <span class="c">*</span><span class="w">ad</span> <span class="c">=</span> <span class="c">dev_get_drvdata(dev);</span>
+
+	<span class="w">m</span><span class="c">utex_lock(&amp;</span><span class="pc">a</span><span class="c">d-&gt;</span><span class="w">current_stream_lock</span><span class="c">);</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(ad-&gt;</span><span class="w">current_stream</span> <span class="w">&amp;</span><span class="pc">&amp;</span> <span class="c">ad-&gt;</span><span class="pc">c</span><span class="c">urrent_stream</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">ru</span><span class="c">ntime</span> <span class="w">&amp;</span><span class="c">&amp;</span>
+	    <span class="w">snd_pcm_running</span><span class="c">(ad-&gt;current_stream</span><span class="w">)</span><span class="pc">) </span><span class="c">{</span>
+		<span class="pc">d</span><span class="c">ev_err(dev</span><span class="pc">,</span><span class="c"> "</span><span class="w">HDMI</span> <span class="w">display</span> <span class="w">d</span><span class="pc">i</span><span class="c">sabled</span><span class="w">,</span> <span class="w">aborting</span> <span class="w">playback</span><span class="c">\n");</span>
+		<span class="w">snd_pcm_stream_lock_irq</span><span class="c">(ad-&gt;</span><span class="pc">current_stream)</span><span class="c">;</span>
+		<span class="w">snd_pcm_stop</span><span class="c">(ad-&gt;current_stream</span><span class="pc">,</span> <span class="w">SNDRV_PCM_STATE_DISCONNECTED</span><span class="c">);</span>
+		<span class="w">snd_pcm_stream_unlock_irq</span><span class="c">(ad</span><span class="pc">-</span><span class="c">&gt;current_stream</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">}</span>
+	<span class="w">m</span><span class="pc">u</span><span class="c">tex_unlock(&amp;</span><span class="pc">a</span><span class="c">d-&gt;</span><span class="w">current_stream_lock</span><span class="c">);</span>
+<span class="pc">}</span>
+
+<span class="c">static</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">hdmi_dai_startup</span><span class="c">(struct</span> <span class="w">sn</span><span class="pc">d_pcm_su</span><span class="c">bstream</span> <span class="c">*</span><span class="pc">s</span><span class="c">ubstream</span><span class="pc">,</span>
+			    <span class="c">struct</span> <span class="w">snd_soc_dai</span> <span class="c">*</span><span class="w">da</span><span class="pc">i</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">hdmi_audio_data</span> <span class="c">*ad</span> <span class="c">=</span> <span class="w">card_drvdata_substream</span><span class="c">(</span><span class="w">s</span><span class="pc">u</span><span class="c">bstream);</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="pc">re</span><span class="c">t;</span>
+	
+	<span class="pc">r</span><span class="c">et</span> <span class="c">=</span> <span class="w">snd_pcm_hw_constraint_step</span><span class="c">(</span><span class="w">su</span><span class="pc">bs</span><span class="c">tream</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">ru</span><span class="c">ntime,</span> <span class="c">0,</span>
+					 <span class="w">SNDRV_PCM_HW_PARAM_PERIOD_BYTES</span><span class="c">,</span> <span class="w">12</span><span class="pc">8</span><span class="c">);</span>
+	<span class="c">if</span> <span class="c">(ret</span> <span class="c">&lt;</span> <span class="c">0</span><span class="pc">) </span><span class="c">{</span>
+		<span class="c">dev_err</span><span class="pc">(</span><span class="w">da</span><span class="pc">i</span><span class="c">-&gt;dev, "</span><span class="w">c</span><span class="pc">o</span><span class="c">uld</span> <span class="c">not</span> <span class="w">apply</span> <span class="w">constraint</span><span class="c">\n");</span>
+		<span class="c">return</span> <span class="pc">r</span><span class="c">et;</span>
+	<span class="c">}</span>
+
+	<span class="w">snd_soc_dai_set_dma_data</span><span class="c">(</span><span class="w">da</span><span class="pc">i</span><span class="c">,</span> <span class="w">su</span><span class="pc">bs</span><span class="c">tream</span><span class="pc">, </span><span class="c">&amp;</span><span class="w">ad</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">dma_data</span><span class="c">);</span>
+
+	<span class="w">m</span><span class="pc">utex_l</span><span class="c">ock(&amp;ad-&gt;</span><span class="w">current_stream_lock</span><span class="c">);</span>
+	<span class="pc">a</span><span class="c">d</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">current_stream</span> <span class="c">=</span> <span class="w">su</span><span class="pc">bs</span><span class="c">tream</span><span class="pc">;</span>
+	<span class="pc">m</span><span class="c">utex_unlock(&amp;ad-&gt;</span><span class="pc">c</span><span class="c">urrent_stream_lock);</span>
+
+	<span class="w">r</span><span class="pc">et</span> <span class="c">=</span> <span class="c">ad</span><span class="pc">-</span><span class="c">&gt;</span><span class="pc">o</span><span class="c">ps</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">audio_startup</span><span class="c">(ad</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">dssdev</span><span class="c">,</span> <span class="w">hdmi_dai_abort</span><span class="c">);</span>
+
+	<span class="c">if</span> <span class="c">(ret</span><span class="pc">) </span><span class="c">{</span>
+		<span class="w">m</span><span class="pc">utex_l</span><span class="c">ock(&amp;ad-&gt;</span><span class="pc">c</span><span class="c">urrent_stream_lock);</span>
+		<span class="w">a</span><span class="c">d-&gt;current_stream</span> <span class="c">=</span> <span class="c">NULL;</span>
+		<span class="pc">m</span><span class="c">utex_unlock(&amp;ad-&gt;</span><span class="pc">c</span><span class="c">urrent_stream_lock);</span>
+	<span class="c">}</span>
+
+	<span class="w">r</span><span class="c">eturn</span> <span class="pc">r</span><span class="c">et;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">hdmi_dai_hw_params</span><span class="c">(struct</span> <span class="w">sn</span><span class="c">d_pcm_substream</span> <span class="c">*</span><span class="pc">s</span><span class="c">ubstream</span><span class="pc">,</span>
+			      <span class="c">struct</span> <span class="w">snd_pcm_hw_params</span> <span class="c">*</span><span class="w">p</span><span class="pc">a</span><span class="c">rams,</span>
+			      <span class="c">struct</span> <span class="w">snd_soc_dai</span> <span class="c">*</span><span class="w">da</span><span class="pc">i</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">hdmi_audio_data</span> <span class="c">*ad</span> <span class="c">=</span> <span class="w">card_drvdata_substream</span><span class="c">(</span><span class="w">su</span><span class="pc">bs</span><span class="c">tream);</span>
+	<span class="c">struct</span> <span class="w">snd_aes_iec958</span> <span class="c">*</span><span class="w">iec</span> <span class="pc">= </span><span class="c">&amp;ad-&gt;iec;</span>
+	<span class="c">struct</span> <span class="w">snd_cea_861_aud_if</span> <span class="c">*</span><span class="w">cea</span> <span class="pc">= </span><span class="c">&amp;</span><span class="pc">a</span><span class="c">d-&gt;cea;</span>
+
+	<span class="w">W</span><span class="c">ARN_ON(</span><span class="pc">a</span><span class="c">d-&gt;</span><span class="w">current_stream</span> <span class="w">!</span><span class="c">=</span> <span class="w">su</span><span class="c">bstream</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="w">s</span><span class="pc">w</span><span class="c">itch</span> <span class="c">(</span><span class="w">params_format</span><span class="pc">(</span><span class="w">par</span><span class="pc">ams)</span><span class="c">) {</span>
+	<span class="c">case</span> <span class="w">SNDRV_PCM_FORMAT_S16_LE</span><span class="c">:</span>
+		<span class="pc">a</span><span class="c">d-&gt;</span><span class="w">dma_data</span><span class="pc">.</span><span class="w">maxburst</span> <span class="c">=</span> <span class="w">1</span><span class="pc">6</span><span class="c">;</span>
+		<span class="c">break;</span>
+	<span class="c">case</span> <span class="w">SNDRV_PCM_FORMAT_S24_LE</span><span class="c">:</span>
+		<span class="pc">a</span><span class="c">d-&gt;dma_data</span><span class="pc">.</span><span class="c">maxburst</span> <span class="c">=</span> <span class="w">3</span><span class="pc">2</span><span class="c">;</span>
+		<span class="c">break;</span>
+	<span class="pc">d</span><span class="c">efault:</span>
+		<span class="pc">d</span><span class="c">ev_err(</span><span class="w">da</span><span class="pc">i</span><span class="c">-&gt;dev, "</span><span class="w">fo</span><span class="pc">r</span><span class="c">mat</span> <span class="w">n</span><span class="c">ot</span> <span class="c">supported</span><span class="w">!</span><span class="c">\n");</span>
+		<span class="c">return</span> <span class="c">-EINVAL;</span>
+	<span class="c">}</span>
+
+	<span class="pc">a</span><span class="c">d-&gt;</span><span class="w">dss_audio</span><span class="pc">.</span><span class="w">iec</span> <span class="c">=</span> <span class="w">i</span><span class="c">ec;</span>
+	<span class="c">ad-&gt;dss_audio.</span><span class="w">cea</span> <span class="c">=</span> <span class="w">c</span><span class="c">ea;</span>
+	
+	
+	<span class="w">m</span><span class="pc">ems</span><span class="c">et(</span><span class="pc">i</span><span class="c">ec</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">s</span><span class="pc">t</span><span class="c">atus,</span> <span class="pc">0</span><span class="c">,</span> <span class="c">sizeof(</span><span class="pc">i</span><span class="c">ec-&gt;</span><span class="w">s</span><span class="c">tatus));</span>
+
+	
+	<span class="w">i</span><span class="pc">e</span><span class="c">c-&gt;</span><span class="pc">s</span><span class="c">tatus</span><span class="w">[</span><span class="c">0</span><span class="w">] &amp;= ~IEC958_AES0_PROFESSIONAL</span><span class="pc">;</span>
+
+	
+	<span class="pc">ie</span><span class="c">c-&gt;</span><span class="pc">s</span><span class="c">tatus</span><span class="pc">[</span><span class="c">0</span><span class="w">] &amp;</span><span class="pc">=</span><span class="c"> ~</span><span class="w">IEC958_AES0_NONAUDIO</span><span class="pc">;</span>
+
+	<span class="c">iec-&gt;</span><span class="pc">s</span><span class="c">tatus</span><span class="pc">[0] |</span><span class="c">=</span> <span class="w">IEC958_AES0_CON_NOT_COPYRIGHT</span><span class="c">;</span>
+
+	<span class="c">iec-&gt;status[</span><span class="pc">0] |</span><span class="c">=</span> <span class="w">IEC958_AES0_CON_EMPHASIS_NONE</span><span class="c">;</span>
+
+	<span class="c">iec-&gt;status[1] =</span> <span class="w">IEC958_AES1_CON_GENERAL</span><span class="c">;</span>
+
+	<span class="c">iec-&gt;status[</span><span class="pc">2] |</span><span class="c">=</span> <span class="w">IEC958_AES2_CON_SOURCE_UNSPEC</span><span class="c">;</span>
+
+	<span class="c">iec-&gt;status[</span><span class="pc">2] |</span><span class="c">=</span> <span class="w">IEC958_AES2_CON_CHANNEL_UNSPEC</span><span class="c">;</span>
+
+	<span class="w">s</span><span class="pc">w</span><span class="c">itch</span> <span class="c">(</span><span class="w">params_rate</span><span class="pc">(</span><span class="w">pa</span><span class="pc">rams)</span><span class="c">) {</span>
+	<span class="c">case</span> <span class="w">32000</span><span class="c">:</span>
+		<span class="c">iec-&gt;status</span><span class="pc">[3] |</span><span class="c">=</span> <span class="w">IEC958_AES3_CON_FS_32000</span><span class="c">;</span>
+		<span class="c">break;</span>
+	<span class="c">case</span> <span class="w">44100</span><span class="c">:</span>
+		<span class="pc">i</span><span class="c">ec</span><span class="pc">-</span><span class="c">&gt;</span><span class="pc">s</span><span class="c">tatus</span><span class="pc">[3</span><span class="c">] |=</span> <span class="w">IEC958_AES3_CON_FS_44100</span><span class="c">;</span>
+		<span class="c">break;</span>
+	<span class="c">case</span> <span class="w">48000</span><span class="c">:</span>
+		<span class="c">iec-&gt;</span><span class="pc">s</span><span class="c">tatus</span><span class="pc">[</span><span class="w">3</span><span class="c">] |=</span> <span class="w">IEC958_AES3_CON_FS_48000</span><span class="c">;</span>
+		<span class="c">break;</span>
+	<span class="c">case</span> <span class="w">88200</span><span class="c">:</span>
+		<span class="c">iec-&gt;</span><span class="pc">s</span><span class="c">tatus</span><span class="pc">[</span><span class="w">3</span><span class="c">] |=</span> <span class="w">IEC958_AES3_CON_FS_88200</span><span class="c">;</span>
+		<span class="c">break;</span>
+	<span class="c">case</span> <span class="w">96000</span><span class="c">:</span>
+		<span class="c">iec-&gt;</span><span class="pc">s</span><span class="c">tatus</span><span class="pc">[</span><span class="w">3</span><span class="c">] |=</span> <span class="w">IEC958_AES3_CON_FS_96000</span><span class="c">;</span>
+		<span class="c">break;</span>
+	<span class="c">case</span> <span class="w">176400</span><span class="c">:</span>
+		<span class="c">iec-&gt;</span><span class="pc">s</span><span class="c">tatus</span><span class="pc">[</span><span class="w">3</span><span class="c">] |=</span> <span class="w">IEC958_AES3_CON_FS_176400</span><span class="c">;</span>
+		<span class="c">break;</span>
+	<span class="c">case</span> <span class="w">192000</span><span class="c">:</span>
+		<span class="c">iec-&gt;</span><span class="pc">s</span><span class="c">tatus</span><span class="pc">[</span><span class="w">3</span><span class="c">] |=</span> <span class="w">IEC958_AES3_CON_FS_192000</span><span class="c">;</span>
+		<span class="c">break;</span>
+	<span class="pc">d</span><span class="c">efault:</span>
+		<span class="pc">d</span><span class="c">ev_err</span><span class="pc">(</span><span class="w">da</span><span class="pc">i</span><span class="c">-&gt;dev, "</span><span class="w">ra</span><span class="pc">te</span> <span class="w">n</span><span class="c">ot</span> <span class="c">supported</span><span class="w">!</span><span class="c">\n");</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="c">-EINVAL;</span>
+	<span class="c">}</span>
+
+	
+	<span class="pc">ie</span><span class="c">c-&gt;</span><span class="w">st</span><span class="pc">atu</span><span class="c">s</span><span class="w">[3</span><span class="pc">] |</span><span class="c">=</span> <span class="w">IEC958_AES3_CON_CLOCK_1000PPM</span><span class="c">;</span>
+
+	
+	<span class="w">s</span><span class="c">witch</span> <span class="c">(</span><span class="w">params_format</span><span class="pc">(</span><span class="w">pa</span><span class="pc">rams)</span><span class="c">) {</span>
+	<span class="c">case</span> <span class="w">SNDRV_PCM_FORMAT_S16_LE</span><span class="c">:</span>
+		<span class="pc">ie</span><span class="c">c-&gt;</span><span class="pc">s</span><span class="c">tatus</span><span class="w">[4</span><span class="pc">] |</span><span class="c">=</span> <span class="w">IEC958_AES4_CON_WORDLEN_20_16</span><span class="c">;</span>
+		<span class="pc">i</span><span class="c">ec-&gt;</span><span class="pc">s</span><span class="c">tatus</span><span class="pc">[</span><span class="w">4] &amp;= ~IEC958_AES4_CON_MAX_WORDLEN_24</span><span class="c">;</span>
+		<span class="pc">b</span><span class="c">reak;</span>
+	<span class="c">case</span> <span class="w">SNDRV_PCM_FORMAT_S24_LE</span><span class="c">:</span>
+		<span class="pc">ie</span><span class="c">c-&gt;</span><span class="w">s</span><span class="c">tatus</span><span class="pc">[</span><span class="w">4</span><span class="pc">] |</span><span class="c">=</span> <span class="w">IEC958_AES4_CON_WORDLEN_24_20</span><span class="c">;</span>
+		<span class="pc">i</span><span class="c">ec-&gt;</span><span class="w">s</span><span class="c">tatus</span><span class="pc">[</span><span class="w">4</span><span class="pc">] |</span><span class="c">=</span> <span class="w">I</span><span class="pc">EC958_AES4_CON_M</span><span class="c">AX_WORDLEN_24;</span>
+		<span class="c">break;</span>
+	<span class="pc">d</span><span class="c">efault:</span>
+		<span class="w">d</span><span class="pc">ev_</span><span class="c">err(</span><span class="w">da</span><span class="pc">i</span><span class="c">-&gt;dev</span><span class="pc">, </span><span class="c">"</span><span class="w">fo</span><span class="pc">rm</span><span class="c">at</span> <span class="w">n</span><span class="c">ot</span> <span class="c">supported</span><span class="w">!</span><span class="c">\n");</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="c">-EINVAL;</span>
+	<span class="c">}</span>
+
+	
+
+	<span class="w">cea</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">db1_ct_cc</span> <span class="w">=</span><span class="pc"> </span><span class="c">(</span><span class="w">params_channels</span><span class="pc">(</span><span class="w">par</span><span class="pc">ams</span><span class="w">) </span><span class="pc">-</span> <span class="c">1</span><span class="w">)</span>
+		<span class="w">&amp;</span> <span class="w">CEA861_AUDIO_INFOFRAME_DB1CC</span><span class="c">;</span>
+	<span class="pc">c</span><span class="c">ea-&gt;db1_ct_cc</span> <span class="c">|=</span> <span class="w">CEA861_AUDIO_INFOFRAME_DB1CT_FROM_STREAM</span><span class="c">;</span>
+
+	<span class="pc">c</span><span class="c">ea-&gt;</span><span class="w">db2_sf_ss</span> <span class="c">=</span> <span class="w">CEA861_AUDIO_INFOFRAME_DB2SF_FROM_STREAM</span><span class="c">;</span>
+	<span class="c">cea-&gt;</span><span class="w">d</span><span class="pc">b2</span><span class="c">_sf_ss</span> <span class="pc">|</span><span class="c">=</span> <span class="w">CEA861_AUDIO_INFOFRAME_DB2SS_FROM_STREAM</span><span class="c">;</span>
+
+	<span class="pc">c</span><span class="c">ea-&gt;</span><span class="w">db3</span> <span class="c">=</span> <span class="pc">0</span><span class="c">;</span> 
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="pc">p</span><span class="c">arams_channels</span><span class="w">(par</span><span class="pc">ams</span><span class="w">)</span><span class="pc"> </span><span class="c">==</span> <span class="pc">2)</span>
+		<span class="c">cea-&gt;</span><span class="w">db4_ca</span> <span class="c">=</span> <span class="w">0x0</span><span class="c">;</span>
+	<span class="c">else</span> <span class="c">if</span> <span class="c">(</span><span class="w">p</span><span class="pc">a</span><span class="c">rams_channels</span><span class="pc">(</span><span class="w">par</span><span class="pc">ams</span><span class="w">)</span><span class="pc"> </span><span class="c">==</span> <span class="w">6</span><span class="c">)</span>
+		<span class="c">cea-&gt;</span><span class="pc">db4</span><span class="c">_ca</span> <span class="pc">=</span> <span class="w">0xb</span><span class="c">;</span>
+	<span class="c">else</span>
+		<span class="pc">c</span><span class="c">ea</span><span class="pc">-</span><span class="c">&gt;</span><span class="pc">db4</span><span class="c">_ca</span> <span class="c">=</span> <span class="w">0x13</span><span class="c">;</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(cea-&gt;db4_ca</span> <span class="c">==</span> <span class="w">0x0</span><span class="pc">0</span><span class="c">)</span>
+		<span class="c">cea-&gt;</span><span class="w">db5_dminh_lsv</span> <span class="c">=</span> <span class="w">CEA861_AUDIO_INFOFRAME_DB5_DM_INH_PERMITTED</span><span class="c">;</span>
+	<span class="pc">e</span><span class="c">lse</span>
+		<span class="pc">c</span><span class="c">ea-&gt;</span><span class="pc">db5</span><span class="c">_dminh_lsv</span> <span class="c">=</span> <span class="w">CEA861_AUDIO_INFOFRAME_DB5_DM_INH_PROHIBITED</span><span class="c">;</span>
+
+	
+	<span class="c">cea-&gt;db5_dminh_lsv</span> <span class="w">|</span><span class="pc">= </span><span class="c">(</span><span class="w">0</span> <span class="w">&amp;</span> <span class="w">CEA861_AUDIO_INFOFRAME_DB5_LSV</span><span class="c">);</span>
+
+	<span class="w">r</span><span class="c">eturn</span> <span class="w">ad</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">o</span><span class="c">ps-&gt;</span><span class="w">audio_config</span><span class="c">(</span><span class="pc">a</span><span class="c">d</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">dssdev</span><span class="pc">, </span><span class="c">&amp;</span><span class="pc">a</span><span class="c">d-&gt;</span><span class="w">dss_audio</span><span class="c">);</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">hdmi_dai_trigger</span><span class="c">(struct</span> <span class="w">s</span><span class="pc">n</span><span class="c">d_pcm_substream</span> <span class="c">*substream</span><span class="pc">,</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">c</span><span class="pc">m</span><span class="c">d,</span>
+			    <span class="pc">s</span><span class="c">truct</span> <span class="w">snd_soc_dai</span> <span class="c">*</span><span class="w">da</span><span class="pc">i</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">hdmi_audio_data</span> <span class="c">*ad</span> <span class="c">=</span> <span class="w">card_drvdata_substream</span><span class="c">(</span><span class="pc">su</span><span class="c">bstream);</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="pc">e</span><span class="c">rr</span> <span class="pc">=</span> <span class="c">0;</span>
+
+	<span class="w">W</span><span class="c">ARN_ON(ad-&gt;</span><span class="w">current_stream</span> <span class="w">!</span><span class="c">=</span> <span class="w">su</span><span class="c">bstream</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="w">s</span><span class="c">witch</span> <span class="c">(cmd) {</span>
+	<span class="c">case</span> <span class="w">SNDRV_PCM_TRIGGER_START</span><span class="c">:</span>
+	<span class="c">case</span> <span class="w">SNDRV_PCM_TRIGGER_RESUME</span><span class="c">:</span>
+	<span class="c">case</span> <span class="w">SNDRV_PCM_TRIGGER_PAUSE_RELEASE</span><span class="c">:</span>
+		<span class="w">e</span><span class="c">rr</span> <span class="c">=</span> <span class="pc">a</span><span class="c">d-&gt;</span><span class="pc">o</span><span class="c">ps-&gt;</span><span class="w">audio_start</span><span class="c">(ad</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">dssdev</span><span class="pc">)</span><span class="c">;</span>
+		<span class="c">break;</span>
+	<span class="c">case</span> <span class="w">SNDRV_PCM_TRIGGER_STOP</span><span class="c">:</span>
+	<span class="c">case</span> <span class="w">SNDRV_PCM_TRIGGER_SUSPEND</span><span class="c">:</span>
+	<span class="c">case</span> <span class="w">SNDRV_PCM_TRIGGER_PAUSE_PUSH</span><span class="c">:</span>
+		<span class="w">a</span><span class="c">d</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">o</span><span class="c">ps-&gt;</span><span class="w">audio_stop</span><span class="pc">(a</span><span class="c">d</span><span class="pc">-</span><span class="c">&gt;dssdev</span><span class="pc">)</span><span class="c">;</span>
+		<span class="c">break;</span>
+	<span class="pc">d</span><span class="c">efault:</span>
+		<span class="w">e</span><span class="c">rr</span> <span class="c">= -EINVAL;</span>
+	<span class="pc">}</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">e</span><span class="c">rr;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">hdmi_dai_shutdown</span><span class="c">(struct</span> <span class="w">sn</span><span class="c">d_pcm_substream</span> <span class="c">*</span><span class="pc">s</span><span class="c">ubstream</span><span class="pc">,</span>
+			      <span class="c">struct</span> <span class="w">snd_soc_dai</span> <span class="c">*</span><span class="w">da</span><span class="pc">i)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">hdmi_audio_data</span> <span class="c">*ad</span> <span class="c">=</span> <span class="w">card_drvdata_substream</span><span class="c">(</span><span class="w">s</span><span class="pc">u</span><span class="c">bstream);</span>
+
+	<span class="w">W</span><span class="c">ARN_ON(ad-&gt;</span><span class="w">current_stream</span> <span class="w">!</span><span class="c">=</span> <span class="w">su</span><span class="c">bstream</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="pc">a</span><span class="c">d-&gt;</span><span class="w">o</span><span class="c">ps-&gt;</span><span class="w">audio_shutdown</span><span class="c">(ad</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">dssdev</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="w">m</span><span class="pc">utex_l</span><span class="c">ock(&amp;ad-&gt;</span><span class="w">current_stream_lock</span><span class="c">);</span>
+	<span class="c">ad-&gt;</span><span class="w">c</span><span class="pc">urrent_stream</span> <span class="c">=</span> <span class="pc">N</span><span class="c">ULL;</span>
+	<span class="c">mutex_unlock(&amp;ad-&gt;</span><span class="w">c</span><span class="pc">urrent_stream_</span><span class="c">lock);</span>
+<span class="pc">}</span>
+
+<span class="c">static</span> <span class="w">c</span><span class="c">onst</span> <span class="c">struct</span> <span class="w">snd_soc_dai_ops</span> <span class="w">hdmi_dai_ops</span> <span class="c">= {</span>
+	<span class="c">.</span><span class="w">startup</span>	<span class="c">=</span> <span class="w">hdmi_dai_startup</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">hw_params</span>	<span class="c">=</span> <span class="w">hdmi_dai_hw_params</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">tr</span><span class="c">igger</span>	<span class="c">=</span> <span class="w">hdmi_dai_trigger</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">shutdown</span>	<span class="c">=</span> <span class="w">hdmi_dai_shutdown</span><span class="c">,</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="c">static</span> <span class="pc">c</span><span class="c">onst</span> <span class="c">struct</span> <span class="w">snd_soc_component_driver</span> <span class="w">omap_hdmi_component</span> <span class="c">= {</span>
+	<span class="c">.name</span> <span class="c">= "</span><span class="w">omapdss_hdmi</span><span class="c">",</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="c">static</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">snd_soc_dai_driver</span> <span class="w">omap5_hdmi_dai</span> <span class="c">= {</span>
+	<span class="c">.name</span> <span class="c">= "</span><span class="w">omap5</span><span class="pc">-</span><span class="w">hd</span><span class="pc">mi-</span><span class="w">da</span><span class="pc">i</span><span class="c">",</span>
+	<span class="c">.</span><span class="w">playback</span> <span class="pc">= {</span>
+		<span class="c">.</span><span class="w">channels_min</span> <span class="c">=</span> <span class="w">2</span><span class="c">,</span>
+		<span class="c">.</span><span class="w">channels_max</span> <span class="c">=</span> <span class="w">8</span><span class="c">,</span>
+		<span class="c">.</span><span class="w">ra</span><span class="pc">tes</span> <span class="pc">= (</span><span class="w">SNDRV_PCM_RATE_32000</span> <span class="pc">|</span> <span class="w">SNDRV_PCM_RATE_44100</span> <span class="pc">|</span>
+			  <span class="w">SNDRV_PCM_RATE_48000</span> <span class="c">|</span> <span class="w">SNDRV_PCM_RATE_88200</span> <span class="c">|</span>
+			  <span class="w">SNDRV_PCM_RATE_96000</span> <span class="c">|</span> <span class="w">SNDRV_PCM_RATE_176400</span> <span class="c">|</span>
+			  <span class="w">SNDRV_PCM_RATE_192000)</span><span class="pc">,</span>
+		<span class="c">.</span><span class="w">formats</span> <span class="c">=</span> <span class="w">SNDRV_PCM_FMTBIT_S16_LE</span><span class="c">,</span>
+	<span class="pc">},</span>
+	<span class="pc">.</span><span class="w">o</span><span class="c">ps</span> <span class="c">= &amp;</span><span class="w">hdmi_dai_ops</span><span class="c">,</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="c">static</span> <span class="c">struct</span> <span class="w">snd_soc_dai_driver</span> <span class="w">omap4_hdmi_dai</span> <span class="c">= {</span>
+	<span class="c">.name</span> <span class="c">= "</span><span class="w">omap4</span><span class="pc">-</span><span class="w">h</span><span class="pc">dmi-</span><span class="w">da</span><span class="pc">i</span><span class="c">",</span>
+	<span class="c">.</span><span class="w">playback</span> <span class="pc">= {</span>
+		<span class="c">.</span><span class="w">channels_min</span> <span class="c">=</span> <span class="w">2</span><span class="c">,</span>
+		<span class="c">.</span><span class="w">channels_max</span> <span class="c">=</span> <span class="w">8</span><span class="c">,</span>
+		<span class="c">.</span><span class="w">ra</span><span class="pc">tes</span> <span class="w">=</span><span class="pc"> (</span><span class="w">SNDRV_PCM_RATE_32000</span> <span class="pc">|</span> <span class="w">SNDRV_PCM_RATE_44100</span> <span class="pc">|</span>
+			  <span class="w">SNDRV_PCM_RATE_48000</span> <span class="c">|</span> <span class="w">SNDRV_PCM_RATE_88200</span> <span class="c">|</span>
+			  <span class="w">SNDRV_PCM_RATE_96000</span> <span class="c">|</span> <span class="w">SNDRV_PCM_RATE_176400</span> <span class="c">|</span>
+			  <span class="w">SNDRV_PCM_RATE_192000)</span><span class="pc">,</span>
+		<span class="c">.</span><span class="w">formats</span> <span class="c">=</span> <span class="w">SNDRV_PCM_FMTBIT_S16_LE</span> <span class="pc">|</span> <span class="w">SNDRV_PCM_FMTBIT_S24_LE</span><span class="pc">,</span>
+	<span class="pc">},</span>
+	<span class="c">.</span><span class="w">o</span><span class="c">ps</span> <span class="c">= &amp;</span><span class="w">hdmi_dai_ops</span><span class="c">,</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">omap_hdmi_audio_probe</span><span class="c">(struct</span> <span class="c">platform_device</span> <span class="c">*pdev)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">omap_hdmi_audio_pdata</span> <span class="c">*</span><span class="w">ha</span> <span class="c">=</span> <span class="pc">pd</span><span class="c">ev-&gt;dev</span><span class="pc">.p</span><span class="c">latform_data;</span>
+	<span class="c">struct</span> <span class="w">d</span><span class="pc">evice</span> <span class="c">*</span><span class="pc">d</span><span class="c">ev</span> <span class="c">= &amp;pdev-&gt;dev</span><span class="pc">;</span>
+	<span class="c">struct</span> <span class="w">hdmi_audio_data</span> <span class="c">*</span><span class="w">ad</span><span class="pc">;</span>
+	<span class="c">struct</span> <span class="w">snd_soc_dai_driver</span> <span class="c">*</span><span class="w">dai_drv</span><span class="c">;</span>
+	<span class="c">struct</span> <span class="w">snd_soc_card</span> <span class="c">*</span><span class="w">ca</span><span class="c">rd;</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="c">ret;</span>
+
+	<span class="c">if</span> <span class="pc">(!</span><span class="w">ha</span><span class="pc">) </span><span class="c">{</span>
+		<span class="c">dev_err</span><span class="pc">(</span><span class="c">dev, "</span><span class="pc">N</span><span class="c">o</span> <span class="w">p</span><span class="c">latform</span> <span class="w">d</span><span class="pc">at</span><span class="c">a\n");</span>
+		<span class="c">return</span> <span class="c">-EINVAL;</span>
+	<span class="c">}</span>
+
+	<span class="w">a</span><span class="c">d</span> <span class="c">=</span> <span class="c">devm_kzalloc(dev,</span> <span class="c">sizeof</span><span class="pc">(*</span><span class="c">ad),</span> <span class="c">GFP_KERNEL);</span>
+	<span class="c">if</span> <span class="c">(!ad)</span>
+		<span class="c">return</span> <span class="c">-ENOMEM;</span>
+	<span class="c">ad-&gt;</span><span class="w">dssdev</span> <span class="c">=</span> <span class="w">ha</span><span class="c">-&gt;</span><span class="pc">de</span><span class="c">v;</span>
+	<span class="pc">a</span><span class="c">d-&gt;</span><span class="w">o</span><span class="c">ps</span> <span class="c">=</span> <span class="w">ha</span><span class="c">-&gt;</span><span class="w">o</span><span class="pc">p</span><span class="c">s</span><span class="pc">;</span>
+	<span class="c">ad-&gt;</span><span class="w">dma_data.a</span><span class="pc">dd</span><span class="c">r</span> <span class="c">=</span> <span class="w">ha</span><span class="c">-&gt;</span><span class="w">audio_dma_addr</span><span class="c">;</span>
+	<span class="c">ad-&gt;dma_data.</span><span class="w">filter_data</span> <span class="w">= "audio_tx</span><span class="c">";</span>
+	<span class="c">ad-&gt;dma_data.</span><span class="w">addr_width</span> <span class="c">=</span> <span class="w">DMA_SLAVE_BUSWIDTH_4_BYTES</span><span class="c">;</span>
+	<span class="w">mu</span><span class="pc">tex_i</span><span class="c">nit(&amp;ad-&gt;</span><span class="w">current_stream_lock</span><span class="c">);</span>
+
+	<span class="w">s</span><span class="pc">w</span><span class="c">itch</span> <span class="c">(</span><span class="w">ha</span><span class="c">-&gt;</span><span class="w">dss_version</span><span class="c">) {</span>
+	<span class="c">case</span> <span class="w">OMAPDSS_VER_OMAP4430_ES1</span><span class="c">:</span>
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">OMAPDSS_VER_OMAP4430_ES2</span><span class="c">:</span>
+	<span class="c">case</span> <span class="w">OMAPDSS_VER_OMAP4</span><span class="c">:</span>
+		<span class="w">dai_drv</span> <span class="w">=</span><span class="pc"> &amp;</span><span class="w">omap4_hdmi_dai</span><span class="c">;</span>
+		<span class="c">break;</span>
+	<span class="c">case</span> <span class="w">OMAPDSS_VER_OMAP5</span><span class="c">:</span>
+		<span class="pc">d</span><span class="c">ai_drv</span> <span class="w">=</span><span class="pc"> &amp;</span><span class="w">omap5_hdmi_dai</span><span class="c">;</span>
+		<span class="c">break;</span>
+	<span class="pc">d</span><span class="c">efault:</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="c">-EINVAL;</span>
+	<span class="c">}</span>
+	<span class="w">r</span><span class="pc">et</span> <span class="c">=</span> <span class="w">snd_soc_register_component</span><span class="c">(</span><span class="w">ad-</span><span class="c">&gt;</span><span class="w">dssdev</span><span class="pc">, </span><span class="c">&amp;</span><span class="w">omap_hdmi_component</span><span class="pc">,</span>
+					 <span class="pc">d</span><span class="c">ai_drv,</span> <span class="pc">1</span><span class="c">);</span>
+	<span class="c">if</span> <span class="c">(ret</span><span class="pc">)</span>
+		<span class="c">return</span> <span class="c">ret;</span>
+
+	<span class="pc">ret</span> <span class="c">=</span> <span class="w">omap_pcm_platform_register</span><span class="c">(ad</span><span class="pc">-</span><span class="c">&gt;dssdev</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">if</span> <span class="c">(ret)</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="c">ret;</span>
+
+	<span class="w">car</span><span class="c">d</span> <span class="pc">=</span> <span class="w">d</span><span class="pc">evm</span><span class="c">_kzalloc</span><span class="pc">(d</span><span class="c">ev,</span> <span class="c">sizeof(*</span><span class="w">ca</span><span class="c">rd),</span> <span class="c">GFP_KERNEL);</span>
+	<span class="c">if</span> <span class="pc">(!</span><span class="w">c</span><span class="pc">a</span><span class="c">rd)</span>
+		<span class="c">return</span> <span class="c">-ENOMEM;</span>
+
+	<span class="w">c</span><span class="c">ard-&gt;</span><span class="pc">n</span><span class="c">ame</span> <span class="pc">=</span> <span class="w">devm_kasprintf</span><span class="pc">(d</span><span class="c">ev,</span> <span class="w">G</span><span class="c">FP_KERNEL</span><span class="pc">,</span>
+				    <span class="w">"HDMI</span> <span class="pc">%s</span><span class="c">",</span> <span class="pc">dev_</span><span class="c">name(</span><span class="w">ad-</span><span class="c">&gt;</span><span class="w">dssdev</span><span class="c">));</span>
+	<span class="w">c</span><span class="pc">a</span><span class="c">rd-&gt;</span><span class="w">o</span><span class="pc">w</span><span class="c">ner</span> <span class="c">=</span> <span class="c">THIS_MODULE;</span>
+	<span class="w">c</span><span class="c">ard-&gt;</span><span class="w">dai_link</span> <span class="c">=</span>
+		<span class="w">de</span><span class="pc">vm_kz</span><span class="c">alloc</span><span class="pc">(</span><span class="c">dev,</span> <span class="c">sizeof</span><span class="w">(</span><span class="pc">*(</span><span class="w">c</span><span class="pc">a</span><span class="c">rd-&gt;</span><span class="pc">da</span><span class="c">i_link</span><span class="w">)),</span> <span class="c">GFP_KERNEL);</span>
+	<span class="w">c</span><span class="c">ard-&gt;</span><span class="pc">d</span><span class="c">ai_link</span><span class="w">-</span><span class="c">&gt;name</span> <span class="c">=</span> <span class="pc">c</span><span class="c">ard</span><span class="pc">-</span><span class="c">&gt;name;</span>
+	<span class="c">card-&gt;</span><span class="pc">da</span><span class="c">i_link</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">stream_name</span> <span class="c">=</span> <span class="c">card-&gt;</span><span class="w">n</span><span class="c">ame;</span>
+	<span class="c">card-&gt;dai_link</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">cpu_dai_name</span> <span class="c">=</span> <span class="w">de</span><span class="pc">v_</span><span class="c">name</span><span class="pc">(</span><span class="w">ad</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">dssdev</span><span class="c">);</span>
+	<span class="c">card-&gt;</span><span class="pc">d</span><span class="c">ai_link-&gt;</span><span class="w">platform_name</span> <span class="c">=</span> <span class="w">de</span><span class="pc">v_</span><span class="c">name</span><span class="pc">(</span><span class="w">a</span><span class="c">d-&gt;</span><span class="pc">ds</span><span class="c">sdev);</span>
+	<span class="w">c</span><span class="c">ard-&gt;</span><span class="w">d</span><span class="pc">a</span><span class="c">i_link-&gt;</span><span class="w">codec_name</span> <span class="w">= </span><span class="pc">"</span><span class="w">snd</span><span class="c">-</span><span class="w">so</span><span class="pc">c-</span><span class="w">du</span><span class="c">mmy</span><span class="pc">";</span>
+	<span class="w">c</span><span class="c">ard-&gt;dai_link</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">codec_dai_name</span> <span class="w">=</span><span class="pc"> "</span><span class="c">snd-</span><span class="w">so</span><span class="pc">c-</span><span class="w">du</span><span class="c">mmy-</span><span class="w">da</span><span class="pc">i"</span><span class="c">;</span>
+	<span class="pc">c</span><span class="c">ard-&gt;</span><span class="w">num_links</span> <span class="c">=</span> <span class="pc">1</span><span class="c">;</span>
+	<span class="c">card-&gt;</span><span class="pc">de</span><span class="c">v</span> <span class="pc">=</span> <span class="pc">d</span><span class="c">ev;</span>
+
+	<span class="w">re</span><span class="pc">t</span> <span class="c">=</span> <span class="w">snd_soc_register_card</span><span class="c">(card</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">if</span> <span class="c">(</span><span class="w">r</span><span class="pc">et) </span><span class="c">{</span>
+		<span class="c">dev_err</span><span class="pc">(</span><span class="c">dev, "</span><span class="w">sn</span><span class="pc">d_</span><span class="c">soc_register_card</span> <span class="pc">f</span><span class="c">ailed</span> <span class="w">(</span><span class="c">%d)\n",</span> <span class="pc">ret</span><span class="c">);</span>
+		<span class="w">snd_soc_unregister_component</span><span class="c">(</span><span class="w">ad-</span><span class="c">&gt;</span><span class="w">dssdev</span><span class="c">);</span>
+		<span class="c">return</span> <span class="c">ret;</span>
+	<span class="c">}</span>
+
+	<span class="w">a</span><span class="c">d</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">ca</span><span class="c">rd</span> <span class="c">=</span> <span class="w">c</span><span class="pc">a</span><span class="c">rd;</span>
+	<span class="w">snd_soc_card_set_drvdata</span><span class="c">(</span><span class="pc">c</span><span class="c">ard</span><span class="pc">,</span> <span class="pc">a</span><span class="c">d);</span>
+
+	<span class="w">dev_set_drvdata</span><span class="c">(</span><span class="pc">d</span><span class="c">ev</span><span class="pc">,</span> <span class="pc">a</span><span class="c">d);</span>
+
+	<span class="c">return</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">omap_hdmi_audio_remove</span><span class="c">(struct</span> <span class="c">platform_device</span> <span class="c">*pdev)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">hdmi_audio_data</span> <span class="c">*ad</span> <span class="c">=</span> <span class="c">platform_get_drvdata(pdev);</span>
+
+	<span class="w">snd_soc_unregister_card</span><span class="pc">(</span><span class="c">ad</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">c</span><span class="pc">a</span><span class="c">rd);</span>
+	<span class="w">snd_soc_unregister_component</span><span class="c">(ad</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">dssdev</span><span class="c">);</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">s</span><span class="c">truct</span> <span class="pc">p</span><span class="c">latform_driver</span> <span class="w">hdmi_audio_driver</span> <span class="c">= {</span>
+	<span class="c">.</span><span class="pc">d</span><span class="c">river</span> <span class="c">= {</span>
+		<span class="c">.name</span> <span class="pc">=</span> <span class="pc">D</span><span class="c">RV_NAME,</span>
+	<span class="pc">}</span><span class="c">,</span>
+	<span class="c">.probe</span> <span class="c">=</span> <span class="w">omap_hdmi_audio_probe</span><span class="c">,</span>
+	<span class="c">.remove</span> <span class="c">=</span> <span class="w">omap_hdmi_audio_remove</span><span class="c">,</span>
+<span class="c">};</span>
+
+<span class="w">module_platform_driver</span><span class="c">(hdmi_audio_driver);</span>
+
+<span class="c">MODULE_AUTHOR("</span><span class="w">Jyri</span> <span class="w">Sarha</span> <span class="c">&lt;</span><span class="w">jsarha</span><span class="c">@</span><span class="w">t</span><span class="c">i.com&gt;");</span>
+<span class="c">MODULE_DESCRIPTION("</span><span class="w">OMAP</span> <span class="w">HDMI</span> <span class="w">Audio</span> <span class="pc">D</span><span class="c">river");</span>
+<span class="c">MODULE_LICENSE("GPL</span><span class="pc">"</span><span class="c">);</span>
+<span class="c">MODULE_ALIAS("platform</span><span class="w">:"</span> <span class="w">D</span><span class="c">RV_NAME</span><span class="w">)</span><span class="pc">;</span>
+
+</pre>
+</body>
+</html>
+

@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+<span class="w">#include</span> <span class="w">&lt;linux/module.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/platform_device.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/delay.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/string.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux</span><span class="c">/</span><span class="w">ctype</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">leds</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">g</span><span class="c">pio.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">rfkill</span><span class="c">.h&gt;</span>
+
+<span class="c">#include</span> <span class="c">&lt;</span><span class="w">plat</span><span class="c">/</span><span class="pc">g</span><span class="c">pio</span><span class="pc">-</span><span class="w">cf</span><span class="c">g.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;</span><span class="w">m</span><span class="pc">a</span><span class="c">ch/hardware</span><span class="pc">.</span><span class="c">h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;</span><span class="pc">m</span><span class="c">ach/</span><span class="w">r</span><span class="pc">egs-</span><span class="c">gpio.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;</span><span class="pc">m</span><span class="c">ach/</span><span class="pc">g</span><span class="c">pio</span><span class="pc">-</span><span class="w">samsung</span><span class="c">.h&gt;</span>
+
+<span class="c">#include</span> <span class="pc">"</span><span class="w">h1940</span><span class="c">.h"</span>
+
+<span class="c">#</span><span class="pc">d</span><span class="c">efine</span> <span class="c">DRV_NAME</span> <span class="c">"</span><span class="w">h</span><span class="c">1940-</span><span class="w">bt</span><span class="pc">"</span>
+
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="c">void</span> <span class="w">h1940bt_enable</span><span class="c">(</span><span class="pc">i</span><span class="c">nt</span> <span class="w">o</span><span class="c">n)</span>
+<span class="c">{</span>
+	<span class="pc">if</span> <span class="c">(</span><span class="w">o</span><span class="pc">n</span><span class="w">)</span><span class="pc"> </span><span class="c">{</span>
+		
+		<span class="w">gpio_set_value</span><span class="c">(</span><span class="w">H1940_LATCH_BLUETOOTH_POWER</span><span class="pc">,</span> <span class="pc">1)</span><span class="c">;</span>
+		
+		<span class="w">m</span><span class="c">delay(</span><span class="pc">10</span><span class="c">);</span>
+
+		<span class="pc">g</span><span class="c">pio_set_value(</span><span class="w">S3C2410_GPH(1</span><span class="pc">)</span><span class="c">,</span> <span class="pc">1</span><span class="c">);</span>
+		<span class="w">m</span><span class="c">delay(</span><span class="pc">10</span><span class="c">);</span>
+		<span class="w">g</span><span class="c">pio_set_value(</span><span class="pc">S</span><span class="c">3C2410_GPH</span><span class="pc">(1</span><span class="c">),</span> <span class="c">0);</span>
+
+		<span class="w">h1940_led_blink_set</span><span class="c">(</span><span class="w">N</span><span class="pc">U</span><span class="c">LL</span><span class="pc">,</span> <span class="w">GPIO_LED_BLINK</span><span class="c">,</span> <span class="pc">N</span><span class="c">ULL</span><span class="pc">,</span> <span class="pc">N</span><span class="c">ULL);</span>
+	<span class="c">}</span>
+	<span class="pc">e</span><span class="c">lse</span> <span class="c">{</span>
+		<span class="pc">g</span><span class="c">pio_set_value(S3C2410_GPH</span><span class="pc">(1)</span><span class="c">,</span> <span class="pc">1</span><span class="c">);</span>
+		<span class="w">m</span><span class="pc">d</span><span class="c">elay(</span><span class="pc">10</span><span class="c">);</span>
+		<span class="pc">g</span><span class="c">pio_set_value(S3C2410_GPH(</span><span class="pc">1)</span><span class="c">,</span> <span class="c">0);</span>
+		<span class="w">m</span><span class="pc">d</span><span class="c">elay(</span><span class="pc">10</span><span class="c">);</span>
+		<span class="pc">g</span><span class="c">pio_set_value(</span><span class="w">H1940_LATCH_BLUETOOTH_POWER</span><span class="c">,</span> <span class="c">0</span><span class="pc">)</span><span class="c">;</span>
+
+		<span class="w">h1940_led_blink_set</span><span class="c">(</span><span class="w">N</span><span class="c">ULL,</span> <span class="w">GPIO_LED_NO_BLINK_LOW</span><span class="pc">,</span> <span class="pc">N</span><span class="c">ULL</span><span class="pc">,</span> <span class="pc">N</span><span class="c">ULL);</span>
+	<span class="pc">}</span>
+<span class="w">}</span>
+
+<span class="c">static</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">h1940bt_set_block</span><span class="c">(</span><span class="pc">v</span><span class="c">oid</span> <span class="c">*</span><span class="pc">d</span><span class="c">ata</span><span class="pc">,</span> <span class="w">b</span><span class="c">ool</span> <span class="w">blocked</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="w">h1940bt_enable(!</span><span class="pc">b</span><span class="c">locked);</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">c</span><span class="c">onst</span> <span class="c">struct</span> <span class="w">rfkill_ops</span> <span class="w">h1940bt_rfkill_ops</span> <span class="pc">=</span><span class="c"> {</span>
+	<span class="c">.</span><span class="w">set_block</span> <span class="c">=</span> <span class="w">h</span><span class="c">1940bt_set_block,</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">h1940bt_probe</span><span class="c">(struct</span> <span class="c">platform_device</span> <span class="c">*pdev)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">rfkill</span> <span class="c">*</span><span class="w">rfk</span><span class="pc">;</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="c">ret</span> <span class="pc">=</span> <span class="c">0;</span>
+
+	<span class="w">r</span><span class="pc">e</span><span class="c">t</span> <span class="c">=</span> <span class="w">gpio_request</span><span class="c">(</span><span class="w">S3C2410_GPH</span><span class="pc">(</span><span class="w">1</span><span class="pc">)</span><span class="c">,</span> <span class="w">d</span><span class="pc">ev_</span><span class="c">name(&amp;</span><span class="pc">p</span><span class="c">dev-&gt;dev));</span>
+	<span class="c">if</span> <span class="c">(ret</span><span class="pc">) </span><span class="c">{</span>
+		<span class="c">dev_err(&amp;pdev-&gt;dev, "</span><span class="w">c</span><span class="pc">o</span><span class="c">uld</span> <span class="c">not</span> <span class="pc">g</span><span class="c">et</span> <span class="w">GPH1</span><span class="c">\n");</span>
+		<span class="c">return</span> <span class="c">ret;</span>
+	<span class="c">}</span>
+
+	<span class="pc">ret</span> <span class="c">=</span> <span class="pc">g</span><span class="c">pio_request(</span><span class="w">H1940_LATCH_BLUETOOTH_POWER</span><span class="pc">,</span> <span class="w">de</span><span class="pc">v_n</span><span class="c">ame(&amp;pdev-&gt;dev));</span>
+	<span class="c">if</span> <span class="c">(ret) {</span>
+		<span class="w">gpio_free</span><span class="c">(</span><span class="w">S3C2410_GPH</span><span class="pc">(</span><span class="w">1</span><span class="pc">))</span><span class="c">;</span>
+		<span class="w">d</span><span class="c">ev_err(&amp;</span><span class="pc">p</span><span class="c">dev-&gt;dev, "</span><span class="w">c</span><span class="pc">o</span><span class="c">uld</span> <span class="c">not</span> <span class="pc">g</span><span class="c">et</span> <span class="w">BT_POWER</span><span class="c">\n");</span>
+		<span class="c">return</span> <span class="pc">r</span><span class="c">et;</span>
+	<span class="c">}</span>
+
+	
+	<span class="w">s3c_gpio_cfgpin</span><span class="c">(</span><span class="w">S</span><span class="c">3C2410_GPH</span><span class="pc">(</span><span class="w">0</span><span class="c">),</span> <span class="w">S3C2410_GPH0_nCTS0</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">s3c_gpio_setpull</span><span class="c">(S3C2410_GPH</span><span class="pc">(0</span><span class="c">),</span> <span class="w">S3C_GPIO_PULL_NONE</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">s</span><span class="pc">3c_gpio_c</span><span class="c">fgpin(S3C2410_GPH</span><span class="pc">(</span><span class="w">1</span><span class="c">),</span> <span class="w">S3C2410_GPIO_OUTPUT</span><span class="pc">)</span><span class="c">;</span>
+	<span class="pc">s3c_gpio_s</span><span class="c">etpull(S3C2410_GPH</span><span class="pc">(</span><span class="w">1</span><span class="c">),</span> <span class="pc">S3C_</span><span class="c">GPIO_PULL_NONE</span><span class="pc">)</span><span class="c">;</span>
+	<span class="pc">s3c_gpio_c</span><span class="c">fgpin(S3C2410_GPH</span><span class="pc">(</span><span class="w">2</span><span class="c">),</span> <span class="w">S3C2410_GPH2_TXD0</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">s3c_gpio_setpull(S3C2410_GPH</span><span class="pc">(</span><span class="w">2</span><span class="c">),</span> <span class="c">S3C_GPIO_PULL_NONE</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">s3c_gpio_cfgpin(S3C2410_GPH</span><span class="pc">(</span><span class="c">3),</span> <span class="w">S3C2410_GPH3_RXD0</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">s3c_gpio_setpull(S3C2410_GPH</span><span class="pc">(3</span><span class="c">),</span> <span class="c">S3C_GPIO_PULL_NONE</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="w">rfk</span> <span class="pc">=</span> <span class="w">rfkill_alloc</span><span class="c">(</span><span class="w">D</span><span class="pc">R</span><span class="c">V_NAME</span><span class="pc">, &amp;</span><span class="w">p</span><span class="c">dev-&gt;dev</span><span class="pc">,</span> <span class="w">RFKILL_TYPE_BLUETOOTH</span><span class="pc">,</span>
+			<span class="w">&amp;h1940bt_rfkill_ops</span><span class="pc">,</span> <span class="w">N</span><span class="c">ULL);</span>
+	<span class="c">if</span> <span class="pc">(!</span><span class="c">rfk</span><span class="pc">) </span><span class="c">{</span>
+		<span class="pc">re</span><span class="c">t</span> <span class="pc">= </span><span class="c">-ENOMEM;</span>
+		<span class="c">goto</span> <span class="w">err_rfk_alloc</span><span class="c">;</span>
+	<span class="c">}</span>
+
+	<span class="pc">ret</span> <span class="c">=</span> <span class="w">rfkill_register</span><span class="c">(</span><span class="pc">r</span><span class="c">fk</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">if</span> <span class="c">(ret</span><span class="pc">)</span>
+		<span class="c">goto</span> <span class="w">err_rfkill</span><span class="c">;</span>
+
+	<span class="w">p</span><span class="pc">l</span><span class="c">atform_set_drvdata(pdev,</span> <span class="pc">r</span><span class="c">fk);</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">0</span><span class="c">;</span>
+
+<span class="pc">e</span><span class="c">rr_rfkill:</span>
+	<span class="w">rfkill_destroy</span><span class="c">(</span><span class="pc">r</span><span class="c">fk);</span>
+<span class="w">e</span><span class="pc">rr_rfk_</span><span class="c">alloc:</span>
+	<span class="c">return</span> <span class="pc">r</span><span class="c">et;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">h1940bt_remove</span><span class="c">(struct</span> <span class="c">platform_device</span> <span class="c">*pdev)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">rfkill</span> <span class="c">*</span><span class="pc">r</span><span class="c">fk</span> <span class="c">=</span> <span class="c">platform_get_drvdata(pdev);</span>
+
+	<span class="w">p</span><span class="pc">l</span><span class="c">atform_set_drvdata(pdev,</span> <span class="pc">N</span><span class="c">ULL);</span>
+	<span class="w">gpio_free</span><span class="c">(</span><span class="w">S3C2410_GPH</span><span class="pc">(</span><span class="w">1</span><span class="pc">))</span><span class="c">;</span>
+
+	<span class="w">i</span><span class="c">f</span> <span class="c">(rfk</span><span class="pc">)</span><span class="c"> {</span>
+		<span class="w">rfkill_unregister</span><span class="c">(rfk);</span>
+		<span class="w">rfkill_destroy</span><span class="c">(rfk);</span>
+	<span class="pc">}</span>
+	<span class="w">r</span><span class="c">fk</span> <span class="pc">=</span> <span class="w">N</span><span class="c">ULL;</span>
+
+	<span class="w">h1940bt_enable</span><span class="c">(</span><span class="pc">0</span><span class="c">);</span>
+
+	<span class="pc">re</span><span class="c">turn</span> <span class="pc">0</span><span class="c">;</span>
+<span class="c">}</span>
+
+
+<span class="c">static</span> <span class="pc">s</span><span class="c">truct</span> <span class="c">platform_driver</span> <span class="w">h1940bt_driver</span> <span class="c">= {</span>
+	<span class="c">.</span><span class="pc">d</span><span class="c">river</span>		<span class="c">= {</span>
+		<span class="c">.name</span>	<span class="pc">=</span> <span class="pc">D</span><span class="c">RV_NAME,</span>
+	<span class="pc">}</span><span class="c">,</span>
+	<span class="c">.probe</span>		<span class="c">=</span> <span class="w">h1940bt_probe</span><span class="c">,</span>
+	<span class="c">.remove</span>		<span class="c">=</span> <span class="w">h1940bt_remove</span><span class="c">,</span>
+<span class="c">};</span>
+
+<span class="w">module_platform_driver</span><span class="c">(h1940bt_driver);</span>
+
+<span class="c">MODULE_AUTHOR("</span><span class="w">Arnaud</span> <span class="w">Patard</span> <span class="c">&lt;</span><span class="w">arnaud</span><span class="pc">.</span><span class="w">patard</span><span class="c">@</span><span class="w">rtp</span><span class="pc">-</span><span class="w">n</span><span class="c">et</span><span class="pc">.</span><span class="w">org</span><span class="c">&gt;");</span>
+<span class="c">MODULE_DESCRIPTION("Driver</span> <span class="c">for</span> <span class="c">the</span> <span class="w">iPAQ</span> <span class="w">H1940</span> <span class="w">bluetooth</span> <span class="w">ch</span><span class="pc">i</span><span class="c">p");</span>
+<span class="c">MODULE_LICENSE("GPL");</span>
+
+</pre>
+</body>
+</html>
+

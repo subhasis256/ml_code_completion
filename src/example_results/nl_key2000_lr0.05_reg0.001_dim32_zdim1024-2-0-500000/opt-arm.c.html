@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+<span class="w">#include</span> <span class="w">&lt;linux/kprobes.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/jump_label.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;asm/kprobes.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;asm/cacheflush.h&gt;</span>
+
+<span class="w">#include</span> <span class="w">&lt;asm</span><span class="c">/</span><span class="w">ins</span><span class="c">n.h&gt;</span>
+
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">patch</span><span class="c">.h&gt;</span>
+
+<span class="c">#include</span> <span class="pc">"</span><span class="w">c</span><span class="pc">o</span><span class="c">re.h"</span>
+
+
+<span class="c">#</span><span class="pc">d</span><span class="c">efine</span> <span class="w">ARM_REG_PC</span>	<span class="w">1</span><span class="pc">5</span>
+<span class="c">#define</span> <span class="w">can_kprobe_direct_exec</span><span class="pc">(</span><span class="w">m)	(!te</span><span class="pc">st_</span><span class="c">bit(</span><span class="pc">A</span><span class="c">RM_REG_PC</span><span class="w">, &amp;(m))</span><span class="pc">)</span>
+
+
+<span class="w">as</span><span class="pc">m</span> <span class="c">(</span>
+			<span class="w">"</span><span class="pc">.</span><span class="w">global</span> <span class="w">optprobe_template_entry\</span><span class="c">n</span><span class="w">"</span>
+			<span class="pc">"</span><span class="w">o</span><span class="c">ptprobe_template_entry</span><span class="w">:</span><span class="pc">\</span><span class="c">n</span><span class="pc">"</span>
+			<span class="w">"</span><span class="pc">.</span><span class="w">g</span><span class="c">lobal</span> <span class="w">optprobe_template_sub_sp</span><span class="pc">\</span><span class="c">n</span><span class="pc">"</span>
+			<span class="pc">"</span><span class="w">o</span><span class="c">ptprobe_template_sub_sp</span><span class="w">:"</span>
+			<span class="pc">"</span>	<span class="w">sub</span>	<span class="w">sp,</span> <span class="w">sp, #0xf</span><span class="pc">f</span><span class="w">\</span><span class="c">n"</span>
+			<span class="c">"</span>	<span class="w">stmia</span>	<span class="w">sp, {r0</span> <span class="w">-</span> <span class="w">r14} \</span><span class="c">n</span><span class="pc">"</span>
+			<span class="w">".g</span><span class="c">lobal</span> <span class="w">optprobe_template_add_sp\</span><span class="c">n"</span>
+			<span class="c">"</span><span class="w">o</span><span class="pc">ptprobe_template_a</span><span class="c">dd_sp</span><span class="w">:</span><span class="pc">"</span>
+			<span class="w">"</span>	<span class="w">ad</span><span class="pc">d</span>	<span class="w">r3,</span> <span class="w">s</span><span class="pc">p</span><span class="w">,</span><span class="pc"> </span><span class="c">#</span><span class="w">0xf</span><span class="pc">f</span><span class="w">\</span><span class="c">n"</span>
+			<span class="c">"</span>	<span class="w">str</span>	<span class="w">r</span><span class="c">3</span><span class="w">, [sp</span><span class="pc">,</span><span class="c"> #</span><span class="w">52]</span><span class="c">\n</span><span class="pc">"</span>
+			<span class="c">"</span>	<span class="w">mrs</span>	<span class="w">r4,</span> <span class="w">cpsr</span><span class="pc">\</span><span class="c">n</span><span class="pc">"</span>
+			<span class="c">"</span>	<span class="w">st</span><span class="pc">r</span>	<span class="w">r</span><span class="pc">4</span><span class="w">,</span><span class="pc"> [</span><span class="w">sp,</span><span class="pc"> </span><span class="c">#</span><span class="w">6</span><span class="c">4</span><span class="w">]</span><span class="pc">\</span><span class="c">n"</span>
+			<span class="c">"</span>	<span class="w">mov</span>	<span class="w">r1,</span> <span class="w">sp\</span><span class="c">n"</span>
+			<span class="c">"</span>	<span class="w">ldr</span>	<span class="w">r0,</span> <span class="w">1f\</span><span class="c">n</span><span class="pc">"</span>
+			<span class="c">"</span>	<span class="w">l</span><span class="c">dr</span>	<span class="w">r2,</span> <span class="w">2f</span><span class="pc">\</span><span class="c">n</span><span class="pc">"</span>
+			
+			<span class="c">"</span>	<span class="w">a</span><span class="pc">n</span><span class="c">d</span>	<span class="w">r4,</span> <span class="w">s</span><span class="pc">p</span><span class="w">,</span><span class="pc"> #</span><span class="w">4</span><span class="pc">\</span><span class="c">n"</span>
+			<span class="c">"</span>	<span class="w">sub</span>	<span class="w">sp,</span> <span class="w">sp</span><span class="pc">,</span> <span class="w">r</span><span class="c">4</span><span class="w">\</span><span class="c">n"</span>
+<span class="w">#</span><span class="pc">if</span> <span class="w">__LINUX_ARM_ARCH__</span> <span class="w">&gt;</span><span class="c">=</span> <span class="w">5</span>
+			<span class="w">"</span>	<span class="w">blx</span>	<span class="w">r</span><span class="pc">2</span><span class="w">\</span><span class="c">n"</span>
+<span class="pc">#el</span><span class="c">se</span>
+			<span class="w">"</span>	<span class="w">mov</span>     <span class="w">lr,</span> <span class="w">pc\</span><span class="c">n"</span>
+			<span class="c">"</span>	<span class="pc">m</span><span class="c">ov</span>	<span class="w">pc,</span> <span class="w">r</span><span class="pc">2</span><span class="w">\</span><span class="c">n</span><span class="pc">"</span>
+<span class="pc">#e</span><span class="c">ndif</span>
+			<span class="w">"</span>	<span class="w">a</span><span class="pc">dd</span>	<span class="w">sp,</span> <span class="w">sp</span><span class="pc">,</span> <span class="w">r4\</span><span class="c">n</span><span class="pc">"</span>
+			<span class="pc">"</span>	<span class="w">ldr</span>	<span class="w">r1, [sp, #6</span><span class="c">4</span><span class="w">]</span><span class="pc">\</span><span class="c">n"</span>
+			<span class="pc">"</span>	<span class="w">tst</span>	<span class="w">r1, #"__stringify(PSR_T_BIT)"\</span><span class="c">n"</span>
+			<span class="c">"</span>	<span class="w">ldrne</span>	<span class="w">r</span><span class="pc">2</span><span class="w">,</span><span class="c"> [</span><span class="w">sp,</span><span class="pc"> </span><span class="c">#</span><span class="w">6</span><span class="pc">0</span><span class="w">]</span><span class="pc">\</span><span class="c">n"</span>
+			<span class="c">"</span>	<span class="w">orrne</span>	<span class="w">r</span><span class="c">2</span><span class="w">,</span><span class="pc"> #</span><span class="w">1\</span><span class="c">n"</span>
+			<span class="c">"</span>	<span class="w">strne</span>	<span class="pc">r</span><span class="c">2, [</span><span class="w">sp</span><span class="c">, #</span><span class="w">6</span><span class="pc">0</span><span class="w">] @</span> <span class="w">set</span> <span class="w">bit0</span> <span class="w">o</span><span class="pc">f</span> <span class="w">PC</span> <span class="w">f</span><span class="pc">o</span><span class="c">r</span> <span class="w">thumb</span><span class="pc">\</span><span class="c">n"</span>
+			<span class="c">"</span>	<span class="w">ms</span><span class="pc">r</span>	<span class="w">cpsr_cxsf,</span> <span class="w">r1\</span><span class="c">n"</span>
+			<span class="w">".global</span> <span class="w">optprobe_template_restore_begin</span><span class="pc">\</span><span class="c">n"</span>
+			<span class="c">"</span><span class="w">o</span><span class="pc">p</span><span class="c">tprobe_template_restore_begin</span><span class="w">:</span><span class="pc">\</span><span class="c">n</span><span class="pc">"</span>
+			<span class="c">"</span>	<span class="w">ldmia</span>	<span class="w">sp, {r0</span> <span class="w">-</span> <span class="w">r15}\</span><span class="c">n"</span>
+			<span class="w">".g</span><span class="c">lobal</span> <span class="w">optprobe_template_restore_orig_insn</span><span class="pc">\</span><span class="c">n"</span>
+			<span class="c">"</span><span class="w">o</span><span class="pc">ptprobe_template_restore_o</span><span class="c">rig_insn</span><span class="w">:</span><span class="pc">\</span><span class="c">n</span><span class="pc">"</span>
+			<span class="c">"</span>	<span class="w">nop</span><span class="c">\n"</span>
+			<span class="w">".</span><span class="pc">g</span><span class="c">lobal</span> <span class="w">optprobe_template_restore_end</span><span class="pc">\</span><span class="c">n"</span>
+			<span class="c">"</span><span class="w">o</span><span class="pc">ptprobe_template_restore_e</span><span class="c">nd</span><span class="w">:</span><span class="pc">\</span><span class="c">n</span><span class="pc">"</span>
+			<span class="c">"</span>	<span class="w">n</span><span class="c">op</span><span class="pc">\</span><span class="c">n"</span>
+			<span class="w">".</span><span class="c">global</span> <span class="w">optprobe_template_val</span><span class="pc">\</span><span class="c">n"</span>
+			<span class="c">"</span><span class="w">o</span><span class="pc">ptprobe_template_v</span><span class="c">al</span><span class="w">:</span><span class="pc">\</span><span class="c">n</span><span class="pc">"</span>
+			<span class="c">"</span><span class="w">1:	.lo</span><span class="pc">n</span><span class="c">g</span> <span class="w">0\</span><span class="c">n"</span>
+			<span class="w">".g</span><span class="c">lobal</span> <span class="w">optprobe_template_call\</span><span class="c">n"</span>
+			<span class="c">"</span><span class="w">o</span><span class="pc">ptprobe_template_c</span><span class="c">all</span><span class="w">:</span><span class="pc">\</span><span class="c">n</span><span class="pc">"</span>
+			<span class="c">"</span><span class="w">2:</span><span class="pc">	</span><span class="c">.</span><span class="w">l</span><span class="c">ong</span> <span class="w">0</span><span class="pc">\</span><span class="c">n"</span>
+			<span class="w">".</span><span class="c">global</span> <span class="w">optprobe_template_end\</span><span class="c">n"</span>
+			<span class="c">"</span><span class="w">o</span><span class="pc">ptprobe_template_e</span><span class="c">nd</span><span class="w">:</span><span class="pc">\</span><span class="c">n");</span>
+
+<span class="pc">#d</span><span class="c">efine</span> <span class="w">TMPL_VAL_IDX</span> <span class="w">\</span>
+	<span class="w">(</span><span class="pc">(un</span><span class="c">signed</span> <span class="c">long</span> <span class="w">*</span><span class="pc">)&amp;</span><span class="w">optprobe_template_val</span> <span class="w">-</span><span class="pc"> </span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">*</span><span class="pc">)&amp;</span><span class="w">optprobe_template_entry)</span>
+<span class="pc">#</span><span class="c">define</span> <span class="w">TMPL_CALL_IDX</span> <span class="pc">\</span>
+	<span class="pc">((u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">*</span><span class="pc">)&amp;</span><span class="w">optprobe_template_call</span> <span class="w">-</span><span class="pc"> </span><span class="c">(unsigned</span> <span class="c">long</span> <span class="w">*</span><span class="pc">)&amp;</span><span class="w">o</span><span class="pc">ptprobe_template_ent</span><span class="c">ry</span><span class="pc">)</span>
+<span class="c">#define</span> <span class="w">TMPL_END_IDX</span> <span class="pc">\</span>
+	<span class="pc">(</span><span class="c">(unsigned</span> <span class="c">long</span> <span class="w">*</span><span class="pc">)&amp;</span><span class="w">optprobe_template_end</span> <span class="w">-</span><span class="pc"> </span><span class="c">(unsigned</span> <span class="c">long</span> <span class="w">*</span><span class="pc">)&amp;</span><span class="c">optprobe_template_entry</span><span class="pc">)</span>
+<span class="c">#define</span> <span class="w">TMPL_ADD_SP</span> <span class="pc">\</span>
+	<span class="pc">((</span><span class="c">unsigned</span> <span class="c">long</span> <span class="w">*</span><span class="pc">)&amp;</span><span class="w">optprobe_template_add_sp</span> <span class="w">-</span><span class="pc"> </span><span class="c">(unsigned</span> <span class="c">long</span> <span class="w">*</span><span class="pc">)&amp;</span><span class="c">optprobe_template_entry</span><span class="pc">)</span>
+<span class="c">#define</span> <span class="w">TMPL_SUB_SP</span> <span class="pc">\</span>
+	<span class="pc">((</span><span class="c">unsigned</span> <span class="c">long</span> <span class="w">*</span><span class="pc">)&amp;</span><span class="w">optprobe_template_sub_sp</span> <span class="w">-</span><span class="pc"> </span><span class="c">(unsigned</span> <span class="c">long</span> <span class="w">*</span><span class="pc">)&amp;</span><span class="c">optprobe_template_entry</span><span class="pc">)</span>
+<span class="c">#define</span> <span class="w">TMPL_RESTORE_BEGIN</span> <span class="pc">\</span>
+	<span class="pc">((</span><span class="c">unsigned</span> <span class="c">long</span> <span class="w">*</span><span class="pc">)&amp;</span><span class="w">optprobe_template_restore_begin</span> <span class="w">-</span><span class="pc"> </span><span class="c">(unsigned</span> <span class="c">long</span> <span class="w">*</span><span class="pc">)&amp;</span><span class="c">optprobe_template_entry</span><span class="pc">)</span>
+<span class="c">#define</span> <span class="w">TMPL_RESTORE_ORIGN_INSN</span> <span class="pc">\</span>
+	<span class="pc">((</span><span class="c">unsigned</span> <span class="c">long</span> <span class="w">*</span><span class="pc">)&amp;</span><span class="w">optprobe_template_restore_orig_insn</span> <span class="w">-</span><span class="pc"> </span><span class="c">(unsigned</span> <span class="c">long</span> <span class="w">*</span><span class="pc">)&amp;</span><span class="c">optprobe_template_entry</span><span class="pc">)</span>
+<span class="c">#define</span> <span class="w">TMPL_RESTORE_END</span> <span class="pc">\</span>
+	<span class="pc">((</span><span class="c">unsigned</span> <span class="c">long</span> <span class="w">*</span><span class="pc">)&amp;</span><span class="w">optprobe_template_restore_end</span> <span class="w">-</span><span class="pc"> </span><span class="c">(unsigned</span> <span class="c">long</span> <span class="w">*</span><span class="pc">)&amp;</span><span class="c">optprobe_template_entry</span><span class="pc">)</span>
+
+
+<span class="w">i</span><span class="c">nt</span> <span class="w">arch_prepared_optinsn</span><span class="c">(</span><span class="pc">s</span><span class="c">truct</span> <span class="w">arch_optimized_insn</span> <span class="c">*</span><span class="w">optinsn</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">optinsn</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">ins</span><span class="pc">n</span> <span class="w">!</span><span class="c">=</span> <span class="pc">N</span><span class="c">ULL;</span>
+<span class="c">}</span>
+
+
+<span class="pc">i</span><span class="c">nt</span> <span class="w">arch_check_optimized_kprobe</span><span class="c">(struct</span> <span class="w">optimized_kprobe</span> <span class="c">*</span><span class="w">op</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">return</span> <span class="pc">0</span><span class="c">;</span>
+<span class="c">}</span>
+
+
+<span class="c">static</span> <span class="pc">int</span> <span class="w">can_optimize</span><span class="c">(struct</span> <span class="w">kprobe</span> <span class="c">*</span><span class="w">kp</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">if</span> <span class="c">(kp-&gt;</span><span class="w">ainsn.stack_space</span> <span class="w">&lt;</span> <span class="pc">0</span><span class="c">)</span>
+		<span class="c">return</span> <span class="pc">0</span><span class="c">;</span>
+	
+	<span class="c">if</span> <span class="c">(</span><span class="pc">k</span><span class="c">p-&gt;ainsn</span><span class="w">.</span><span class="pc">s</span><span class="c">tack_space</span> <span class="w">&gt;</span> <span class="w">2</span><span class="pc">55</span> <span class="w">-</span> <span class="w">s</span><span class="c">izeof(struct</span> <span class="w">pt</span><span class="c">_regs</span><span class="pc">))</span>
+		<span class="c">return</span> <span class="c">0;</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">1</span><span class="c">;</span>
+<span class="c">}</span>
+
+
+<span class="c">static</span> <span class="pc">v</span><span class="c">oid</span>
+<span class="w">__arch_remove_optimized_kprobe</span><span class="c">(struct</span> <span class="w">optimized_kprobe</span> <span class="c">*</span><span class="w">o</span><span class="pc">p</span><span class="c">,</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">di</span><span class="pc">rt</span><span class="c">y</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">if</span> <span class="c">(</span><span class="w">o</span><span class="c">p-&gt;</span><span class="w">optinsn.ins</span><span class="pc">n</span><span class="w">)</span><span class="pc"> </span><span class="c">{</span>
+		<span class="w">free_optinsn_slot</span><span class="c">(</span><span class="w">o</span><span class="pc">p</span><span class="c">-&gt;optinsn</span><span class="pc">.</span><span class="w">ins</span><span class="pc">n,</span> <span class="w">dir</span><span class="pc">t</span><span class="c">y);</span>
+		<span class="w">op</span><span class="c">-&gt;optinsn.</span><span class="w">ins</span><span class="pc">n</span> <span class="pc">=</span> <span class="pc">N</span><span class="c">ULL;</span>
+	<span class="c">}</span>
+<span class="pc">}</span>
+
+<span class="w">e</span><span class="pc">x</span><span class="c">tern</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">kprobe_handler</span><span class="c">(struct</span> <span class="w">p</span><span class="pc">t</span><span class="c">_regs</span> <span class="c">*regs</span><span class="pc">);</span>
+
+<span class="c">static</span> <span class="c">void</span>
+<span class="w">optimized_callback</span><span class="c">(struct</span> <span class="w">optimized_kprobe</span> <span class="c">*</span><span class="w">o</span><span class="pc">p</span><span class="c">,</span> <span class="c">struct</span> <span class="pc">p</span><span class="c">t_regs</span> <span class="c">*regs</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="c">flags;</span>
+	<span class="pc">st</span><span class="c">ruct</span> <span class="w">kprobe</span> <span class="c">*</span><span class="pc">p</span> <span class="pc">= </span><span class="c">&amp;</span><span class="w">op</span><span class="c">-&gt;</span><span class="w">kp</span><span class="c">;</span>
+	<span class="c">struct</span> <span class="w">kprobe_ctlblk</span> <span class="c">*</span><span class="w">kcb</span> <span class="pc">=</span> <span class="w">get_kprobe_ctlblk()</span><span class="c">;</span>
+
+	
+	<span class="w">re</span><span class="pc">g</span><span class="c">s-&gt;</span><span class="w">ARM_pc</span> <span class="w">=</span><span class="pc"> (</span><span class="c">unsigned</span> <span class="c">long)</span><span class="w">op</span><span class="c">-&gt;</span><span class="w">k</span><span class="pc">p.</span><span class="w">a</span><span class="pc">d</span><span class="c">dr</span><span class="w">;</span>
+	<span class="w">re</span><span class="pc">gs</span><span class="c">-&gt;</span><span class="w">ARM_ORIG_r0</span> <span class="w">= ~0UL</span><span class="pc">;</span>
+
+	<span class="w">local_irq_save</span><span class="pc">(f</span><span class="c">lags);</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">kprobe_running(</span><span class="pc">)</span><span class="c">) {</span>
+		<span class="w">kprobes_inc_nmissed_count</span><span class="pc">(&amp;</span><span class="w">o</span><span class="c">p-&gt;</span><span class="w">k</span><span class="pc">p)</span><span class="c">;</span>
+	<span class="c">}</span> <span class="pc">e</span><span class="c">lse</span> <span class="c">{</span>
+		<span class="w">__this_cpu_write</span><span class="pc">(</span><span class="w">current_kprobe</span><span class="pc">, &amp;</span><span class="w">o</span><span class="c">p-&gt;kp</span><span class="pc">)</span><span class="c">;</span>
+		<span class="w">kcb-</span><span class="c">&gt;</span><span class="w">kprobe_status</span> <span class="c">=</span> <span class="w">KPROBE_HIT_ACTIVE</span><span class="c">;</span>
+		<span class="w">opt_pre_handler</span><span class="c">(&amp;</span><span class="pc">o</span><span class="c">p-&gt;</span><span class="w">k</span><span class="pc">p,</span> <span class="w">reg</span><span class="pc">s)</span><span class="c">;</span>
+		<span class="w">_</span><span class="c">_this_cpu_write</span><span class="pc">(c</span><span class="c">urrent_kprobe,</span> <span class="w">N</span><span class="c">ULL);</span>
+	<span class="c">}</span>
+
+	
+	<span class="pc">i</span><span class="c">f</span> <span class="pc">(!</span><span class="w">p</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">ainsn</span><span class="pc">.</span><span class="w">kprobe_direct_exec</span><span class="pc">)</span>
+		<span class="w">o</span><span class="pc">p</span><span class="c">-&gt;</span><span class="w">k</span><span class="pc">p</span><span class="c">.ainsn.</span><span class="w">insn_singlestep(p</span><span class="c">-&gt;</span><span class="w">opc</span><span class="c">ode</span><span class="pc">, </span><span class="c">&amp;</span><span class="w">p</span><span class="c">-&gt;ainsn</span><span class="pc">,</span> <span class="w">reg</span><span class="pc">s)</span><span class="c">;</span>
+
+	<span class="w">local_irq_restore</span><span class="c">(</span><span class="w">f</span><span class="pc">l</span><span class="c">ags);</span>
+<span class="c">}</span>
+
+<span class="w">i</span><span class="pc">n</span><span class="c">t</span> <span class="w">arch_prepare_optimized_kprobe</span><span class="c">(struct</span> <span class="w">optimized_kprobe</span> <span class="c">*</span><span class="w">o</span><span class="pc">p</span><span class="c">,</span> <span class="c">struct</span> <span class="w">kprobe</span> <span class="c">*</span><span class="w">orig</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">kprobe_opcode_t</span> <span class="pc">*</span><span class="w">co</span><span class="pc">d</span><span class="c">e</span><span class="pc">;</span>
+	<span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">rel_chk</span><span class="c">;</span>
+	<span class="c">unsigned</span> <span class="c">long</span> <span class="pc">v</span><span class="c">al;</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">stack_protect</span> <span class="pc">=</span> <span class="pc">s</span><span class="c">izeof(struct</span> <span class="w">p</span><span class="pc">t</span><span class="c">_regs);</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="pc">(!</span><span class="w">can_optimize</span><span class="c">(</span><span class="pc">o</span><span class="c">rig))</span>
+		<span class="c">return</span> <span class="c">-</span><span class="w">EILSEQ</span><span class="c">;</span>
+
+	<span class="w">co</span><span class="pc">d</span><span class="c">e</span> <span class="c">=</span> <span class="w">get_optinsn_slot</span><span class="pc">()</span><span class="c">;</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="pc">(!</span><span class="w">co</span><span class="pc">d</span><span class="c">e)</span>
+		<span class="c">return</span> <span class="c">-</span><span class="pc">ENOM</span><span class="c">EM;</span>
+
+	
+	<span class="w">r</span><span class="pc">el</span><span class="c">_chk</span> <span class="pc">= </span><span class="c">(</span><span class="w">u</span><span class="c">nsigned</span> <span class="c">long</span><span class="w">)((l</span><span class="pc">o</span><span class="c">ng)</span><span class="w">c</span><span class="pc">od</span><span class="c">e</span> <span class="w">-</span>
+			<span class="w">(</span><span class="pc">l</span><span class="c">ong)</span><span class="pc">o</span><span class="c">rig-&gt;</span><span class="w">a</span><span class="c">ddr</span> <span class="w">+</span> <span class="w">8) </span><span class="pc">&amp;</span> <span class="w">0xfe000003</span><span class="c">;</span>
+
+	<span class="c">if</span> <span class="pc">((</span><span class="w">r</span><span class="c">el_chk</span> <span class="w">!</span><span class="c">=</span> <span class="pc">0</span><span class="c">) &amp;&amp; (rel_chk</span> <span class="pc">!</span><span class="c">=</span> <span class="w">0xfe000000</span><span class="pc">)) </span><span class="c">{</span>
+		
+		<span class="w">free_optinsn_slot</span><span class="c">(</span><span class="w">cod</span><span class="c">e,</span> <span class="c">0</span><span class="pc">)</span><span class="c">;</span>
+		<span class="c">return</span> <span class="c">-</span><span class="w">ERANGE</span><span class="c">;</span>
+	<span class="c">}</span>
+
+	
+	<span class="w">m</span><span class="c">emcpy(</span><span class="w">co</span><span class="pc">d</span><span class="c">e</span><span class="pc">, </span><span class="c">&amp;</span><span class="w">optprobe_template_entry</span><span class="c">,</span>
+			<span class="w">TMPL_END_IDX</span> <span class="w">*</span> <span class="c">sizeof(</span><span class="w">kprobe_opcode_t</span><span class="c">));</span>
+
+	
+	<span class="w">B</span><span class="c">UG_ON(</span><span class="w">orig-</span><span class="pc">&gt;</span><span class="w">ainsn</span><span class="c">.</span><span class="w">stack_space</span> <span class="w">&lt;</span> <span class="c">0);</span>
+
+	<span class="w">stack_protect</span> <span class="w">+</span><span class="c">=</span> <span class="pc">or</span><span class="c">ig-&gt;ainsn.stack_space</span><span class="pc">;</span>
+
+	
+	<span class="w">B</span><span class="c">UG_ON(stack_protect</span> <span class="pc">&gt;</span> <span class="w">2</span><span class="pc">55</span><span class="c">);</span>
+
+	
+	<span class="w">cod</span><span class="c">e</span><span class="w">[TMPL_SUB_SP</span><span class="c">] =</span> <span class="w">__opcode_to_mem_arm</span><span class="pc">(</span><span class="w">0xe24dd000</span> <span class="w">|</span> <span class="pc">s</span><span class="c">tack_protect);</span>
+	
+	<span class="w">cod</span><span class="c">e</span><span class="pc">[</span><span class="w">TMPL_ADD_SP</span><span class="c">] =</span> <span class="pc">_</span><span class="c">_opcode_to_mem_arm(</span><span class="w">0xe28d3000</span> <span class="w">|</span> <span class="pc">s</span><span class="c">tack_protect);</span>
+
+	
+	<span class="w">v</span><span class="pc">al</span> <span class="pc">= </span><span class="c">(</span><span class="w">u</span><span class="c">nsigned</span> <span class="c">long)</span><span class="w">op</span><span class="pc">;</span>
+	<span class="w">cod</span><span class="c">e</span><span class="w">[TMPL_VAL_IDX</span><span class="c">] =</span> <span class="w">v</span><span class="c">al;</span>
+
+	
+	<span class="w">v</span><span class="c">al</span> <span class="pc">= </span><span class="c">(</span><span class="w">u</span><span class="c">nsigned</span> <span class="c">long)</span><span class="w">optimized_callback</span><span class="c">;</span>
+	<span class="w">co</span><span class="pc">d</span><span class="c">e</span><span class="pc">[</span><span class="w">TMPL_CALL_IDX</span><span class="c">] =</span> <span class="c">val;</span>
+
+	
+	<span class="w">orig-</span><span class="c">&gt;</span><span class="w">ainsn</span><span class="pc">.</span><span class="w">kprobe_direct_exec</span> <span class="c">=</span> <span class="w">f</span><span class="pc">a</span><span class="c">lse;</span>
+	<span class="w">i</span><span class="c">f</span> <span class="c">(</span><span class="w">can_kprobe_direct_exec</span><span class="c">(</span><span class="pc">or</span><span class="c">ig</span><span class="pc">-</span><span class="c">&gt;ainsn</span><span class="pc">.</span><span class="w">register_usage_flags</span><span class="pc">)) </span><span class="c">{</span>
+		<span class="w">kprobe_opcode_t</span> <span class="w">final_branch</span> <span class="pc">=</span> <span class="w">arm_gen_branch</span><span class="c">(</span>
+				<span class="w">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span><span class="w">)(&amp;cod</span><span class="c">e</span><span class="w">[TMPL_RESTORE_END])</span><span class="pc">,</span>
+				<span class="w">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span><span class="pc">)(</span><span class="w">o</span><span class="pc">p</span><span class="c">-&gt;</span><span class="w">kp</span><span class="pc">.</span><span class="w">a</span><span class="pc">d</span><span class="c">dr</span><span class="w">) </span><span class="c">+</span> <span class="w">4</span><span class="c">);</span>
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">f</span><span class="c">inal_branch</span> <span class="w">!</span><span class="c">=</span> <span class="pc">0) </span><span class="c">{</span>
+			
+			<span class="w">cod</span><span class="c">e</span><span class="w">[TMPL_RESTORE_BEGIN</span><span class="c">] =</span> <span class="w">__opcode_to_mem_arm</span><span class="c">(</span><span class="w">0xe89d7fff</span><span class="pc">)</span><span class="c">;</span>
+
+			
+			<span class="w">cod</span><span class="c">e</span><span class="pc">[</span><span class="w">TMPL_RESTORE_ORIGN_INSN</span><span class="c">] =</span> <span class="w">_</span><span class="c">_opcode_to_mem_arm(</span><span class="w">orig-</span><span class="c">&gt;</span><span class="w">o</span><span class="pc">pc</span><span class="c">ode</span><span class="pc">)</span><span class="c">;</span>
+
+			
+			<span class="w">co</span><span class="pc">d</span><span class="c">e</span><span class="pc">[</span><span class="w">T</span><span class="pc">MPL_RESTORE_E</span><span class="c">ND] =</span> <span class="pc">_</span><span class="c">_opcode_to_mem_arm(</span><span class="pc">f</span><span class="c">inal_branch</span><span class="pc">)</span><span class="c">;</span>
+			<span class="w">o</span><span class="pc">r</span><span class="c">ig</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">ainsn</span><span class="pc">.</span><span class="w">kprobe_direct_exec</span> <span class="c">=</span> <span class="w">t</span><span class="c">rue;</span>
+		<span class="c">}</span>
+	<span class="pc">}</span>
+
+	<span class="w">flush_icache_range(</span><span class="pc">(</span><span class="w">u</span><span class="pc">ns</span><span class="c">igned</span> <span class="c">long)</span><span class="w">cod</span><span class="c">e</span><span class="pc">,</span>
+			   <span class="w">(</span><span class="c">unsigned</span> <span class="pc">l</span><span class="c">ong</span><span class="w">)(&amp;cod</span><span class="c">e</span><span class="w">[TMPL_END_IDX])</span><span class="pc">)</span><span class="c">;</span>
+
+	
+	<span class="w">o</span><span class="pc">p</span><span class="c">-&gt;</span><span class="w">optinsn</span><span class="pc">.</span><span class="w">ins</span><span class="pc">n</span> <span class="pc">=</span> <span class="w">cod</span><span class="c">e;</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="pc">v</span><span class="c">oid</span> <span class="w">__kprobes</span> <span class="w">arch_optimize_kprobes</span><span class="c">(struct</span> <span class="w">l</span><span class="c">ist_head</span> <span class="c">*</span><span class="w">oplist</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">optimized_kprobe</span> <span class="c">*</span><span class="w">o</span><span class="pc">p,</span><span class="c"> *</span><span class="w">t</span><span class="c">mp;</span>
+
+	<span class="w">l</span><span class="pc">ist_for_each_entry_</span><span class="c">safe(</span><span class="w">o</span><span class="pc">p</span><span class="c">,</span> <span class="pc">t</span><span class="c">mp,</span> <span class="c">oplist</span><span class="pc">,</span> <span class="pc">l</span><span class="c">ist) {</span>
+		<span class="w">u</span><span class="c">nsigned</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">ins</span><span class="pc">n</span><span class="c">;</span>
+		<span class="w">W</span><span class="pc">A</span><span class="c">RN_ON(</span><span class="w">kprobe_disabled</span><span class="pc">(&amp;</span><span class="w">o</span><span class="pc">p</span><span class="c">-&gt;</span><span class="w">kp</span><span class="c">));</span>
+
+		
+		<span class="w">m</span><span class="pc">e</span><span class="c">mcpy(</span><span class="w">o</span><span class="pc">p</span><span class="c">-&gt;</span><span class="w">optinsn</span><span class="pc">.</span><span class="w">copied_insn</span><span class="c">,</span> <span class="w">o</span><span class="pc">p</span><span class="c">-&gt;</span><span class="pc">k</span><span class="c">p.</span><span class="w">a</span><span class="pc">d</span><span class="c">dr</span><span class="pc">,</span>
+				<span class="w">RELATIVEJUMP_SIZE</span><span class="c">);</span>
+
+		<span class="w">ins</span><span class="pc">n</span> <span class="pc">=</span> <span class="w">arm_gen_branch</span><span class="pc">((u</span><span class="c">nsigned</span> <span class="c">long)</span><span class="w">o</span><span class="pc">p</span><span class="c">-&gt;</span><span class="pc">k</span><span class="c">p.</span><span class="w">a</span><span class="pc">d</span><span class="c">dr</span><span class="w">,</span>
+				<span class="w">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="c">long)</span><span class="w">o</span><span class="pc">p</span><span class="c">-&gt;</span><span class="pc">o</span><span class="c">ptinsn.</span><span class="w">ins</span><span class="pc">n)</span><span class="c">;</span>
+		<span class="w">B</span><span class="c">UG_ON</span><span class="pc">(</span><span class="w">ins</span><span class="pc">n</span> <span class="w">=</span><span class="c">=</span> <span class="pc">0</span><span class="c">);</span>
+
+		
+		<span class="w">ins</span><span class="pc">n</span> <span class="pc">= </span><span class="c">(</span><span class="w">__mem_to_opcode_arm</span><span class="c">(</span>
+			  <span class="w">op</span><span class="c">-&gt;</span><span class="pc">o</span><span class="c">ptinsn</span><span class="w">.copied_insn</span><span class="pc">[</span><span class="c">0</span><span class="w">]) &amp;</span> <span class="w">0xf0000000) |</span>
+			<span class="c">(</span><span class="w">i</span><span class="pc">ns</span><span class="c">n</span> <span class="w">&amp;</span> <span class="w">0x0fffffff</span><span class="pc">)</span><span class="c">;</span>
+
+		
+		<span class="w">kprobes_remove_breakpoint</span><span class="c">(</span><span class="w">op</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">kp</span><span class="pc">.</span><span class="w">a</span><span class="pc">d</span><span class="c">dr,</span> <span class="w">i</span><span class="pc">ns</span><span class="c">n</span><span class="pc">)</span><span class="c">;</span>
+
+		<span class="w">li</span><span class="pc">st_del_</span><span class="c">init(&amp;</span><span class="w">op</span><span class="c">-&gt;</span><span class="w">l</span><span class="pc">i</span><span class="c">st);</span>
+	<span class="c">}</span>
+<span class="w">}</span>
+
+<span class="pc">v</span><span class="c">oid</span> <span class="w">arch_unoptimize_kprobe</span><span class="c">(struct</span> <span class="w">optimized_kprobe</span> <span class="c">*</span><span class="w">o</span><span class="pc">p</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="w">arch_arm_kprobe</span><span class="pc">(&amp;</span><span class="w">o</span><span class="pc">p</span><span class="c">-&gt;kp);</span>
+<span class="c">}</span>
+
+
+<span class="pc">v</span><span class="c">oid</span> <span class="w">arch_unoptimize_kprobes</span><span class="c">(struct</span> <span class="w">l</span><span class="c">ist_head</span> <span class="c">*</span><span class="w">oplist</span><span class="c">,</span>
+			    <span class="c">struct</span> <span class="pc">l</span><span class="c">ist_head</span> <span class="c">*</span><span class="w">done_list</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="c">optimized_kprobe</span> <span class="c">*</span><span class="w">o</span><span class="pc">p,</span><span class="c"> *</span><span class="w">t</span><span class="c">mp;</span>
+
+	<span class="w">l</span><span class="pc">ist_for_each_entry_</span><span class="c">safe(</span><span class="w">o</span><span class="pc">p</span><span class="c">,</span> <span class="pc">t</span><span class="c">mp</span><span class="pc">,</span> <span class="c">oplist,</span> <span class="pc">l</span><span class="c">ist) {</span>
+		<span class="w">arch_unoptimize_kprobe</span><span class="c">(</span><span class="w">o</span><span class="pc">p</span><span class="c">);</span>
+		<span class="w">list_move</span><span class="pc">(&amp;</span><span class="w">o</span><span class="pc">p</span><span class="c">-&gt;</span><span class="pc">l</span><span class="c">ist</span><span class="pc">,</span> <span class="pc">d</span><span class="c">one_list</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">}</span>
+<span class="c">}</span>
+
+<span class="w">i</span><span class="pc">n</span><span class="c">t</span> <span class="w">arch_within_optimized_kprobe</span><span class="c">(struct</span> <span class="pc">o</span><span class="c">ptimized_kprobe</span> <span class="c">*</span><span class="pc">o</span><span class="c">p,</span>
+				<span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">a</span><span class="pc">ddr)</span>
+<span class="c">{</span>
+	<span class="w">r</span><span class="c">eturn</span> <span class="w">(</span><span class="pc">(un</span><span class="c">signed</span> <span class="c">long)</span><span class="w">o</span><span class="pc">p</span><span class="c">-&gt;</span><span class="w">kp</span><span class="pc">.</span><span class="w">a</span><span class="c">ddr</span> <span class="w">&lt;</span><span class="pc">=</span> <span class="w">a</span><span class="pc">d</span><span class="c">dr</span> <span class="w">&amp;</span><span class="pc">&amp;</span>
+		<span class="w">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="c">long)</span><span class="w">o</span><span class="pc">p</span><span class="c">-&gt;kp.addr</span> <span class="w">+</span> <span class="w">RELATIVEJUMP_SIZE</span> <span class="w">&gt;</span> <span class="w">a</span><span class="c">ddr</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="pc">v</span><span class="c">oid</span> <span class="w">arch_remove_optimized_kprobe</span><span class="c">(struct</span> <span class="w">optimized_kprobe</span> <span class="c">*</span><span class="w">o</span><span class="pc">p)</span>
+<span class="c">{</span>
+	<span class="w">__arch_remove_optimized_kprobe</span><span class="c">(</span><span class="w">o</span><span class="pc">p,</span> <span class="w">1</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">}</span>
+
+</pre>
+</body>
+</html>
+

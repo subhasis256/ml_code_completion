@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+<span class="w">#include</span> <span class="w">&lt;linux/errno.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/kernel.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/delay.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/console.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux</span><span class="c">/</span><span class="w">e</span><span class="pc">x</span><span class="c">port.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">p</span><span class="pc">c</span><span class="c">i.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">of_platform</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">g</span><span class="pc">f</span><span class="c">p.h&gt;</span>
+
+<span class="c">#include</span> <span class="c">&lt;</span><span class="pc">a</span><span class="c">sm/</span><span class="w">prom</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">io</span><span class="pc">m</span><span class="c">mu.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">machdep</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">mpic</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">sm</span><span class="c">p.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">t</span><span class="pc">i</span><span class="c">me.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">mmu</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">de</span><span class="pc">b</span><span class="c">ug.h&gt;</span>
+
+<span class="c">#include</span> <span class="c">&lt;</span><span class="w">pcmcia</span><span class="c">/</span><span class="w">ss</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;pcmcia/</span><span class="w">cistpl</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;</span><span class="pc">p</span><span class="c">cmcia/</span><span class="w">d</span><span class="pc">s</span><span class="c">.h&gt;</span>
+
+<span class="c">#include</span> <span class="pc">"</span><span class="w">pasemi</span><span class="c">.h"</span>
+
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="pc">v</span><span class="c">oid</span> <span class="c">__iomem</span> <span class="c">*</span><span class="w">reset_reg</span><span class="c">;</span>
+
+
+
+<span class="pc">#</span><span class="c">define</span> <span class="w">MAX_MCE_REGS</span>	<span class="w">3</span><span class="c">2</span>
+<span class="pc">s</span><span class="c">truct</span> <span class="w">mce_regs</span> <span class="c">{</span>
+	<span class="w">c</span><span class="c">har</span> <span class="c">*name;</span>
+	<span class="pc">v</span><span class="c">oid</span> <span class="c">__iomem</span> <span class="c">*</span><span class="pc">a</span><span class="c">ddr;</span>
+<span class="w">}</span><span class="c">;</span>
+
+<span class="c">static</span> <span class="pc">s</span><span class="c">truct</span> <span class="pc">m</span><span class="c">ce_regs</span> <span class="pc">m</span><span class="c">ce_regs</span><span class="pc">[</span><span class="w">M</span><span class="c">AX_MCE_REGS];</span>
+<span class="c">static</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">num_mce_regs</span><span class="pc">;</span>
+<span class="c">static</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">nmi_virq</span> <span class="pc">=</span> <span class="w">NO_IRQ</span><span class="c">;</span>
+
+
+<span class="c">static</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">pas_restart</span><span class="c">(</span><span class="w">c</span><span class="pc">h</span><span class="c">ar</span> <span class="c">*</span><span class="w">c</span><span class="pc">m</span><span class="c">d</span><span class="pc">)</span>
+<span class="c">{</span>
+	
+	<span class="w">smp_send_stop(</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">ud</span><span class="c">elay(</span><span class="w">10000</span><span class="c">);</span>
+	<span class="w">p</span><span class="pc">ri</span><span class="c">ntk</span><span class="pc">("</span><span class="w">Restarting...\</span><span class="c">n");</span>
+	<span class="w">w</span><span class="c">hile</span> <span class="c">(</span><span class="pc">1)</span>
+		<span class="w">out_le32</span><span class="c">(</span><span class="w">reset_reg</span><span class="pc">,</span> <span class="w">0x6000000</span><span class="c">);</span>
+<span class="pc">}</span>
+
+<span class="pc">#ifd</span><span class="c">ef</span> <span class="w">CONFIG_SMP</span>
+<span class="c">static</span> <span class="w">arch_spinlock_t</span> <span class="w">timebase_lock</span><span class="pc">;</span>
+<span class="c">static</span> <span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">timebase</span><span class="c">;</span>
+
+<span class="c">static</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">pas_give_timebase</span><span class="c">(</span><span class="pc">v</span><span class="c">oid)</span>
+<span class="c">{</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="c">flags;</span>
+
+	<span class="w">local_irq_save</span><span class="pc">(</span><span class="c">flags);</span>
+	<span class="w">hard_irq_disable</span><span class="pc">()</span><span class="c">;</span>
+	<span class="w">arch_spin_lock</span><span class="pc">(&amp;</span><span class="w">t</span><span class="pc">imebase_</span><span class="c">lock);</span>
+	<span class="w">mtspr</span><span class="c">(</span><span class="w">SPRN_TBCTL</span><span class="pc">,</span> <span class="w">TBCTL_FREEZE</span><span class="c">);</span>
+	<span class="w">isync</span><span class="pc">()</span><span class="c">;</span>
+	<span class="w">t</span><span class="c">imebase</span> <span class="pc">=</span> <span class="w">get_tb</span><span class="pc">()</span><span class="c">;</span>
+	<span class="w">arch_spin_unlock</span><span class="pc">(&amp;timebase_</span><span class="c">lock);</span>
+
+	<span class="w">w</span><span class="c">hile</span> <span class="c">(timebase</span><span class="pc">)</span>
+		<span class="w">barrier</span><span class="c">();</span>
+	<span class="w">m</span><span class="c">tspr(SPRN_TBCTL</span><span class="pc">,</span> <span class="w">TBCTL_RESTART</span><span class="c">);</span>
+	<span class="w">local_irq_restore</span><span class="c">(</span><span class="pc">f</span><span class="c">lags);</span>
+<span class="c">}</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="c">void</span> <span class="w">pas_take_timebase</span><span class="c">(</span><span class="pc">v</span><span class="c">oid)</span>
+<span class="c">{</span>
+	<span class="w">w</span><span class="c">hile</span> <span class="pc">(!</span><span class="c">timebase</span><span class="pc">)</span>
+		<span class="w">smp_rmb</span><span class="c">();</span>
+
+	<span class="w">arch_spin_lock</span><span class="pc">(&amp;</span><span class="c">timebase_lock);</span>
+	<span class="w">set_tb</span><span class="pc">(</span><span class="c">timebase</span> <span class="w">&gt;</span><span class="pc">&gt;</span> <span class="w">3</span><span class="pc">2,</span> <span class="pc">t</span><span class="c">imebase</span> <span class="w">&amp;</span> <span class="w">0xf</span><span class="pc">ffff</span><span class="c">fff);</span>
+	<span class="pc">t</span><span class="c">imebase</span> <span class="pc">=</span> <span class="w">0</span><span class="c">;</span>
+	<span class="w">arch_spin_unlock</span><span class="pc">(&amp;</span><span class="c">timebase_lock);</span>
+<span class="pc">}</span>
+
+<span class="w">s</span><span class="pc">tr</span><span class="c">uct</span> <span class="w">smp_ops_t</span> <span class="w">pas_smp_ops</span> <span class="c">= {</span>
+	<span class="c">.</span><span class="pc">p</span><span class="c">robe</span>		<span class="c">=</span> <span class="w">smp_mpic_probe</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">message_pass</span>	<span class="c">=</span> <span class="w">smp_mpic_message_pass</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">kick_cpu</span>	<span class="c">=</span> <span class="w">smp_generic_kick_cpu</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">setup_cpu</span>	<span class="c">=</span> <span class="w">smp_mpic_setup_cpu</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">give_timebase</span>	<span class="c">=</span> <span class="w">pas_give_timebase</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">take_timebase</span>	<span class="c">=</span> <span class="w">pas_take_timebase</span><span class="c">,</span>
+<span class="pc">}</span><span class="c">;</span>
+<span class="pc">#e</span><span class="c">ndif</span> 
+
+<span class="pc">v</span><span class="c">oid</span> <span class="c">__init</span> <span class="w">pas_setup_arch</span><span class="c">(void)</span>
+<span class="c">{</span>
+<span class="w">#</span><span class="c">ifdef</span> <span class="w">CONFIG_SMP</span>
+	
+	<span class="w">smp_ops</span> <span class="w">=</span><span class="pc"> </span><span class="c">&amp;</span><span class="w">pas_smp_ops</span><span class="c">;</span>
+<span class="c">#endif</span>
+	
+	<span class="w">pas_pci_init</span><span class="pc">()</span><span class="c">;</span>
+
+<span class="pc">#ifd</span><span class="c">ef</span> <span class="w">CONFIG_DUMMY_CONSOLE</span>
+	<span class="w">conswitchp</span> <span class="w">=</span><span class="pc"> </span><span class="c">&amp;</span><span class="w">dummy_con</span><span class="c">;</span>
+<span class="c">#endif</span>
+
+	
+	
+	<span class="w">reset_reg</span> <span class="pc">=</span> <span class="w">i</span><span class="pc">o</span><span class="c">remap(</span><span class="w">0xfc101100</span><span class="c">,</span> <span class="w">4</span><span class="c">);</span>
+<span class="w">}</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="pc">i</span><span class="c">nt</span> <span class="c">__init</span> <span class="w">pas_setup_mce_regs</span><span class="c">(void)</span>
+<span class="c">{</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="c">pci_dev</span> <span class="c">*</span><span class="pc">d</span><span class="c">ev;</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">re</span><span class="pc">g</span><span class="c">;</span>
+
+	
+
+	<span class="w">r</span><span class="pc">eg</span> <span class="c">=</span> <span class="c">0;</span>
+
+	<span class="w">d</span><span class="c">ev</span> <span class="c">=</span> <span class="w">pci_get_device</span><span class="c">(</span><span class="w">PCI_VENDOR_ID_PASEMI</span><span class="c">,</span> <span class="w">0xa00a</span><span class="pc">,</span> <span class="w">N</span><span class="c">ULL);</span>
+	<span class="w">w</span><span class="c">hile</span> <span class="c">(</span><span class="w">d</span><span class="c">ev</span> <span class="w">&amp;</span><span class="pc">&amp;</span> <span class="w">r</span><span class="c">eg</span> <span class="c">&lt;</span> <span class="w">MAX_MCE_REGS</span><span class="c">) {</span>
+		<span class="w">mce_regs[</span><span class="pc">r</span><span class="c">eg].</span><span class="w">n</span><span class="c">ame</span> <span class="c">=</span> <span class="w">kasprintf</span><span class="pc">(</span><span class="w">G</span><span class="c">FP_KERNEL</span><span class="pc">,</span>
+						<span class="w">"mc</span><span class="pc">%</span><span class="w">d_mcdebug_errsta</span><span class="pc">"</span><span class="c">,</span> <span class="c">reg);</span>
+		<span class="pc">m</span><span class="c">ce_regs</span><span class="w">[r</span><span class="c">eg</span><span class="pc">].</span><span class="w">a</span><span class="c">ddr</span> <span class="c">=</span> <span class="w">pasemi_pci_getcfgaddr</span><span class="pc">(d</span><span class="c">ev,</span> <span class="w">0x730</span><span class="c">);</span>
+		<span class="w">de</span><span class="pc">v</span> <span class="pc">=</span> <span class="w">pci_get_device</span><span class="c">(</span><span class="w">PCI_VENDOR_ID_PASEMI</span><span class="c">,</span> <span class="w">0xa00a</span><span class="c">,</span> <span class="w">d</span><span class="pc">e</span><span class="c">v</span><span class="pc">)</span><span class="c">;</span>
+		<span class="w">r</span><span class="pc">eg</span><span class="w">+</span><span class="pc">+</span><span class="c">;</span>
+	<span class="c">}</span>
+
+	<span class="w">d</span><span class="pc">ev</span> <span class="pc">=</span> <span class="pc">p</span><span class="c">ci_get_device(</span><span class="w">P</span><span class="c">CI_VENDOR_ID_PASEMI,</span> <span class="w">0xa001</span><span class="pc">,</span> <span class="w">N</span><span class="c">ULL);</span>
+	<span class="c">if</span> <span class="c">(dev</span> <span class="w">&amp;</span><span class="pc">&amp;</span> <span class="w">r</span><span class="pc">eg</span><span class="w">+4</span> <span class="w">&lt;</span> <span class="w">MAX_MCE_REGS</span><span class="pc">) </span><span class="c">{</span>
+		<span class="w">mce_regs[r</span><span class="c">eg].</span><span class="w">n</span><span class="c">ame</span> <span class="pc">= </span><span class="c">"</span><span class="w">iobdbg_IntStatus1</span><span class="pc">"</span><span class="c">;</span>
+		<span class="pc">m</span><span class="c">ce_regs</span><span class="pc">[</span><span class="w">r</span><span class="c">eg].</span><span class="pc">a</span><span class="c">ddr</span> <span class="c">=</span> <span class="w">pasemi_pci_getcfgaddr</span><span class="pc">(d</span><span class="c">ev,</span> <span class="w">0x438</span><span class="pc">)</span><span class="c">;</span>
+		<span class="w">r</span><span class="pc">eg</span><span class="w">+</span><span class="c">+;</span>
+		<span class="pc">m</span><span class="c">ce_regs[</span><span class="w">r</span><span class="c">eg</span><span class="pc">].</span><span class="w">n</span><span class="c">ame</span> <span class="pc">= </span><span class="c">"</span><span class="w">iobdbg_IOCTbusIntDbgReg</span><span class="pc">";</span>
+		<span class="c">mce_regs</span><span class="pc">[</span><span class="w">r</span><span class="c">eg].</span><span class="pc">a</span><span class="c">ddr</span> <span class="c">=</span> <span class="pc">p</span><span class="c">asemi_pci_getcfgaddr</span><span class="pc">(d</span><span class="c">ev,</span> <span class="w">0x454</span><span class="c">);</span>
+		<span class="pc">r</span><span class="c">eg</span><span class="w">+</span><span class="c">+;</span>
+		<span class="pc">m</span><span class="c">ce_regs[</span><span class="w">r</span><span class="c">eg</span><span class="pc">].</span><span class="w">n</span><span class="c">ame</span> <span class="pc">= </span><span class="c">"</span><span class="w">iobiom_IntStatus</span><span class="pc">"</span><span class="c">;</span>
+		<span class="c">mce_regs</span><span class="pc">[</span><span class="w">r</span><span class="c">eg].</span><span class="pc">a</span><span class="c">ddr</span> <span class="c">=</span> <span class="pc">p</span><span class="c">asemi_pci_getcfgaddr</span><span class="pc">(</span><span class="c">dev,</span> <span class="w">0xc10</span><span class="c">);</span>
+		<span class="pc">r</span><span class="c">eg</span><span class="w">+</span><span class="c">+;</span>
+		<span class="pc">m</span><span class="c">ce_regs[</span><span class="w">r</span><span class="c">eg</span><span class="pc">].</span><span class="w">n</span><span class="c">ame</span> <span class="pc">= </span><span class="c">"</span><span class="w">iobiom_IntDbgReg</span><span class="pc">"</span><span class="c">;</span>
+		<span class="c">mce_regs</span><span class="pc">[</span><span class="w">r</span><span class="c">eg].</span><span class="pc">a</span><span class="c">ddr</span> <span class="c">=</span> <span class="pc">p</span><span class="c">asemi_pci_getcfgaddr</span><span class="pc">(</span><span class="c">dev,</span> <span class="w">0xc1c</span><span class="c">);</span>
+		<span class="pc">r</span><span class="c">eg</span><span class="w">+</span><span class="c">+;</span>
+	<span class="c">}</span>
+
+	<span class="w">d</span><span class="pc">e</span><span class="c">v</span> <span class="pc">=</span> <span class="w">pci_get_device</span><span class="c">(</span><span class="w">PCI_VENDOR_ID_PASEMI</span><span class="c">,</span> <span class="w">0xa009</span><span class="c">,</span> <span class="w">N</span><span class="c">ULL);</span>
+	<span class="c">if</span> <span class="c">(</span><span class="pc">d</span><span class="c">ev</span> <span class="w">&amp;</span><span class="pc">&amp;</span> <span class="w">r</span><span class="c">eg</span><span class="w">+</span><span class="pc">2</span> <span class="w">&lt;</span> <span class="w">MAX_MCE_REGS</span><span class="c">) {</span>
+		<span class="c">mce_regs</span><span class="pc">[</span><span class="w">r</span><span class="c">eg</span><span class="pc">].</span><span class="w">n</span><span class="c">ame</span> <span class="pc">= </span><span class="c">"</span><span class="w">l2csts_IntStatus"</span><span class="c">;</span>
+		<span class="pc">m</span><span class="c">ce_regs</span><span class="pc">[</span><span class="w">r</span><span class="c">eg].</span><span class="w">a</span><span class="c">ddr</span> <span class="c">=</span> <span class="w">pasemi_pci_getcfgaddr</span><span class="pc">(d</span><span class="c">ev,</span> <span class="w">0x20</span><span class="pc">0)</span><span class="c">;</span>
+		<span class="w">r</span><span class="pc">eg+</span><span class="c">+;</span>
+		<span class="pc">m</span><span class="c">ce_regs</span><span class="pc">[</span><span class="w">r</span><span class="c">eg</span><span class="pc">].</span><span class="w">n</span><span class="c">ame</span> <span class="pc">= </span><span class="c">"</span><span class="w">l2csts_Cnt</span><span class="pc">"</span><span class="c">;</span>
+		<span class="c">mce_regs</span><span class="pc">[</span><span class="w">r</span><span class="c">eg].</span><span class="pc">a</span><span class="c">ddr</span> <span class="c">=</span> <span class="pc">p</span><span class="c">asemi_pci_getcfgaddr</span><span class="w">(</span><span class="pc">d</span><span class="c">ev,</span> <span class="w">0x214</span><span class="c">);</span>
+		<span class="pc">r</span><span class="c">eg</span><span class="w">+</span><span class="c">+;</span>
+	<span class="c">}</span>
+
+	<span class="w">num_mce_regs</span> <span class="pc">=</span> <span class="w">r</span><span class="c">eg</span><span class="pc">;</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+<span class="w">machine_device_initcall</span><span class="c">(</span><span class="w">pasemi</span><span class="c">,</span> <span class="w">pas_setup_mce_regs</span><span class="pc">)</span><span class="c">;</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="w">__i</span><span class="pc">nit</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">pas_init_IRQ</span><span class="c">(</span><span class="pc">v</span><span class="c">oid)</span>
+<span class="c">{</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="pc">d</span><span class="c">evice_node</span> <span class="c">*np</span><span class="pc">;</span>
+	<span class="c">struct</span> <span class="pc">d</span><span class="c">evice_node</span> <span class="c">*</span><span class="w">ro</span><span class="c">ot</span><span class="pc">,</span><span class="c"> *</span><span class="w">mpic_node</span><span class="c">;</span>
+	<span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="c">long</span> <span class="w">openpic_addr</span><span class="pc">;</span>
+	<span class="w">c</span><span class="c">onst</span> <span class="pc">u</span><span class="c">nsigned</span> <span class="pc">i</span><span class="c">nt</span> <span class="pc">*</span><span class="w">opprop</span><span class="c">;</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">naddr</span><span class="pc">,</span> <span class="w">opplen</span><span class="c">;</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">mpic_flags</span><span class="pc">;</span>
+	<span class="w">c</span><span class="pc">o</span><span class="c">nst</span> <span class="pc">u</span><span class="c">nsigned</span> <span class="pc">i</span><span class="c">nt</span> <span class="c">*</span><span class="w">nmiprop</span><span class="c">;</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">mpic</span> <span class="c">*mpic;</span>
+
+	<span class="w">m</span><span class="c">pic_node</span> <span class="c">=</span> <span class="w">N</span><span class="c">ULL;</span>
+
+	<span class="w">for_each_node_by_type</span><span class="c">(</span><span class="w">n</span><span class="pc">p, </span><span class="c">"</span><span class="w">int</span><span class="pc">err</span><span class="c">upt</span><span class="w">-co</span><span class="pc">n</span><span class="c">troller</span><span class="w">")</span>
+		<span class="w">i</span><span class="pc">f</span> <span class="c">(</span><span class="w">of_device_is_compatible</span><span class="c">(</span><span class="pc">n</span><span class="c">p</span><span class="pc">, </span><span class="c">"</span><span class="w">op</span><span class="pc">e</span><span class="c">n</span><span class="pc">-</span><span class="w">pic"</span><span class="pc">)) </span><span class="c">{</span>
+			<span class="w">m</span><span class="c">pic_node</span> <span class="c">=</span> <span class="w">n</span><span class="c">p</span><span class="pc">;</span>
+			<span class="w">b</span><span class="c">reak;</span>
+		<span class="pc">}</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="pc">(!m</span><span class="c">pic_node</span><span class="pc">)</span>
+		<span class="w">f</span><span class="c">or_each_node_by_type</span><span class="pc">(</span><span class="c">np, "</span><span class="w">o</span><span class="pc">p</span><span class="c">en-</span><span class="w">p</span><span class="c">ic</span><span class="w">") {</span>
+			<span class="w">m</span><span class="c">pic_node</span> <span class="w">=</span> <span class="pc">n</span><span class="c">p</span><span class="pc">;</span>
+			<span class="w">b</span><span class="c">reak;</span>
+		<span class="pc">}</span>
+	<span class="c">if</span> <span class="pc">(!</span><span class="c">mpic_node) {</span>
+		<span class="pc">pri</span><span class="c">ntk(KERN_ERR</span>
+			<span class="c">"</span><span class="pc">F</span><span class="c">ailed</span> <span class="c">to</span> <span class="w">locate</span> <span class="w">t</span><span class="pc">h</span><span class="c">e</span> <span class="w">MPIC</span> <span class="w">i</span><span class="pc">nt</span><span class="c">errupt</span> <span class="w">co</span><span class="pc">ntroll</span><span class="c">er\n");</span>
+		<span class="c">return</span><span class="pc">;</span>
+	<span class="c">}</span>
+
+	
+	<span class="w">ro</span><span class="c">ot</span> <span class="c">=</span> <span class="w">of_find_node_by_path("/");</span>
+	<span class="w">naddr</span> <span class="w">=</span> <span class="w">of_n_addr_cells</span><span class="pc">(</span><span class="w">r</span><span class="pc">o</span><span class="c">ot</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">opprop</span> <span class="pc">=</span> <span class="w">of_get_property</span><span class="c">(</span><span class="w">ro</span><span class="c">ot</span><span class="w">,</span><span class="pc"> "</span><span class="w">pl</span><span class="c">atform</span><span class="pc">-</span><span class="w">op</span><span class="pc">e</span><span class="c">n</span><span class="pc">-</span><span class="w">pic</span><span class="pc">", </span><span class="c">&amp;</span><span class="w">opplen</span><span class="c">);</span>
+	<span class="c">if</span> <span class="pc">(!</span><span class="c">opprop) {</span>
+		<span class="pc">pri</span><span class="c">ntk(KERN_ERR</span> <span class="c">"</span><span class="pc">N</span><span class="c">o</span> <span class="w">p</span><span class="pc">l</span><span class="c">atform</span><span class="w">-op</span><span class="pc">e</span><span class="c">n-</span><span class="w">p</span><span class="c">ic</span> <span class="w">p</span><span class="pc">r</span><span class="c">operty</span><span class="pc">.</span><span class="c">\n");</span>
+		<span class="w">of_node_put</span><span class="c">(</span><span class="w">ro</span><span class="c">ot</span><span class="pc">)</span><span class="c">;</span>
+		<span class="c">return</span><span class="pc">;</span>
+	<span class="c">}</span>
+	<span class="w">openpic_addr</span> <span class="pc">=</span> <span class="w">of_read_number</span><span class="c">(opprop,</span> <span class="w">naddr</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">p</span><span class="pc">r</span><span class="c">intk(</span><span class="pc">KERN_D</span><span class="c">EBUG</span> <span class="c">"</span><span class="w">OpenPIC</span> <span class="w">ad</span><span class="pc">dr:</span><span class="c"> %</span><span class="w">l</span><span class="pc">x</span><span class="c">\n",</span> <span class="pc">o</span><span class="c">penpic_addr);</span>
+
+	<span class="w">mpic_flags</span> <span class="pc">=</span> <span class="w">MPIC_LARGE_VECTORS</span> <span class="pc">|</span> <span class="w">MPIC_NO_BIAS</span> <span class="c">|</span> <span class="w">MPIC_NO_RESET</span><span class="c">;</span>
+
+	<span class="w">nmiprop</span> <span class="pc">=</span> <span class="w">of_get_property</span><span class="c">(</span><span class="w">mpic_node,</span><span class="pc"> "</span><span class="w">nmi</span><span class="pc">-</span><span class="w">so</span><span class="pc">u</span><span class="c">rce",</span> <span class="pc">N</span><span class="c">ULL</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">if</span> <span class="c">(nmiprop</span><span class="w">)</span>
+		<span class="w">m</span><span class="c">pic_flags</span> <span class="w">|</span><span class="c">=</span> <span class="w">MPIC_ENABLE_MCK</span><span class="c">;</span>
+
+	<span class="w">mpic</span> <span class="pc">=</span> <span class="w">mpic_alloc</span><span class="c">(</span><span class="pc">m</span><span class="c">pic_node,</span> <span class="pc">o</span><span class="c">penpic_addr</span><span class="pc">,</span>
+			  <span class="c">mpic_flags,</span> <span class="c">0</span><span class="pc">,</span> <span class="pc">0, "</span><span class="w">PASEMI</span><span class="pc">-</span><span class="w">OPIC</span><span class="pc">")</span><span class="c">;</span>
+	<span class="w">B</span><span class="c">UG_ON</span><span class="pc">(!mpic</span><span class="c">);</span>
+
+	<span class="w">mpic_assign_isu</span><span class="c">(</span><span class="pc">mpic</span><span class="c">,</span> <span class="w">0</span><span class="pc">,</span> <span class="pc">m</span><span class="c">pic</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">pad</span><span class="pc">d</span><span class="c">r</span> <span class="w">+</span> <span class="w">0x100</span><span class="pc">00</span><span class="c">);</span>
+	<span class="w">mpic_init</span><span class="c">(mpic</span><span class="pc">)</span><span class="c">;</span>
+	
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">nmiprop</span><span class="pc">)</span><span class="c"> {</span>
+		<span class="w">nmi_virq</span> <span class="pc">=</span> <span class="w">irq_create_mapping</span><span class="c">(</span><span class="w">N</span><span class="pc">U</span><span class="c">LL</span><span class="w">, *</span><span class="pc">n</span><span class="c">miprop);</span>
+		<span class="w">mpic_irq_set_priority</span><span class="c">(</span><span class="pc">n</span><span class="c">mi_virq,</span> <span class="w">15</span><span class="c">);</span>
+		<span class="w">irq_set_irq_type</span><span class="c">(nmi_virq</span><span class="pc">,</span> <span class="w">IRQ_TYPE_EDGE_RISING</span><span class="c">);</span>
+		<span class="w">mpic_unmask_irq</span><span class="c">(</span><span class="w">irq_get_irq_data</span><span class="pc">(n</span><span class="c">mi_virq</span><span class="pc">))</span><span class="c">;</span>
+	<span class="c">}</span>
+
+	<span class="w">of_node_put</span><span class="c">(</span><span class="w">mpic_node</span><span class="c">);</span>
+	<span class="w">o</span><span class="c">f_node_put(</span><span class="w">ro</span><span class="c">ot);</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">void</span> <span class="pc">__i</span><span class="c">nit</span> <span class="w">pas_progress</span><span class="c">(</span><span class="pc">ch</span><span class="c">ar</span> <span class="c">*</span><span class="w">s</span><span class="c">,</span> <span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="pc">s</span><span class="c">hort</span> <span class="w">hex</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">p</span><span class="c">rintk</span><span class="w">("[%04</span><span class="c">x</span><span class="w">] : %s</span><span class="c">\n",</span> <span class="pc">h</span><span class="c">ex</span><span class="pc">,</span> <span class="w">s</span> <span class="w">?</span> <span class="pc">s</span> <span class="w">: "");</span>
+<span class="pc">}</span>
+
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">pas_machine_check_handler</span><span class="c">(struct</span> <span class="w">p</span><span class="pc">t</span><span class="c">_regs</span> <span class="c">*</span><span class="w">r</span><span class="pc">eg</span><span class="c">s</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">c</span><span class="pc">p</span><span class="c">u</span> <span class="c">=</span> <span class="w">smp_processor_id</span><span class="pc">()</span><span class="c">;</span>
+	<span class="w">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">srr0</span><span class="pc">,</span> <span class="w">srr1</span><span class="pc">,</span> <span class="w">dsisr</span><span class="pc">;</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">dump_slb</span> <span class="c">=</span> <span class="c">0;</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="c">i</span><span class="pc">;</span>
+
+	<span class="w">s</span><span class="pc">rr0</span> <span class="c">=</span> <span class="w">reg</span><span class="pc">s-</span><span class="c">&gt;</span><span class="w">nip</span><span class="pc">;</span>
+	<span class="pc">srr1</span> <span class="c">=</span> <span class="w">r</span><span class="pc">eg</span><span class="c">s-&gt;</span><span class="w">ms</span><span class="pc">r</span><span class="c">;</span>
+
+	<span class="c">if</span> <span class="c">(</span><span class="w">nmi_virq</span> <span class="w">!</span><span class="c">=</span> <span class="w">NO_IRQ</span> <span class="w">&amp;</span><span class="c">&amp;</span> <span class="w">mpic_get_mcirq() ==</span> <span class="c">nmi_virq</span><span class="pc">)</span><span class="c"> {</span>
+		<span class="w">p</span><span class="c">rintk(</span><span class="pc">KERN_E</span><span class="c">RR</span> <span class="c">"</span><span class="w">NMI</span> <span class="w">delivered</span><span class="pc">\</span><span class="c">n");</span>
+		<span class="w">debugger</span><span class="c">(</span><span class="w">r</span><span class="c">egs);</span>
+		<span class="w">mpic_end_irq</span><span class="c">(</span><span class="w">irq_get_irq_data</span><span class="pc">(n</span><span class="c">mi_virq));</span>
+		<span class="w">g</span><span class="c">oto</span> <span class="pc">o</span><span class="c">ut;</span>
+	<span class="c">}</span>
+
+	<span class="w">dsisr</span> <span class="pc">=</span> <span class="w">mfspr</span><span class="c">(</span><span class="w">SPRN_DSISR</span><span class="c">);</span>
+	<span class="w">p</span><span class="c">rintk(</span><span class="pc">KERN_E</span><span class="c">RR</span> <span class="c">"</span><span class="w">Machine</span> <span class="w">Check</span> <span class="w">o</span><span class="c">n</span> <span class="w">C</span><span class="pc">P</span><span class="c">U</span> <span class="c">%d\n",</span> <span class="w">cp</span><span class="c">u);</span>
+	<span class="w">p</span><span class="c">rintk(</span><span class="pc">KERN_E</span><span class="c">RR</span> <span class="c">"</span><span class="w">SRR0</span>  <span class="w">0</span><span class="c">x%</span><span class="w">016lx</span> <span class="w">SRR1</span> <span class="w">0</span><span class="c">x%</span><span class="w">01</span><span class="c">6lx\n",</span> <span class="w">srr0</span><span class="c">,</span> <span class="w">srr1</span><span class="pc">)</span><span class="c">;</span>
+	<span class="pc">p</span><span class="c">rintk(</span><span class="pc">KERN_E</span><span class="c">RR</span> <span class="c">"</span><span class="w">DSISR</span> <span class="w">0</span><span class="pc">x</span><span class="c">%</span><span class="w">01</span><span class="c">6lx</span> <span class="w">DAR</span>  <span class="pc">0</span><span class="c">x%</span><span class="w">01</span><span class="c">6lx\n",</span> <span class="w">dsisr</span><span class="c">,</span> <span class="w">reg</span><span class="pc">s</span><span class="c">-&gt;</span><span class="w">dar</span><span class="c">);</span>
+	<span class="pc">p</span><span class="c">rintk(</span><span class="pc">KERN_E</span><span class="c">RR</span> <span class="c">"</span><span class="w">BER</span>   <span class="w">0</span><span class="pc">x</span><span class="c">%</span><span class="w">01</span><span class="c">6lx</span> <span class="w">MER</span>  <span class="c">0x%</span><span class="w">01</span><span class="c">6lx\n",</span> <span class="w">mfspr</span><span class="pc">(</span><span class="w">SPRN_PA6T_BER</span><span class="pc">),</span>
+		<span class="pc">m</span><span class="c">fspr(</span><span class="w">SPRN_PA6T_MER</span><span class="c">));</span>
+	<span class="w">p</span><span class="c">rintk(</span><span class="pc">KERN_E</span><span class="c">RR</span> <span class="c">"</span><span class="w">IER</span>   <span class="w">0</span><span class="c">x%</span><span class="w">01</span><span class="c">6lx</span> <span class="w">DER</span>  <span class="pc">0x</span><span class="c">%</span><span class="w">01</span><span class="c">6lx\n",</span> <span class="w">m</span><span class="c">fspr</span><span class="pc">(</span><span class="w">SPRN_PA6T_IER</span><span class="pc">)</span><span class="c">,</span>
+		<span class="pc">m</span><span class="c">fspr</span><span class="pc">(</span><span class="w">SPRN_PA6T_DER</span><span class="pc">))</span><span class="c">;</span>
+	<span class="w">p</span><span class="c">rintk(</span><span class="pc">KERN_E</span><span class="c">RR</span> <span class="c">"</span><span class="w">Cause:</span><span class="pc">\</span><span class="c">n");</span>
+
+	<span class="w">i</span><span class="c">f</span> <span class="c">(</span><span class="w">srr1</span> <span class="pc">&amp;</span> <span class="w">0x200000</span><span class="pc">)</span>
+		<span class="c">printk(</span><span class="pc">KERN_E</span><span class="c">RR</span> <span class="c">"</span><span class="w">Signalled</span> <span class="w">by</span> <span class="w">SDC</span><span class="c">\n");</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="pc">s</span><span class="c">rr1</span> <span class="pc">&amp;</span> <span class="w">0x10</span><span class="pc">000</span><span class="c">0) {</span>
+		<span class="c">printk(</span><span class="pc">KERN_E</span><span class="c">RR</span> <span class="c">"</span><span class="w">Load/Store</span> <span class="w">d</span><span class="c">etected</span> <span class="w">e</span><span class="pc">r</span><span class="c">ror</span><span class="w">:</span><span class="pc">\</span><span class="c">n");</span>
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">dsisr</span> <span class="pc">&amp;</span> <span class="w">0x80</span><span class="pc">00</span><span class="c">)</span>
+			<span class="c">printk(</span><span class="pc">KERN_E</span><span class="c">RR</span> <span class="c">"</span><span class="w">D</span><span class="c">-</span><span class="w">cac</span><span class="c">he</span> <span class="w">ECC</span> <span class="w">double</span><span class="pc">-b</span><span class="c">it</span> <span class="w">e</span><span class="pc">r</span><span class="c">ror</span> <span class="w">o</span><span class="pc">r</span> <span class="w">bu</span><span class="pc">s</span> <span class="w">e</span><span class="c">rror\n");</span>
+		<span class="w">i</span><span class="c">f</span> <span class="c">(</span><span class="w">d</span><span class="pc">s</span><span class="c">isr</span> <span class="pc">&amp;</span> <span class="w">0x40</span><span class="pc">00</span><span class="c">)</span>
+			<span class="c">printk(KERN_ERR</span> <span class="c">"</span><span class="w">LSU</span> <span class="w">snoop</span> <span class="w">resp</span><span class="pc">o</span><span class="c">nse</span> <span class="w">e</span><span class="pc">r</span><span class="c">ror\n");</span>
+		<span class="w">i</span><span class="c">f</span> <span class="c">(</span><span class="w">d</span><span class="pc">s</span><span class="c">isr</span> <span class="c">&amp;</span> <span class="w">0x20</span><span class="pc">00) </span><span class="c">{</span>
+			<span class="c">printk(KERN_ERR</span> <span class="c">"</span><span class="w">MMU</span> <span class="w">SLB</span> <span class="w">multi</span><span class="pc">-</span><span class="w">hit</span> <span class="w">o</span><span class="pc">r</span> <span class="w">i</span><span class="pc">nv</span><span class="c">alid</span> <span class="w">B</span> <span class="w">fi</span><span class="pc">e</span><span class="c">ld\n");</span>
+			<span class="w">dump_slb</span> <span class="pc">=</span> <span class="c">1;</span>
+		<span class="c">}</span>
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="pc">d</span><span class="c">sisr</span> <span class="pc">&amp;</span> <span class="w">0x10</span><span class="pc">00)</span>
+			<span class="c">printk(KERN_ERR</span> <span class="c">"</span><span class="w">Recoverable</span> <span class="w">Duptags</span><span class="c">\n");</span>
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="pc">ds</span><span class="c">isr</span> <span class="c">&amp;</span> <span class="w">0x80</span><span class="pc">0</span><span class="c">)</span>
+			<span class="c">printk(</span><span class="pc">KERN_E</span><span class="c">RR</span> <span class="c">"</span><span class="pc">R</span><span class="c">ecoverable</span> <span class="w">D</span><span class="pc">-</span><span class="w">cac</span><span class="c">he</span> <span class="w">parity</span> <span class="w">e</span><span class="pc">r</span><span class="c">ror</span> <span class="w">cou</span><span class="pc">n</span><span class="c">t</span> <span class="w">overflow</span><span class="c">\n");</span>
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(dsisr</span> <span class="pc">&amp;</span> <span class="w">0x40</span><span class="pc">0</span><span class="c">)</span>
+			<span class="c">printk(KERN_ERR</span> <span class="pc">"</span><span class="w">TLB</span> <span class="w">p</span><span class="c">arity</span> <span class="w">er</span><span class="c">ror</span> <span class="w">cou</span><span class="pc">n</span><span class="c">t</span> <span class="w">o</span><span class="pc">v</span><span class="c">erflow\n");</span>
+	<span class="pc">}</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">srr1</span> <span class="pc">&amp;</span> <span class="w">0x80000</span><span class="pc">)</span>
+		<span class="c">printk(KERN_ERR</span> <span class="pc">"</span><span class="w">Bus</span> <span class="w">E</span><span class="c">rror</span><span class="w">\</span><span class="c">n");</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(srr1</span> <span class="c">&amp;</span> <span class="w">0x40</span><span class="pc">000) </span><span class="c">{</span>
+		<span class="c">printk(KERN_ERR</span> <span class="c">"</span><span class="w">I</span><span class="pc">-</span><span class="w">side</span> <span class="w">SLB</span> <span class="w">multiple</span> <span class="w">hit</span><span class="c">\n");</span>
+		<span class="w">dump_slb</span> <span class="c">=</span> <span class="c">1;</span>
+	<span class="c">}</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(srr1</span> <span class="c">&amp;</span> <span class="w">0x20</span><span class="pc">000)</span>
+		<span class="pc">p</span><span class="c">rintk(KERN_ERR</span> <span class="c">"</span><span class="w">I</span><span class="pc">-</span><span class="w">ca</span><span class="pc">c</span><span class="c">he</span> <span class="w">parity</span> <span class="w">er</span><span class="c">ror</span> <span class="w">h</span><span class="c">it</span><span class="pc">\</span><span class="c">n");</span>
+
+	<span class="w">i</span><span class="c">f</span> <span class="c">(</span><span class="w">num_mce_regs</span> <span class="pc">=</span><span class="c">=</span> <span class="c">0)</span>
+		<span class="pc">p</span><span class="c">rintk(KERN_ERR</span> <span class="pc">"</span><span class="w">N</span><span class="c">o</span> <span class="w">MCE</span> <span class="w">registers</span> <span class="w">mapped</span> <span class="w">yet,</span> <span class="w">ca</span><span class="pc">n</span><span class="c">'t</span> <span class="w">dump</span><span class="pc">\</span><span class="c">n");</span>
+	<span class="w">e</span><span class="c">lse</span>
+		<span class="c">printk(KERN_ERR</span> <span class="c">"</span><span class="w">SoC</span> <span class="w">de</span><span class="pc">b</span><span class="c">ug</span> <span class="w">r</span><span class="c">egisters</span><span class="w">:</span><span class="pc">\</span><span class="c">n");</span>
+
+	<span class="w">f</span><span class="c">or</span> <span class="c">(i</span> <span class="c">=</span> <span class="c">0;</span> <span class="c">i</span> <span class="c">&lt;</span> <span class="w">n</span><span class="c">um_mce_regs;</span> <span class="c">i</span><span class="pc">++)</span>
+		<span class="c">printk(</span><span class="pc">KERN_E</span><span class="c">RR</span> <span class="pc">"%</span><span class="c">s:</span> <span class="pc">0</span><span class="c">x%08x\n",</span> <span class="w">mce_regs</span><span class="pc">[</span><span class="c">i</span><span class="pc">].</span><span class="c">name,</span>
+			<span class="w">in_le32</span><span class="pc">(m</span><span class="c">ce_regs[i</span><span class="pc">].</span><span class="w">a</span><span class="pc">ddr</span><span class="w">)</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">dump_slb</span><span class="pc">) </span><span class="c">{</span>
+		<span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">e</span><span class="pc">,</span> <span class="w">v</span><span class="c">;</span>
+		<span class="w">i</span><span class="pc">nt</span> <span class="c">i;</span>
+
+		<span class="w">p</span><span class="pc">ri</span><span class="c">ntk(KERN_ERR</span> <span class="c">"</span><span class="w">slb</span> <span class="w">contents:</span><span class="pc">\</span><span class="c">n</span><span class="pc">")</span><span class="c">;</span>
+		<span class="pc">f</span><span class="c">or</span> <span class="c">(i</span> <span class="c">=</span> <span class="c">0;</span> <span class="c">i</span> <span class="c">&lt;</span> <span class="w">mmu_slb_size</span><span class="c">;</span> <span class="c">i++) {</span>
+			<span class="w">as</span><span class="pc">m</span> <span class="w">v</span><span class="pc">o</span><span class="c">latile</span><span class="w">("slbmfee</span>  <span class="c">%</span><span class="w">0,</span><span class="pc">%</span><span class="w">1" : "=r"</span><span class="pc"> </span><span class="c">(</span><span class="w">e) : "r"</span><span class="pc"> </span><span class="c">(i));</span>
+			<span class="w">as</span><span class="c">m</span> <span class="w">v</span><span class="pc">o</span><span class="c">latile</span><span class="w">(</span><span class="pc">"</span><span class="w">slbmfev</span>  <span class="w">%0,</span><span class="pc">%</span><span class="w">1" </span><span class="pc">:</span><span class="c"> "=</span><span class="w">r"</span><span class="pc"> </span><span class="c">(</span><span class="w">v) :</span><span class="pc"> </span><span class="c">"</span><span class="w">r</span><span class="pc">"</span><span class="c"> (</span><span class="pc">i</span><span class="c">));</span>
+			<span class="w">p</span><span class="c">rintk(KERN_ERR</span> <span class="pc">"%</span><span class="w">02d</span> <span class="w">%016lx</span> <span class="pc">%</span><span class="w">0</span><span class="pc">1</span><span class="c">6lx</span><span class="pc">\</span><span class="c">n",</span> <span class="w">i</span><span class="c">,</span> <span class="w">e</span><span class="pc">,</span> <span class="pc">v</span><span class="c">);</span>
+		<span class="c">}</span>
+	<span class="c">}</span>
+
+<span class="w">o</span><span class="c">ut</span><span class="pc">:</span>
+	
+	<span class="c">return</span> <span class="w">!!(srr1</span> <span class="w">&amp;</span> <span class="w">0x2</span><span class="c">);</span>
+<span class="pc">}</span>
+
+<span class="c">static</span> <span class="c">void</span> <span class="pc">__i</span><span class="c">nit</span> <span class="w">pas_init_early</span><span class="c">(</span><span class="pc">v</span><span class="c">oid)</span>
+<span class="c">{</span>
+	<span class="w">iommu_init_early_pasemi</span><span class="pc">()</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="pc">#</span><span class="c">ifdef</span> <span class="w">CONFIG_PCMCIA</span>
+<span class="c">static</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">pcmcia_notify</span><span class="c">(struct</span> <span class="w">n</span><span class="pc">o</span><span class="c">tifier_block</span> <span class="c">*nb,</span> <span class="c">unsigned</span> <span class="c">long</span> <span class="w">a</span><span class="pc">c</span><span class="c">tion,</span>
+			 <span class="c">void</span> <span class="c">*data)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">d</span><span class="pc">evice</span> <span class="c">*dev</span> <span class="c">=</span> <span class="w">d</span><span class="pc">a</span><span class="c">ta;</span>
+	<span class="c">struct</span> <span class="w">d</span><span class="pc">evice</span> <span class="c">*</span><span class="pc">pa</span><span class="c">rent</span><span class="pc">;</span>
+	<span class="c">struct</span> <span class="w">pcmcia_device</span> <span class="c">*</span><span class="w">pd</span><span class="pc">e</span><span class="c">v</span> <span class="pc">=</span> <span class="w">to_pcmcia_dev</span><span class="c">(dev);</span>
+
+	
+	<span class="pc">if</span> <span class="c">(</span><span class="w">ac</span><span class="pc">tio</span><span class="c">n</span> <span class="pc">!</span><span class="c">=</span> <span class="w">BUS_NOTIFY_ADD_DEVICE</span><span class="c">)</span>
+		<span class="c">return</span> <span class="pc">0</span><span class="c">;</span>
+
+	<span class="w">pa</span><span class="c">rent</span> <span class="c">=</span> <span class="w">p</span><span class="c">dev-&gt;</span><span class="w">so</span><span class="pc">ck</span><span class="c">et</span><span class="pc">-</span><span class="c">&gt;dev.</span><span class="pc">p</span><span class="c">arent;</span>
+
+	
+	<span class="c">if</span> <span class="pc">(!</span><span class="w">p</span><span class="pc">a</span><span class="c">rent</span><span class="pc">-</span><span class="c">&gt;</span><span class="pc">of</span><span class="c">_node</span><span class="pc">)</span>
+		<span class="c">return</span> <span class="pc">0</span><span class="c">;</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="pc">(!</span><span class="w">of_device_is_compatible</span><span class="c">(</span><span class="pc">pa</span><span class="c">rent</span><span class="pc">-</span><span class="c">&gt;</span><span class="pc">o</span><span class="c">f_node</span><span class="pc">, </span><span class="c">"</span><span class="w">electra</span><span class="c">-</span><span class="w">cf</span><span class="pc">")</span><span class="c">)</span>
+		<span class="c">return</span> <span class="pc">0</span><span class="c">;</span>
+
+	
+	<span class="pc">d</span><span class="c">ev-&gt;</span><span class="w">archdata</span><span class="pc">.</span><span class="w">dma_ops</span> <span class="pc">= </span><span class="c">&amp;</span><span class="w">dma_direct_ops</span><span class="c">;</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">n</span><span class="c">otifier_block</span> <span class="w">pcmcia_notifier</span> <span class="pc">=</span><span class="c"> {</span>
+	<span class="c">.</span><span class="w">notifier_call</span> <span class="c">=</span> <span class="w">pcmcia_notify</span><span class="c">,</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="c">static</span> <span class="w">i</span><span class="pc">nl</span><span class="c">ine</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">pasemi_pcmcia_init</span><span class="c">(</span><span class="pc">v</span><span class="c">oid)</span>
+<span class="c">{</span>
+	<span class="w">e</span><span class="pc">x</span><span class="c">tern</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">bus_type</span> <span class="w">pcmcia_bus_type</span><span class="c">;</span>
+
+	<span class="w">bus_register_notifier</span><span class="pc">(&amp;p</span><span class="c">cmcia_bus_type</span><span class="pc">, </span><span class="c">&amp;</span><span class="w">p</span><span class="pc">cmcia_notifi</span><span class="c">er);</span>
+<span class="c">}</span>
+
+<span class="pc">#el</span><span class="c">se</span>
+
+<span class="c">static</span> <span class="c">inline</span> <span class="c">void</span> <span class="w">p</span><span class="pc">a</span><span class="c">semi_pcmcia_init(</span><span class="pc">v</span><span class="c">oid)</span>
+<span class="c">{</span>
+<span class="c">}</span>
+
+<span class="pc">#</span><span class="c">endif</span>
+
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="pc">c</span><span class="c">onst</span> <span class="c">struct</span> <span class="c">of_device_id</span> <span class="w">pasemi_bus_ids</span><span class="c">[] = {</span>
+	
+	<span class="c">{ .</span><span class="w">t</span><span class="pc">y</span><span class="c">pe</span> <span class="pc">= </span><span class="c">"</span><span class="w">localbus", },</span>
+	<span class="w">{</span><span class="pc"> .</span><span class="w">t</span><span class="c">ype</span> <span class="pc">= "</span><span class="w">sdc",</span><span class="pc"> }</span><span class="c">,</span>
+	
+	<span class="pc">{</span><span class="c"> .</span><span class="w">c</span><span class="c">ompatible</span> <span class="c">= "</span><span class="w">pasemi</span><span class="pc">,</span><span class="w">l</span><span class="pc">oca</span><span class="c">lbus</span><span class="w">",</span><span class="pc"> }</span><span class="c">,</span>
+	<span class="w">{</span><span class="c"> .</span><span class="pc">c</span><span class="c">ompatible</span> <span class="c">= "</span><span class="pc">p</span><span class="c">asemi,</span><span class="w">s</span><span class="c">dc</span><span class="w">"</span><span class="pc">, }</span><span class="c">,</span>
+	<span class="w">{},</span>
+<span class="c">};</span>
+
+<span class="c">static</span> <span class="pc">i</span><span class="c">nt</span> <span class="c">__init</span> <span class="w">pasemi_publish_devices</span><span class="c">(void)</span>
+<span class="c">{</span>
+	<span class="w">pasemi_pcmcia_init()</span><span class="c">;</span>
+
+	
+	<span class="w">of_platform_bus_probe</span><span class="c">(</span><span class="pc">N</span><span class="c">ULL</span><span class="pc">,</span> <span class="w">pasemi_bus_ids</span><span class="pc">,</span> <span class="c">NULL);</span>
+
+	<span class="w">r</span><span class="c">eturn</span> <span class="pc">0</span><span class="c">;</span>
+<span class="c">}</span>
+<span class="w">machine_device_initcall</span><span class="c">(</span><span class="w">p</span><span class="pc">asemi,</span> <span class="w">p</span><span class="pc">asemi_pu</span><span class="c">blish_devices);</span>
+
+
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="pc">int</span> <span class="c">__init</span> <span class="w">pas_probe</span><span class="c">(void)</span>
+<span class="c">{</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">ro</span><span class="c">ot</span> <span class="pc">=</span> <span class="w">of_get_flat_dt_root</span><span class="pc">()</span><span class="c">;</span>
+
+	<span class="c">if</span> <span class="pc">(!</span><span class="w">of_flat_dt_is_compatible</span><span class="c">(</span><span class="w">r</span><span class="pc">o</span><span class="c">ot</span><span class="pc">, "</span><span class="w">PA6T</span><span class="pc">-</span><span class="w">1682M") &amp;&amp;</span>
+	    <span class="w">!o</span><span class="c">f_flat_dt_is_compatible</span><span class="pc">(</span><span class="w">r</span><span class="pc">o</span><span class="c">ot</span><span class="pc">, </span><span class="c">"</span><span class="pc">pasemi</span><span class="w">,pwrficient")</span><span class="pc">)</span>
+		<span class="c">return</span> <span class="pc">0</span><span class="c">;</span>
+
+	<span class="w">hpte_init_native(</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="w">alloc_iobmap_l2</span><span class="pc">()</span><span class="c">;</span>
+
+	<span class="c">return</span> <span class="w">1</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="w">define_machine</span><span class="c">(</span><span class="w">p</span><span class="pc">a</span><span class="c">semi</span><span class="w">) </span><span class="pc">{</span>
+	<span class="w">.</span><span class="c">name</span>			<span class="c">= "</span><span class="w">PA</span> <span class="w">Semi</span> <span class="w">PWRficient</span><span class="pc">",</span>
+	<span class="c">.</span><span class="w">pr</span><span class="pc">ob</span><span class="c">e</span>			<span class="c">=</span> <span class="w">pas_probe</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">setup_arch</span>		<span class="c">=</span> <span class="w">pas_setup_arch</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">init_early</span>		<span class="c">=</span> <span class="w">pas_init_early</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">init_IRQ</span>		<span class="c">=</span> <span class="w">pas_init_IRQ</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">get_irq</span>		<span class="c">=</span> <span class="w">mpic_get_irq</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">restart</span>		<span class="c">=</span> <span class="w">pas_restart</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">get_boot_time</span>		<span class="c">=</span> <span class="w">pas_get_boot_time</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">calibrate_decr</span>		<span class="c">=</span> <span class="w">generic_calibrate_decr</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">progress</span>		<span class="c">=</span> <span class="w">pas_progress</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">machine_check_exception</span> <span class="c">=</span> <span class="w">pas_machine_check_handler</span><span class="c">,</span>
+<span class="pc">}</span><span class="c">;</span>
+
+</pre>
+</body>
+</html>
+

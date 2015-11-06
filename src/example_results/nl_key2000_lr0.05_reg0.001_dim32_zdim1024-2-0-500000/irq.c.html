@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+<span class="w">#include</span> <span class="w">&lt;linux/kernel.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/delay.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/init.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/interrupt.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux</span><span class="c">/</span><span class="w">kernel_stat</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">proc_fs</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">m</span><span class="pc">m</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">random</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">s</span><span class="pc">c</span><span class="c">hed.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">se</span><span class="c">q_file.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">kallsyms</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">kgdb</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">ftrace</span><span class="c">.h&gt;</span>
+
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">atomic</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;</span><span class="pc">a</span><span class="c">sm/</span><span class="pc">u</span><span class="c">access.h&gt;</span>
+
+
+<span class="w">v</span><span class="c">oid</span> <span class="w">ack_bad_irq</span><span class="c">(</span><span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="pc">i</span><span class="c">nt</span> <span class="c">irq</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">p</span><span class="c">rintk</span><span class="pc">("</span><span class="w">unexpected</span> <span class="w">I</span><span class="pc">R</span><span class="c">Q</span> <span class="w"># %d</span><span class="pc">\</span><span class="c">n",</span> <span class="w">i</span><span class="c">rq);</span>
+<span class="pc">}</span>
+
+<span class="w">at</span><span class="pc">omic_t</span> <span class="w">irq_err_count</span><span class="c">;</span>
+
+<span class="pc">i</span><span class="c">nt</span> <span class="w">arch_show_interrupts</span><span class="pc">(s</span><span class="c">truct</span> <span class="w">s</span><span class="c">eq_file</span> <span class="c">*</span><span class="w">p</span><span class="c">,</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">prec</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">se</span><span class="c">q_printf(</span><span class="w">p, "%*</span><span class="c">s</span><span class="w">:</span><span class="pc"> </span><span class="c">%</span><span class="w">10u</span><span class="c">\n",</span> <span class="w">p</span><span class="pc">r</span><span class="c">ec</span><span class="w">,</span><span class="pc"> "</span><span class="w">ERR</span><span class="pc">"</span><span class="c">,</span> <span class="w">a</span><span class="pc">t</span><span class="c">omic_read(&amp;</span><span class="w">i</span><span class="c">rq_err_count</span><span class="pc">));</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="w">as</span><span class="pc">ml</span><span class="c">inkage</span> <span class="w">v</span><span class="c">oid</span> <span class="w">spurious_interrupt</span><span class="c">(</span><span class="pc">v</span><span class="c">oid)</span>
+<span class="c">{</span>
+	<span class="w">a</span><span class="pc">t</span><span class="c">omic_inc(&amp;</span><span class="w">i</span><span class="c">rq_err_count);</span>
+<span class="c">}</span>
+
+<span class="pc">v</span><span class="c">oid</span> <span class="pc">__i</span><span class="c">nit</span> <span class="w">init_IRQ</span><span class="c">(void)</span>
+<span class="c">{</span>
+	<span class="c">int</span> <span class="c">i;</span>
+
+	<span class="c">for</span> <span class="c">(i</span> <span class="c">=</span> <span class="c">0;</span> <span class="c">i</span> <span class="c">&lt;</span> <span class="w">NR_IRQS</span><span class="c">;</span> <span class="c">i++)</span>
+		<span class="w">irq_set_noprobe</span><span class="c">(</span><span class="pc">i)</span><span class="c">;</span>
+
+	<span class="w">arch_init_irq</span><span class="pc">()</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="w">#</span><span class="pc">i</span><span class="c">fdef</span> <span class="w">CONFIG_DEBUG_STACKOVERFLOW</span>
+<span class="pc">s</span><span class="c">tatic</span> <span class="pc">inl</span><span class="c">ine</span> <span class="c">void</span> <span class="w">check_stack_overflow</span><span class="c">(</span><span class="pc">v</span><span class="c">oid)</span>
+<span class="c">{</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">sp</span><span class="c">;</span>
+
+	<span class="w">__a</span><span class="pc">s</span><span class="c">m__</span> <span class="w">_</span><span class="pc">_v</span><span class="c">olatile__("</span><span class="w">move</span> <span class="pc">%</span><span class="w">0, $sp" : "=r</span><span class="pc">" </span><span class="c">(</span><span class="w">sp</span><span class="c">));</span>
+	<span class="w">sp</span> <span class="w">&amp;</span><span class="pc">=</span> <span class="w">THREAD_MASK</span><span class="pc">;</span>
+
+	
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(unlikely(</span><span class="w">s</span><span class="c">p</span> <span class="w">&lt;</span><span class="pc"> </span><span class="c">(</span><span class="w">s</span><span class="pc">i</span><span class="c">zeof(struct</span> <span class="w">thread_info</span><span class="pc">) </span><span class="c">+</span> <span class="w">STACK_WARN))</span><span class="pc">) </span><span class="c">{</span>
+		<span class="pc">p</span><span class="c">rintk</span><span class="pc">("</span><span class="w">do_IRQ</span><span class="c">:</span> <span class="w">stack</span> <span class="w">overflow:</span><span class="c"> %</span><span class="w">l</span><span class="pc">d</span><span class="c">\n",</span>
+		       <span class="w">s</span><span class="pc">p</span> <span class="w">-</span> <span class="w">s</span><span class="pc">i</span><span class="c">zeof(struct</span> <span class="c">thread_info</span><span class="w">)</span><span class="pc">);</span>
+		<span class="w">dump_stack(</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">}</span>
+<span class="w">}</span>
+<span class="w">#</span><span class="pc">el</span><span class="c">se</span>
+<span class="c">static</span> <span class="c">inline</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">check_stack_overflow</span><span class="c">(</span><span class="pc">v</span><span class="c">oid</span><span class="w">) {}</span>
+<span class="pc">#</span><span class="c">endif</span>
+
+
+
+<span class="w">v</span><span class="c">oid</span> <span class="w">__irq_entry</span> <span class="w">do</span><span class="pc">_</span><span class="c">IRQ</span><span class="w">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="c">int</span> <span class="pc">i</span><span class="c">rq)</span>
+<span class="c">{</span>
+	<span class="w">irq_enter</span><span class="c">();</span>
+	<span class="w">c</span><span class="c">heck_stack_overflow</span><span class="pc">()</span><span class="c">;</span>
+	<span class="w">generic_handle_irq</span><span class="pc">(irq</span><span class="c">);</span>
+	<span class="w">irq_exit</span><span class="c">();</span>
+<span class="c">}</span>
+
+
+</pre>
+</body>
+</html>
+

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+<span class="w">#ifndef</span> <span class="w">__ASM_SH_RENESAS_RTS7751R2D_H</span>
+<span class="w">#define</span> <span class="w">__ASM_SH_RENESAS_RTS7751R2D_H</span>
+
+
+
+
+
+<span class="w">#define</span> <span class="w">PA_BCR</span>		<span class="w">0xa4000000</span>	
+<span class="w">#define</span> <span class="w">PA_IRLMON</span>	<span class="w">0xa4000002</span>	
+<span class="w">#define</span> <span class="w">PA_CFCTL</span>	<span class="w">0xa4000004</span>	
+<span class="w">#define</span> <span class="w">PA_CFPOW</span>	<span class="w">0xa4000006</span>	
+<span class="w">#define</span> <span class="w">PA_DISPCTL</span>	<span class="w">0xa4000008</span>	
+<span class="w">#define</span> <span class="w">PA_SDMPOW</span>	<span class="w">0xa400000a</span>	
+<span class="w">#define</span> <span class="w">PA_RTCCE</span>	<span class="w">0xa400000c</span>	
+<span class="w">#define</span> <span class="w">PA_PCICD</span>	<span class="w">0xa400000e</span>	
+<span class="w">#define</span> <span class="w">PA_VOYAGERRTS</span>	<span class="w">0xa4000020</span>	
+
+<span class="c">#define</span> <span class="w">PA_R2D1_AXRST</span>		<span class="w">0xa4000022</span>	
+<span class="c">#define</span> <span class="w">PA_R2D1_CFRST</span>		<span class="w">0xa4000024</span>	
+<span class="c">#define</span> <span class="w">PA_R2D1_ADMRTS</span>		<span class="w">0xa4000026</span>	
+<span class="c">#define</span> <span class="w">PA_R2D1_EXTRST</span>		<span class="w">0xa4000028</span>	
+<span class="c">#define</span> <span class="w">PA_R2D1_CFCDINTCLR</span>	<span class="w">0xa400002a</span>	
+
+<span class="c">#define</span> <span class="w">PA_R2DPLUS_CFRST</span>	<span class="w">0xa400002</span><span class="pc">2</span>	
+<span class="c">#define</span> <span class="w">PA_R2DPLUS_ADMRTS</span>	<span class="pc">0xa400002</span><span class="c">4</span>	
+<span class="c">#define</span> <span class="w">PA_R2DPLUS_EXTRST</span>	<span class="c">0xa4000026</span>	
+<span class="c">#define</span> <span class="w">PA_R2DPLUS_CFCDINTCLR</span>	<span class="c">0xa4000028</span>	
+<span class="c">#define</span> <span class="w">PA_R2DPLUS_KEYCTLCLR</span>	<span class="c">0xa400002a</span>	
+
+<span class="c">#define</span> <span class="w">PA_POWOFF</span>	<span class="w">0xa4000030</span>	
+<span class="c">#define</span> <span class="w">PA_VERREG</span>	<span class="w">0xa4000032</span>	
+<span class="c">#define</span> <span class="w">PA_INPORT</span>	<span class="w">0xa4000034</span>	
+<span class="c">#define</span> <span class="w">PA_OUTPORT</span>	<span class="w">0xa4000036</span>	
+<span class="c">#define</span> <span class="w">PA_BVERREG</span>	<span class="w">0xa4000038</span>	
+
+<span class="c">#define</span> <span class="w">PA_AX88796L</span>	<span class="w">0xaa000400</span>	
+<span class="c">#define</span> <span class="w">PA_VOYAGER</span>	<span class="w">0xab000000</span>	
+<span class="c">#define</span> <span class="w">PA_IDE_OFFSET</span>	<span class="w">0x1f0</span>		
+<span class="c">#define</span> <span class="w">AX88796L_IO_BASE</span>	<span class="w">0x10</span><span class="pc">00</span>	
+
+<span class="c">#define</span> <span class="w">IRLCNTR1</span>	<span class="w">(PA_BCR</span> <span class="pc">+</span> <span class="pc">0</span><span class="c">)</span>	
+
+<span class="c">#define</span> <span class="w">R2D_FPGA_IRQ_BASE</span>	<span class="w">10</span><span class="pc">0</span>
+
+<span class="c">#define</span> <span class="w">IRQ_VOYAGER</span>		<span class="pc">(R</span><span class="c">2D_FPGA_IRQ_BASE</span> <span class="c">+</span> <span class="pc">0</span><span class="c">)</span>
+<span class="c">#define</span> <span class="w">IRQ_EXT</span>			<span class="c">(</span><span class="pc">R</span><span class="c">2D_FPGA_IRQ_BASE</span> <span class="c">+</span> <span class="c">1)</span>
+<span class="c">#define</span> <span class="w">IRQ_TP</span>			<span class="c">(R2D_FPGA_IRQ_BASE</span> <span class="c">+</span> <span class="c">2)</span>
+<span class="c">#define</span> <span class="w">IRQ_RTC_T</span>		<span class="c">(R2D_FPGA_IRQ_BASE</span> <span class="c">+</span> <span class="c">3)</span>
+<span class="c">#define</span> <span class="w">IRQ_RTC_A</span>		<span class="c">(R2D_FPGA_IRQ_BASE</span> <span class="c">+</span> <span class="c">4)</span>
+<span class="c">#define</span> <span class="w">IRQ_SDCARD</span>		<span class="c">(R2D_FPGA_IRQ_BASE</span> <span class="c">+</span> <span class="c">5)</span>
+<span class="c">#define</span> <span class="w">IRQ_CF_CD</span>		<span class="c">(R2D_FPGA_IRQ_BASE</span> <span class="c">+</span> <span class="c">6)</span>
+<span class="c">#define</span> <span class="w">IRQ_CF_IDE</span>		<span class="c">(R2D_FPGA_IRQ_BASE</span> <span class="c">+</span> <span class="c">7)</span>
+<span class="c">#define</span> <span class="w">IRQ_AX88796</span>		<span class="c">(R2D_FPGA_IRQ_BASE</span> <span class="c">+</span> <span class="pc">8</span><span class="c">)</span>
+<span class="c">#define</span> <span class="w">IRQ_KEY</span>			<span class="c">(R2D_FPGA_IRQ_BASE</span> <span class="c">+</span> <span class="c">9)</span>
+<span class="c">#define</span> <span class="w">IRQ_PCI_INTA</span>		<span class="c">(R2D_FPGA_IRQ_BASE</span> <span class="c">+</span> <span class="c">10)</span>
+<span class="c">#define</span> <span class="w">IRQ_PCI_INTB</span>		<span class="c">(R2D_FPGA_IRQ_BASE</span> <span class="c">+</span> <span class="pc">11</span><span class="c">)</span>
+<span class="c">#define</span> <span class="w">IRQ_PCI_INTC</span>		<span class="c">(R2D_FPGA_IRQ_BASE</span> <span class="c">+</span> <span class="c">12)</span>
+<span class="c">#define</span> <span class="w">IRQ_PCI_INTD</span>		<span class="c">(R2D_FPGA_IRQ_BASE</span> <span class="c">+</span> <span class="pc">13</span><span class="c">)</span>
+
+
+<span class="pc">v</span><span class="c">oid</span> <span class="w">init_rts7751r2d_IRQ</span><span class="c">(</span><span class="pc">v</span><span class="c">oid</span><span class="pc">);</span>
+<span class="pc">i</span><span class="c">nt</span> <span class="w">rts7751r2d_irq_demux</span><span class="c">(</span><span class="pc">i</span><span class="c">nt</span><span class="pc">);</span>
+
+<span class="w">#e</span><span class="pc">n</span><span class="c">dif</span>  
+
+</pre>
+</body>
+</html>
+

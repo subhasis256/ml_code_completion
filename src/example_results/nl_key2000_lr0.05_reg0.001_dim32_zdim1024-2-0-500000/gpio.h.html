@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+<span class="w">#ifndef</span> <span class="w">_MACH_GPIO_H_</span>
+<span class="w">#define</span> <span class="w">_MACH_GPIO_H_</span>
+
+<span class="w">#define</span> <span class="w">MAX_BLACKFIN_GPIOS</span> <span class="w">112</span>
+
+<span class="w">#define</span> <span class="w">GPIO_PA0</span>	<span class="w">0</span>
+<span class="w">#define</span> <span class="w">GPIO_PA1</span>	<span class="w">1</span>
+<span class="w">#define</span> <span class="w">GPIO_PA2</span>	<span class="w">2</span>
+<span class="w">#define</span> <span class="w">GPIO_PA3</span>	<span class="w">3</span>
+<span class="w">#define</span> <span class="w">GPIO_PA4</span>	<span class="w">4</span>
+<span class="w">#define</span> <span class="w">GPIO_PA5</span>	<span class="w">5</span>
+<span class="w">#define</span> <span class="w">GPIO_PA6</span>	<span class="w">6</span>
+<span class="w">#define</span> <span class="w">GPIO_PA7</span>	<span class="c">7</span>
+<span class="c">#define</span> <span class="w">GPIO_PA8</span>	<span class="c">8</span>
+<span class="c">#define</span> <span class="w">GPIO_PA9</span>	<span class="c">9</span>
+<span class="c">#define</span> <span class="w">GPIO_PA10</span>	<span class="c">10</span>
+<span class="c">#define</span> <span class="w">GPIO_PA11</span>	<span class="c">11</span>
+<span class="c">#define</span> <span class="w">GPIO_PA12</span>	<span class="c">12</span>
+<span class="c">#define</span> <span class="w">GPIO_PA13</span>	<span class="c">13</span>
+<span class="c">#define</span> <span class="w">GPIO_PA14</span>	<span class="c">14</span>
+<span class="c">#define</span> <span class="w">GPIO_PA15</span>	<span class="c">15</span>
+<span class="c">#define</span> <span class="w">GPIO_PB0</span>	<span class="c">16</span>
+<span class="c">#define</span> <span class="w">GPIO_PB1</span>	<span class="c">17</span>
+<span class="c">#define</span> <span class="w">GPIO_PB2</span>	<span class="c">18</span>
+<span class="c">#define</span> <span class="w">GPIO_PB3</span>	<span class="c">19</span>
+<span class="c">#define</span> <span class="w">GPIO_PB4</span>	<span class="c">20</span>
+<span class="c">#define</span> <span class="w">GPIO_PB5</span>	<span class="c">21</span>
+<span class="c">#define</span> <span class="w">GPIO_PB6</span>	<span class="c">22</span>
+<span class="c">#define</span> <span class="w">GPIO_PB7</span>	<span class="c">23</span>
+<span class="c">#define</span> <span class="w">GPIO_PB8</span>	<span class="c">24</span>
+<span class="c">#define</span> <span class="w">GPIO_PB9</span>	<span class="c">25</span>
+<span class="c">#define</span> <span class="w">GPIO_PB10</span>	<span class="c">26</span>
+<span class="c">#define</span> <span class="w">GPIO_PB11</span>	<span class="c">27</span>
+<span class="c">#define</span> <span class="w">GPIO_PB12</span>	<span class="c">28</span>
+<span class="c">#define</span> <span class="w">GPIO_PB13</span>	<span class="c">29</span>
+<span class="c">#define</span> <span class="w">GPIO_PB14</span>	<span class="c">30</span>
+<span class="c">#define</span> <span class="w">GPIO_PB15</span>	<span class="c">31</span>
+<span class="c">#define</span> <span class="w">GPIO_PC0</span>	<span class="c">32</span>
+<span class="c">#define</span> <span class="w">GPIO_PC1</span>	<span class="c">33</span>
+<span class="c">#define</span> <span class="w">GPIO_PC2</span>	<span class="c">34</span>
+<span class="c">#define</span> <span class="w">GPIO_PC3</span>	<span class="c">35</span>
+<span class="c">#define</span> <span class="w">GPIO_PC4</span>	<span class="c">36</span>
+<span class="c">#define</span> <span class="w">GPIO_PC5</span>	<span class="w">37</span>
+<span class="c">#define</span> <span class="w">GPIO_PC6</span>	<span class="w">38</span>
+<span class="c">#define</span> <span class="w">GPIO_PC7</span>	<span class="w">39</span>
+<span class="c">#define</span> <span class="w">GPIO_PC8</span>	<span class="c">40</span>
+<span class="c">#define</span> <span class="w">GPIO_PC9</span>	<span class="w">41</span>
+<span class="c">#define</span> <span class="w">GPIO_PC10</span>	<span class="c">42</span>
+<span class="c">#define</span> <span class="w">GPIO_PC11</span>	<span class="w">43</span>
+<span class="c">#define</span> <span class="w">GPIO_PC12</span>	<span class="c">44</span>
+<span class="c">#define</span> <span class="w">GPIO_PC13</span>	<span class="w">45</span>
+<span class="c">#define</span> <span class="w">GPIO_PC14</span>	<span class="w">46</span>
+<span class="c">#define</span> <span class="w">GPIO_PC15</span>	<span class="w">47</span>
+<span class="c">#define</span> <span class="w">GPIO_PD0</span>	<span class="pc">48</span>
+<span class="c">#define</span> <span class="w">GPIO_PD1</span>	<span class="w">49</span>
+<span class="c">#define</span> <span class="w">GPIO_PD2</span>	<span class="c">50</span>
+<span class="c">#define</span> <span class="w">GPIO_PD3</span>	<span class="w">51</span>
+<span class="c">#define</span> <span class="w">GPIO_PD4</span>	<span class="w">52</span>
+<span class="c">#define</span> <span class="w">GPIO_PD5</span>	<span class="w">53</span>
+<span class="c">#define</span> <span class="w">GPIO_PD6</span>	<span class="w">54</span>
+<span class="c">#define</span> <span class="w">GPIO_PD7</span>	<span class="w">55</span>
+<span class="c">#define</span> <span class="w">GPIO_PD8</span>	<span class="pc">56</span>
+<span class="c">#define</span> <span class="w">GPIO_PD9</span>	<span class="w">57</span>
+<span class="c">#define</span> <span class="w">GPIO_PD10</span>	<span class="w">58</span>
+<span class="c">#define</span> <span class="w">GPIO_PD11</span>	<span class="w">59</span>
+<span class="c">#define</span> <span class="w">GPIO_PD12</span>	<span class="pc">6</span><span class="c">0</span>
+<span class="c">#define</span> <span class="w">GPIO_PD13</span>	<span class="w">61</span>
+<span class="c">#define</span> <span class="w">GPIO_PD14</span>	<span class="c">62</span>
+<span class="c">#define</span> <span class="w">GPIO_PD15</span>	<span class="c">63</span>
+<span class="c">#define</span> <span class="w">GPIO_PE0</span>	<span class="c">64</span>
+<span class="c">#define</span> <span class="w">GPIO_PE1</span>	<span class="w">65</span>
+<span class="c">#define</span> <span class="w">GPIO_PE2</span>	<span class="w">66</span>
+<span class="c">#define</span> <span class="w">GPIO_PE3</span>	<span class="w">67</span>
+<span class="c">#define</span> <span class="w">GPIO_PE4</span>	<span class="w">68</span>
+<span class="c">#define</span> <span class="w">GPIO_PE5</span>	<span class="w">69</span>
+<span class="c">#define</span> <span class="w">GPIO_PE6</span>	<span class="w">70</span>
+<span class="c">#define</span> <span class="w">GPIO_PE7</span>	<span class="w">71</span>
+<span class="c">#define</span> <span class="w">GPIO_PE8</span>	<span class="w">72</span>
+<span class="c">#define</span> <span class="w">GPIO_PE9</span>	<span class="w">73</span>
+<span class="c">#define</span> <span class="w">GPIO_PE10</span>	<span class="w">74</span>
+<span class="c">#define</span> <span class="w">GPIO_PE11</span>	<span class="w">75</span>
+<span class="c">#define</span> <span class="w">GPIO_PE12</span>	<span class="w">76</span>
+<span class="c">#define</span> <span class="w">GPIO_PE13</span>	<span class="w">77</span>
+<span class="c">#define</span> <span class="w">GPIO_PE14</span>	<span class="w">78</span>
+<span class="c">#define</span> <span class="w">GPIO_PE15</span>	<span class="w">79</span>
+<span class="c">#define</span> <span class="w">GPIO_PF0</span>	<span class="w">8</span><span class="pc">0</span>
+<span class="c">#define</span> <span class="w">GPIO_PF1</span>	<span class="w">81</span>
+<span class="c">#define</span> <span class="w">GPIO_PF2</span>	<span class="w">82</span>
+<span class="c">#define</span> <span class="w">GPIO_PF3</span>	<span class="w">83</span>
+<span class="c">#define</span> <span class="w">GPIO_PF4</span>	<span class="w">84</span>
+<span class="c">#define</span> <span class="w">GPIO_PF5</span>	<span class="w">85</span>
+<span class="c">#define</span> <span class="w">GPIO_PF6</span>	<span class="w">86</span>
+<span class="c">#define</span> <span class="w">GPIO_PF7</span>	<span class="w">87</span>
+<span class="c">#define</span> <span class="w">GPIO_PF8</span>	<span class="w">88</span>
+<span class="c">#define</span> <span class="w">GPIO_PF9</span>	<span class="w">89</span>
+<span class="c">#define</span> <span class="w">GPIO_PF10</span>	<span class="w">90</span>
+<span class="c">#define</span> <span class="w">GPIO_PF11</span>	<span class="w">91</span>
+<span class="c">#define</span> <span class="w">GPIO_PF12</span>	<span class="w">92</span>
+<span class="c">#define</span> <span class="w">GPIO_PF13</span>	<span class="w">93</span>
+<span class="c">#define</span> <span class="w">GPIO_PF14</span>	<span class="w">94</span>
+<span class="c">#define</span> <span class="w">GPIO_PF15</span>	<span class="w">95</span>
+<span class="c">#define</span> <span class="w">GPIO_PG0</span>	<span class="w">96</span>
+<span class="c">#define</span> <span class="w">GPIO_PG1</span>	<span class="w">97</span>
+<span class="c">#define</span> <span class="w">GPIO_PG2</span>	<span class="w">98</span>
+<span class="c">#define</span> <span class="w">GPIO_PG3</span>	<span class="w">99</span>
+<span class="c">#define</span> <span class="w">GPIO_PG4</span>	<span class="w">1</span><span class="pc">0</span><span class="c">0</span>
+<span class="c">#define</span> <span class="w">GPIO_PG5</span>	<span class="w">101</span>
+<span class="c">#define</span> <span class="w">GPIO_PG6</span>	<span class="w">102</span>
+<span class="c">#define</span> <span class="w">GPIO_PG7</span>	<span class="w">103</span>
+<span class="c">#define</span> <span class="w">GPIO_PG8</span>	<span class="w">104</span>
+<span class="c">#define</span> <span class="w">GPIO_PG9</span>	<span class="w">105</span>
+<span class="c">#define</span> <span class="w">GPIO_PG10</span>	<span class="w">106</span>
+<span class="c">#define</span> <span class="w">GPIO_PG11</span>	<span class="w">107</span>
+<span class="c">#define</span> <span class="w">GPIO_PG12</span>	<span class="w">108</span>
+<span class="c">#define</span> <span class="w">GPIO_PG13</span>	<span class="w">109</span>
+<span class="c">#define</span> <span class="w">GPIO_PG14</span>	<span class="w">110</span>
+<span class="c">#define</span> <span class="w">GPIO_PG15</span>	<span class="w">111</span>
+
+
+<span class="c">#define</span> <span class="w">BFIN_GPIO_PINT</span> <span class="w">1</span>
+<span class="c">#define</span> <span class="w">NR_PINT_SYS_IRQS</span>        <span class="w">6</span>
+<span class="c">#define</span> <span class="w">NR_PINTS</span>                <span class="w">112</span>
+
+
+<span class="c">#</span><span class="pc">ifn</span><span class="c">def</span> <span class="w">__ASSEMBLY__</span>
+
+<span class="pc">s</span><span class="c">truct</span> <span class="w">gpio_port_t</span> <span class="c">{</span>
+	<span class="c">unsigned</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">port_fer</span><span class="c">;</span>
+	<span class="c">unsigned</span> <span class="c">long</span> <span class="w">port_fer_set</span><span class="c">;</span>
+	<span class="c">unsigned</span> <span class="c">long</span> <span class="w">port_fer_clear</span><span class="c">;</span>
+	<span class="c">unsigned</span> <span class="c">long</span> <span class="w">d</span><span class="c">ata;</span>
+	<span class="c">unsigned</span> <span class="c">long</span> <span class="w">data_set</span><span class="c">;</span>
+	<span class="c">unsigned</span> <span class="c">long</span> <span class="w">data_clear</span><span class="c">;</span>
+	<span class="c">unsigned</span> <span class="c">long</span> <span class="w">di</span><span class="pc">r</span><span class="c">;</span>
+	<span class="c">unsigned</span> <span class="c">long</span> <span class="w">dir_set</span><span class="c">;</span>
+	<span class="c">unsigned</span> <span class="c">long</span> <span class="w">dir_clear</span><span class="c">;</span>
+	<span class="c">unsigned</span> <span class="c">long</span> <span class="w">inen</span><span class="c">;</span>
+	<span class="c">unsigned</span> <span class="c">long</span> <span class="w">inen_set</span><span class="c">;</span>
+	<span class="c">unsigned</span> <span class="c">long</span> <span class="w">inen_clear</span><span class="c">;</span>
+	<span class="c">unsigned</span> <span class="c">long</span> <span class="w">port_mux</span><span class="c">;</span>
+	<span class="c">unsigned</span> <span class="c">long</span> <span class="w">toggle</span><span class="c">;</span>
+	<span class="c">unsigned</span> <span class="c">long</span> <span class="w">polar</span><span class="c">;</span>
+	<span class="c">unsigned</span> <span class="c">long</span> <span class="w">polar_set</span><span class="c">;</span>
+	<span class="c">unsigned</span> <span class="c">long</span> <span class="w">polar_clear</span><span class="c">;</span>
+	<span class="c">unsigned</span> <span class="c">long</span> <span class="w">lo</span><span class="pc">c</span><span class="c">k;</span>
+	<span class="c">unsigned</span> <span class="c">long</span> <span class="w">spare</span><span class="c">;</span>
+	<span class="c">unsigned</span> <span class="c">long</span> <span class="w">revid</span><span class="c">;</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="c">#</span><span class="pc">e</span><span class="c">ndif</span>
+
+<span class="c">#</span><span class="pc">in</span><span class="c">clude</span> <span class="c">&lt;</span><span class="w">m</span><span class="pc">ac</span><span class="c">h</span><span class="pc">-</span><span class="w">co</span><span class="pc">mm</span><span class="c">on</span><span class="pc">/</span><span class="w">por</span><span class="pc">ts-</span><span class="w">a</span><span class="c">.h&gt;</span>
+<span class="c">#</span><span class="pc">i</span><span class="c">nclude</span> <span class="c">&lt;</span><span class="w">m</span><span class="c">ach</span><span class="pc">-</span><span class="w">c</span><span class="pc">om</span><span class="c">mon</span><span class="pc">/</span><span class="w">po</span><span class="pc">rts-</span><span class="w">b</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;</span><span class="pc">m</span><span class="c">ach</span><span class="pc">-</span><span class="w">c</span><span class="pc">o</span><span class="c">mmon</span><span class="pc">/</span><span class="w">po</span><span class="pc">rts-</span><span class="w">c</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;</span><span class="pc">ma</span><span class="c">ch</span><span class="pc">-</span><span class="w">c</span><span class="pc">om</span><span class="c">mon</span><span class="pc">/</span><span class="w">po</span><span class="pc">rts</span><span class="c">-</span><span class="w">d</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;</span><span class="pc">ma</span><span class="c">ch</span><span class="pc">-</span><span class="w">co</span><span class="pc">m</span><span class="c">mon</span><span class="pc">/</span><span class="w">po</span><span class="pc">rts</span><span class="c">-</span><span class="w">e</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;</span><span class="pc">m</span><span class="c">ach</span><span class="pc">-</span><span class="w">co</span><span class="pc">m</span><span class="c">mon</span><span class="pc">/</span><span class="w">po</span><span class="pc">rts</span><span class="c">-</span><span class="w">f</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;</span><span class="pc">m</span><span class="c">ach</span><span class="pc">-</span><span class="w">c</span><span class="pc">om</span><span class="c">mon</span><span class="pc">/</span><span class="w">po</span><span class="pc">rts-</span><span class="w">g</span><span class="c">.h&gt;</span>
+
+<span class="c">#</span><span class="pc">e</span><span class="c">ndif</span> 
+
+</pre>
+</body>
+</html>
+

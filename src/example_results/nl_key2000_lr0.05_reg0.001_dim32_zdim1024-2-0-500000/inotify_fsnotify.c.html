@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+<span class="w">#include</span> <span class="w">&lt;linux/dcache.h&gt;</span> 
+<span class="w">#include</span> <span class="w">&lt;linux/fs.h&gt;</span> 
+<span class="w">#include</span> <span class="w">&lt;linux/fsnotify_backend.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/inotify.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux</span><span class="c">/</span><span class="w">pa</span><span class="pc">t</span><span class="c">h.h&gt;</span> 
+<span class="c">#include</span> <span class="c">&lt;linux/slab.h&gt;</span> 
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">t</span><span class="c">ypes.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">s</span><span class="pc">c</span><span class="c">hed.h&gt;</span>
+
+<span class="c">#include</span> <span class="pc">"</span><span class="w">inotify</span><span class="c">.h"</span>
+
+
+<span class="pc">sta</span><span class="c">tic</span> <span class="w">b</span><span class="c">ool</span> <span class="w">event_compare</span><span class="c">(struct</span> <span class="w">fsnotify_event</span> <span class="c">*</span><span class="w">old_fsn</span><span class="c">,</span>
+			  <span class="c">struct</span> <span class="w">f</span><span class="pc">s</span><span class="c">notify_event</span> <span class="c">*</span><span class="w">new_fsn</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">inotify_event_info</span> <span class="c">*</span><span class="w">ol</span><span class="pc">d,</span><span class="c"> *</span><span class="w">n</span><span class="pc">ew</span><span class="c">;</span>
+
+	<span class="pc">if</span> <span class="c">(</span><span class="pc">o</span><span class="c">ld_fsn-&gt;</span><span class="w">mas</span><span class="pc">k</span> <span class="pc">&amp;</span> <span class="w">FS_IN_IGNORED</span><span class="pc">)</span>
+		<span class="c">return</span> <span class="pc">f</span><span class="c">alse;</span>
+	<span class="w">ol</span><span class="pc">d</span> <span class="c">=</span> <span class="w">INOTIFY_E</span><span class="c">(old_fsn</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">n</span><span class="pc">ew</span> <span class="pc">=</span> <span class="w">I</span><span class="c">NOTIFY_E(</span><span class="pc">n</span><span class="c">ew_fsn</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">if</span> <span class="pc">((</span><span class="w">o</span><span class="pc">ld_</span><span class="c">fsn</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">m</span><span class="c">ask</span> <span class="pc">=</span><span class="c">=</span> <span class="pc">n</span><span class="c">ew_fsn-&gt;</span><span class="pc">m</span><span class="c">ask</span><span class="pc">) &amp;</span><span class="c">&amp;</span>
+	    <span class="pc">(o</span><span class="c">ld_fsn-&gt;</span><span class="w">ino</span><span class="pc">d</span><span class="c">e</span> <span class="pc">=</span><span class="c">=</span> <span class="pc">n</span><span class="c">ew_fsn-&gt;</span><span class="w">ino</span><span class="c">de</span><span class="w">) </span><span class="pc">&amp;</span><span class="c">&amp;</span>
+	    <span class="c">(</span><span class="w">o</span><span class="pc">ld</span><span class="c">-&gt;</span><span class="w">name_len</span> <span class="c">==</span> <span class="w">n</span><span class="pc">ew</span><span class="c">-&gt;name_len</span><span class="w">) </span><span class="pc">&amp;</span><span class="c">&amp;</span>
+	    <span class="w">(</span><span class="pc">!</span><span class="w">o</span><span class="pc">ld</span><span class="c">-&gt;name_len</span> <span class="w">|</span><span class="pc">| </span><span class="c">!</span><span class="w">s</span><span class="pc">t</span><span class="c">rcmp(</span><span class="w">o</span><span class="pc">ld</span><span class="c">-&gt;</span><span class="w">n</span><span class="pc">ame</span><span class="c">,</span> <span class="pc">new</span><span class="c">-&gt;</span><span class="w">n</span><span class="pc">a</span><span class="c">me</span><span class="w">))</span><span class="pc">)</span>
+		<span class="c">return</span> <span class="w">t</span><span class="c">rue;</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">f</span><span class="c">alse;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">inotify_merge</span><span class="c">(struct</span> <span class="w">l</span><span class="c">ist_head</span> <span class="c">*</span><span class="w">l</span><span class="pc">i</span><span class="c">st</span><span class="pc">,</span>
+			  <span class="c">struct</span> <span class="w">fsnotify_event</span> <span class="c">*</span><span class="w">e</span><span class="pc">v</span><span class="c">ent)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">f</span><span class="c">snotify_event</span> <span class="c">*</span><span class="w">last_event</span><span class="c">;</span>
+
+	<span class="pc">l</span><span class="c">ast_event</span> <span class="c">=</span> <span class="pc">l</span><span class="c">ist_entry(</span><span class="w">l</span><span class="pc">i</span><span class="c">st</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">p</span><span class="pc">re</span><span class="c">v,</span> <span class="c">struct</span> <span class="c">fsnotify_event,</span> <span class="c">list);</span>
+	<span class="w">r</span><span class="c">eturn</span> <span class="w">event_compare</span><span class="c">(last_event,</span> <span class="pc">e</span><span class="c">vent);</span>
+<span class="c">}</span>
+
+<span class="pc">i</span><span class="c">nt</span> <span class="w">inotify_handle_event</span><span class="c">(struct</span> <span class="w">fsnotify_group</span> <span class="c">*</span><span class="w">g</span><span class="pc">r</span><span class="c">oup,</span>
+			 <span class="c">struct</span> <span class="w">i</span><span class="c">node</span> <span class="c">*inode,</span>
+			 <span class="c">struct</span> <span class="w">fsnotify_mark</span> <span class="c">*</span><span class="w">inode_mark</span><span class="c">,</span>
+			 <span class="c">struct</span> <span class="pc">fsnotify_m</span><span class="c">ark</span> <span class="c">*</span><span class="w">vfsmount_mark</span><span class="c">,</span>
+			 <span class="w">u</span><span class="pc">3</span><span class="c">2</span> <span class="w">m</span><span class="c">ask,</span> <span class="pc">v</span><span class="c">oid</span> <span class="c">*data</span><span class="pc">,</span> <span class="c">int</span> <span class="w">data_type</span><span class="c">,</span>
+			 <span class="pc">c</span><span class="c">onst</span> <span class="pc">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">har</span> <span class="c">*</span><span class="w">file_name</span><span class="c">,</span> <span class="w">u</span><span class="pc">3</span><span class="c">2</span> <span class="w">co</span><span class="pc">o</span><span class="c">kie</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">inotify_inode_mark</span> <span class="c">*</span><span class="w">i_mark</span><span class="pc">;</span>
+	<span class="c">struct</span> <span class="w">inotify_event_info</span> <span class="c">*</span><span class="w">e</span><span class="pc">v</span><span class="c">ent;</span>
+	<span class="c">struct</span> <span class="w">fsnotify_event</span> <span class="c">*</span><span class="w">fsn_event</span><span class="c">;</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="c">ret;</span>
+	<span class="pc">in</span><span class="c">t</span> <span class="w">l</span><span class="c">en</span> <span class="pc">=</span> <span class="c">0;</span>
+	<span class="pc">in</span><span class="c">t</span> <span class="w">alloc_len</span> <span class="pc">=</span> <span class="w">s</span><span class="c">izeof(struct</span> <span class="c">inotify_event_info);</span>
+
+	<span class="w">B</span><span class="c">UG_ON</span><span class="pc">(</span><span class="w">vfsmount_mark</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="c">if</span> <span class="pc">((</span><span class="w">inode_mark</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">m</span><span class="pc">as</span><span class="c">k</span> <span class="c">&amp;</span> <span class="w">FS_EXCL_UNLINK</span><span class="pc">) &amp;</span><span class="c">&amp;</span>
+	    <span class="c">(</span><span class="w">data_type</span> <span class="pc">=</span><span class="c">=</span> <span class="w">FSNOTIFY_EVENT_PATH</span><span class="c">)) {</span>
+		<span class="pc">s</span><span class="c">truct</span> <span class="w">p</span><span class="pc">at</span><span class="c">h</span> <span class="c">*</span><span class="w">pa</span><span class="pc">t</span><span class="c">h</span> <span class="c">=</span> <span class="w">d</span><span class="pc">ata;</span>
+
+		<span class="c">if</span> <span class="c">(</span><span class="w">d_unlinked</span><span class="c">(</span><span class="w">pa</span><span class="pc">t</span><span class="c">h</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">de</span><span class="pc">n</span><span class="c">try</span><span class="pc">)</span><span class="c">)</span>
+			<span class="c">return</span> <span class="w">0</span><span class="c">;</span>
+	<span class="c">}</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">file_name</span><span class="pc">) </span><span class="c">{</span>
+		<span class="w">l</span><span class="pc">e</span><span class="c">n</span> <span class="c">=</span> <span class="w">s</span><span class="pc">t</span><span class="c">rlen(file_name);</span>
+		<span class="w">alloc_len</span> <span class="w">+</span><span class="pc">=</span> <span class="pc">l</span><span class="c">en</span> <span class="w">+</span> <span class="pc">1</span><span class="c">;</span>
+	<span class="c">}</span>
+
+	<span class="w">p</span><span class="pc">r_</span><span class="c">debug</span><span class="pc">("%</span><span class="c">s:</span> <span class="w">g</span><span class="pc">r</span><span class="c">oup</span><span class="pc">=%p</span> <span class="w">ino</span><span class="pc">d</span><span class="c">e</span><span class="pc">=</span><span class="c">%</span><span class="pc">p</span> <span class="w">mas</span><span class="pc">k</span><span class="c">=%</span><span class="w">x</span><span class="pc">\</span><span class="c">n",</span> <span class="c">__func__,</span> <span class="w">g</span><span class="pc">r</span><span class="c">oup,</span> <span class="w">in</span><span class="pc">o</span><span class="c">de</span><span class="pc">,</span>
+		 <span class="w">m</span><span class="pc">a</span><span class="c">sk);</span>
+
+	<span class="w">i_mark</span> <span class="pc">=</span> <span class="w">co</span><span class="pc">n</span><span class="c">tainer_of(</span><span class="w">inode_mark</span><span class="c">,</span> <span class="c">struct</span> <span class="w">inotify_inode_mark</span><span class="c">,</span>
+			      <span class="w">fsn_mark</span><span class="c">);</span>
+
+	<span class="w">ev</span><span class="c">ent</span> <span class="c">=</span> <span class="w">k</span><span class="pc">m</span><span class="c">alloc(</span><span class="w">alloc_len</span><span class="c">,</span> <span class="c">GFP_KERNEL);</span>
+	<span class="c">if</span> <span class="c">(</span><span class="pc">u</span><span class="c">nlikely</span><span class="pc">(!</span><span class="w">e</span><span class="c">vent))</span>
+		<span class="c">return</span> <span class="pc">-</span><span class="c">ENOMEM;</span>
+
+	<span class="w">fsn_event</span> <span class="w">=</span><span class="pc"> &amp;</span><span class="w">e</span><span class="pc">v</span><span class="c">ent-&gt;</span><span class="w">fse</span><span class="c">;</span>
+	<span class="w">fsnotify_init_event</span><span class="c">(</span><span class="pc">f</span><span class="c">sn_event</span><span class="pc">,</span> <span class="w">ino</span><span class="pc">de</span><span class="c">,</span> <span class="w">mas</span><span class="pc">k</span><span class="c">);</span>
+	<span class="w">e</span><span class="pc">v</span><span class="c">ent-&gt;</span><span class="w">wd</span> <span class="c">=</span> <span class="w">i_mark</span><span class="pc">-</span><span class="c">&gt;wd;</span>
+	<span class="w">e</span><span class="c">vent-&gt;</span><span class="w">sync_cookie</span> <span class="c">=</span> <span class="w">coo</span><span class="c">kie;</span>
+	<span class="w">e</span><span class="c">vent-&gt;</span><span class="w">name_len</span> <span class="c">=</span> <span class="w">l</span><span class="pc">e</span><span class="c">n;</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">l</span><span class="pc">e</span><span class="c">n</span><span class="pc">)</span>
+		<span class="w">str</span><span class="pc">c</span><span class="c">py(</span><span class="w">e</span><span class="c">vent-&gt;</span><span class="pc">n</span><span class="c">ame,</span> <span class="w">file_name</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="w">r</span><span class="pc">et</span> <span class="c">=</span> <span class="w">fsnotify_add_event</span><span class="c">(</span><span class="w">g</span><span class="pc">r</span><span class="c">oup,</span> <span class="w">fsn_event</span><span class="c">,</span> <span class="w">inotify_merge</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">if</span> <span class="c">(ret</span><span class="pc">) </span><span class="c">{</span>
+		
+		<span class="w">fsnotify_destroy_event</span><span class="c">(</span><span class="w">g</span><span class="c">roup,</span> <span class="w">f</span><span class="pc">s</span><span class="c">n_event);</span>
+	<span class="pc">}</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">inode_mark</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">m</span><span class="pc">a</span><span class="c">sk</span> <span class="pc">&amp;</span> <span class="w">IN_ONESHOT</span><span class="pc">)</span>
+		<span class="w">fsnotify_destroy_mark</span><span class="c">(</span><span class="pc">i</span><span class="c">node_mark,</span> <span class="w">g</span><span class="pc">r</span><span class="c">oup</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="c">return</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">inotify_freeing_mark</span><span class="c">(struct</span> <span class="w">fsnotify_mark</span> <span class="c">*</span><span class="w">fsn_mark</span><span class="pc">,</span> <span class="c">struct</span> <span class="w">fsnotify_group</span> <span class="c">*</span><span class="w">g</span><span class="c">roup)</span>
+<span class="c">{</span>
+	<span class="w">inotify_ignored_and_remove_idr</span><span class="c">(fsn_mark,</span> <span class="w">g</span><span class="pc">r</span><span class="c">oup);</span>
+<span class="pc">}</span>
+
+
+<span class="c">static</span> <span class="pc">int</span> <span class="w">idr_callback</span><span class="c">(</span><span class="pc">i</span><span class="c">nt</span> <span class="w">i</span><span class="pc">d</span><span class="c">,</span> <span class="pc">v</span><span class="c">oid</span> <span class="c">*</span><span class="w">p</span><span class="pc">,</span> <span class="pc">v</span><span class="c">oid</span> <span class="c">*</span><span class="pc">d</span><span class="c">ata)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="pc">fsnotify_m</span><span class="c">ark</span> <span class="c">*fsn_mark</span><span class="pc">;</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">inotify_inode_mark</span> <span class="c">*</span><span class="w">i_mark</span><span class="c">;</span>
+	<span class="w">s</span><span class="pc">ta</span><span class="c">tic</span> <span class="w">b</span><span class="c">ool</span> <span class="w">warned</span> <span class="pc">=</span> <span class="w">f</span><span class="pc">a</span><span class="c">lse;</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">w</span><span class="c">arned)</span>
+		<span class="c">return</span> <span class="pc">0</span><span class="c">;</span>
+
+	<span class="w">w</span><span class="c">arned</span> <span class="c">=</span> <span class="w">t</span><span class="c">rue;</span>
+	<span class="pc">f</span><span class="c">sn_mark</span> <span class="c">=</span> <span class="w">p</span><span class="pc">;</span>
+	<span class="w">i</span><span class="pc">_</span><span class="c">mark</span> <span class="c">=</span> <span class="w">c</span><span class="c">ontainer_of(fsn_mark,</span> <span class="c">struct</span> <span class="c">inotify_inode_mark,</span> <span class="pc">f</span><span class="c">sn_mark);</span>
+
+	<span class="w">WARN</span><span class="c">(</span><span class="w">1</span><span class="pc">, </span><span class="c">"</span><span class="w">inotify</span> <span class="w">closing</span> <span class="w">but</span> <span class="w">id=</span><span class="pc">%</span><span class="c">d</span> <span class="w">f</span><span class="pc">o</span><span class="c">r</span> <span class="c">fsn_mark</span><span class="pc">=</span><span class="c">%</span><span class="pc">p</span> <span class="w">i</span><span class="pc">n</span> <span class="w">gr</span><span class="c">oup</span><span class="pc">=</span><span class="c">%</span><span class="pc">p</span> <span class="w">still</span> <span class="w">i</span><span class="c">n</span> <span class="w">"</span>
+		<span class="c">"</span><span class="w">idr.</span>  <span class="w">Probably</span> <span class="w">leaking</span> <span class="w">m</span><span class="pc">e</span><span class="c">mory\n</span><span class="pc">",</span> <span class="w">id</span><span class="c">,</span> <span class="w">p</span><span class="pc">,</span> <span class="w">d</span><span class="pc">a</span><span class="c">ta</span><span class="pc">)</span><span class="c">;</span>
+
+	
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="pc">f</span><span class="c">sn_mark</span><span class="w">)</span>
+		<span class="pc">p</span><span class="c">rintk</span><span class="pc">(KERN_W</span><span class="c">ARNING</span> <span class="c">"</span><span class="w">f</span><span class="c">sn_mark</span><span class="w">-</span><span class="pc">&gt;</span><span class="w">gr</span><span class="c">oup</span><span class="w">=</span><span class="pc">%p</span> <span class="w">ino</span><span class="pc">d</span><span class="c">e</span><span class="w">=</span><span class="c">%</span><span class="pc">p</span> <span class="w">wd</span><span class="pc">=</span><span class="c">%d\n",</span>
+			<span class="pc">f</span><span class="c">sn_mark</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">g</span><span class="pc">r</span><span class="c">oup,</span> <span class="w">f</span><span class="c">sn_mark</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">ino</span><span class="pc">d</span><span class="c">e,</span> <span class="w">i_mark</span><span class="pc">-</span><span class="c">&gt;</span><span class="pc">w</span><span class="c">d</span><span class="pc">)</span><span class="c">;</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">0</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">inotify_free_group_priv</span><span class="c">(struct</span> <span class="w">fsnotify_group</span> <span class="c">*</span><span class="w">g</span><span class="pc">r</span><span class="c">oup)</span>
+<span class="c">{</span>
+	
+	<span class="w">idr_for_each</span><span class="pc">(&amp;</span><span class="w">g</span><span class="pc">r</span><span class="c">oup-&gt;</span><span class="w">inotify_data</span><span class="pc">.</span><span class="w">idr</span><span class="pc">,</span> <span class="w">idr_callback</span><span class="c">,</span> <span class="w">g</span><span class="pc">r</span><span class="c">oup);</span>
+	<span class="w">idr_destroy</span><span class="pc">(&amp;</span><span class="w">g</span><span class="pc">r</span><span class="c">oup-&gt;</span><span class="pc">i</span><span class="c">notify_data</span><span class="pc">.id</span><span class="c">r</span><span class="pc">)</span><span class="c">;</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">g</span><span class="c">roup</span><span class="pc">-</span><span class="c">&gt;inotify_data.</span><span class="w">u</span><span class="pc">s</span><span class="c">er</span><span class="pc">)</span><span class="c"> {</span>
+		<span class="w">atomic_dec</span><span class="pc">(&amp;</span><span class="w">g</span><span class="pc">r</span><span class="c">oup-&gt;inotify_data.</span><span class="w">u</span><span class="pc">se</span><span class="c">r</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">inotify_devs</span><span class="c">);</span>
+		<span class="w">free_uid</span><span class="pc">(</span><span class="w">g</span><span class="pc">r</span><span class="c">oup</span><span class="pc">-</span><span class="c">&gt;</span><span class="pc">inotify_da</span><span class="c">ta.</span><span class="w">u</span><span class="pc">s</span><span class="c">er);</span>
+	<span class="c">}</span>
+<span class="pc">}</span>
+
+<span class="c">static</span> <span class="c">void</span> <span class="w">inotify_free_event</span><span class="c">(struct</span> <span class="w">fsnotify_event</span> <span class="c">*</span><span class="w">fsn_event</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">k</span><span class="c">free(</span><span class="w">INOTIFY_E</span><span class="pc">(f</span><span class="c">sn_event));</span>
+<span class="c">}</span>
+
+<span class="w">c</span><span class="c">onst</span> <span class="c">struct</span> <span class="w">fsnotify_ops</span> <span class="w">inotify_fsnotify_ops</span> <span class="c">= {</span>
+	<span class="c">.</span><span class="w">handle_event</span> <span class="c">=</span> <span class="w">inotify_handle_event</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">free_group_priv</span> <span class="c">=</span> <span class="w">inotify_free_group_priv</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">free_event</span> <span class="c">=</span> <span class="w">i</span><span class="pc">notify_free_e</span><span class="c">vent,</span>
+	<span class="c">.</span><span class="w">freeing_mark</span> <span class="c">=</span> <span class="w">inotify_freeing_mark</span><span class="c">,</span>
+<span class="pc">}</span><span class="c">;</span>
+
+</pre>
+</body>
+</html>
+

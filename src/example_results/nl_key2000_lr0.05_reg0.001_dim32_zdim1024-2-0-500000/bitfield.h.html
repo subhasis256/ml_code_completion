@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+
+
+<span class="w">#ifndef</span> <span class="w">__BITFIELD_H</span>
+<span class="w">#define</span> <span class="w">__BITFIELD_H</span>
+
+<span class="w">#ifndef</span> <span class="w">__ASSEMBLY__</span>
+<span class="w">#define</span> <span class="w">UData(Data)	((unsigned</span> <span class="w">long) (Data))</span>
+<span class="w">#else</span>
+<span class="w">#define</span> <span class="w">UData(Data)	(Data)</span>
+<span class="w">#endif</span>
+
+
+
+
+<span class="w">#define</span> <span class="w">Fld(Size,</span> <span class="w">Shft)	(((</span><span class="c">Size</span><span class="w">) &lt;</span><span class="c">&lt;</span> <span class="w">1</span><span class="c">6</span><span class="w">) +</span><span class="pc"> </span><span class="c">(</span><span class="pc">Sh</span><span class="c">ft))</span>
+
+
+
+
+<span class="c">#define</span> <span class="w">FSize</span><span class="c">(</span><span class="w">Field</span><span class="pc">)	</span><span class="c">((Field</span><span class="pc">) </span><span class="c">&gt;&gt;</span> <span class="c">16)</span>
+<span class="c">#define</span> <span class="w">FShft</span><span class="c">(Field)	((Field</span><span class="pc">) &amp;</span> <span class="w">0x0000FFFF</span><span class="c">)</span>
+<span class="c">#define</span> <span class="w">FMsk</span><span class="c">(Field</span><span class="pc">)	(((</span><span class="w">UData</span> <span class="w">(1</span><span class="c">) &lt;&lt;</span> <span class="w">F</span><span class="pc">S</span><span class="c">ize</span> <span class="w">(</span><span class="c">Field</span><span class="w">)) -</span> <span class="pc">1) </span><span class="c">&lt;&lt;</span> <span class="w">F</span><span class="pc">S</span><span class="c">hft</span> <span class="pc">(F</span><span class="c">ield))</span>
+<span class="c">#define</span> <span class="w">FAlnMsk</span><span class="c">(Field</span><span class="pc">)	</span><span class="c">((UData</span> <span class="c">(</span><span class="w">1</span><span class="c">) &lt;&lt;</span> <span class="w">F</span><span class="c">Size</span> <span class="pc">(</span><span class="c">Field</span><span class="w">)</span><span class="pc">) </span><span class="c">-</span> <span class="pc">1)</span>
+<span class="c">#define</span> <span class="w">F1stBit</span><span class="c">(</span><span class="pc">F</span><span class="c">ield</span><span class="w">)	</span><span class="pc">(U</span><span class="c">Data</span> <span class="c">(</span><span class="pc">1) </span><span class="c">&lt;&lt;</span> <span class="w">F</span><span class="pc">Sh</span><span class="c">ft</span> <span class="pc">(Fi</span><span class="c">eld))</span>
+
+
+
+
+<span class="c">#define</span> <span class="w">FInsrt</span><span class="c">(</span><span class="w">Value,</span> <span class="c">Field</span><span class="pc">) </span><span class="c">\</span>
+                	<span class="pc">(</span><span class="w">U</span><span class="c">Data</span> <span class="c">(</span><span class="pc">V</span><span class="c">alue</span><span class="w">) &lt;</span><span class="c">&lt;</span> <span class="w">F</span><span class="pc">Sh</span><span class="c">ft</span> <span class="w">(</span><span class="pc">F</span><span class="c">ield))</span>
+
+
+
+
+<span class="c">#define</span> <span class="w">FExtr</span><span class="c">(</span><span class="w">Data</span><span class="c">,</span> <span class="w">F</span><span class="pc">i</span><span class="c">eld</span><span class="pc">) </span><span class="c">\</span>
+                	<span class="pc">((U</span><span class="c">Data</span> <span class="c">(</span><span class="pc">D</span><span class="c">ata</span><span class="w">) &gt;</span><span class="c">&gt;</span> <span class="pc">FS</span><span class="c">hft</span> <span class="pc">(</span><span class="c">Field</span><span class="w">)</span><span class="pc">) </span><span class="c">&amp;</span> <span class="w">FAlnMsk</span> <span class="pc">(</span><span class="c">Field))</span>
+
+
+<span class="c">#</span><span class="pc">e</span><span class="c">ndif</span> 
+
+</pre>
+</body>
+</html>
+

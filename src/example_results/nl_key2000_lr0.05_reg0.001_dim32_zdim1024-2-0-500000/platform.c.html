@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+<span class="w">#include</span> <span class="w">&lt;linux/types.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/pci.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/time.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;asm/platform.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;asm</span><span class="c">/</span><span class="w">timex</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">pa</span><span class="pc">r</span><span class="c">am.h&gt;</span>		
+
+<span class="c">#</span><span class="pc">d</span><span class="c">efine</span> <span class="w">_F</span><span class="c">(</span><span class="w">r</span><span class="c">,</span><span class="w">f</span><span class="c">,</span><span class="w">a</span><span class="pc">,</span><span class="c">b</span><span class="w">)							\</span>
+	<span class="w">r</span> <span class="w">__platform_#</span><span class="pc">#</span><span class="w">f</span> <span class="w">a</span> <span class="w">b;                                   	\</span>
+	<span class="w">r</span> <span class="w">platform_#</span><span class="pc">#f</span> <span class="w">a</span> <span class="w">__a</span><span class="c">ttribute__((</span><span class="w">weak,</span> <span class="w">alias("_</span><span class="c">_platform_</span><span class="w">"#f))</span><span class="pc">)</span>
+
+
+
+<span class="w">_</span><span class="c">F(</span><span class="w">vo</span><span class="c">id</span><span class="pc">,</span> <span class="w">set</span><span class="pc">u</span><span class="c">p</span><span class="pc">, </span><span class="c">(</span><span class="w">c</span><span class="c">har</span><span class="w">**</span> <span class="w">cm</span><span class="c">d</span><span class="w">), { });</span>
+<span class="w">_F</span><span class="pc">(</span><span class="w">v</span><span class="c">oid</span><span class="pc">,</span> <span class="w">restart</span><span class="pc">, </span><span class="c">(</span><span class="pc">v</span><span class="c">oid</span><span class="w">), {</span> <span class="w">w</span><span class="pc">h</span><span class="c">ile(</span><span class="pc">1</span><span class="w">); });</span>
+<span class="w">_</span><span class="c">F(</span><span class="pc">v</span><span class="c">oid</span><span class="pc">,</span> <span class="w">halt,</span><span class="pc"> </span><span class="c">(void</span><span class="w">), </span><span class="pc">{</span> <span class="w">w</span><span class="pc">h</span><span class="c">ile(</span><span class="pc">1);</span><span class="c"> });</span>
+<span class="pc">_</span><span class="c">F(</span><span class="pc">v</span><span class="c">oid,</span> <span class="w">power_off,</span><span class="pc"> </span><span class="c">(void</span><span class="w">)</span><span class="pc">, {</span> <span class="w">w</span><span class="c">hile(</span><span class="pc">1</span><span class="c">); });</span>
+<span class="c">_F(</span><span class="w">v</span><span class="c">oid,</span> <span class="w">idle,</span><span class="pc"> </span><span class="c">(void</span><span class="pc">),</span><span class="c"> {</span> <span class="w">__a</span><span class="pc">s</span><span class="c">m__</span> <span class="w">__v</span><span class="pc">o</span><span class="c">latile__</span> <span class="pc">("</span><span class="w">waiti</span> <span class="w">0" ::: "m</span><span class="pc">e</span><span class="c">mory</span><span class="w">"); });</span>
+<span class="w">_</span><span class="c">F(</span><span class="pc">v</span><span class="c">oid</span><span class="pc">,</span> <span class="w">heartbeat</span><span class="pc">, </span><span class="c">(void</span><span class="w">), { });</span>
+<span class="w">_</span><span class="c">F(</span><span class="w">i</span><span class="pc">n</span><span class="c">t,</span>  <span class="w">pcibios_fixup,</span><span class="pc"> </span><span class="c">(</span><span class="pc">v</span><span class="c">oid</span><span class="w">),</span><span class="pc"> {</span> <span class="w">ret</span><span class="c">urn</span> <span class="w">0; });</span>
+<span class="pc">_</span><span class="c">F(</span><span class="w">v</span><span class="c">oid</span><span class="pc">,</span> <span class="w">pcibios_init,</span><span class="pc"> </span><span class="c">(</span><span class="pc">v</span><span class="c">oid</span><span class="w">),</span><span class="pc"> { </span><span class="c">});</span>
+
+<span class="w">#</span><span class="pc">i</span><span class="c">fdef</span> <span class="w">CONFIG_XTENSA_CALIBRATE_CCOUNT</span>
+<span class="w">_</span><span class="c">F(</span><span class="w">v</span><span class="c">oid,</span> <span class="w">calibrate_ccount,</span><span class="pc"> </span><span class="c">(</span><span class="pc">v</span><span class="c">oid</span><span class="pc">)</span><span class="c">,</span>
+<span class="w">{</span>
+	<span class="w">pr</span><span class="pc">_e</span><span class="c">rr("</span><span class="w">E</span><span class="pc">R</span><span class="c">ROR</span><span class="pc">:</span> <span class="w">C</span><span class="pc">a</span><span class="c">nnot</span> <span class="w">calibrate</span> <span class="w">c</span><span class="pc">p</span><span class="c">u</span> <span class="w">fre</span><span class="pc">qu</span><span class="c">ency</span><span class="w">!</span> <span class="w">Assuming</span> <span class="w">10MHz.</span><span class="c">\n");</span>
+	<span class="w">ccount_freq</span> <span class="pc">=</span> <span class="w">10</span> <span class="pc">*</span> <span class="w">1000000UL</span><span class="c">;</span>
+<span class="w">});</span>
+<span class="w">#</span><span class="c">endif</span>
+
+</pre>
+</body>
+</html>
+

@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+<span class="w">#ifndef</span> <span class="w">_UAPICRYPTOCOP_H</span>
+<span class="w">#define</span> <span class="w">_UAPICRYPTOCOP_H</span>
+
+<span class="w">#include</span> <span class="w">&lt;linux/uio.h&gt;</span>
+
+
+<span class="w">#define</span> <span class="w">CRYPTOCOP_SESSION_ID_NONE</span> <span class="w">(0)</span>
+
+<span class="w">typedef</span> <span class="w">unsigned</span> <span class="w">long</span> <span class="w">long</span> <span class="w">int</span> <span class="w">cryptocop_session_id;</span>
+
+
+<span class="w">#define</span> <span class="w">ETRAXCRYPTOCOP_IOCTYPE</span>         <span class="w">(250)</span>
+
+<span class="w">#define</span> <span class="w">CRYPTOCOP_IO_CREATE_SESSION</span>    <span class="w">_IOWR(ETRAXCRYPTOCOP_IOCTYPE</span><span class="pc">,</span> <span class="pc">1,</span> <span class="c">struct</span> <span class="w">strcop_session_op</span><span class="c">)</span>
+<span class="c">#define</span> <span class="w">CRYPTOCOP_IO_CLOSE_SESSION</span>     <span class="w">_IOW</span><span class="pc">(E</span><span class="c">TRAXCRYPTOCOP_IOCTYPE</span><span class="pc">,</span> <span class="pc">2</span><span class="c">,</span> <span class="c">struct</span> <span class="c">strcop_session_op)</span>
+<span class="c">#define</span> <span class="w">CRYPTOCOP_IO_PROCESS_OP</span>        <span class="pc">_IOWR</span><span class="c">(ETRAXCRYPTOCOP_IOCTYPE,</span> <span class="pc">3</span><span class="c">,</span> <span class="c">struct</span> <span class="w">strcop_crypto_op</span><span class="c">)</span>
+<span class="c">#define</span> <span class="w">CRYPTOCOP_IO_MAXNR</span>             <span class="pc">(</span><span class="w">3</span><span class="c">)</span>
+
+<span class="w">t</span><span class="c">ypedef</span> <span class="pc">e</span><span class="c">num</span> <span class="c">{</span>
+	<span class="w">cryptocop_cipher_des</span> <span class="c">=</span> <span class="c">0,</span>
+	<span class="w">cryptocop_cipher_3des</span> <span class="c">=</span> <span class="c">1,</span>
+	<span class="w">cryptocop_cipher_aes</span> <span class="c">=</span> <span class="c">2,</span>
+	<span class="w">cryptocop_cipher_m2m</span> <span class="c">=</span> <span class="c">3,</span> 
+	<span class="w">cryptocop_cipher_none</span>
+<span class="w">}</span> <span class="w">cryptocop_cipher_type</span><span class="pc">;</span>
+
+<span class="pc">t</span><span class="c">ypedef</span> <span class="pc">e</span><span class="c">num</span> <span class="c">{</span>
+	<span class="w">cryptocop_digest_sha1</span> <span class="c">=</span> <span class="pc">0</span><span class="c">,</span>
+	<span class="w">cryptocop_digest_md5</span> <span class="c">=</span> <span class="c">1,</span>
+	<span class="w">cryptocop_digest_none</span>
+<span class="pc">}</span> <span class="w">cryptocop_digest_type</span><span class="c">;</span>
+
+<span class="pc">t</span><span class="c">ypedef</span> <span class="c">enum</span> <span class="c">{</span>
+	<span class="w">cryptocop_csum_le</span> <span class="c">=</span> <span class="c">0,</span>
+	<span class="w">cryptocop_csum_be</span> <span class="c">=</span> <span class="c">1,</span>
+	<span class="w">cryptocop_csum_none</span>
+<span class="pc">}</span> <span class="w">cryptocop_csum_type</span><span class="c">;</span>
+
+<span class="c">typedef</span> <span class="c">enum</span> <span class="c">{</span>
+	<span class="w">cryptocop_cipher_mode_ecb</span> <span class="c">=</span> <span class="pc">0</span><span class="c">,</span>
+	<span class="w">cryptocop_cipher_mode_cbc</span><span class="pc">,</span>
+	<span class="w">cryptocop_cipher_mode_none</span>
+<span class="pc">}</span> <span class="w">cryptocop_cipher_mode</span><span class="c">;</span>
+
+<span class="c">typedef</span> <span class="c">enum</span> <span class="c">{</span>
+	<span class="w">cryptocop_3des_eee</span> <span class="c">=</span> <span class="c">0,</span>
+	<span class="w">cryptocop_3des_eed</span> <span class="c">=</span> <span class="c">1,</span>
+	<span class="w">cryptocop_3des_ede</span> <span class="c">=</span> <span class="c">2,</span>
+	<span class="w">cryptocop_3des_edd</span> <span class="c">=</span> <span class="c">3,</span>
+	<span class="w">cryptocop_3des_dee</span> <span class="c">=</span> <span class="c">4,</span>
+	<span class="w">cryptocop_3des_ded</span> <span class="c">=</span> <span class="c">5,</span>
+	<span class="w">cryptocop_3des_dde</span> <span class="c">=</span> <span class="c">6,</span>
+	<span class="w">cryptocop_3des_ddd</span> <span class="c">=</span> <span class="c">7</span>
+<span class="w">}</span> <span class="w">cryptocop_3des_mode</span><span class="pc">;</span>
+
+
+<span class="c">struct</span> <span class="w">strcop_session_op</span><span class="c">{</span>
+	<span class="w">cryptocop_session_id</span>    <span class="w">ses_id</span><span class="c">;</span>
+
+	<span class="w">cryptocop_cipher_type</span>   <span class="w">cipher</span><span class="c">;</span> 
+
+	<span class="w">cryptocop_cipher_mode</span>   <span class="w">cmode</span><span class="c">;</span> 
+	<span class="w">cryptocop_3</span><span class="pc">des_m</span><span class="c">ode</span>     <span class="w">des3_mode</span><span class="c">;</span>
+
+	<span class="w">cryptocop_digest_type</span>   <span class="w">digest</span><span class="c">;</span> 
+
+	<span class="w">cryptocop_csum_type</span>     <span class="w">csum</span><span class="c">;</span>   
+
+	<span class="w">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">har</span>           <span class="c">*</span><span class="w">k</span><span class="pc">e</span><span class="c">y;</span>
+	<span class="w">s</span><span class="pc">i</span><span class="c">ze_t</span>                  <span class="w">keylen</span><span class="c">;</span>
+<span class="pc">};</span>
+
+<span class="c">#define</span> <span class="w">CRYPTOCOP_CSUM_LENGTH</span>         <span class="c">(</span><span class="w">2</span><span class="c">)</span>
+<span class="c">#define</span> <span class="w">CRYPTOCOP_MAX_DIGEST_LENGTH</span>   <span class="c">(</span><span class="w">2</span><span class="pc">0</span><span class="c">)</span>  
+<span class="c">#define</span> <span class="w">CRYPTOCOP_MAX_IV_LENGTH</span>       <span class="c">(</span><span class="w">1</span><span class="pc">6</span><span class="c">)</span>  
+<span class="c">#define</span> <span class="w">CRYPTOCOP_MAX_KEY_LENGTH</span>      <span class="c">(</span><span class="w">3</span><span class="pc">2</span><span class="c">)</span>
+
+<span class="pc">s</span><span class="c">truct</span> <span class="w">strcop_crypto_op</span><span class="c">{</span>
+	<span class="w">cryptocop_session_id</span> <span class="w">ses_id</span><span class="c">;</span>
+
+	
+	<span class="c">unsigned</span> <span class="pc">c</span><span class="c">har</span>            <span class="c">*</span><span class="w">indata</span><span class="c">;</span>
+	<span class="w">s</span><span class="pc">i</span><span class="c">ze_t</span>                   <span class="w">inlen</span><span class="c">;</span> 
+
+	
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="c">char</span>            <span class="w">do_cipher</span><span class="pc">:</span><span class="c">1;</span>
+	<span class="c">unsigned</span> <span class="c">char</span>            <span class="w">decrypt</span><span class="pc">:</span><span class="c">1;</span> 
+	<span class="c">unsigned</span> <span class="c">char</span>            <span class="w">cipher_explicit</span><span class="c">:1;</span>
+	<span class="w">s</span><span class="pc">i</span><span class="c">ze_t</span>                   <span class="w">cipher_start</span><span class="c">;</span>
+	<span class="w">s</span><span class="pc">i</span><span class="c">ze_t</span>                   <span class="w">cipher_len</span><span class="c">;</span>
+	
+	<span class="c">unsigned</span> <span class="pc">c</span><span class="c">har</span>            <span class="w">cipher_iv</span><span class="c">[</span><span class="w">CRYPTOCOP_MAX_IV_LENGTH</span><span class="c">];</span>
+	
+	<span class="c">unsigned</span> <span class="c">char</span>            <span class="c">*</span><span class="w">cipher_outdata</span><span class="c">;</span>
+	<span class="w">s</span><span class="pc">i</span><span class="c">ze_t</span>                   <span class="w">cipher_outlen</span><span class="c">;</span>
+
+	
+	<span class="c">unsigned</span> <span class="c">char</span>            <span class="w">do_digest</span><span class="pc">:</span><span class="c">1;</span>
+	<span class="w">s</span><span class="pc">i</span><span class="c">ze_t</span>                   <span class="w">digest_start</span><span class="c">;</span>
+	<span class="w">s</span><span class="pc">i</span><span class="c">ze_t</span>                   <span class="w">digest_len</span><span class="c">;</span>
+	
+	<span class="c">unsigned</span> <span class="c">char</span>            <span class="w">digest</span><span class="c">[</span><span class="w">CRYPTOCOP_MAX_DIGEST_LENGTH</span><span class="c">];</span>
+
+	
+	<span class="c">unsigned</span> <span class="c">char</span>            <span class="w">do_csum:</span><span class="c">1;</span>
+	<span class="w">s</span><span class="pc">i</span><span class="c">ze_t</span>                   <span class="w">csum_start</span><span class="c">;</span>
+	<span class="w">s</span><span class="pc">i</span><span class="c">ze_t</span>                   <span class="w">csum_len</span><span class="c">;</span>
+	
+	<span class="c">unsigned</span> <span class="c">char</span>            <span class="w">csum</span><span class="c">[</span><span class="w">CRYPTOCOP_CSUM_LENGTH</span><span class="c">];</span>
+<span class="pc">}</span><span class="c">;</span>
+
+
+
+
+<span class="pc">#e</span><span class="c">ndif</span> 
+
+</pre>
+</body>
+</html>
+

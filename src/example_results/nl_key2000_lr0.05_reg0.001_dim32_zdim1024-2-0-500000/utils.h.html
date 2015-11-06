@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+<span class="w">#ifndef</span> <span class="w">_SELFTESTS_POWERPC_UTILS_H</span>
+<span class="w">#define</span> <span class="w">_SELFTESTS_POWERPC_UTILS_H</span>
+
+<span class="w">#include</span> <span class="w">&lt;stdint.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;stdbool.h&gt;</span>
+
+
+<span class="w">typedef</span> <span class="w">unsigned</span> <span class="w">long</span> <span class="w">long</span> <span class="w">u64;</span>
+<span class="w">typedef</span>   <span class="w">signed</span> <span class="w">long</span> <span class="w">long</span> <span class="w">s64;</span>
+
+
+<span class="w">typedef</span> <span class="w">uint32_t</span> <span class="w">u32;</span>
+<span class="w">typedef</span> <span class="w">uint16_t</span> <span class="w">u16;</span>
+<span class="pc">t</span><span class="c">ypedef</span> <span class="w">ui</span><span class="c">nt8_t</span> <span class="w">u8</span><span class="pc">;</span>
+
+
+<span class="w">i</span><span class="c">nt</span> <span class="w">test_harness(i</span><span class="c">nt</span> <span class="w">(test_function)</span><span class="pc">(</span><span class="c">void</span><span class="w">),</span> <span class="w">c</span><span class="c">har</span> <span class="c">*</span><span class="w">n</span><span class="pc">a</span><span class="c">me);</span>
+<span class="c">extern</span> <span class="c">void</span> <span class="pc">*</span><span class="w">get_auxv_entry</span><span class="c">(</span><span class="pc">i</span><span class="c">nt</span> <span class="pc">t</span><span class="c">ype);</span>
+
+
+<span class="pc">#d</span><span class="c">efine</span> <span class="w">FAIL_IF</span><span class="c">(</span><span class="w">x)						\</span>
+<span class="w">d</span><span class="c">o</span> <span class="w">{								\</span>
+	<span class="c">if</span> <span class="pc">((x</span><span class="w">)) {						\</span>
+		<span class="w">fp</span><span class="c">rintf(</span><span class="w">stderr,					\</span>
+		<span class="w">"[FAIL]</span> <span class="w">Test</span> <span class="w">FAILED</span> <span class="w">o</span><span class="pc">n</span> <span class="w">li</span><span class="pc">n</span><span class="c">e</span> <span class="pc">%</span><span class="c">d\n",</span> <span class="w">_</span><span class="pc">_L</span><span class="c">INE__</span><span class="pc">);	</span><span class="c">\</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="w">1;					\</span>
+	<span class="w">}							\</span>
+<span class="pc">}</span> <span class="c">while</span> <span class="c">(0)</span>
+
+
+<span class="c">#define</span> <span class="w">MAGIC_SKIP_RETURN_VALUE</span>	<span class="w">99</span>
+
+<span class="c">#define</span> <span class="w">SKIP_IF</span><span class="c">(</span><span class="pc">x</span><span class="w">)						\</span>
+<span class="pc">d</span><span class="c">o</span> <span class="w">{								\</span>
+	<span class="c">if</span> <span class="pc">((x</span><span class="w">)) {						\</span>
+		<span class="w">fp</span><span class="pc">r</span><span class="c">intf(</span><span class="w">stderr,					\</span>
+		<span class="w">"[SKIP]</span> <span class="w">Test</span> <span class="w">skipped</span> <span class="w">o</span><span class="pc">n</span> <span class="w">li</span><span class="pc">n</span><span class="c">e</span> <span class="pc">%</span><span class="c">d\n",</span> <span class="w">_</span><span class="pc">_L</span><span class="c">INE__</span><span class="pc">);	</span><span class="c">\</span>
+		<span class="w">r</span><span class="c">eturn</span> <span class="w">M</span><span class="c">AGIC_SKIP_RETURN_VALUE</span><span class="w">;			\</span>
+	<span class="w">}							\</span>
+<span class="pc">}</span> <span class="c">while</span> <span class="c">(0)</span>
+
+<span class="c">#define</span> <span class="w">_str</span><span class="c">(</span><span class="w">s) #</span><span class="pc">s</span>
+<span class="w">#</span><span class="c">define</span> <span class="w">str(</span><span class="pc">s)</span> <span class="w">_</span><span class="c">str(s</span><span class="w">)</span>
+
+<span class="c">#</span><span class="pc">e</span><span class="c">ndif</span> 
+
+</pre>
+</body>
+</html>
+

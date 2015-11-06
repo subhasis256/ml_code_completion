@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+<span class="w">#include</span> <span class="w">&lt;linux/init.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/module.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/cpufreq.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;hwregs/reg_map.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;arch</span><span class="c">/hwregs</span><span class="pc">/</span><span class="w">reg_rdwr</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;</span><span class="w">ar</span><span class="pc">c</span><span class="c">h/hwregs/</span><span class="w">config_defs</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;</span><span class="w">ar</span><span class="pc">c</span><span class="c">h/hwregs/</span><span class="w">bif_core_defs</span><span class="c">.h&gt;</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="c">int</span>
+<span class="w">cris_sdram_freq_notifier</span><span class="c">(struct</span> <span class="w">n</span><span class="pc">o</span><span class="c">tifier_block</span> <span class="c">*nb,</span> <span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="c">val,</span>
+			 <span class="c">void</span> <span class="c">*data</span><span class="pc">);</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="pc">s</span><span class="c">truct</span> <span class="pc">n</span><span class="c">otifier_block</span> <span class="w">cris_sdram_freq_notifier_block</span> <span class="c">= {</span>
+	<span class="c">.</span><span class="w">notifier_call</span> <span class="c">=</span> <span class="w">c</span><span class="pc">r</span><span class="c">is_sdram_freq_notifier</span>
+<span class="w">}</span><span class="pc">;</span>
+
+<span class="c">static</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">cpufreq_frequency_table</span> <span class="w">cris_freq_table</span><span class="pc">[</span><span class="c">] = {</span>
+	<span class="c">{</span><span class="pc">0</span><span class="c">,</span> <span class="w">0</span><span class="pc">x0</span><span class="c">1,</span> <span class="w">6000</span><span class="pc">},</span>
+	<span class="c">{0,</span> <span class="w">0</span><span class="pc">x02,</span> <span class="w">200000</span><span class="c">},</span>
+	<span class="c">{0,</span> <span class="c">0,</span> <span class="w">CPUFREQ_TABLE_END</span><span class="c">},</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="c">static</span> <span class="pc">u</span><span class="c">nsigned</span> <span class="c">int</span> <span class="w">cris_freq_get_cpu_frequency</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="c">int</span> <span class="w">cp</span><span class="pc">u</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="w">reg_config_rw_clk_ctrl</span> <span class="w">clk_ctrl</span><span class="c">;</span>
+	<span class="w">c</span><span class="pc">l</span><span class="c">k_ctrl</span> <span class="c">=</span> <span class="w">REG_RD</span><span class="c">(</span><span class="w">con</span><span class="pc">f</span><span class="c">ig</span><span class="pc">,</span> <span class="w">regi_config</span><span class="pc">,</span> <span class="w">rw_clk_ctrl</span><span class="c">);</span>
+	<span class="w">r</span><span class="pc">e</span><span class="c">turn</span> <span class="w">c</span><span class="pc">l</span><span class="c">k_ctrl</span><span class="w">.pl</span><span class="pc">l</span> <span class="w">?</span> <span class="pc">2</span><span class="c">00000</span> <span class="c">:</span> <span class="w">6000</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">cris_freq_target</span><span class="c">(struct</span> <span class="w">cpufreq_policy</span> <span class="c">*</span><span class="w">po</span><span class="pc">l</span><span class="c">icy,</span> <span class="c">unsigned</span> <span class="c">int</span> <span class="w">st</span><span class="pc">ate</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="w">r</span><span class="pc">eg</span><span class="c">_config_rw_clk_ctrl</span> <span class="w">c</span><span class="c">lk_ctrl</span><span class="pc">;</span>
+	<span class="w">c</span><span class="pc">l</span><span class="c">k_ctrl</span> <span class="pc">=</span> <span class="c">REG_RD(</span><span class="w">co</span><span class="pc">n</span><span class="c">fig</span><span class="pc">,</span> <span class="pc">re</span><span class="c">gi_config</span><span class="pc">,</span> <span class="pc">r</span><span class="c">w_clk_ctrl</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="w">local_irq_disable</span><span class="pc">()</span><span class="c">;</span>
+
+	
+	<span class="c">if</span> <span class="c">(</span><span class="w">cris_freq_table[s</span><span class="c">tate].</span><span class="w">f</span><span class="pc">r</span><span class="c">equency</span> <span class="pc">=</span><span class="c">=</span> <span class="w">200000</span><span class="c">)</span>
+		<span class="w">c</span><span class="pc">l</span><span class="c">k_ctrl</span><span class="pc">.</span><span class="w">pl</span><span class="pc">l</span> <span class="pc">=</span> <span class="w">1</span><span class="c">;</span>
+	<span class="c">else</span>
+		<span class="w">c</span><span class="c">lk_ctrl</span><span class="w">.pl</span><span class="pc">l</span> <span class="c">=</span> <span class="w">0</span><span class="c">;</span>
+	<span class="w">REG_WR</span><span class="c">(</span><span class="w">co</span><span class="c">nfig,</span> <span class="pc">r</span><span class="c">egi_config,</span> <span class="c">rw_clk_ctrl</span><span class="pc">,</span> <span class="pc">c</span><span class="c">lk_ctrl);</span>
+
+	<span class="w">local_irq_enable(</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">0</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">cris_freq_cpu_init</span><span class="c">(struct</span> <span class="w">cpufreq_policy</span> <span class="c">*</span><span class="w">po</span><span class="pc">l</span><span class="c">icy</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">cpufreq_generic_init</span><span class="c">(</span><span class="w">pol</span><span class="pc">i</span><span class="c">cy</span><span class="pc">,</span> <span class="w">cris_freq_table</span><span class="pc">,</span> <span class="w">1000000</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">cpufreq_driver</span> <span class="w">cris_freq_driver</span> <span class="c">= {</span>
+	<span class="c">.</span><span class="w">g</span><span class="c">et</span> <span class="c">=</span> <span class="w">cris_freq_get_cpu_frequency</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">verify</span> <span class="c">=</span> <span class="w">cpufreq_generic_frequency_table_verify</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">target_index</span> <span class="c">=</span> <span class="w">cris_freq_target</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">i</span><span class="pc">ni</span><span class="c">t</span> <span class="c">=</span> <span class="w">cris_freq_cpu_init</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">n</span><span class="c">ame</span> <span class="pc">= </span><span class="c">"</span><span class="w">cris_freq</span><span class="c">",</span>
+	<span class="c">.</span><span class="w">at</span><span class="pc">tr</span> <span class="c">=</span> <span class="w">cpufreq_generic_attr</span><span class="c">,</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="c">static</span> <span class="pc">i</span><span class="c">nt</span> <span class="c">__init</span> <span class="w">cris_freq_init</span><span class="c">(void)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="c">ret;</span>
+	<span class="c">ret</span> <span class="c">=</span> <span class="w">cpufreq_register_driver</span><span class="c">(&amp;</span><span class="w">cris_freq_driver</span><span class="c">);</span>
+	<span class="w">cpufreq_register_notifier</span><span class="pc">(&amp;</span><span class="w">cris_sdram_freq_notifier_block</span><span class="pc">,</span>
+				  <span class="w">CPUFREQ_TRANSITION_NOTIFIER</span><span class="c">);</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">r</span><span class="c">et;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">i</span><span class="c">nt</span>
+<span class="w">cris_sdram_freq_notifier</span><span class="c">(struct</span> <span class="w">n</span><span class="pc">o</span><span class="c">tifier_block</span> <span class="c">*</span><span class="pc">n</span><span class="c">b</span><span class="pc">,</span> <span class="c">unsigned</span> <span class="c">long</span> <span class="w">v</span><span class="c">al</span><span class="pc">,</span>
+			 <span class="c">void</span> <span class="c">*data)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="pc">i</span><span class="c">;</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">cpufreq_freqs</span> <span class="c">*</span><span class="w">freqs</span> <span class="c">=</span> <span class="c">data;</span>
+	<span class="pc">if</span> <span class="c">(</span><span class="pc">v</span><span class="c">al</span> <span class="c">==</span> <span class="w">CPUFREQ_PRECHANGE</span><span class="pc">) </span><span class="c">{</span>
+		<span class="w">reg_bif_core_rw_sdram_timing</span> <span class="w">timing</span> <span class="c">=</span>
+		    <span class="w">REG_RD</span><span class="c">(</span><span class="w">bif_core</span><span class="c">,</span> <span class="w">regi_bif_core</span><span class="pc">,</span> <span class="w">rw_sdram_timing</span><span class="pc">)</span><span class="c">;</span>
+		<span class="pc">t</span><span class="c">iming</span><span class="w">.cpd</span> <span class="pc">= </span><span class="c">(</span><span class="pc">f</span><span class="c">reqs</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">ne</span><span class="pc">w</span> <span class="w">=</span><span class="c">=</span> <span class="w">200000</span> <span class="pc">?</span> <span class="pc">0</span> <span class="c">:</span> <span class="pc">1)</span><span class="c">;</span>
+
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(freqs-&gt;</span><span class="w">ne</span><span class="pc">w</span> <span class="c">==</span> <span class="w">2</span><span class="pc">0</span><span class="c">0000</span><span class="pc">)</span>
+			<span class="w">f</span><span class="pc">o</span><span class="c">r</span> <span class="c">(i</span> <span class="c">=</span> <span class="c">0;</span> <span class="c">i</span> <span class="c">&lt;</span> <span class="w">50000</span><span class="c">;</span> <span class="c">i</span><span class="w">++) ;</span>
+		<span class="w">REG_WR</span><span class="pc">(</span><span class="w">bif_core</span><span class="c">,</span> <span class="w">regi_bif_core</span><span class="c">,</span> <span class="w">rw_sdram_timing</span><span class="c">,</span> <span class="w">timing</span><span class="pc">)</span><span class="c">;</span>
+	<span class="pc">}</span>
+	<span class="w">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="w">m</span><span class="c">odule_init(</span><span class="w">cris_freq_init</span><span class="c">);</span>
+
+</pre>
+</body>
+</html>
+

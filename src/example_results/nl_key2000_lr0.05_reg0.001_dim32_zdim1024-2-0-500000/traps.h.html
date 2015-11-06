@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+<span class="w">#ifndef</span> <span class="w">__ASM_AVR32_TRAPS_H</span>
+<span class="w">#define</span> <span class="w">__ASM_AVR32_TRAPS_H</span>
+
+<span class="w">#include</span> <span class="w">&lt;linux/list.h&gt;</span>
+
+<span class="w">struct</span> <span class="w">undef_hook</span> <span class="w">{</span>
+	<span class="w">struct</span> <span class="w">list_head</span> <span class="w">node;</span>
+	<span class="w">u32</span> <span class="w">insn_mask;</span>
+	<span class="w">u32</span> <span class="w">insn_val;</span>
+	<span class="w">int</span> <span class="w">(*fn)(struct</span> <span class="w">pt_regs</span> <span class="w">*regs,</span> <span class="w">u32</span> <span class="w">insn);</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="pc">v</span><span class="c">oid</span> <span class="w">register_undef_hook</span><span class="c">(struct</span> <span class="c">undef_hook</span> <span class="c">*</span><span class="w">hook</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">void</span> <span class="w">unregister_undef_hook</span><span class="c">(struct</span> <span class="c">undef_hook</span> <span class="c">*hook);</span>
+
+<span class="pc">#en</span><span class="c">dif</span> 
+
+</pre>
+</body>
+</html>
+

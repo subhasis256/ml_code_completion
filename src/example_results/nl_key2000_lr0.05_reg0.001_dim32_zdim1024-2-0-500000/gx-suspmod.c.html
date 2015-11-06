@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+
+
+<span class="w">#include</span> <span class="w">&lt;linux/kernel.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/module.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/init.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/smp.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux</span><span class="c">/</span><span class="w">cpufreq</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">p</span><span class="pc">c</span><span class="c">i.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">e</span><span class="c">rrno.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/slab.h&gt;</span>
+
+<span class="c">#include</span> <span class="c">&lt;</span><span class="pc">a</span><span class="c">sm/</span><span class="w">cpu_device_id</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">processor</span><span class="pc">-</span><span class="w">cyrix</span><span class="c">.h&gt;</span>
+
+
+<span class="c">#</span><span class="pc">d</span><span class="c">efine</span> <span class="w">PCI_PMER1</span>	<span class="w">0x8</span><span class="c">0</span>	
+<span class="c">#define</span> <span class="w">PCI_PMER2</span>	<span class="w">0x8</span><span class="pc">1</span>	
+<span class="c">#define</span> <span class="w">PCI_PMER3</span>	<span class="w">0x8</span><span class="c">2</span>	
+<span class="c">#define</span> <span class="w">PCI_IRQTC</span>	<span class="w">0x8c</span>	
+<span class="c">#define</span> <span class="w">PCI_VIDTC</span>	<span class="w">0x8d</span>	
+<span class="c">#define</span> <span class="w">PCI_MODOFF</span>	<span class="w">0x94</span>	
+<span class="c">#define</span> <span class="w">PCI_MODON</span>	<span class="w">0x9</span><span class="pc">5</span>	
+<span class="c">#define</span> <span class="w">PCI_SUSCFG</span>	<span class="w">0x96</span>	
+
+
+<span class="c">#define</span> <span class="w">GPM</span>		<span class="c">(1&lt;&lt;0)</span>	
+<span class="c">#define</span> <span class="w">GIT</span>		<span class="c">(1&lt;&lt;1)</span>	
+<span class="c">#define</span> <span class="w">GTR</span>		<span class="c">(1&lt;&lt;2)</span>	
+<span class="c">#define</span> <span class="w">IRQ_SPDUP</span>	<span class="c">(1&lt;&lt;3)</span>	
+<span class="c">#define</span> <span class="w">VID_SPDUP</span>	<span class="c">(1&lt;&lt;4)</span>	
+
+
+<span class="c">#define</span> <span class="w">SUSMOD</span>		<span class="c">(1&lt;&lt;</span><span class="w">0</span><span class="c">)</span>	
+
+<span class="c">#define</span> <span class="w">SMISPDUP</span>	<span class="c">(1&lt;&lt;1)</span>	
+				
+<span class="c">#define</span> <span class="w">SUSCFG</span>		<span class="c">(1&lt;&lt;2)</span>	
+
+<span class="c">#define</span> <span class="w">PWRSVE_ISA</span>	<span class="c">(1&lt;&lt;3)</span>	
+<span class="c">#define</span> <span class="w">PWRSVE</span>		<span class="c">(1&lt;&lt;4)</span>	
+
+<span class="pc">s</span><span class="c">truct</span> <span class="w">gxfreq_params</span> <span class="c">{</span>
+	<span class="pc">u8</span> <span class="w">on_duration</span><span class="c">;</span>
+	<span class="c">u8</span> <span class="w">off_duration</span><span class="c">;</span>
+	<span class="c">u8</span> <span class="w">pci_suscfg</span><span class="c">;</span>
+	<span class="c">u8</span> <span class="w">pci_pmer1</span><span class="c">;</span>
+	<span class="c">u8</span> <span class="w">pci_pmer2</span><span class="c">;</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">p</span><span class="c">ci_dev</span> <span class="c">*</span><span class="w">cs55x0</span><span class="c">;</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="pc">sta</span><span class="c">tic</span> <span class="pc">s</span><span class="c">truct</span> <span class="c">gxfreq_params</span> <span class="c">*</span><span class="w">gx_params</span><span class="c">;</span>
+<span class="w">s</span><span class="pc">ta</span><span class="c">tic</span> <span class="pc">int</span> <span class="w">stock_freq</span><span class="pc">;</span>
+
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">pci_busclk</span><span class="pc">;</span>
+<span class="w">m</span><span class="c">odule_param(pci_busclk,</span> <span class="pc">i</span><span class="c">nt,</span> <span class="w">0</span><span class="pc">4</span><span class="c">44);</span>
+
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="c">int</span> <span class="w">max_duration</span> <span class="pc">=</span> <span class="w">25</span><span class="pc">5</span><span class="c">;</span>
+<span class="pc">m</span><span class="c">odule_param(max_duration,</span> <span class="c">int,</span> <span class="pc">04</span><span class="c">44);</span>
+
+
+<span class="w">#</span><span class="pc">d</span><span class="c">efine</span> <span class="w">POLICY_MIN_DIV</span> <span class="w">2</span><span class="c">0</span>
+
+
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">gx_freq_mult</span><span class="pc">[16] </span><span class="c">= {</span>
+		<span class="w">4</span><span class="c">,</span> <span class="pc">1</span><span class="c">0</span><span class="pc">,</span> <span class="w">4</span><span class="c">,</span> <span class="w">6</span><span class="c">,</span> <span class="w">9</span><span class="c">,</span> <span class="w">5</span><span class="c">,</span> <span class="pc">7</span><span class="c">,</span> <span class="w">8</span><span class="c">,</span>
+		<span class="pc">0</span><span class="c">,</span> <span class="w">0</span><span class="c">,</span> <span class="c">0,</span> <span class="c">0,</span> <span class="c">0,</span> <span class="c">0,</span> <span class="c">0,</span> <span class="c">0</span>
+<span class="pc">}</span><span class="c">;</span>
+
+
+
+<span class="c">static</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">p</span><span class="pc">c</span><span class="c">i_device_id</span> <span class="w">gx_chipset_tbl[</span><span class="pc">]</span> <span class="c">__initdata</span> <span class="c">= {</span>
+	<span class="c">{</span> <span class="w">P</span><span class="c">CI_VDEVICE(</span><span class="w">CYRIX</span><span class="c">,</span> <span class="w">PCI_DEVICE_ID_CYRIX_5530_LEGACY), },</span>
+	<span class="w">{</span> <span class="w">P</span><span class="c">CI_VDEVICE(</span><span class="pc">C</span><span class="c">YRIX,</span> <span class="w">PCI_DEVICE_ID_CYRIX_5520),</span><span class="pc"> }</span><span class="c">,</span>
+	<span class="pc">{</span> <span class="w">P</span><span class="pc">CI_V</span><span class="c">DEVICE(CYRIX,</span> <span class="w">PCI_DEVICE_ID_CYRIX_5510</span><span class="pc">), </span><span class="c">},</span>
+	<span class="c">{</span> <span class="pc">0</span><span class="w">,</span><span class="pc"> }</span><span class="c">,</span>
+<span class="c">};</span>
+<span class="pc">M</span><span class="c">ODULE_DEVICE_TABLE(pci,</span> <span class="pc">g</span><span class="c">x_chipset_tbl);</span>
+
+<span class="c">static</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">gx_write_byte</span><span class="c">(</span><span class="pc">i</span><span class="c">nt</span> <span class="w">r</span><span class="pc">eg</span><span class="c">,</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">v</span><span class="c">alue)</span>
+<span class="c">{</span>
+	<span class="w">pci_write_config_byte</span><span class="c">(</span><span class="w">gx_params-</span><span class="c">&gt;</span><span class="w">cs55x0</span><span class="c">,</span> <span class="w">r</span><span class="c">eg</span><span class="pc">,</span> <span class="w">v</span><span class="pc">alu</span><span class="c">e);</span>
+<span class="c">}</span>
+
+
+<span class="c">static</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">p</span><span class="pc">ci_dev</span> <span class="c">*</span> <span class="pc">_</span><span class="c">_init</span> <span class="w">gx_detect_chipset</span><span class="c">(</span><span class="pc">v</span><span class="c">oid)</span>
+<span class="c">{</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="c">pci_dev</span> <span class="c">*</span><span class="w">gx_pci</span> <span class="c">=</span> <span class="w">N</span><span class="c">ULL;</span>
+
+	
+	<span class="w">for_each_pci_dev</span><span class="c">(</span><span class="w">g</span><span class="pc">x_pc</span><span class="c">i</span><span class="w">)</span><span class="pc"> </span><span class="c">{</span>
+		<span class="pc">if</span> <span class="pc">((</span><span class="w">pci_match_id</span><span class="c">(</span><span class="w">gx_chipset_tbl</span><span class="pc">,</span> <span class="c">gx_pci</span><span class="w">))</span><span class="pc"> !</span><span class="c">=</span> <span class="c">NULL</span><span class="pc">)</span>
+			<span class="c">return</span> <span class="pc">g</span><span class="c">x_pci;</span>
+	<span class="pc">}</span>
+
+	<span class="w">p</span><span class="pc">r_d</span><span class="c">ebug("</span><span class="w">e</span><span class="c">rror:</span> <span class="pc">n</span><span class="c">o</span> <span class="w">s</span><span class="pc">u</span><span class="c">pported</span> <span class="w">chipset</span> <span class="w">f</span><span class="pc">ou</span><span class="c">nd</span><span class="w">!</span><span class="c">\n");</span>
+	<span class="c">return</span> <span class="pc">N</span><span class="c">ULL;</span>
+<span class="c">}</span>
+
+
+<span class="c">static</span> <span class="w">u</span><span class="c">nsigned</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">gx_get_cpuspeed</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">c</span><span class="pc">p</span><span class="c">u</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">if</span> <span class="pc">((</span><span class="w">gx_params</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">pci_suscfg</span> <span class="c">&amp;</span> <span class="w">SUSMOD</span><span class="c">) ==</span> <span class="c">0</span><span class="pc">)</span>
+		<span class="c">return</span> <span class="w">stock_freq</span><span class="c">;</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">(</span><span class="w">s</span><span class="pc">to</span><span class="c">ck_freq</span> <span class="w">*</span> <span class="c">gx_params</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">off_duration)</span>
+		<span class="w">/ (g</span><span class="c">x_params</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">on_duration</span> <span class="pc">+</span> <span class="pc">g</span><span class="c">x_params-&gt;</span><span class="pc">o</span><span class="c">ff_duration</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">}</span>
+
+
+
+<span class="c">static</span> <span class="pc">u</span><span class="c">nsigned</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">gx_validate_speed</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">khz</span><span class="c">,</span> <span class="w">u</span><span class="pc">8</span> <span class="c">*</span><span class="w">o</span><span class="pc">n</span><span class="c">_duration</span><span class="pc">,</span>
+		<span class="pc">u8</span> <span class="c">*</span><span class="pc">o</span><span class="c">ff_duration)</span>
+<span class="c">{</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="c">int</span> <span class="c">i;</span>
+	<span class="w">u</span><span class="pc">8</span> <span class="w">tmp_on</span><span class="pc">,</span> <span class="w">tmp_off</span><span class="c">;</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">old_tmp_freq</span> <span class="pc">=</span> <span class="w">stock_freq</span><span class="c">;</span>
+	<span class="c">int</span> <span class="w">tmp_freq</span><span class="pc">;</span>
+
+	<span class="w">*</span><span class="c">off_duration</span> <span class="c">=</span> <span class="w">1</span><span class="c">;</span>
+	<span class="w">*</span><span class="c">on_duration</span> <span class="c">=</span> <span class="c">0;</span>
+
+	<span class="w">f</span><span class="c">or</span> <span class="c">(i</span> <span class="c">=</span> <span class="w">max_duration</span><span class="c">;</span> <span class="c">i</span> <span class="pc">&gt;</span> <span class="pc">0</span><span class="c">;</span> <span class="c">i</span><span class="w">-</span><span class="pc">-</span><span class="c">) {</span>
+		<span class="w">t</span><span class="pc">mp_of</span><span class="c">f</span> <span class="w">=</span><span class="pc"> ((</span><span class="w">khz</span> <span class="w">*</span> <span class="c">i</span><span class="w">)</span><span class="c"> /</span> <span class="w">s</span><span class="c">tock_freq</span><span class="w">)</span><span class="pc"> &amp;</span> <span class="c">0xff;</span>
+		<span class="w">tmp_on</span> <span class="pc">=</span> <span class="pc">i</span> <span class="pc">-</span> <span class="pc">t</span><span class="c">mp_off;</span>
+		<span class="w">t</span><span class="pc">mp_f</span><span class="c">req</span> <span class="pc">= </span><span class="c">(</span><span class="w">s</span><span class="pc">to</span><span class="c">ck_freq</span> <span class="pc">*</span> <span class="pc">tmp_of</span><span class="c">f</span><span class="w">)</span><span class="c"> /</span> <span class="pc">i</span><span class="c">;</span>
+		
+		<span class="c">if</span> <span class="c">(</span><span class="w">abs</span><span class="c">(</span><span class="pc">tmp_f</span><span class="c">req</span> <span class="w">-</span> <span class="w">k</span><span class="c">hz</span><span class="w">) &lt;=</span> <span class="w">a</span><span class="c">bs</span><span class="w">(old_tmp_freq</span> <span class="w">-</span> <span class="w">k</span><span class="c">hz</span><span class="w">))</span><span class="pc"> </span><span class="c">{</span>
+			<span class="w">*on_duration</span> <span class="c">=</span> <span class="pc">tmp_o</span><span class="c">n</span><span class="pc">;</span>
+			<span class="c">*</span><span class="w">off_duration</span> <span class="c">=</span> <span class="w">t</span><span class="pc">mp_of</span><span class="c">f;</span>
+			<span class="w">o</span><span class="pc">l</span><span class="c">d_tmp_freq</span> <span class="c">=</span> <span class="c">tmp_freq;</span>
+		<span class="pc">}</span>
+	<span class="pc">}</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">o</span><span class="c">ld_tmp_freq;</span>
+<span class="c">}</span>
+
+
+
+
+<span class="c">static</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">gx_set_cpuspeed</span><span class="c">(struct</span> <span class="w">cpufreq_policy</span> <span class="c">*</span><span class="w">po</span><span class="pc">l</span><span class="c">icy</span><span class="pc">,</span> <span class="pc">u</span><span class="c">nsigned</span> <span class="c">int</span> <span class="w">k</span><span class="c">hz</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">u</span><span class="pc">8</span> <span class="w">suscfg</span><span class="pc">,</span> <span class="w">pmer1</span><span class="c">;</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">new_khz</span><span class="c">;</span>
+	<span class="c">unsigned</span> <span class="pc">l</span><span class="c">ong</span> <span class="c">flags;</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">cpufreq_freqs</span> <span class="w">freqs</span><span class="c">;</span>
+
+	<span class="w">f</span><span class="c">reqs</span><span class="pc">.</span><span class="w">ol</span><span class="pc">d</span> <span class="c">=</span> <span class="w">gx_get_cpuspeed</span><span class="pc">(</span><span class="w">0</span><span class="c">);</span>
+
+	<span class="w">n</span><span class="c">ew_khz</span> <span class="c">=</span> <span class="w">gx_validate_speed</span><span class="c">(</span><span class="w">k</span><span class="c">hz</span><span class="pc">, </span><span class="c">&amp;</span><span class="w">gx_params-</span><span class="c">&gt;</span><span class="w">on_duration</span><span class="pc">,</span>
+			<span class="w">&amp;</span><span class="pc">gx_p</span><span class="c">arams</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">off_duration</span><span class="c">);</span>
+
+	<span class="w">f</span><span class="c">reqs</span><span class="pc">.</span><span class="w">ne</span><span class="pc">w</span> <span class="c">=</span> <span class="pc">n</span><span class="c">ew_khz</span><span class="pc">;</span>
+
+	<span class="w">cpufreq_freq_transition_begin</span><span class="c">(</span><span class="w">po</span><span class="pc">l</span><span class="c">icy</span><span class="pc">, </span><span class="c">&amp;</span><span class="pc">f</span><span class="c">reqs</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">local_irq_save</span><span class="c">(</span><span class="pc">fl</span><span class="c">ags);</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">n</span><span class="c">ew_khz</span> <span class="w">!</span><span class="c">=</span> <span class="w">stock_freq</span><span class="c">) {</span>
+		
+		<span class="w">s</span><span class="pc">w</span><span class="c">itch</span> <span class="c">(gx_params</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">cs55x0-</span><span class="c">&gt;</span><span class="w">de</span><span class="pc">vi</span><span class="c">ce</span><span class="pc">) </span><span class="c">{</span>
+		<span class="c">case</span> <span class="w">PCI_DEVICE_ID_CYRIX_5530_LEGACY</span><span class="c">:</span>
+			<span class="w">pmer1</span> <span class="pc">=</span> <span class="pc">g</span><span class="c">x_params</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">pci_pmer1</span> <span class="w">|</span> <span class="w">IRQ_SPDUP</span> <span class="pc">|</span> <span class="w">VID_SPDUP</span><span class="c">;</span>
+			
+			
+			<span class="w">gx_write_byte</span><span class="c">(</span><span class="w">PCI_IRQTC</span><span class="c">,</span> <span class="w">4</span><span class="pc">)</span><span class="c">;</span>
+			
+			<span class="w">g</span><span class="pc">x_w</span><span class="c">rite_byte(</span><span class="w">PCI_VIDTC</span><span class="c">,</span> <span class="w">1</span><span class="pc">00</span><span class="c">);</span>
+			<span class="pc">g</span><span class="c">x_write_byte(</span><span class="w">PCI_PMER1</span><span class="c">,</span> <span class="w">p</span><span class="c">mer1);</span>
+
+			<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="pc">g</span><span class="c">x_params-&gt;</span><span class="pc">cs</span><span class="c">55x0</span><span class="w">-</span><span class="c">&gt;</span><span class="w">r</span><span class="pc">ev</span><span class="c">ision</span> <span class="w">&lt;</span> <span class="w">0x1</span><span class="pc">0</span><span class="c">) {</span>
+				
+				<span class="w">suscfg</span> <span class="pc">=</span> <span class="c">gx_params</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">pci_suscfg|SUSMOD</span><span class="c">;</span>
+			<span class="pc">}</span> <span class="c">else</span> <span class="c">{</span>
+				
+				<span class="c">suscfg</span> <span class="pc">=</span> <span class="c">gx_params-&gt;</span><span class="pc">pc</span><span class="c">i_suscfg</span><span class="w">|</span><span class="c">SUSMOD</span><span class="pc">|</span><span class="w">PWRSVE</span><span class="c">;</span>
+			<span class="c">}</span>
+			<span class="w">b</span><span class="c">reak;</span>
+		<span class="c">case</span> <span class="w">PCI_DEVICE_ID_CYRIX_5520</span><span class="c">:</span>
+		<span class="pc">c</span><span class="c">ase</span> <span class="w">PCI_DEVICE_ID_CYRIX_5510</span><span class="c">:</span>
+			<span class="w">s</span><span class="c">uscfg</span> <span class="c">=</span> <span class="pc">g</span><span class="c">x_params</span><span class="pc">-</span><span class="c">&gt;pci_suscfg</span> <span class="w">|</span> <span class="c">SUSMOD;</span>
+			<span class="c">break;</span>
+		<span class="pc">d</span><span class="c">efault:</span>
+			<span class="w">local_irq_restore</span><span class="c">(</span><span class="w">f</span><span class="c">lags);</span>
+			<span class="w">p</span><span class="pc">r_</span><span class="c">debug</span><span class="pc">("</span><span class="w">fatal</span><span class="c">:</span> <span class="w">try</span> <span class="w">t</span><span class="c">o</span> <span class="w">s</span><span class="pc">e</span><span class="c">t</span> <span class="w">u</span><span class="pc">n</span><span class="c">known</span> <span class="w">chipset</span><span class="pc">.</span><span class="c">\n");</span>
+			<span class="pc">r</span><span class="c">eturn</span><span class="pc">;</span>
+		<span class="c">}</span>
+	<span class="pc">}</span> <span class="w">e</span><span class="c">lse</span> <span class="c">{</span>
+		<span class="pc">s</span><span class="c">uscfg</span> <span class="c">=</span> <span class="c">gx_params</span><span class="pc">-</span><span class="c">&gt;pci_suscfg</span> <span class="w">&amp; ~(</span><span class="c">SUSMOD</span><span class="w">)</span><span class="c">;</span>
+		<span class="pc">g</span><span class="c">x_params</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">off_duration</span> <span class="c">=</span> <span class="pc">0</span><span class="c">;</span>
+		<span class="pc">g</span><span class="c">x_params-&gt;</span><span class="w">on_duration</span> <span class="c">=</span> <span class="c">0;</span>
+		<span class="w">p</span><span class="pc">r</span><span class="c">_debug("</span><span class="w">su</span><span class="pc">sp</span><span class="c">end</span> <span class="w">modulation</span> <span class="w">d</span><span class="pc">i</span><span class="c">sabled</span><span class="w">:</span> <span class="w">cp</span><span class="c">u</span> <span class="w">runs</span> <span class="w">1</span><span class="pc">00</span><span class="w">%%</span> <span class="w">sp</span><span class="c">eed</span><span class="w">.</span><span class="c">\n");</span>
+	<span class="pc">}</span>
+
+	<span class="w">gx_write_byte</span><span class="c">(</span><span class="w">PCI_MODOFF</span><span class="pc">,</span> <span class="c">gx_params</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">o</span><span class="pc">f</span><span class="c">f_duration);</span>
+	<span class="w">g</span><span class="pc">x_w</span><span class="c">rite_byte(</span><span class="w">PCI_MODON</span><span class="c">,</span> <span class="w">g</span><span class="pc">x_p</span><span class="c">arams-&gt;</span><span class="pc">on</span><span class="c">_duration);</span>
+
+	<span class="c">gx_write_byte(</span><span class="w">PCI_SUSCFG</span><span class="c">,</span> <span class="w">suscfg</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">pci_read_config_byte</span><span class="c">(</span><span class="pc">g</span><span class="c">x_params</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">cs55x0</span><span class="pc">,</span> <span class="w">P</span><span class="pc">CI_S</span><span class="c">USCFG</span><span class="w">,</span><span class="pc"> </span><span class="c">&amp;</span><span class="pc">s</span><span class="c">uscfg);</span>
+
+	<span class="w">local_irq_restore</span><span class="c">(</span><span class="w">f</span><span class="c">lags);</span>
+
+	<span class="pc">g</span><span class="c">x_params</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">pci_suscfg</span> <span class="c">=</span> <span class="pc">s</span><span class="c">uscfg</span><span class="pc">;</span>
+
+	<span class="w">cpufreq_freq_transition_end</span><span class="c">(</span><span class="w">po</span><span class="pc">l</span><span class="c">icy</span><span class="pc">, </span><span class="c">&amp;</span><span class="w">freqs</span><span class="pc">,</span> <span class="w">0</span><span class="c">);</span>
+
+	<span class="w">p</span><span class="pc">r_d</span><span class="c">ebug("</span><span class="w">su</span><span class="pc">sp</span><span class="c">end</span> <span class="w">modulation</span> <span class="w">w/</span> <span class="w">duration</span> <span class="w">o</span><span class="c">f</span> <span class="w">ON:</span><span class="pc">%</span><span class="c">d</span> <span class="w">us,</span> <span class="w">OFF:</span><span class="pc">%</span><span class="c">d</span> <span class="w">us\</span><span class="c">n",</span>
+		<span class="pc">g</span><span class="c">x_params-&gt;</span><span class="w">on_duration</span> <span class="w">*</span> <span class="w">3</span><span class="pc">2</span><span class="c">,</span> <span class="c">gx_params-&gt;</span><span class="w">off_duration</span> <span class="w">*</span> <span class="w">3</span><span class="pc">2)</span><span class="c">;</span>
+	<span class="w">p</span><span class="c">r_debug("</span><span class="w">su</span><span class="pc">s</span><span class="c">pend</span> <span class="w">m</span><span class="c">odulation</span> <span class="w">w/</span> <span class="w">c</span><span class="c">lock</span> <span class="w">sp</span><span class="pc">e</span><span class="c">ed</span><span class="pc">:</span><span class="c"> %d</span> <span class="w">kHz.</span><span class="c">\n",</span> <span class="w">freqs.ne</span><span class="pc">w)</span><span class="c">;</span>
+<span class="pc">}</span>
+
+
+
+
+
+<span class="c">static</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">cpufreq_gx_verify</span><span class="c">(struct</span> <span class="w">cpufreq_policy</span> <span class="c">*</span><span class="w">po</span><span class="pc">l</span><span class="c">icy</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">tmp_freq</span> <span class="c">=</span> <span class="c">0;</span>
+	<span class="w">u</span><span class="pc">8</span> <span class="w">tmp1</span><span class="pc">,</span> <span class="w">tmp2</span><span class="c">;</span>
+
+	<span class="c">if</span> <span class="pc">(!</span><span class="w">stock_freq</span> <span class="w">|</span><span class="pc">| </span><span class="c">!</span><span class="w">pol</span><span class="c">icy</span><span class="pc">)</span>
+		<span class="c">return</span> <span class="c">-EINVAL;</span>
+
+	<span class="w">po</span><span class="pc">l</span><span class="c">icy</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">cp</span><span class="pc">u</span> <span class="c">=</span> <span class="c">0;</span>
+	<span class="w">cpufreq_verify_within_limits</span><span class="c">(</span><span class="w">pol</span><span class="pc">i</span><span class="c">cy</span><span class="w">,</span><span class="pc"> (</span><span class="w">s</span><span class="pc">to</span><span class="c">ck_freq</span> <span class="w">/</span> <span class="w">max_duration</span><span class="pc">),</span>
+			<span class="w">s</span><span class="c">tock_freq);</span>
+
+	
+	<span class="w">t</span><span class="pc">mp_</span><span class="c">freq</span> <span class="c">=</span> <span class="w">gx_validate_speed</span><span class="c">(</span><span class="w">pol</span><span class="pc">i</span><span class="c">cy</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">mi</span><span class="pc">n</span><span class="w">,</span><span class="pc"> </span><span class="c">&amp;</span><span class="pc">tmp1, </span><span class="c">&amp;tmp2</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">if</span> <span class="c">(</span><span class="pc">t</span><span class="c">mp_freq</span> <span class="w">&lt;</span> <span class="w">po</span><span class="pc">l</span><span class="c">icy</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">mi</span><span class="c">n</span><span class="pc">)</span>
+		<span class="w">t</span><span class="pc">mp_</span><span class="c">freq</span> <span class="w">+</span><span class="pc">=</span> <span class="pc">s</span><span class="c">tock_freq</span> <span class="w">/</span> <span class="c">max_duration;</span>
+	<span class="w">po</span><span class="pc">l</span><span class="c">icy</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">mi</span><span class="c">n</span> <span class="c">=</span> <span class="pc">t</span><span class="c">mp_freq;</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">pol</span><span class="pc">i</span><span class="c">cy</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">mi</span><span class="pc">n</span> <span class="pc">&gt;</span> <span class="w">po</span><span class="pc">l</span><span class="c">icy-&gt;</span><span class="w">m</span><span class="c">ax</span><span class="pc">)</span>
+		<span class="w">po</span><span class="pc">l</span><span class="c">icy-&gt;</span><span class="w">m</span><span class="pc">ax</span> <span class="c">=</span> <span class="c">tmp_freq</span><span class="pc">;</span>
+	<span class="w">t</span><span class="pc">m</span><span class="c">p_freq</span> <span class="pc">=</span> <span class="w">gx_validate_speed</span><span class="c">(</span><span class="w">po</span><span class="pc">l</span><span class="c">icy</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">ma</span><span class="pc">x</span><span class="w">,</span><span class="pc"> </span><span class="c">&amp;</span><span class="w">tmp1</span><span class="pc">, </span><span class="c">&amp;</span><span class="w">tmp2</span><span class="c">);</span>
+	<span class="c">if</span> <span class="c">(</span><span class="w">t</span><span class="c">mp_freq</span> <span class="pc">&gt;</span> <span class="w">po</span><span class="pc">l</span><span class="c">icy-&gt;</span><span class="w">m</span><span class="c">ax)</span>
+		<span class="pc">t</span><span class="c">mp_freq</span> <span class="w">-</span><span class="pc">=</span> <span class="w">stock_freq</span> <span class="w">/</span> <span class="w">max_duration</span><span class="c">;</span>
+	<span class="w">po</span><span class="pc">l</span><span class="c">icy-&gt;</span><span class="w">ma</span><span class="pc">x</span> <span class="c">=</span> <span class="pc">tmp_</span><span class="c">freq;</span>
+	<span class="c">if</span> <span class="c">(</span><span class="w">po</span><span class="pc">l</span><span class="c">icy-&gt;</span><span class="w">m</span><span class="pc">ax</span> <span class="pc">&lt;</span> <span class="w">po</span><span class="pc">l</span><span class="c">icy-&gt;</span><span class="w">mi</span><span class="c">n</span><span class="pc">)</span>
+		<span class="w">po</span><span class="pc">l</span><span class="c">icy-&gt;</span><span class="w">m</span><span class="c">ax</span> <span class="c">=</span> <span class="w">po</span><span class="pc">l</span><span class="c">icy-&gt;</span><span class="w">m</span><span class="pc">i</span><span class="c">n;</span>
+	<span class="w">cpufreq_verify_within_limits</span><span class="pc">(</span><span class="w">po</span><span class="pc">l</span><span class="c">icy</span><span class="w">,</span><span class="pc"> (</span><span class="w">s</span><span class="pc">to</span><span class="c">ck_freq</span> <span class="w">/</span> <span class="c">max_duration</span><span class="w">),</span>
+			<span class="w">s</span><span class="c">tock_freq</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">0</span><span class="c">;</span>
+<span class="c">}</span>
+
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">cpufreq_gx_target</span><span class="c">(struct</span> <span class="w">cpufreq_policy</span> <span class="c">*</span><span class="w">po</span><span class="pc">l</span><span class="c">icy,</span>
+			     <span class="pc">u</span><span class="c">nsigned</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">target_freq</span><span class="pc">,</span>
+			     <span class="c">unsigned</span> <span class="c">int</span> <span class="w">relation</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="w">u</span><span class="pc">8</span> <span class="w">tmp1</span><span class="pc">,</span> <span class="w">tmp2</span><span class="c">;</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">tmp_freq</span><span class="c">;</span>
+
+	<span class="w">i</span><span class="pc">f</span> <span class="pc">(!s</span><span class="c">tock_freq</span> <span class="w">|</span><span class="pc">| </span><span class="c">!</span><span class="w">pol</span><span class="pc">i</span><span class="c">cy</span><span class="pc">)</span>
+		<span class="c">return</span> <span class="pc">-</span><span class="c">EINVAL;</span>
+
+	<span class="w">pol</span><span class="pc">i</span><span class="c">cy</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">cp</span><span class="pc">u</span> <span class="c">=</span> <span class="c">0;</span>
+
+	<span class="pc">t</span><span class="c">mp_freq</span> <span class="c">=</span> <span class="w">gx_validate_speed</span><span class="c">(</span><span class="w">t</span><span class="pc">a</span><span class="c">rget_freq</span><span class="pc">, </span><span class="c">&amp;</span><span class="pc">tmp1, </span><span class="c">&amp;</span><span class="pc">tmp2</span><span class="c">);</span>
+	<span class="pc">w</span><span class="c">hile</span> <span class="c">(</span><span class="pc">t</span><span class="c">mp_freq</span> <span class="pc">&lt;</span> <span class="w">pol</span><span class="pc">i</span><span class="c">cy</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">mi</span><span class="pc">n</span><span class="w">)</span><span class="c"> {</span>
+		<span class="pc">t</span><span class="c">mp_freq</span> <span class="w">+</span><span class="c">=</span> <span class="pc">s</span><span class="c">tock_freq</span> <span class="w">/</span> <span class="w">max_duration</span><span class="c">;</span>
+		<span class="pc">t</span><span class="c">mp_freq</span> <span class="c">=</span> <span class="pc">g</span><span class="c">x_validate_speed</span><span class="pc">(tm</span><span class="c">p_freq</span><span class="pc">, </span><span class="c">&amp;tmp1</span><span class="w">,</span><span class="pc"> </span><span class="c">&amp;tmp2);</span>
+	<span class="pc">}</span>
+	<span class="pc">w</span><span class="c">hile</span> <span class="c">(</span><span class="pc">t</span><span class="c">mp_freq</span> <span class="pc">&gt;</span> <span class="w">pol</span><span class="c">icy</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">m</span><span class="pc">ax</span><span class="c">) {</span>
+		<span class="w">t</span><span class="pc">mp_</span><span class="c">freq</span> <span class="w">-</span><span class="pc">=</span> <span class="c">stock_freq</span> <span class="w">/</span> <span class="pc">m</span><span class="c">ax_duration;</span>
+		<span class="pc">t</span><span class="c">mp_freq</span> <span class="c">=</span> <span class="pc">g</span><span class="c">x_validate_speed</span><span class="pc">(</span><span class="c">tmp_freq</span><span class="pc">, </span><span class="c">&amp;tmp1</span><span class="pc">, </span><span class="c">&amp;tmp2);</span>
+	<span class="pc">}</span>
+
+	<span class="w">gx_set_cpuspeed</span><span class="c">(</span><span class="w">po</span><span class="pc">l</span><span class="c">icy</span><span class="pc">,</span> <span class="c">tmp_freq);</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">0</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">cpufreq_gx_cpu_init</span><span class="c">(struct</span> <span class="w">cpufreq_policy</span> <span class="c">*</span><span class="w">po</span><span class="pc">l</span><span class="c">icy</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="c">int</span> <span class="w">maxfreq</span><span class="c">;</span>
+
+	<span class="pc">if</span> <span class="pc">(!</span><span class="w">po</span><span class="pc">l</span><span class="c">icy</span> <span class="pc">||</span> <span class="w">pol</span><span class="pc">i</span><span class="c">cy-&gt;</span><span class="w">cp</span><span class="pc">u</span> <span class="pc">!</span><span class="c">=</span> <span class="pc">0</span><span class="c">)</span>
+		<span class="c">return</span> <span class="c">-</span><span class="pc">EN</span><span class="c">ODEV;</span>
+
+	
+	<span class="c">if</span> <span class="c">(</span><span class="w">pci_busclk</span><span class="pc">)</span>
+		<span class="pc">m</span><span class="c">axfreq</span> <span class="c">=</span> <span class="pc">p</span><span class="c">ci_busclk</span> <span class="w">*</span> <span class="w">gx_freq_mult[getCx86</span><span class="pc">(</span><span class="w">CX86_DIR1)</span><span class="pc"> &amp;</span> <span class="w">0x0</span><span class="pc">f</span><span class="w">]</span><span class="c">;</span>
+	<span class="pc">e</span><span class="c">lse</span> <span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">cpu_khz</span><span class="pc">)</span>
+		<span class="w">m</span><span class="c">axfreq</span> <span class="pc">=</span> <span class="pc">c</span><span class="c">pu_khz;</span>
+	<span class="c">else</span>
+		<span class="pc">m</span><span class="c">axfreq</span> <span class="c">=</span> <span class="w">30000</span> <span class="w">*</span> <span class="pc">g</span><span class="c">x_freq_mult</span><span class="w">[g</span><span class="c">etCx86</span><span class="w">(</span><span class="pc">C</span><span class="c">X86_DIR1</span><span class="pc">) &amp;</span> <span class="w">0x0</span><span class="pc">f</span><span class="w">]</span><span class="pc">;</span>
+
+	<span class="w">stock_freq</span> <span class="pc">=</span> <span class="pc">m</span><span class="c">axfreq</span><span class="pc">;</span>
+
+	<span class="w">p</span><span class="pc">r</span><span class="c">_debug("</span><span class="w">cp</span><span class="pc">u</span> <span class="w">m</span><span class="pc">ax</span> <span class="w">fr</span><span class="pc">equ</span><span class="c">ency</span> <span class="w">i</span><span class="pc">s</span> <span class="pc">%d.</span><span class="c">\n",</span> <span class="pc">m</span><span class="c">axfreq);</span>
+
+	
+	<span class="w">po</span><span class="pc">l</span><span class="c">icy</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">cp</span><span class="pc">u</span> <span class="c">=</span> <span class="pc">0</span><span class="c">;</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">max_duration</span> <span class="w">&lt;</span> <span class="w">POLICY_MIN_DIV</span><span class="pc">)</span>
+		<span class="w">po</span><span class="pc">l</span><span class="c">icy-&gt;</span><span class="w">mi</span><span class="c">n</span> <span class="c">=</span> <span class="w">m</span><span class="pc">axf</span><span class="c">req</span> <span class="pc">/</span> <span class="w">m</span><span class="c">ax_duration;</span>
+	<span class="pc">e</span><span class="c">lse</span>
+		<span class="w">po</span><span class="pc">l</span><span class="c">icy</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">mi</span><span class="c">n</span> <span class="c">=</span> <span class="pc">maxf</span><span class="c">req</span> <span class="pc">/</span> <span class="pc">P</span><span class="c">OLICY_MIN_DIV;</span>
+	<span class="w">po</span><span class="pc">l</span><span class="c">icy-&gt;</span><span class="w">m</span><span class="pc">ax</span> <span class="c">=</span> <span class="c">maxfreq;</span>
+	<span class="w">po</span><span class="pc">l</span><span class="c">icy-&gt;</span><span class="w">cpuinfo</span><span class="pc">.</span><span class="w">min_freq</span> <span class="c">=</span> <span class="c">maxfreq</span> <span class="w">/</span> <span class="w">m</span><span class="pc">ax_</span><span class="c">duration;</span>
+	<span class="w">po</span><span class="pc">l</span><span class="c">icy-&gt;cpuinfo</span><span class="pc">.</span><span class="w">max_freq</span> <span class="c">=</span> <span class="pc">maxf</span><span class="c">req;</span>
+	<span class="w">po</span><span class="pc">l</span><span class="c">icy-&gt;cpuinfo.</span><span class="w">transition_latency</span> <span class="c">=</span> <span class="w">CPUFREQ_ETERNAL</span><span class="c">;</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+
+<span class="c">static</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">cpufreq_driver</span> <span class="w">gx_suspmod_driver</span> <span class="c">= {</span>
+	<span class="c">.</span><span class="w">g</span><span class="c">et</span>		<span class="c">=</span> <span class="w">gx_get_cpuspeed</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">verify</span>		<span class="c">=</span> <span class="w">cpufreq_gx_verify</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">t</span><span class="c">arget</span>		<span class="c">=</span> <span class="w">cpufreq_gx_target</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">i</span><span class="c">nit</span>		<span class="c">=</span> <span class="w">cpufreq_gx_cpu_init</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">n</span><span class="c">ame</span>		<span class="c">= "</span><span class="w">gx</span><span class="pc">-</span><span class="w">suspmod</span><span class="c">",</span>
+<span class="pc">};</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="c">__init</span> <span class="w">cpufreq_gx_init</span><span class="c">(void)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="pc">r</span><span class="c">et;</span>
+	<span class="w">s</span><span class="c">truct</span> <span class="w">gxfreq_params</span> <span class="c">*</span><span class="w">par</span><span class="pc">a</span><span class="c">ms;</span>
+	<span class="c">struct</span> <span class="w">p</span><span class="pc">c</span><span class="c">i_dev</span> <span class="c">*</span><span class="w">gx_pci</span><span class="c">;</span>
+
+	
+	<span class="pc">g</span><span class="c">x_pci</span> <span class="c">=</span> <span class="w">gx_detect_chipset</span><span class="pc">()</span><span class="c">;</span>
+	<span class="c">if</span> <span class="c">(gx_pci</span> <span class="pc">=</span><span class="c">=</span> <span class="c">NULL)</span>
+		<span class="c">return</span> <span class="pc">-</span><span class="c">ENODEV;</span>
+
+	
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">max_duration</span> <span class="w">&gt;</span> <span class="w">0</span><span class="pc">x</span><span class="c">ff</span><span class="pc">)</span>
+		<span class="pc">m</span><span class="c">ax_duration</span> <span class="c">=</span> <span class="w">0xf</span><span class="pc">f</span><span class="c">;</span>
+
+	<span class="w">p</span><span class="pc">r_d</span><span class="c">ebug("</span><span class="w">geode</span> <span class="w">su</span><span class="pc">s</span><span class="c">pend</span> <span class="w">modulation</span> <span class="w">available</span><span class="pc">.</span><span class="c">\n");</span>
+
+	<span class="w">par</span><span class="pc">ams</span> <span class="pc">=</span> <span class="w">k</span><span class="c">zalloc(sizeof</span><span class="pc">(*</span><span class="w">par</span><span class="pc">ams</span><span class="c">),</span> <span class="c">GFP_KERNEL);</span>
+	<span class="c">if</span> <span class="pc">(</span><span class="w">pa</span><span class="c">rams</span> <span class="c">==</span> <span class="c">NULL</span><span class="pc">)</span>
+		<span class="c">return</span> <span class="c">-ENOMEM;</span>
+
+	<span class="w">pa</span><span class="pc">rams</span><span class="c">-&gt;</span><span class="w">cs55x0</span> <span class="c">=</span> <span class="w">gx_pci</span><span class="c">;</span>
+	<span class="w">gx_params</span> <span class="pc">=</span> <span class="w">p</span><span class="pc">a</span><span class="c">rams</span><span class="pc">;</span>
+
+	
+	<span class="w">pci_read_config_byte</span><span class="pc">(</span><span class="w">pa</span><span class="c">rams</span><span class="pc">-</span><span class="c">&gt;cs55x0</span><span class="pc">,</span> <span class="w">PCI_SUSCFG, &amp;(p</span><span class="pc">a</span><span class="c">rams-&gt;</span><span class="w">pci_suscfg)</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">p</span><span class="c">ci_read_config_byte</span><span class="pc">(</span><span class="w">p</span><span class="pc">ara</span><span class="c">ms-&gt;</span><span class="pc">c</span><span class="c">s55x0,</span> <span class="w">PCI_PMER1,</span><span class="pc"> &amp;(</span><span class="w">p</span><span class="pc">a</span><span class="c">rams-&gt;</span><span class="w">pci_pmer1)</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">pci_read_config_byte(</span><span class="w">p</span><span class="pc">ara</span><span class="c">ms-&gt;cs55x0,</span> <span class="w">PCI_PMER2,</span><span class="pc"> &amp;(</span><span class="w">p</span><span class="pc">a</span><span class="c">rams-&gt;</span><span class="w">pci_pmer2)</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">pci_read_config_byte(</span><span class="w">p</span><span class="pc">ara</span><span class="c">ms-&gt;cs55x0,</span> <span class="w">PCI_MODON</span><span class="pc">, &amp;(</span><span class="w">p</span><span class="pc">a</span><span class="c">rams-&gt;</span><span class="w">on_duration)</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">pci_read_config_byte(</span><span class="w">p</span><span class="pc">ara</span><span class="c">ms-&gt;cs55x0,</span> <span class="w">PCI_MODOFF</span><span class="c">,</span>
+			<span class="w">&amp;(pa</span><span class="c">rams-&gt;</span><span class="w">off_duration)</span><span class="pc">);</span>
+
+	<span class="w">r</span><span class="pc">et</span> <span class="c">=</span> <span class="w">cpufreq_register_driver</span><span class="pc">(&amp;</span><span class="w">gx_suspmod_driver</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">if</span> <span class="c">(ret</span><span class="pc">) </span><span class="c">{</span>
+		<span class="w">k</span><span class="c">free(</span><span class="w">pa</span><span class="pc">rams)</span><span class="c">;</span>
+		<span class="c">return</span> <span class="c">ret;</span>                   
+	<span class="c">}</span>
+
+	<span class="c">return</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">v</span><span class="c">oid</span> <span class="c">__exit</span> <span class="w">cpufreq_gx_exit</span><span class="c">(void)</span>
+<span class="c">{</span>
+	<span class="w">cpufreq_unregister_driver</span><span class="c">(&amp;gx_suspmod_driver);</span>
+	<span class="w">pci_dev_put</span><span class="pc">(</span><span class="w">gx_params-</span><span class="c">&gt;</span><span class="w">cs55x0</span><span class="c">);</span>
+	<span class="pc">k</span><span class="c">free(</span><span class="pc">gx_p</span><span class="c">arams);</span>
+<span class="c">}</span>
+
+<span class="w">M</span><span class="c">ODULE_AUTHOR("</span><span class="w">Hiroshi</span> <span class="w">Miura</span> <span class="c">&lt;</span><span class="w">miura</span><span class="c">@</span><span class="w">da</span><span class="pc">-</span><span class="w">cha</span><span class="c">.</span><span class="w">org</span><span class="c">&gt;");</span>
+<span class="c">MODULE_DESCRIPTION("</span><span class="w">Cpufreq</span> <span class="pc">d</span><span class="c">river</span> <span class="c">for</span> <span class="w">Cyrix</span> <span class="w">MediaGX</span> <span class="w">a</span><span class="c">nd</span> <span class="w">NatSemi</span> <span class="w">Geode</span><span class="c">");</span>
+<span class="c">MODULE_LICENSE("GPL");</span>
+
+<span class="pc">m</span><span class="c">odule_init(</span><span class="w">cpufreq_gx_init</span><span class="c">);</span>
+<span class="c">module_exit(</span><span class="w">cpufreq_gx_exit</span><span class="c">);</span>
+
+
+</pre>
+</body>
+</html>
+

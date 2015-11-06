@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+<span class="w">#ifndef</span> <span class="w">_ASM_X86_RMWcc</span>
+<span class="w">#define</span> <span class="w">_ASM_X86_RMWcc</span>
+
+<span class="w">#ifdef</span> <span class="w">CC_HAVE_ASM_GOTO</span>
+
+<span class="w">#define</span> <span class="w">__GEN_RMWcc(fullop,</span> <span class="w">var,</span> <span class="w">cc, ...)				\</span>
+<span class="w">do</span> <span class="w">{									\</span>
+	<span class="w">asm_volatile_goto</span> <span class="w">(fullop</span> <span class="w">";</span> <span class="w">j"</span> <span class="w">cc</span> <span class="w">" %l[cc_label]"		\</span>
+			<span class="w">: : "m" (var), ##</span> <span class="w">__VA_ARGS__</span> 			<span class="w">\</span>
+			<span class="w">:</span><span class="pc"> "</span><span class="w">me</span><span class="pc">mo</span><span class="c">ry</span><span class="w">" :</span> <span class="pc">c</span><span class="c">c_label</span><span class="w">);				\</span>
+	<span class="w">r</span><span class="c">eturn</span> <span class="c">0</span><span class="w">;							\</span>
+<span class="w">c</span><span class="pc">c</span><span class="c">_label</span><span class="w">:								\</span>
+	<span class="w">r</span><span class="c">eturn</span> <span class="pc">1</span><span class="w">;</span><span class="pc">	</span><span class="c">						\</span>
+<span class="c">}</span> <span class="pc">w</span><span class="c">hile</span> <span class="c">(0)</span>
+
+<span class="c">#define</span> <span class="w">GEN_UNARY_RMWcc</span><span class="c">(</span><span class="w">o</span><span class="pc">p</span><span class="c">,</span> <span class="w">va</span><span class="pc">r</span><span class="c">,</span> <span class="w">arg0</span><span class="c">,</span> <span class="w">cc) 				\</span>
+	<span class="w">__GEN_RMWcc</span><span class="pc">(</span><span class="w">o</span><span class="c">p</span> <span class="w">" "</span> <span class="w">a</span><span class="c">rg0</span><span class="pc">,</span> <span class="w">v</span><span class="pc">ar,</span> <span class="w">cc</span><span class="pc">)</span>
+
+<span class="c">#define</span> <span class="w">GEN_BINARY_RMWcc</span><span class="c">(</span><span class="w">o</span><span class="c">p,</span> <span class="w">v</span><span class="pc">ar</span><span class="c">,</span> <span class="w">vcon</span><span class="c">,</span> <span class="w">v</span><span class="pc">al</span><span class="c">,</span> <span class="w">a</span><span class="c">rg0,</span> <span class="w">cc)	</span><span class="c">		\</span>
+	<span class="pc">_</span><span class="c">_GEN_RMWcc(</span><span class="w">op</span> <span class="w">" %1,</span><span class="pc"> "</span> <span class="w">a</span><span class="c">rg0</span><span class="w">,</span> <span class="w">v</span><span class="pc">a</span><span class="c">r,</span> <span class="w">cc</span><span class="c">,</span> <span class="pc">v</span><span class="c">con</span> <span class="pc">(</span><span class="w">v</span><span class="pc">al</span><span class="w">)</span><span class="pc">)</span>
+
+<span class="c">#</span><span class="w">e</span><span class="pc">l</span><span class="c">se</span> 
+
+<span class="c">#define</span> <span class="pc">_</span><span class="c">_GEN_RMWcc(</span><span class="w">fullop</span><span class="c">,</span> <span class="w">v</span><span class="pc">ar</span><span class="c">,</span> <span class="w">cc, ...)				\</span>
+<span class="w">d</span><span class="c">o</span> <span class="w">{									\</span>
+	<span class="w">ch</span><span class="c">ar</span> <span class="w">c;								\</span>
+	<span class="w">as</span><span class="pc">m</span> <span class="w">v</span><span class="pc">o</span><span class="c">latile</span> <span class="w">(f</span><span class="c">ullop</span> <span class="w">";</span> <span class="w">set"</span> <span class="w">cc</span> <span class="w">"</span><span class="pc"> </span><span class="c">%</span><span class="w">1"				\</span>
+			<span class="w">: "+m"</span><span class="pc"> </span><span class="c">(</span><span class="w">v</span><span class="pc">ar</span><span class="w">), "=qm"</span><span class="pc"> (</span><span class="c">c</span><span class="w">)		</span><span class="pc">		\</span>
+			<span class="w">:</span> <span class="w">__VA_ARGS__</span> <span class="w">:</span><span class="pc"> "</span><span class="w">mem</span><span class="pc">o</span><span class="c">ry</span><span class="w">");			\</span>
+	<span class="w">r</span><span class="c">eturn</span> <span class="w">c</span> <span class="w">!</span><span class="pc">=</span> <span class="pc">0</span><span class="w">;							\</span>
+<span class="c">}</span> <span class="c">while</span> <span class="c">(0)</span>
+
+<span class="c">#define</span> <span class="w">GEN_UNARY_RMWcc</span><span class="c">(</span><span class="w">o</span><span class="pc">p</span><span class="c">,</span> <span class="w">va</span><span class="pc">r</span><span class="c">,</span> <span class="w">arg0</span><span class="c">,</span> <span class="w">cc)	</span><span class="pc">			</span><span class="c">\</span>
+	<span class="w">__GEN_RMWcc</span><span class="c">(</span><span class="w">o</span><span class="c">p</span> <span class="w">" "</span> <span class="c">arg0</span><span class="pc">,</span> <span class="w">v</span><span class="pc">ar,</span> <span class="w">cc</span><span class="pc">)</span>
+
+<span class="c">#define</span> <span class="w">GEN_BINARY_RMWcc</span><span class="c">(</span><span class="w">o</span><span class="pc">p</span><span class="c">,</span> <span class="w">v</span><span class="pc">ar</span><span class="c">,</span> <span class="w">vcon</span><span class="c">,</span> <span class="w">v</span><span class="pc">al</span><span class="c">,</span> <span class="pc">a</span><span class="c">rg0,</span> <span class="w">cc)	</span><span class="c">		\</span>
+	<span class="pc">_</span><span class="c">_GEN_RMWcc(</span><span class="w">o</span><span class="pc">p</span> <span class="w">" %2, "</span> <span class="pc">a</span><span class="c">rg0</span><span class="w">,</span> <span class="w">v</span><span class="pc">a</span><span class="c">r,</span> <span class="w">cc</span><span class="c">,</span> <span class="pc">v</span><span class="c">con</span> <span class="pc">(</span><span class="w">v</span><span class="pc">al</span><span class="w">)</span><span class="pc">)</span>
+
+<span class="c">#</span><span class="pc">e</span><span class="c">ndif</span> 
+
+<span class="c">#</span><span class="w">e</span><span class="c">ndif</span> 
+
+</pre>
+</body>
+</html>
+

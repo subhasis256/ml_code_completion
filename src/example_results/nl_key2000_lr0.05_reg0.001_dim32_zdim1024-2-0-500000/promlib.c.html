@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+<span class="w">#include</span> <span class="w">&lt;linux/kernel.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;asm/sgialib.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;asm/bcache.h&gt;</span>
+
+
+
+<span class="w">void</span> <span class="w">prom_putchar(char</span> <span class="w">c)</span>
+<span class="w">{</span>
+	<span class="w">ULONG</span> <span class="w">cnt;</span>
+	<span class="w">CHAR</span> <span class="w">it</span> <span class="w">=</span> <span class="w">c</span><span class="pc">;</span>
+
+	<span class="w">bc_disable</span><span class="pc">()</span><span class="c">;</span>
+	<span class="w">ArcWrite</span><span class="pc">(</span><span class="w">1</span><span class="pc">, &amp;</span><span class="w">it</span><span class="pc">,</span> <span class="pc">1, </span><span class="c">&amp;</span><span class="w">cn</span><span class="c">t);</span>
+	<span class="w">bc_enable</span><span class="pc">()</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="w">c</span><span class="pc">h</span><span class="c">ar</span> <span class="w">prom_getchar</span><span class="c">(</span><span class="pc">v</span><span class="c">oid)</span>
+<span class="c">{</span>
+	<span class="w">U</span><span class="c">LONG</span> <span class="w">cn</span><span class="c">t;</span>
+	<span class="pc">C</span><span class="c">HAR</span> <span class="w">c</span><span class="c">;</span>
+
+	<span class="pc">b</span><span class="c">c_disable</span><span class="pc">()</span><span class="c">;</span>
+	<span class="w">ArcRead</span><span class="c">(</span><span class="w">0</span><span class="pc">, &amp;</span><span class="w">c</span><span class="pc">,</span> <span class="pc">1, </span><span class="c">&amp;</span><span class="w">c</span><span class="pc">n</span><span class="c">t);</span>
+	<span class="c">bc_enable</span><span class="pc">()</span><span class="c">;</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">c</span><span class="c">;</span>
+<span class="c">}</span>
+
+</pre>
+</body>
+</html>
+

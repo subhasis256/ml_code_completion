@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+<span class="w">#include</span> <span class="w">&lt;linux/pm.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/io.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/of.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/reset-controller.h&gt;</span>
+
+<span class="w">#include</span> <span class="c">&lt;</span><span class="pc">a</span><span class="c">sm/</span><span class="w">reboot</span><span class="c">.h&gt;</span>
+
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="pc">m</span><span class="c">ach-</span><span class="w">ralink</span><span class="pc">/</span><span class="w">ralink_regs</span><span class="c">.h&gt;</span>
+
+
+<span class="c">#</span><span class="pc">d</span><span class="c">efine</span> <span class="w">SYSC_REG_RESET_CTRL</span>     <span class="w">0x034</span>
+<span class="c">#define</span> <span class="w">RSTCTL_RESET_SYSTEM</span>     <span class="w">B</span><span class="c">IT(0)</span>
+
+<span class="pc">sta</span><span class="c">tic</span> <span class="c">int</span> <span class="w">ralink_assert_device</span><span class="c">(struct</span> <span class="w">reset_controller_dev</span> <span class="c">*</span><span class="w">rcdev</span><span class="c">,</span>
+				<span class="pc">un</span><span class="c">signed</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">i</span><span class="pc">d</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="w">u</span><span class="pc">3</span><span class="c">2</span> <span class="c">val;</span>
+
+	<span class="pc">if</span> <span class="c">(</span><span class="w">i</span><span class="c">d</span> <span class="pc">&lt;</span> <span class="w">8</span><span class="c">)</span>
+		<span class="c">return</span> <span class="pc">-1</span><span class="c">;</span>
+
+	<span class="w">v</span><span class="c">al</span> <span class="c">=</span> <span class="w">rt_sysc_r32</span><span class="c">(</span><span class="w">S</span><span class="c">YSC_REG_RESET_CTRL</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">v</span><span class="c">al</span> <span class="pc">|</span><span class="c">=</span> <span class="pc">B</span><span class="c">IT(</span><span class="w">i</span><span class="c">d);</span>
+	<span class="w">rt_sysc_w32</span><span class="c">(val,</span> <span class="w">S</span><span class="c">YSC_REG_RESET_CTRL);</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">ralink_deassert_device</span><span class="c">(struct</span> <span class="w">reset_controller_dev</span> <span class="c">*</span><span class="w">rcdev</span><span class="pc">,</span>
+				  <span class="pc">un</span><span class="c">signed</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">i</span><span class="c">d)</span>
+<span class="c">{</span>
+	<span class="w">u</span><span class="pc">3</span><span class="c">2</span> <span class="c">val;</span>
+
+	<span class="w">i</span><span class="pc">f</span> <span class="c">(</span><span class="w">i</span><span class="c">d</span> <span class="w">&lt;</span> <span class="w">8</span><span class="c">)</span>
+		<span class="c">return</span> <span class="pc">-1</span><span class="c">;</span>
+
+	<span class="pc">v</span><span class="c">al</span> <span class="c">=</span> <span class="w">rt_sysc_r32</span><span class="c">(</span><span class="pc">S</span><span class="c">YSC_REG_RESET_CTRL</span><span class="pc">)</span><span class="c">;</span>
+	<span class="pc">v</span><span class="c">al</span> <span class="pc">&amp;</span><span class="c">= ~BIT(</span><span class="w">i</span><span class="c">d);</span>
+	<span class="w">rt_sysc_w32</span><span class="c">(val</span><span class="pc">,</span> <span class="w">S</span><span class="c">YSC_REG_RESET_CTRL</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">ralink_reset_device</span><span class="c">(struct</span> <span class="w">reset_controller_dev</span> <span class="c">*</span><span class="w">rcdev</span><span class="pc">,</span>
+			       <span class="c">unsigned</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">i</span><span class="c">d)</span>
+<span class="c">{</span>
+	<span class="w">ralink_assert_device</span><span class="c">(rcdev,</span> <span class="w">i</span><span class="c">d);</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">ralink_deassert_device</span><span class="c">(rcdev</span><span class="pc">,</span> <span class="w">i</span><span class="c">d);</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="w">s</span><span class="c">truct</span> <span class="w">reset_control_ops</span> <span class="w">reset_ops</span> <span class="pc">=</span><span class="c"> {</span>
+	<span class="c">.</span><span class="w">re</span><span class="pc">set</span> <span class="c">=</span> <span class="pc">ra</span><span class="c">link_reset_device,</span>
+	<span class="c">.</span><span class="w">as</span><span class="c">sert</span> <span class="c">=</span> <span class="pc">ralink_a</span><span class="c">ssert_device,</span>
+	<span class="c">.</span><span class="w">deassert</span> <span class="c">=</span> <span class="pc">ra</span><span class="c">link_deassert_device,</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="c">static</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">reset_controller_dev</span> <span class="w">reset_dev</span> <span class="c">= {</span>
+	<span class="c">.</span><span class="w">o</span><span class="pc">ps</span>			<span class="c">= &amp;</span><span class="pc">re</span><span class="c">set_ops,</span>
+	<span class="c">.</span><span class="w">o</span><span class="pc">w</span><span class="c">ner</span>			<span class="c">=</span> <span class="c">THIS_MODULE,</span>
+	<span class="c">.</span><span class="w">nr_resets</span>		<span class="c">=</span> <span class="w">3</span><span class="pc">2</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">of_reset_n_cells</span>	<span class="c">=</span> <span class="c">1,</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="pc">v</span><span class="c">oid</span> <span class="w">ralink_rst_init</span><span class="c">(</span><span class="pc">v</span><span class="c">oid)</span>
+<span class="c">{</span>
+	<span class="w">r</span><span class="pc">es</span><span class="c">et_dev</span><span class="w">.of</span><span class="pc">_n</span><span class="c">ode</span> <span class="c">=</span> <span class="w">of_find_compatible_node</span><span class="c">(</span><span class="w">N</span><span class="c">ULL</span><span class="pc">,</span> <span class="pc">N</span><span class="c">ULL,</span>
+						<span class="w">"ralink,rt2880</span><span class="c">-</span><span class="w">res</span><span class="pc">et")</span><span class="c">;</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="pc">(!r</span><span class="c">eset_dev</span><span class="pc">.</span><span class="w">o</span><span class="pc">f_n</span><span class="c">ode</span><span class="pc">)</span>
+		<span class="w">p</span><span class="pc">r_</span><span class="c">err("</span><span class="w">F</span><span class="c">ailed</span> <span class="c">to</span> <span class="w">f</span><span class="c">ind</span> <span class="w">res</span><span class="pc">et</span> <span class="w">c</span><span class="pc">o</span><span class="c">ntroller</span> <span class="w">n</span><span class="c">ode</span><span class="pc">"</span><span class="c">);</span>
+	<span class="w">e</span><span class="pc">l</span><span class="c">se</span>
+		<span class="w">reset_controller_register</span><span class="pc">(&amp;</span><span class="c">reset_dev</span><span class="pc">)</span><span class="c">;</span>
+<span class="pc">}</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="c">void</span> <span class="w">ralink_restart</span><span class="c">(</span><span class="w">c</span><span class="pc">h</span><span class="c">ar</span> <span class="c">*</span><span class="w">com</span><span class="pc">ma</span><span class="c">nd</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">local_irq_disable</span><span class="pc">()</span><span class="c">;</span>
+	<span class="w">rt_sysc_w32</span><span class="c">(</span><span class="w">RSTCTL_RESET_SYSTEM</span><span class="pc">,</span> <span class="w">SYSC_REG_RESET_CTRL</span><span class="c">);</span>
+	<span class="w">unreachable</span><span class="pc">()</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="c">void</span> <span class="w">ralink_halt</span><span class="c">(</span><span class="pc">v</span><span class="c">oid)</span>
+<span class="c">{</span>
+	<span class="w">l</span><span class="c">ocal_irq_disable</span><span class="pc">()</span><span class="c">;</span>
+	<span class="pc">u</span><span class="c">nreachable</span><span class="pc">()</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">int</span> <span class="c">__init</span> <span class="w">mips_reboot_setup</span><span class="c">(void)</span>
+<span class="c">{</span>
+	<span class="w">_machine_restart</span> <span class="w">=</span> <span class="w">r</span><span class="pc">alink_r</span><span class="c">estart</span><span class="pc">;</span>
+	<span class="w">_machine_halt</span> <span class="pc">=</span> <span class="w">r</span><span class="pc">alink_h</span><span class="c">alt;</span>
+	<span class="w">pm_power_off</span> <span class="pc">=</span> <span class="w">r</span><span class="pc">alink_h</span><span class="c">alt</span><span class="pc">;</span>
+
+	<span class="w">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="w">arch_initcall</span><span class="c">(</span><span class="w">m</span><span class="c">ips_reboot_setup);</span>
+
+</pre>
+</body>
+</html>
+

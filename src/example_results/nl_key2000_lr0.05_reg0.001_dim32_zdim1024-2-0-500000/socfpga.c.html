@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+<span class="w">#include</span> <span class="w">&lt;linux/irqchip.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/of_address.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/of_irq.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/of_platform.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux</span><span class="c">/</span><span class="w">reboot</span><span class="c">.h&gt;</span>
+
+<span class="c">#include</span> <span class="c">&lt;</span><span class="pc">a</span><span class="c">sm/</span><span class="pc">h</span><span class="c">ardware</span><span class="pc">/</span><span class="w">ca</span><span class="pc">c</span><span class="c">he</span><span class="pc">-</span><span class="w">l2x0</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;</span><span class="pc">a</span><span class="c">sm/</span><span class="pc">m</span><span class="c">ach/</span><span class="w">ar</span><span class="pc">c</span><span class="c">h.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="pc">m</span><span class="c">ach</span><span class="pc">/</span><span class="w">m</span><span class="pc">ap</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">cacheflush</span><span class="c">.h&gt;</span>
+
+<span class="c">#include</span> <span class="pc">"</span><span class="w">c</span><span class="pc">or</span><span class="c">e.h"</span>
+
+<span class="pc">v</span><span class="c">oid</span> <span class="c">__iomem</span> <span class="c">*</span><span class="w">sys_manager_base_addr</span><span class="c">;</span>
+<span class="pc">v</span><span class="c">oid</span> <span class="c">__iomem</span> <span class="c">*</span><span class="w">rst_manager_base_addr</span><span class="c">;</span>
+<span class="pc">v</span><span class="c">oid</span> <span class="c">__iomem</span> <span class="c">*</span><span class="w">sdr_ctl_base_addr</span><span class="c">;</span>
+<span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="c">long</span> <span class="w">socfpga_cpu1start_addr</span><span class="c">;</span>
+
+<span class="c">void</span> <span class="w">_</span><span class="pc">_in</span><span class="c">it</span> <span class="w">socfpga_sysmgr_init</span><span class="c">(void</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">st</span><span class="c">ruct</span> <span class="pc">d</span><span class="c">evice_node</span> <span class="c">*</span><span class="pc">np</span><span class="c">;</span>
+
+	<span class="w">n</span><span class="pc">p</span> <span class="c">=</span> <span class="w">of_find_compatible_node</span><span class="c">(</span><span class="w">N</span><span class="c">ULL</span><span class="pc">,</span> <span class="w">N</span><span class="c">ULL</span><span class="pc">, "</span><span class="w">altr,sy</span><span class="pc">s</span><span class="c">-</span><span class="w">mg</span><span class="c">r</span><span class="pc">")</span><span class="c">;</span>
+
+	<span class="c">if</span> <span class="c">(</span><span class="w">of_property_read_u32</span><span class="c">(np, "</span><span class="w">cpu1</span><span class="pc">-</span><span class="w">st</span><span class="pc">a</span><span class="c">rt</span><span class="pc">-</span><span class="w">add</span><span class="pc">r",</span>
+			<span class="w">(u</span><span class="pc">3</span><span class="c">2</span> <span class="w">*</span><span class="pc">) </span><span class="c">&amp;</span><span class="w">socfpga_cpu1start_addr</span><span class="pc">))</span>
+		<span class="w">p</span><span class="pc">r_</span><span class="c">err("</span><span class="w">SMP</span><span class="pc">:</span> <span class="w">Need</span> <span class="w">c</span><span class="c">pu1</span><span class="pc">-</span><span class="w">s</span><span class="pc">t</span><span class="c">art-</span><span class="w">ad</span><span class="pc">dr</span> <span class="w">i</span><span class="pc">n</span> <span class="w">de</span><span class="pc">v</span><span class="c">ice</span> <span class="w">tr</span><span class="c">ee</span><span class="w">.</span><span class="pc">\</span><span class="c">n");</span>
+
+	
+	<span class="w">smp_wmb(</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">sync_cache_w</span><span class="pc">(&amp;</span><span class="w">s</span><span class="c">ocfpga_cpu1start_addr</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="w">sys_manager_base_addr</span> <span class="pc">=</span> <span class="w">of_iomap</span><span class="c">(</span><span class="pc">np</span><span class="c">,</span> <span class="c">0);</span>
+
+	<span class="w">np</span> <span class="c">=</span> <span class="w">of_find_compatible_node</span><span class="c">(</span><span class="w">N</span><span class="pc">U</span><span class="c">LL,</span> <span class="pc">N</span><span class="c">ULL</span><span class="pc">, </span><span class="c">"</span><span class="w">altr,rst</span><span class="c">-</span><span class="w">mg</span><span class="c">r</span><span class="pc">")</span><span class="c">;</span>
+	<span class="w">rst_manager_base_addr</span> <span class="pc">=</span> <span class="w">o</span><span class="c">f_iomap(np,</span> <span class="pc">0)</span><span class="c">;</span>
+
+	<span class="w">n</span><span class="c">p</span> <span class="c">=</span> <span class="pc">o</span><span class="c">f_find_compatible_node(</span><span class="pc">N</span><span class="c">ULL</span><span class="pc">,</span> <span class="c">NULL</span><span class="pc">, </span><span class="c">"</span><span class="pc">a</span><span class="c">ltr</span><span class="pc">,</span><span class="w">sdr</span><span class="c">-</span><span class="w">ct</span><span class="c">l</span><span class="pc">")</span><span class="c">;</span>
+	<span class="w">sdr_ctl_base_addr</span> <span class="pc">=</span> <span class="w">o</span><span class="pc">f_i</span><span class="c">omap(np</span><span class="pc">,</span> <span class="pc">0)</span><span class="c">;</span>
+<span class="pc">}</span>
+
+<span class="c">static</span> <span class="pc">v</span><span class="c">oid</span> <span class="pc">__i</span><span class="c">nit</span> <span class="w">socfpga_init_irq</span><span class="c">(</span><span class="pc">v</span><span class="c">oid)</span>
+<span class="c">{</span>
+	<span class="w">irqchip_init</span><span class="pc">()</span><span class="c">;</span>
+	<span class="w">socfpga_sysmgr_init</span><span class="pc">()</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">socfpga_cyclone5_restart</span><span class="c">(</span><span class="w">e</span><span class="c">num</span> <span class="w">reboot_mode</span> <span class="w">m</span><span class="c">ode</span><span class="pc">,</span> <span class="pc">c</span><span class="c">onst</span> <span class="c">char</span> <span class="c">*</span><span class="w">cm</span><span class="c">d</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">u</span><span class="pc">3</span><span class="c">2</span> <span class="w">t</span><span class="pc">e</span><span class="c">mp;</span>
+
+	<span class="w">t</span><span class="pc">e</span><span class="c">mp</span> <span class="c">=</span> <span class="pc">r</span><span class="c">eadl(</span><span class="w">rst_manager_base_addr</span> <span class="pc">+</span> <span class="w">SOCFPGA_RSTMGR_CTRL</span><span class="c">);</span>
+
+	<span class="c">if</span> <span class="c">(</span><span class="w">m</span><span class="pc">o</span><span class="c">de</span> <span class="pc">=</span><span class="c">=</span> <span class="w">REBOOT_HARD</span><span class="c">)</span>
+		<span class="w">t</span><span class="c">emp</span> <span class="pc">|</span><span class="c">=</span> <span class="w">RSTMGR_CTRL_SWCOLDRSTREQ</span><span class="c">;</span>
+	<span class="c">else</span>
+		<span class="w">t</span><span class="pc">e</span><span class="c">mp</span> <span class="pc">|</span><span class="c">=</span> <span class="w">RSTMGR_CTRL_SWWARMRSTREQ</span><span class="c">;</span>
+	<span class="pc">w</span><span class="c">ritel(</span><span class="pc">t</span><span class="c">emp,</span> <span class="w">r</span><span class="pc">s</span><span class="c">t_manager_base_addr</span> <span class="pc">+</span> <span class="c">SOCFPGA_RSTMGR_CTRL);</span>
+<span class="pc">}</span>
+
+<span class="c">static</span> <span class="w">c</span><span class="c">onst</span> <span class="pc">c</span><span class="c">har</span> <span class="c">*</span><span class="w">altera_dt_match</span><span class="pc">[</span><span class="c">] = {</span>
+	<span class="pc">"</span><span class="w">altr</span><span class="pc">,</span><span class="w">socfpga</span><span class="pc">"</span><span class="c">,</span>
+	<span class="pc">N</span><span class="c">ULL</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="w">DT_MACHINE_START</span><span class="c">(</span><span class="w">SOCFPGA</span><span class="pc">, </span><span class="c">"</span><span class="w">Altera</span> <span class="w">S</span><span class="pc">OCFPGA</span><span class="w">")</span>
+	<span class="w">.l2c_aux_val</span>	<span class="pc">=</span> <span class="pc">0</span><span class="c">,</span>
+	<span class="pc">.</span><span class="w">l2c_aux_mask</span>	<span class="w">= ~0</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">init_irq</span>	<span class="c">=</span> <span class="w">socfpga_init_irq</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">restart</span>	<span class="c">=</span> <span class="w">socfpga_cyclone5_restart</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">dt_compat</span>	<span class="c">=</span> <span class="pc">a</span><span class="c">ltera_dt_match,</span>
+<span class="w">MACHINE_END</span>
+
+</pre>
+</body>
+</html>
+

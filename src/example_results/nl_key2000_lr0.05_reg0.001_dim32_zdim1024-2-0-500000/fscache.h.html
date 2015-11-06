@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+<span class="w">#ifndef</span> <span class="w">_NFS_FSCACHE_H</span>
+<span class="w">#define</span> <span class="w">_NFS_FSCACHE_H</span>
+
+<span class="w">#include</span> <span class="w">&lt;linux/nfs_fs.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/nfs_mount.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/nfs4_mount.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/fscache.</span><span class="c">h&gt;</span>
+
+<span class="c">#</span><span class="pc">if</span><span class="c">def</span> <span class="w">CONFIG_NFS_FSCACHE</span>
+
+
+<span class="pc">s</span><span class="c">truct</span> <span class="w">nfs_fscache_key</span> <span class="c">{</span>
+	<span class="c">struct</span> <span class="w">r</span><span class="pc">b</span><span class="c">_node</span>		<span class="pc">n</span><span class="c">ode;</span>
+	<span class="c">struct</span> <span class="w">nfs_client</span>	<span class="c">*</span><span class="pc">n</span><span class="c">fs_client;</span>	
+
+	
+	<span class="c">struct</span> <span class="w">{</span>
+		<span class="c">struct</span> <span class="w">{</span>
+			<span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span>	<span class="w">s_flags</span><span class="c">;</span>	
+		<span class="pc">}</span> <span class="w">super</span><span class="c">;</span>
+
+		<span class="c">struct</span> <span class="c">{</span>
+			<span class="c">struct</span> <span class="w">nfs_fsid</span> <span class="w">fsid</span><span class="c">;</span>
+			<span class="pc">i</span><span class="c">nt</span>		<span class="w">f</span><span class="c">lags;</span>
+			<span class="pc">u</span><span class="c">nsigned</span> <span class="pc">i</span><span class="c">nt</span>	<span class="w">rsize</span><span class="c">;</span>		
+			<span class="c">unsigned</span> <span class="c">int</span>	<span class="w">wsize</span><span class="c">;</span>		
+			<span class="c">unsigned</span> <span class="c">int</span>	<span class="w">acregmin</span><span class="c">;</span>	
+			<span class="c">unsigned</span> <span class="c">int</span>	<span class="w">acregmax</span><span class="c">;</span>
+			<span class="c">unsigned</span> <span class="c">int</span>	<span class="w">acdirmin</span><span class="c">;</span>
+			<span class="c">unsigned</span> <span class="c">int</span>	<span class="w">acdirmax</span><span class="c">;</span>
+		<span class="w">}</span> <span class="w">nfs_server</span><span class="c">;</span>
+
+		<span class="pc">s</span><span class="c">truct</span> <span class="c">{</span>
+			<span class="w">rpc_authflavor_t</span> <span class="w">au_flavor</span><span class="c">;</span>
+		<span class="pc">}</span> <span class="w">rpc_auth</span><span class="c">;</span>
+
+		
+		<span class="w">u</span><span class="pc">8</span> <span class="w">uniq_len</span><span class="c">;</span>
+		<span class="w">c</span><span class="pc">h</span><span class="c">ar</span> <span class="w">uniquifier</span><span class="pc">[</span><span class="w">0</span><span class="c">];</span>
+	<span class="pc">}</span> <span class="w">k</span><span class="pc">e</span><span class="c">y;</span>
+<span class="w">}</span><span class="c">;</span>
+
+
+<span class="pc">e</span><span class="c">xtern</span> <span class="c">struct</span> <span class="w">fscache_netfs</span> <span class="w">nfs_fscache_netfs</span><span class="c">;</span>
+<span class="pc">e</span><span class="c">xtern</span> <span class="pc">c</span><span class="c">onst</span> <span class="c">struct</span> <span class="w">fscache_cookie_def</span> <span class="w">nfs_fscache_server_index_def</span><span class="c">;</span>
+<span class="pc">e</span><span class="c">xtern</span> <span class="c">const</span> <span class="c">struct</span> <span class="c">fscache_cookie_def</span> <span class="w">nfs_fscache_super_index_def</span><span class="c">;</span>
+<span class="c">extern</span> <span class="c">const</span> <span class="c">struct</span> <span class="c">fscache_cookie_def</span> <span class="w">nfs_fscache_inode_object_def</span><span class="c">;</span>
+
+<span class="pc">e</span><span class="c">xtern</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">nfs_fscache_register</span><span class="c">(</span><span class="pc">v</span><span class="c">oid);</span>
+<span class="c">extern</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">nfs_fscache_unregister</span><span class="c">(</span><span class="pc">v</span><span class="c">oid);</span>
+
+
+<span class="c">extern</span> <span class="c">void</span> <span class="w">nfs_fscache_get_client_cookie</span><span class="c">(struct</span> <span class="w">nfs_client</span> <span class="pc">*)</span><span class="c">;</span>
+<span class="c">extern</span> <span class="c">void</span> <span class="w">nfs_fscache_release_client_cookie</span><span class="c">(struct</span> <span class="c">nfs_client</span> <span class="c">*);</span>
+
+<span class="c">extern</span> <span class="c">void</span> <span class="w">nfs_fscache_get_super_cookie</span><span class="c">(struct</span> <span class="w">s</span><span class="pc">u</span><span class="c">per_block</span> <span class="pc">*,</span> <span class="pc">c</span><span class="c">onst</span> <span class="c">char</span> <span class="pc">*,</span> <span class="pc">i</span><span class="c">nt);</span>
+<span class="c">extern</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">nfs_fscache_release_super_cookie</span><span class="c">(struct</span> <span class="w">s</span><span class="pc">u</span><span class="c">per_block</span> <span class="pc">*)</span><span class="c">;</span>
+
+<span class="c">extern</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">nfs_fscache_init_inode</span><span class="c">(struct</span> <span class="pc">i</span><span class="c">node</span> <span class="c">*);</span>
+<span class="c">extern</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">nfs_fscache_clear_inode</span><span class="c">(struct</span> <span class="pc">i</span><span class="c">node</span> <span class="c">*);</span>
+<span class="c">extern</span> <span class="c">void</span> <span class="w">nfs_fscache_open_file</span><span class="c">(struct</span> <span class="c">inode</span> <span class="pc">*,</span> <span class="c">struct</span> <span class="c">file</span> <span class="c">*);</span>
+
+<span class="c">extern</span> <span class="c">void</span> <span class="w">__nfs_fscache_invalidate_page</span><span class="c">(struct</span> <span class="w">p</span><span class="c">age</span> <span class="c">*,</span> <span class="c">struct</span> <span class="pc">i</span><span class="c">node</span> <span class="c">*);</span>
+<span class="c">extern</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">nfs_fscache_release_page</span><span class="c">(struct</span> <span class="w">p</span><span class="c">age</span> <span class="pc">*,</span> <span class="pc">g</span><span class="c">fp_t);</span>
+
+<span class="c">extern</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">__nfs_readpage_from_fscache</span><span class="c">(struct</span> <span class="w">nfs_open_context</span> <span class="c">*,</span>
+				       <span class="c">struct</span> <span class="pc">i</span><span class="c">node</span> <span class="c">*,</span> <span class="c">struct</span> <span class="pc">p</span><span class="c">age</span> <span class="c">*);</span>
+<span class="c">extern</span> <span class="c">int</span> <span class="w">__nfs_readpages_from_fscache</span><span class="c">(struct</span> <span class="pc">n</span><span class="c">fs_open_context</span> <span class="c">*,</span>
+					<span class="pc">s</span><span class="c">truct</span> <span class="w">i</span><span class="c">node</span> <span class="pc">*,</span> <span class="c">struct</span> <span class="w">address_space</span> <span class="pc">*,</span>
+					<span class="c">struct</span> <span class="w">l</span><span class="c">ist_head</span> <span class="pc">*,</span> <span class="c">unsigned</span> <span class="w">*</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">extern</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">__nfs_readpage_to_fscache</span><span class="c">(struct</span> <span class="pc">i</span><span class="c">node</span> <span class="c">*,</span> <span class="c">struct</span> <span class="w">p</span><span class="c">age</span> <span class="pc">*,</span> <span class="pc">i</span><span class="c">nt);</span>
+
+
+<span class="w">s</span><span class="pc">ta</span><span class="c">tic</span> <span class="c">inline</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">nfs_fscache_wait_on_page_write</span><span class="c">(struct</span> <span class="w">nfs_inode</span> <span class="pc">*</span><span class="w">nfsi</span><span class="c">,</span>
+						  <span class="c">struct</span> <span class="w">p</span><span class="c">age</span> <span class="c">*page</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">PageFsCache</span><span class="c">(</span><span class="w">p</span><span class="c">age</span><span class="w">)</span><span class="pc">)</span>
+		<span class="w">fscache_wait_on_page_write</span><span class="c">(</span><span class="pc">n</span><span class="c">fsi-&gt;</span><span class="w">fscache</span><span class="c">,</span> <span class="c">page</span><span class="pc">);</span>
+<span class="c">}</span>
+
+
+<span class="c">static</span> <span class="c">inline</span> <span class="c">void</span> <span class="w">nfs_fscache_invalidate_page</span><span class="c">(struct</span> <span class="pc">p</span><span class="c">age</span> <span class="c">*page,</span>
+					       <span class="pc">s</span><span class="c">truct</span> <span class="w">i</span><span class="c">node</span> <span class="c">*inode</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">if</span> <span class="c">(</span><span class="w">P</span><span class="pc">a</span><span class="c">geFsCache(page))</span>
+		<span class="w">__nfs_fscache_invalidate_page</span><span class="c">(page,</span> <span class="pc">i</span><span class="c">node</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">}</span>
+
+
+<span class="c">static</span> <span class="c">inline</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">nfs_readpage_from_fscache</span><span class="c">(struct</span> <span class="w">nfs_open_context</span> <span class="c">*</span><span class="w">c</span><span class="pc">t</span><span class="c">x,</span>
+					    <span class="pc">s</span><span class="c">truct</span> <span class="c">inode</span> <span class="c">*inode,</span>
+					    <span class="pc">s</span><span class="c">truct</span> <span class="pc">p</span><span class="c">age</span> <span class="c">*page)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">NFS_I</span><span class="c">(</span><span class="pc">i</span><span class="c">node</span><span class="pc">)</span><span class="c">-&gt;</span><span class="w">fscache</span><span class="pc">)</span>
+		<span class="c">return</span> <span class="w">__nfs_readpage_from_fscache</span><span class="c">(</span><span class="w">c</span><span class="pc">tx,</span> <span class="pc">i</span><span class="c">node</span><span class="pc">,</span> <span class="pc">p</span><span class="c">age);</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">-</span><span class="w">ENOBUFS</span><span class="c">;</span>
+<span class="c">}</span>
+
+
+<span class="c">static</span> <span class="c">inline</span> <span class="c">int</span> <span class="w">nfs_readpages_from_fscache</span><span class="c">(struct</span> <span class="w">nfs_open_context</span> <span class="c">*</span><span class="w">c</span><span class="pc">tx,</span>
+					     <span class="pc">s</span><span class="c">truct</span> <span class="pc">i</span><span class="c">node</span> <span class="c">*inode,</span>
+					     <span class="c">struct</span> <span class="w">address_space</span> <span class="c">*</span><span class="w">m</span><span class="pc">app</span><span class="c">ing</span><span class="pc">,</span>
+					     <span class="c">struct</span> <span class="w">l</span><span class="c">ist_head</span> <span class="c">*</span><span class="w">p</span><span class="pc">ages,</span>
+					     <span class="c">unsigned</span> <span class="pc">*</span><span class="w">nr</span><span class="pc">_</span><span class="c">pages</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">if</span> <span class="c">(</span><span class="w">NFS_I</span><span class="c">(</span><span class="pc">i</span><span class="c">node</span><span class="pc">)</span><span class="c">-&gt;</span><span class="w">fscache</span><span class="c">)</span>
+		<span class="c">return</span> <span class="w">__nfs_readpages_from_fscache</span><span class="c">(</span><span class="w">c</span><span class="pc">tx</span><span class="c">,</span> <span class="w">i</span><span class="pc">n</span><span class="c">ode</span><span class="pc">,</span> <span class="w">m</span><span class="pc">app</span><span class="c">ing,</span> <span class="w">p</span><span class="pc">ages</span><span class="c">,</span>
+						    <span class="w">n</span><span class="pc">r</span><span class="c">_pages);</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">-</span><span class="w">ENOBUFS</span><span class="c">;</span>
+<span class="c">}</span>
+
+
+<span class="c">static</span> <span class="c">inline</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">nfs_readpage_to_fscache</span><span class="c">(struct</span> <span class="c">inode</span> <span class="c">*inode,</span>
+					   <span class="c">struct</span> <span class="pc">p</span><span class="c">age</span> <span class="c">*page</span><span class="pc">,</span>
+					   <span class="w">i</span><span class="c">nt</span> <span class="w">sy</span><span class="c">nc)</span>
+<span class="c">{</span>
+	<span class="pc">if</span> <span class="c">(</span><span class="w">PageFsCache</span><span class="c">(page</span><span class="pc">)</span><span class="c">)</span>
+		<span class="w">__nfs_readpage_to_fscache</span><span class="c">(inode,</span> <span class="pc">p</span><span class="c">age,</span> <span class="w">sy</span><span class="c">nc</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">}</span>
+
+
+<span class="c">static</span> <span class="c">inline</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">nfs_fscache_invalidate</span><span class="c">(struct</span> <span class="c">inode</span> <span class="c">*inode</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">fscache_invalidate</span><span class="c">(</span><span class="w">NFS_I</span><span class="pc">(</span><span class="c">inode)-&gt;</span><span class="w">fscache</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">}</span>
+
+
+<span class="c">static</span> <span class="c">inline</span> <span class="c">void</span> <span class="w">nfs_fscache_wait_on_invalidate</span><span class="c">(struct</span> <span class="c">inode</span> <span class="c">*inode</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">fscache_wait_on_invalidate</span><span class="c">(</span><span class="w">N</span><span class="pc">F</span><span class="c">S_I</span><span class="pc">(i</span><span class="c">node</span><span class="pc">)</span><span class="c">-&gt;fscache);</span>
+<span class="c">}</span>
+
+
+<span class="c">static</span> <span class="c">inline</span> <span class="w">c</span><span class="c">onst</span> <span class="pc">c</span><span class="c">har</span> <span class="c">*</span><span class="w">nfs_server_fscache_state</span><span class="c">(struct</span> <span class="w">nfs_server</span> <span class="c">*</span><span class="w">ser</span><span class="pc">v</span><span class="c">er)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">ser</span><span class="pc">v</span><span class="c">er-&gt;fscache</span> <span class="w">&amp;</span><span class="pc">&amp; (</span><span class="w">ser</span><span class="pc">v</span><span class="c">er-&gt;</span><span class="w">o</span><span class="pc">pt</span><span class="c">ions</span> <span class="pc">&amp;</span> <span class="w">NFS_OPTION_FSCACHE</span><span class="c">))</span>
+		<span class="c">return</span> <span class="w">"yes</span><span class="pc">"</span><span class="c">;</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">"n</span><span class="pc">o</span> <span class="c">";</span>
+<span class="c">}</span>
+
+<span class="w">#</span><span class="pc">el</span><span class="c">se</span> 
+<span class="c">static</span> <span class="c">inline</span> <span class="c">int</span> <span class="w">nfs_fscache_register</span><span class="c">(</span><span class="pc">v</span><span class="c">oid</span><span class="pc">) </span><span class="c">{</span> <span class="c">return</span> <span class="pc">0</span><span class="c">; }</span>
+<span class="c">static</span> <span class="c">inline</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">nfs_fscache_unregister</span><span class="c">(</span><span class="pc">v</span><span class="c">oid</span><span class="w">) {}</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="c">inline</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">nfs_fscache_get_client_cookie</span><span class="c">(</span><span class="pc">s</span><span class="c">truct</span> <span class="w">nfs_client</span> <span class="c">*</span><span class="w">clp</span><span class="pc">) {}</span>
+<span class="c">static</span> <span class="c">inline</span> <span class="c">void</span> <span class="w">nfs_fscache_release_client_cookie</span><span class="c">(struct</span> <span class="c">nfs_client</span> <span class="c">*</span><span class="w">clp</span><span class="c">) {}</span>
+
+<span class="c">static</span> <span class="c">inline</span> <span class="c">void</span> <span class="w">nfs_fscache_release_super_cookie</span><span class="c">(struct</span> <span class="w">su</span><span class="c">per_block</span> <span class="c">*</span><span class="w">s</span><span class="c">b) {}</span>
+
+<span class="c">static</span> <span class="c">inline</span> <span class="c">void</span> <span class="w">nfs_fscache_init_inode</span><span class="c">(struct</span> <span class="w">i</span><span class="c">node</span> <span class="c">*inode) {}</span>
+<span class="pc">s</span><span class="c">tatic</span> <span class="c">inline</span> <span class="c">void</span> <span class="w">nfs_fscache_clear_inode</span><span class="c">(struct</span> <span class="c">inode</span> <span class="c">*inode) {}</span>
+<span class="pc">s</span><span class="c">tatic</span> <span class="c">inline</span> <span class="c">void</span> <span class="w">nfs_fscache_open_file</span><span class="c">(struct</span> <span class="c">inode</span> <span class="c">*inode</span><span class="pc">,</span>
+					 <span class="c">struct</span> <span class="pc">f</span><span class="c">ile</span> <span class="c">*</span><span class="pc">filp</span><span class="w">) </span><span class="pc">{}</span>
+
+<span class="w">s</span><span class="c">tatic</span> <span class="c">inline</span> <span class="c">int</span> <span class="w">nfs_fscache_release_page</span><span class="c">(struct</span> <span class="pc">p</span><span class="c">age</span> <span class="c">*</span><span class="pc">p</span><span class="c">age,</span> <span class="pc">g</span><span class="c">fp_t</span> <span class="pc">g</span><span class="c">fp</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">return</span> <span class="w">1</span><span class="pc">;</span> 
+<span class="c">}</span>
+<span class="c">static</span> <span class="c">inline</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">nfs_fscache_invalidate_page</span><span class="c">(struct</span> <span class="pc">p</span><span class="c">age</span> <span class="c">*page,</span>
+					       <span class="c">struct</span> <span class="pc">i</span><span class="c">node</span> <span class="c">*inode</span><span class="w">) </span><span class="pc">{}</span>
+<span class="pc">sta</span><span class="c">tic</span> <span class="c">inline</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">nfs_fscache_wait_on_page_write</span><span class="c">(struct</span> <span class="w">nfs_inode</span> <span class="c">*</span><span class="w">nfsi</span><span class="pc">,</span>
+						  <span class="c">struct</span> <span class="c">page</span> <span class="c">*page</span><span class="pc">) </span><span class="c">{}</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="c">inline</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">nfs_readpage_from_fscache</span><span class="c">(struct</span> <span class="w">nfs_open_context</span> <span class="c">*</span><span class="w">ct</span><span class="pc">x</span><span class="c">,</span>
+					    <span class="c">struct</span> <span class="pc">i</span><span class="c">node</span> <span class="c">*inode,</span>
+					    <span class="pc">s</span><span class="c">truct</span> <span class="pc">p</span><span class="c">age</span> <span class="c">*page</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">return</span> <span class="c">-</span><span class="w">ENOBUFS</span><span class="c">;</span>
+<span class="c">}</span>
+<span class="c">static</span> <span class="c">inline</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">nfs_readpages_from_fscache</span><span class="c">(struct</span> <span class="pc">n</span><span class="c">fs_open_context</span> <span class="c">*</span><span class="w">c</span><span class="pc">t</span><span class="c">x,</span>
+					     <span class="c">struct</span> <span class="pc">i</span><span class="c">node</span> <span class="c">*inode,</span>
+					     <span class="pc">s</span><span class="c">truct</span> <span class="w">address_space</span> <span class="c">*</span><span class="w">m</span><span class="pc">app</span><span class="c">ing,</span>
+					     <span class="c">struct</span> <span class="w">l</span><span class="c">ist_head</span> <span class="c">*</span><span class="pc">pages</span><span class="c">,</span>
+					     <span class="c">unsigned</span> <span class="pc">*</span><span class="w">n</span><span class="pc">r_</span><span class="c">pages</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">return</span> <span class="pc">-</span><span class="w">EN</span><span class="pc">OB</span><span class="c">UFS;</span>
+<span class="c">}</span>
+<span class="c">static</span> <span class="c">inline</span> <span class="c">void</span> <span class="w">nfs_readpage_to_fscache</span><span class="c">(struct</span> <span class="w">i</span><span class="c">node</span> <span class="c">*inode,</span>
+					   <span class="c">struct</span> <span class="w">p</span><span class="c">age</span> <span class="c">*page</span><span class="pc">,</span> <span class="w">i</span><span class="c">nt</span> <span class="w">sy</span><span class="c">nc</span><span class="w">) {}</span>
+
+
+<span class="w">s</span><span class="c">tatic</span> <span class="c">inline</span> <span class="c">void</span> <span class="w">nfs_fscache_invalidate</span><span class="c">(struct</span> <span class="c">inode</span> <span class="c">*inode</span><span class="pc">) </span><span class="c">{}</span>
+<span class="pc">s</span><span class="c">tatic</span> <span class="c">inline</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">nfs_fscache_wait_on_invalidate</span><span class="c">(struct</span> <span class="c">inode</span> <span class="c">*inode) {}</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="c">inline</span> <span class="w">c</span><span class="c">onst</span> <span class="w">c</span><span class="c">har</span> <span class="c">*</span><span class="w">nfs_server_fscache_state</span><span class="c">(</span><span class="pc">s</span><span class="c">truct</span> <span class="w">nfs_server</span> <span class="c">*</span><span class="w">ser</span><span class="pc">v</span><span class="c">er</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">return</span> <span class="w">"no</span> <span class="w">"</span><span class="pc">;</span>
+<span class="c">}</span>
+
+<span class="pc">#</span><span class="c">endif</span> 
+<span class="c">#</span><span class="w">e</span><span class="c">ndif</span> 
+
+</pre>
+</body>
+</html>
+

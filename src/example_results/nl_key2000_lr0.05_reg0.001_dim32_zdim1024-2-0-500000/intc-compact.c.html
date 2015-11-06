@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+<span class="w">#include</span> <span class="w">&lt;linux/interrupt.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/module.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/of.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/irqdomain.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux</span><span class="c">/</span><span class="w">irqchip</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;</span><span class="pc">a</span><span class="c">sm/</span><span class="pc">ir</span><span class="c">q.h&gt;</span>
+
+
+<span class="w">v</span><span class="c">oid</span> <span class="w">arc_init_IRQ</span><span class="c">(</span><span class="pc">v</span><span class="c">oid</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">int</span> <span class="w">level_mask</span> <span class="pc">=</span> <span class="c">0;</span>
+
+       
+	<span class="w">l</span><span class="c">evel_mask</span> <span class="w">|</span><span class="pc">=</span> <span class="w">I</span><span class="pc">S</span><span class="c">_ENABLED(</span><span class="w">CONFIG_ARC_IRQ3_LV2) &lt;</span><span class="pc">&lt;</span> <span class="c">3</span><span class="pc">;</span>
+	<span class="c">level_mask</span> <span class="w">|</span><span class="pc">=</span> <span class="w">I</span><span class="c">S_ENABLED(</span><span class="w">CONFIG_ARC_IRQ5_LV2) &lt;</span><span class="c">&lt;</span> <span class="pc">5</span><span class="w">;</span>
+	<span class="pc">l</span><span class="c">evel_mask</span> <span class="w">|</span><span class="c">=</span> <span class="w">I</span><span class="c">S_ENABLED(</span><span class="w">CONFIG_ARC_IRQ6_LV2) &lt;</span><span class="c">&lt;</span> <span class="w">6;</span>
+
+	
+	<span class="w">write_aux_reg</span><span class="c">(</span><span class="w">AUX_IRQ_LEV</span><span class="c">,</span> <span class="c">level_mask</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="w">i</span><span class="c">f</span> <span class="c">(</span><span class="pc">l</span><span class="c">evel_mask</span><span class="pc">)</span>
+		<span class="w">p</span><span class="pc">r_i</span><span class="c">nfo("</span><span class="w">Level</span><span class="pc">-</span><span class="w">2</span> <span class="w">interrupts</span> <span class="w">bitset</span> <span class="w">%</span><span class="pc">x</span><span class="c">\n",</span> <span class="c">level_mask);</span>
+<span class="c">}</span>
+
+
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">arc_irq_mask</span><span class="c">(struct</span> <span class="w">ir</span><span class="c">q_data</span> <span class="c">*</span><span class="w">d</span><span class="pc">a</span><span class="c">ta</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">u</span><span class="pc">ns</span><span class="c">igned</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">ienb</span><span class="pc">;</span>
+
+	<span class="w">i</span><span class="pc">e</span><span class="c">nb</span> <span class="c">=</span> <span class="w">read_aux_reg</span><span class="c">(</span><span class="w">AUX_IENABLE</span><span class="pc">)</span><span class="c">;</span>
+	<span class="pc">ie</span><span class="c">nb</span> <span class="w">&amp;</span><span class="c">= ~(1</span> <span class="c">&lt;&lt;</span> <span class="w">da</span><span class="c">ta</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">i</span><span class="pc">r</span><span class="c">q);</span>
+	<span class="w">write_aux_reg</span><span class="c">(</span><span class="pc">A</span><span class="c">UX_IENABLE,</span> <span class="c">ienb);</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">void</span> <span class="w">arc_irq_unmask</span><span class="c">(struct</span> <span class="w">i</span><span class="pc">r</span><span class="c">q_data</span> <span class="c">*data)</span>
+<span class="c">{</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="pc">i</span><span class="c">nt</span> <span class="pc">ie</span><span class="c">nb;</span>
+
+	<span class="w">i</span><span class="pc">e</span><span class="c">nb</span> <span class="pc">=</span> <span class="pc">r</span><span class="c">ead_aux_reg(AUX_IENABLE</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">ienb</span> <span class="w">|</span><span class="c">= (1</span> <span class="c">&lt;&lt;</span> <span class="w">d</span><span class="c">ata</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">i</span><span class="pc">r</span><span class="c">q);</span>
+	<span class="pc">w</span><span class="c">rite_aux_reg(AUX_IENABLE,</span> <span class="c">ienb);</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">irq_chip</span> <span class="w">onchip_intc</span> <span class="c">= {</span>
+	<span class="c">.name</span>           <span class="c">= "</span><span class="w">ARC</span> <span class="w">In</span><span class="pc">-</span><span class="w">cor</span><span class="c">e</span> <span class="w">Intc</span><span class="c">",</span>
+	<span class="c">.</span><span class="w">irq_mask</span>	<span class="c">=</span> <span class="w">arc_irq_mask</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">irq_unmask</span>	<span class="c">=</span> <span class="w">arc_irq_unmask</span><span class="c">,</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="c">static</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">arc_intc_domain_map</span><span class="c">(struct</span> <span class="w">irq_domain</span> <span class="c">*</span><span class="w">d</span><span class="c">,</span> <span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="pc">i</span><span class="c">nt</span> <span class="pc">i</span><span class="c">rq</span><span class="pc">,</span>
+			       <span class="w">irq_hw_number_t</span> <span class="w">h</span><span class="pc">w</span><span class="c">)</span>
+<span class="c">{</span>
+	
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">i</span><span class="pc">rq</span> <span class="pc">=</span><span class="c">=</span> <span class="w">TIMER0_IRQ</span><span class="c">)</span>
+		<span class="w">irq_set_chip_and_handler</span><span class="c">(</span><span class="w">i</span><span class="pc">rq, </span><span class="c">&amp;</span><span class="w">onchip_intc</span><span class="pc">,</span> <span class="w">handle_percpu_irq</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">else</span>
+		<span class="w">i</span><span class="pc">rq_s</span><span class="c">et_chip_and_handler(</span><span class="w">i</span><span class="pc">rq, </span><span class="c">&amp;onchip_intc</span><span class="pc">,</span> <span class="w">handle_level_irq</span><span class="c">);</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">c</span><span class="c">onst</span> <span class="c">struct</span> <span class="w">irq_domain_ops</span> <span class="w">arc_intc_domain_ops</span> <span class="c">= {</span>
+	<span class="c">.</span><span class="w">xlate</span> <span class="c">=</span> <span class="w">irq_domain_xlate_onecell</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">m</span><span class="pc">ap</span> <span class="c">=</span> <span class="w">arc_intc_domain_map</span><span class="c">,</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="c">static</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">irq_domain</span> <span class="c">*</span><span class="w">root_domain</span><span class="pc">;</span>
+
+<span class="c">static</span> <span class="pc">i</span><span class="c">nt</span> <span class="c">__init</span>
+<span class="w">init_onchip_IRQ</span><span class="c">(</span><span class="pc">s</span><span class="c">truct</span> <span class="c">device_node</span> <span class="c">*</span><span class="w">intc</span><span class="pc">,</span> <span class="c">struct</span> <span class="c">device_node</span> <span class="c">*</span><span class="pc">p</span><span class="c">arent)</span>
+<span class="c">{</span>
+	<span class="w">i</span><span class="pc">f</span> <span class="c">(</span><span class="w">p</span><span class="c">arent</span><span class="pc">)</span>
+		<span class="w">panic</span><span class="pc">("</span><span class="w">DeviceTree</span> <span class="w">incore</span> <span class="w">i</span><span class="c">ntc</span> <span class="pc">n</span><span class="c">ot</span> <span class="w">a</span> <span class="w">r</span><span class="pc">oot</span> <span class="w">ir</span><span class="c">q</span> <span class="w">c</span><span class="pc">o</span><span class="c">ntroller\n");</span>
+
+	<span class="w">r</span><span class="pc">o</span><span class="c">ot_domain</span> <span class="pc">=</span> <span class="w">irq_domain_add_legacy</span><span class="c">(</span><span class="pc">i</span><span class="c">ntc</span><span class="pc">,</span> <span class="w">NR_CPU_IRQS</span><span class="c">,</span> <span class="pc">0,</span> <span class="c">0</span><span class="pc">,</span>
+					    <span class="w">&amp;arc_intc_domain_ops</span><span class="pc">,</span> <span class="pc">N</span><span class="c">ULL);</span>
+
+	<span class="c">if</span> <span class="pc">(!</span><span class="c">root_domain</span><span class="pc">)</span>
+		<span class="w">p</span><span class="pc">a</span><span class="c">nic</span><span class="pc">("</span><span class="w">ro</span><span class="pc">ot</span> <span class="w">ir</span><span class="pc">q</span> <span class="w">do</span><span class="pc">m</span><span class="c">ain</span> <span class="w">n</span><span class="pc">o</span><span class="c">t</span> <span class="w">avail</span><span class="c">\n");</span>
+
+	
+	<span class="w">irq_set_default_host</span><span class="c">(</span><span class="pc">r</span><span class="c">oot_domain</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="w">IRQCHIP_DECLARE</span><span class="c">(</span><span class="w">arc_intc</span><span class="pc">, </span><span class="c">"</span><span class="w">snps</span><span class="c">,</span><span class="w">arc700</span><span class="c">-</span><span class="w">intc</span><span class="pc">"</span><span class="c">,</span> <span class="w">init_onchip_IRQ</span><span class="c">);</span>
+
+
+
+<span class="pc">#</span><span class="c">ifdef</span> <span class="w">CONFIG_ARC_COMPACT_IRQ_LEVELS</span>	
+
+<span class="pc">v</span><span class="c">oid</span> <span class="w">arch_local_irq_enable</span><span class="c">(</span><span class="pc">v</span><span class="c">oid</span><span class="pc">)</span>
+<span class="c">{</span>
+
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="c">flags</span> <span class="pc">=</span> <span class="w">arch_local_save_flags</span><span class="pc">()</span><span class="c">;</span>
+
+	
+	<span class="w">f</span><span class="pc">l</span><span class="c">ags</span> <span class="w">|</span><span class="pc">= </span><span class="c">(</span><span class="w">STATUS_E1_MASK</span> <span class="c">|</span> <span class="w">STATUS_E2_MASK</span><span class="pc">)</span><span class="c">;</span>
+
+	
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">in_irq(</span><span class="pc">)) </span><span class="c">{</span>
+
+		
+		<span class="c">if</span> <span class="c">(flags</span> <span class="c">&amp;</span> <span class="w">STATUS_A2_MASK</span><span class="pc">)</span>
+			<span class="pc">f</span><span class="c">lags</span> <span class="w">&amp;</span><span class="pc">= ~(</span><span class="w">S</span><span class="pc">TATUS_E1</span><span class="c">_MASK</span> <span class="c">|</span> <span class="c">STATUS_E2_MASK);</span>
+
+		
+		<span class="c">else</span> <span class="c">if</span> <span class="c">(</span><span class="w">f</span><span class="c">lags</span> <span class="c">&amp;</span> <span class="w">STATUS_A1_MASK</span><span class="c">)</span>
+			<span class="pc">f</span><span class="c">lags</span> <span class="w">&amp;</span><span class="pc">= ~(STATUS_E1</span><span class="c">_MASK</span><span class="pc">)</span><span class="c">;</span>
+	<span class="pc">}</span>
+
+	
+
+	<span class="c">else</span> <span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">in_softirq(</span><span class="pc">)</span><span class="c">) {</span>
+
+		
+		<span class="w">st</span><span class="pc">r</span><span class="c">uct</span> <span class="w">p</span><span class="pc">t</span><span class="c">_regs</span> <span class="c">*</span><span class="w">pt</span> <span class="c">=</span> <span class="w">get_irq_regs</span><span class="pc">()</span><span class="c">;</span>
+
+		<span class="c">if</span> <span class="pc">((</span><span class="c">flags</span> <span class="c">&amp;</span> <span class="c">STATUS_A2_MASK</span><span class="pc">) &amp;</span><span class="c">&amp;</span> <span class="w">pt</span> <span class="w">&amp;</span><span class="pc">&amp;</span>
+		    <span class="w">(pt</span><span class="c">-&gt;</span><span class="w">status32</span> <span class="pc">&amp;</span> <span class="w">S</span><span class="pc">TATUS_A1</span><span class="c">_MASK)) {</span>
+			
+			<span class="w">f</span><span class="pc">l</span><span class="c">ags</span> <span class="w">&amp;</span><span class="pc">= ~(S</span><span class="c">TATUS_E1_MASK);</span>
+		<span class="c">}</span>
+	<span class="pc">}</span>
+
+	<span class="w">arch_local_irq_restore</span><span class="c">(</span><span class="w">f</span><span class="c">lags);</span>
+<span class="c">}</span>
+
+<span class="w">#</span><span class="pc">e</span><span class="c">lse</span> 
+
+
+<span class="w">v</span><span class="c">oid</span> <span class="w">arch_local_irq_enable</span><span class="c">(</span><span class="pc">v</span><span class="c">oid)</span>
+<span class="c">{</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="c">flags;</span>
+
+	
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">in_irq(</span><span class="pc">)) </span><span class="c">{</span>
+		<span class="w">WARN_ONCE</span><span class="pc">(</span><span class="w">1</span><span class="pc">, "</span><span class="w">I</span><span class="pc">R</span><span class="c">Q</span> <span class="w">e</span><span class="pc">nabled</span> <span class="w">f</span><span class="pc">r</span><span class="c">om</span> <span class="w">hard-isr"</span><span class="pc">);</span>
+		<span class="pc">r</span><span class="c">eturn</span><span class="w">;</span>
+	<span class="c">}</span>
+
+	<span class="w">f</span><span class="pc">l</span><span class="c">ags</span> <span class="c">=</span> <span class="w">arch_local_save_flags</span><span class="pc">()</span><span class="c">;</span>
+	<span class="w">f</span><span class="pc">l</span><span class="c">ags</span> <span class="w">|</span><span class="pc">= </span><span class="c">(</span><span class="w">STATUS_E1_MASK</span> <span class="c">|</span> <span class="w">STATUS_E2_MASK</span><span class="c">);</span>
+	<span class="w">arch_local_irq_restore</span><span class="c">(flags);</span>
+<span class="c">}</span>
+<span class="w">#</span><span class="pc">e</span><span class="c">ndif</span>
+<span class="w">E</span><span class="pc">XPORT_SYMBOL</span><span class="c">(</span><span class="w">arch_local_irq_enable</span><span class="c">);</span>
+
+</pre>
+</body>
+</html>
+

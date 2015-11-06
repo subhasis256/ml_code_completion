@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+<span class="w">#include</span> <span class="w">&lt;linux/module.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/errno.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;asm/byteorder.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;asm/uaccess.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;asm</span><span class="c">/</span><span class="w">checksum</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="pc">"</span><span class="w">i</span><span class="pc">nt</span><span class="c">ernal.h"</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="w">i</span><span class="pc">nl</span><span class="c">ine</span> <span class="pc">un</span><span class="c">signed</span> <span class="pc">s</span><span class="c">hort</span> <span class="w">from32to16</span><span class="c">(</span><span class="w">__wsum</span> <span class="w">su</span><span class="pc">m)</span>
+<span class="c">{</span>
+	<span class="w">as</span><span class="c">m</span><span class="w">("</span>	<span class="w">ad</span><span class="pc">d</span>	<span class="pc">%</span><span class="w">1,</span><span class="pc">%</span><span class="w">0</span>		<span class="w">\</span><span class="c">n</span><span class="pc">"</span>
+	    <span class="c">"</span>	<span class="w">addc</span>	<span class="w">0xf</span><span class="pc">ff</span><span class="c">f</span><span class="w">,</span><span class="pc">%0</span>	<span class="pc">\</span><span class="c">n"</span>
+	    <span class="w">: "=r"</span><span class="pc"> </span><span class="c">(</span><span class="w">sum)</span>
+	    <span class="w">:</span><span class="pc"> "</span><span class="w">r"</span><span class="c"> (</span><span class="w">su</span><span class="c">m</span> <span class="w">&lt;</span><span class="pc">&lt;</span> <span class="c">16</span><span class="w">),</span><span class="pc"> </span><span class="c">"0</span><span class="w">"</span><span class="pc"> (</span><span class="w">su</span><span class="c">m</span> <span class="pc">&amp;</span> <span class="w">0xfff</span><span class="pc">f0</span><span class="c">000</span><span class="w">)</span>
+	    <span class="w">:</span><span class="pc"> "</span><span class="w">cc"</span>
+	    <span class="w">);</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">su</span><span class="c">m</span> <span class="w">&gt;</span><span class="pc">&gt;</span> <span class="c">16;</span>
+<span class="c">}</span>
+
+<span class="w">__sum16</span> <span class="w">ip_fast_csum</span><span class="c">(</span><span class="w">c</span><span class="pc">o</span><span class="c">nst</span> <span class="w">v</span><span class="c">oid</span> <span class="c">*</span><span class="w">ip</span><span class="pc">h</span><span class="c">,</span> <span class="pc">un</span><span class="c">signed</span> <span class="c">int</span> <span class="w">ihl</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="w">r</span><span class="c">eturn</span> <span class="w">~do_csum</span><span class="pc">(</span><span class="w">ip</span><span class="pc">h,</span> <span class="c">ihl</span> <span class="w">*</span> <span class="w">4</span><span class="pc">)</span><span class="c">;</span>
+<span class="pc">}</span>
+<span class="w">E</span><span class="pc">XPORT_SYMBOL</span><span class="c">(</span><span class="pc">ip</span><span class="c">_fast_csum);</span>
+
+<span class="w">__wsum</span> <span class="w">csum_partial</span><span class="c">(</span><span class="pc">c</span><span class="c">onst</span> <span class="pc">v</span><span class="c">oid</span> <span class="c">*</span><span class="w">b</span><span class="pc">uff</span><span class="c">,</span> <span class="pc">i</span><span class="c">nt</span> <span class="pc">l</span><span class="c">en</span><span class="pc">,</span> <span class="w">__w</span><span class="c">sum</span> <span class="w">su</span><span class="c">m)</span>
+<span class="c">{</span>
+	<span class="w">__w</span><span class="c">sum</span> <span class="w">res</span><span class="pc">u</span><span class="c">lt</span><span class="pc">;</span>
+
+	<span class="w">r</span><span class="pc">es</span><span class="c">ult</span> <span class="c">=</span> <span class="w">d</span><span class="pc">o</span><span class="c">_csum(</span><span class="w">b</span><span class="pc">uff</span><span class="c">,</span> <span class="w">l</span><span class="c">en);</span>
+	<span class="pc">r</span><span class="c">esult</span> <span class="w">+</span><span class="c">=</span> <span class="w">su</span><span class="c">m;</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">su</span><span class="c">m</span> <span class="c">&gt;</span> <span class="pc">r</span><span class="c">esult)</span>
+		<span class="pc">res</span><span class="c">ult</span><span class="pc">++</span><span class="c">;</span>
+	<span class="pc">ret</span><span class="c">urn</span> <span class="c">result;</span>
+<span class="c">}</span>
+<span class="w">E</span><span class="pc">XPORT_SYMBOL</span><span class="c">(</span><span class="w">csum_partial</span><span class="c">);</span>
+
+<span class="w">__sum16</span> <span class="w">ip_compute_csum</span><span class="c">(</span><span class="pc">c</span><span class="c">onst</span> <span class="pc">v</span><span class="c">oid</span> <span class="c">*</span><span class="w">b</span><span class="pc">uff</span><span class="c">,</span> <span class="pc">i</span><span class="c">nt</span> <span class="c">len</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">r</span><span class="c">eturn</span> <span class="w">~from32to16</span><span class="pc">(</span><span class="w">do_csum</span><span class="pc">(</span><span class="w">bu</span><span class="pc">ff</span><span class="c">,</span> <span class="pc">l</span><span class="c">en</span><span class="pc">))</span><span class="c">;</span>
+<span class="c">}</span>
+<span class="w">E</span><span class="c">XPORT_SYMBOL(</span><span class="w">i</span><span class="c">p_compute_csum);</span>
+
+<span class="w">__wsum</span> <span class="w">csum_partial_copy</span><span class="c">(</span><span class="pc">c</span><span class="c">onst</span> <span class="pc">v</span><span class="c">oid</span> <span class="c">*</span><span class="w">s</span><span class="c">rc,</span> <span class="w">v</span><span class="c">oid</span> <span class="c">*dst</span><span class="pc">,</span> <span class="pc">i</span><span class="c">nt</span> <span class="pc">l</span><span class="c">en</span><span class="pc">,</span> <span class="w">__w</span><span class="c">sum</span> <span class="w">s</span><span class="pc">u</span><span class="c">m</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">cop</span><span class="pc">y_f</span><span class="c">rom_user(</span><span class="pc">ds</span><span class="c">t,</span> <span class="pc">s</span><span class="c">rc,</span> <span class="pc">l</span><span class="c">en</span><span class="pc">)</span><span class="c">;</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">csum_partial</span><span class="c">(dst,</span> <span class="w">l</span><span class="c">en,</span> <span class="w">s</span><span class="pc">u</span><span class="c">m</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">}</span>
+<span class="w">E</span><span class="pc">XPORT_SYMBOL</span><span class="c">(csum_partial_copy);</span>
+
+<span class="w">_</span><span class="c">_wsum</span> <span class="w">csum_partial_copy_nocheck</span><span class="c">(</span><span class="pc">c</span><span class="c">onst</span> <span class="w">v</span><span class="c">oid</span> <span class="c">*</span><span class="pc">s</span><span class="c">rc,</span> <span class="w">v</span><span class="c">oid</span> <span class="c">*dst,</span>
+				 <span class="pc">i</span><span class="c">nt</span> <span class="pc">l</span><span class="c">en</span><span class="pc">,</span> <span class="w">__w</span><span class="c">sum</span> <span class="w">s</span><span class="pc">u</span><span class="c">m</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">s</span><span class="pc">u</span><span class="c">m</span> <span class="pc">=</span> <span class="w">cs</span><span class="pc">um_partial</span><span class="c">(</span><span class="pc">s</span><span class="c">rc,</span> <span class="w">l</span><span class="c">en</span><span class="pc">,</span> <span class="w">s</span><span class="pc">u</span><span class="c">m</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">m</span><span class="c">emcpy(dst,</span> <span class="pc">s</span><span class="c">rc,</span> <span class="w">l</span><span class="c">en</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">r</span><span class="c">eturn</span> <span class="w">s</span><span class="pc">u</span><span class="c">m;</span>
+<span class="c">}</span>
+<span class="w">E</span><span class="pc">XPORT_SYMBOL</span><span class="c">(</span><span class="w">csum_partial_copy_nocheck</span><span class="c">);</span>
+
+<span class="w">_</span><span class="pc">_w</span><span class="c">sum</span> <span class="w">csum_partial_copy_from_user</span><span class="c">(const</span> <span class="pc">v</span><span class="c">oid</span> <span class="c">*</span><span class="pc">s</span><span class="c">rc,</span> <span class="w">v</span><span class="c">oid</span> <span class="c">*dst,</span>
+				   <span class="w">i</span><span class="c">nt</span> <span class="pc">l</span><span class="c">en</span><span class="pc">,</span> <span class="w">__w</span><span class="c">sum</span> <span class="w">s</span><span class="pc">u</span><span class="c">m,</span>
+				   <span class="pc">i</span><span class="c">nt</span> <span class="pc">*</span><span class="w">err_ptr</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">missing</span><span class="pc">;</span>
+
+	<span class="w">m</span><span class="c">issing</span> <span class="c">=</span> <span class="w">co</span><span class="pc">py_</span><span class="c">from_user(dst,</span> <span class="pc">s</span><span class="c">rc,</span> <span class="pc">l</span><span class="c">en</span><span class="pc">)</span><span class="c">;</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="pc">m</span><span class="c">issing</span><span class="pc">) </span><span class="c">{</span>
+		<span class="w">m</span><span class="pc">ems</span><span class="c">et(dst</span> <span class="w">+</span> <span class="pc">l</span><span class="c">en</span> <span class="pc">-</span> <span class="w">m</span><span class="c">issing,</span> <span class="pc">0,</span> <span class="c">missing);</span>
+		<span class="w">*</span><span class="c">err_ptr</span> <span class="w">=</span><span class="pc"> -E</span><span class="c">FAULT;</span>
+	<span class="c">}</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">csum_partial</span><span class="c">(</span><span class="pc">ds</span><span class="c">t,</span> <span class="pc">l</span><span class="c">en,</span> <span class="w">su</span><span class="c">m</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">}</span>
+<span class="w">E</span><span class="pc">XPORT_SYMBOL</span><span class="c">(</span><span class="w">csum_partial_copy_from_user</span><span class="c">);</span>
+
+<span class="w">__wsum</span> <span class="w">csum_and_copy_to_user</span><span class="c">(</span><span class="w">c</span><span class="c">onst</span> <span class="pc">v</span><span class="c">oid</span> <span class="c">*</span><span class="pc">s</span><span class="c">rc,</span> <span class="w">v</span><span class="c">oid</span> <span class="c">*dst,</span>
+			     <span class="pc">i</span><span class="c">nt</span> <span class="pc">l</span><span class="c">en</span><span class="pc">,</span> <span class="w">__w</span><span class="c">sum</span> <span class="w">s</span><span class="pc">u</span><span class="c">m,</span>
+			     <span class="pc">i</span><span class="c">nt</span> <span class="pc">*</span><span class="w">e</span><span class="c">rr_ptr)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">missing</span><span class="pc">;</span>
+
+	<span class="w">m</span><span class="c">issing</span> <span class="c">=</span> <span class="w">cop</span><span class="pc">y_t</span><span class="c">o_user(dst,</span> <span class="pc">sr</span><span class="c">c,</span> <span class="pc">l</span><span class="c">en</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">if</span> <span class="c">(</span><span class="pc">m</span><span class="c">issing</span><span class="pc">) </span><span class="c">{</span>
+		<span class="w">m</span><span class="pc">ems</span><span class="c">et(dst</span> <span class="w">+</span> <span class="pc">l</span><span class="c">en</span> <span class="pc">-</span> <span class="w">m</span><span class="c">issing,</span> <span class="pc">0,</span> <span class="c">missing);</span>
+		<span class="w">*</span><span class="c">err_ptr</span> <span class="w">=</span><span class="pc"> -E</span><span class="c">FAULT;</span>
+	<span class="c">}</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">csum_partial</span><span class="c">(</span><span class="w">sr</span><span class="c">c,</span> <span class="pc">l</span><span class="c">en</span><span class="pc">,</span> <span class="w">su</span><span class="c">m</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">}</span>
+<span class="w">E</span><span class="pc">XPORT_SYMBOL</span><span class="c">(</span><span class="w">csum_and_copy_to_user</span><span class="c">);</span>
+
+</pre>
+</body>
+</html>
+

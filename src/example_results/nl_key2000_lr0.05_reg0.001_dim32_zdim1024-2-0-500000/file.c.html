@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+<span class="w">#include</span> <span class="w">&lt;linux/mm.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/fs.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/posix_acl.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/quotaops.h&gt;</span>
+<span class="w">#include</span> <span class="w">"jfs_incore</span><span class="c">.h"</span>
+<span class="c">#include</span> <span class="c">"</span><span class="w">jfs_inode</span><span class="c">.h"</span>
+<span class="c">#include</span> <span class="c">"</span><span class="w">jfs_dmap</span><span class="c">.h"</span>
+<span class="c">#include</span> <span class="c">"</span><span class="w">jfs_txnmgr</span><span class="c">.h"</span>
+<span class="c">#include</span> <span class="c">"</span><span class="w">jfs_xattr</span><span class="c">.h"</span>
+<span class="c">#include</span> <span class="c">"</span><span class="w">jfs_acl</span><span class="c">.h"</span>
+<span class="c">#include</span> <span class="c">"</span><span class="w">jfs_debug</span><span class="c">.h"</span>
+
+<span class="pc">i</span><span class="c">nt</span> <span class="w">jfs_fsync</span><span class="c">(struct</span> <span class="w">f</span><span class="pc">i</span><span class="c">le</span> <span class="c">*file,</span> <span class="w">l</span><span class="pc">of</span><span class="c">f_t</span> <span class="w">st</span><span class="pc">ar</span><span class="c">t,</span> <span class="w">l</span><span class="pc">of</span><span class="c">f_t</span> <span class="w">e</span><span class="pc">n</span><span class="c">d,</span> <span class="c">int</span> <span class="w">datasync</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">i</span><span class="pc">n</span><span class="c">ode</span> <span class="c">*inode</span> <span class="c">=</span> <span class="c">file-&gt;</span><span class="w">f_mapping-</span><span class="pc">&gt;</span><span class="w">h</span><span class="pc">o</span><span class="c">st</span><span class="pc">;</span>
+	<span class="pc">in</span><span class="c">t</span> <span class="pc">rc</span> <span class="c">=</span> <span class="c">0;</span>
+
+	<span class="pc">r</span><span class="c">c</span> <span class="c">=</span> <span class="w">filemap_write_and_wait_range</span><span class="c">(inode</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">i_mapping</span><span class="pc">,</span> <span class="w">s</span><span class="pc">ta</span><span class="c">rt</span><span class="pc">,</span> <span class="w">e</span><span class="c">nd);</span>
+	<span class="c">if</span> <span class="c">(rc)</span>
+		<span class="c">return</span> <span class="c">rc;</span>
+
+	<span class="w">m</span><span class="c">utex_lock(&amp;</span><span class="pc">in</span><span class="c">ode-&gt;</span><span class="w">i_mutex</span><span class="c">);</span>
+	<span class="c">if</span> <span class="pc">(!(</span><span class="w">i</span><span class="pc">n</span><span class="c">ode-&gt;</span><span class="w">i_state</span> <span class="c">&amp;</span> <span class="w">I_DIRTY_ALL</span><span class="pc">) |</span><span class="c">|</span>
+	    <span class="pc">(</span><span class="w">datasync</span> <span class="w">&amp;&amp; !(i</span><span class="pc">n</span><span class="c">ode-&gt;</span><span class="w">i</span><span class="pc">_s</span><span class="c">tate</span> <span class="w">&amp;</span> <span class="w">I_DIRTY_DATASYNC))</span><span class="pc">)</span><span class="c"> {</span>
+		
+		<span class="w">jfs_flush_journal</span><span class="c">(</span><span class="w">JFS_SBI</span><span class="pc">(i</span><span class="c">node</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">i_</span><span class="pc">sb</span><span class="w">)-</span><span class="c">&gt;</span><span class="w">lo</span><span class="pc">g,</span> <span class="w">1</span><span class="c">);</span>
+		<span class="w">m</span><span class="c">utex_unlock(&amp;</span><span class="pc">i</span><span class="c">node-&gt;i_mutex);</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="pc">rc</span><span class="c">;</span>
+	<span class="c">}</span>
+
+	<span class="w">r</span><span class="pc">c</span> <span class="w">|</span><span class="c">=</span> <span class="w">jfs_commit_inode</span><span class="c">(</span><span class="pc">i</span><span class="c">node,</span> <span class="w">1</span><span class="c">);</span>
+	<span class="pc">m</span><span class="c">utex_unlock(&amp;</span><span class="pc">i</span><span class="c">node-&gt;</span><span class="pc">i</span><span class="c">_mutex);</span>
+
+	<span class="c">return</span> <span class="c">rc</span> <span class="w">? -E</span><span class="pc">IO</span> <span class="c">:</span> <span class="w">0</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">jfs_open</span><span class="c">(struct</span> <span class="c">inode</span> <span class="c">*inode,</span> <span class="c">struct</span> <span class="c">file</span> <span class="c">*file)</span>
+<span class="c">{</span>
+	<span class="pc">in</span><span class="c">t</span> <span class="pc">rc</span><span class="c">;</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="pc">((</span><span class="c">rc</span> <span class="pc">=</span> <span class="w">dquot_file_open</span><span class="c">(inode,</span> <span class="pc">f</span><span class="c">ile</span><span class="w">))</span><span class="pc">)</span>
+		<span class="c">return</span> <span class="c">rc;</span>
+
+	
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">S_ISREG</span><span class="c">(inode</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">i</span><span class="pc">_</span><span class="c">mode</span><span class="w">) </span><span class="pc">&amp;</span><span class="c">&amp;</span> <span class="w">f</span><span class="c">ile-&gt;</span><span class="w">f_mode</span> <span class="w">&amp;</span> <span class="w">FMODE_WRITE</span> <span class="w">&amp;</span><span class="c">&amp;</span>
+	    <span class="w">(</span><span class="c">inode-&gt;</span><span class="w">i_size</span> <span class="pc">=</span><span class="c">=</span> <span class="pc">0)) </span><span class="c">{</span>
+		<span class="w">s</span><span class="c">truct</span> <span class="w">jfs_inode_info</span> <span class="c">*</span><span class="w">ji</span> <span class="c">=</span> <span class="w">JFS_IP</span><span class="c">(inode);</span>
+		<span class="w">spin_l</span><span class="pc">ock_irq</span><span class="c">(&amp;ji-&gt;</span><span class="w">ag_lock</span><span class="c">);</span>
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(ji-&gt;</span><span class="w">active_ag</span> <span class="w">=</span><span class="pc">= </span><span class="c">-1</span><span class="pc">) </span><span class="c">{</span>
+			<span class="w">s</span><span class="c">truct</span> <span class="w">jfs_sb_info</span> <span class="c">*</span><span class="w">jfs_sb</span> <span class="c">=</span> <span class="w">JFS_SBI</span><span class="c">(</span><span class="w">i</span><span class="c">node-&gt;</span><span class="w">i_</span><span class="pc">sb)</span><span class="c">;</span>
+			<span class="pc">j</span><span class="c">i-&gt;</span><span class="w">a</span><span class="pc">c</span><span class="c">tive_ag</span> <span class="c">=</span> <span class="w">BLKTOAG</span><span class="pc">(</span><span class="w">addressPXD(</span><span class="pc">&amp;</span><span class="c">ji-&gt;</span><span class="w">ixpxd</span><span class="pc">),</span> <span class="pc">j</span><span class="c">fs_sb);</span>
+			<span class="w">a</span><span class="pc">tomic_i</span><span class="c">nc(&amp;</span><span class="pc">jf</span><span class="c">s_sb-&gt;</span><span class="w">bmap</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">db_active[</span><span class="pc">ji</span><span class="c">-&gt;</span><span class="w">a</span><span class="pc">ctive_</span><span class="c">ag</span><span class="pc">])</span><span class="c">;</span>
+		<span class="c">}</span>
+		<span class="w">spin_u</span><span class="pc">nlock_irq</span><span class="c">(&amp;</span><span class="pc">ji</span><span class="c">-&gt;</span><span class="w">ag_lock</span><span class="c">);</span>
+	<span class="c">}</span>
+
+	<span class="w">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+<span class="c">static</span> <span class="c">int</span> <span class="w">jfs_release</span><span class="c">(struct</span> <span class="pc">i</span><span class="c">node</span> <span class="c">*inode,</span> <span class="c">struct</span> <span class="c">file</span> <span class="c">*file)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">jfs_inode_info</span> <span class="c">*</span><span class="w">j</span><span class="pc">i</span> <span class="c">=</span> <span class="w">JFS_IP</span><span class="c">(inode);</span>
+
+	<span class="w">sp</span><span class="pc">in_lock_</span><span class="c">irq(&amp;ji-&gt;</span><span class="pc">a</span><span class="c">g_lock);</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(ji-&gt;</span><span class="w">active_ag</span> <span class="w">!</span><span class="pc">= </span><span class="c">-1</span><span class="pc">) </span><span class="c">{</span>
+		<span class="pc">s</span><span class="c">truct</span> <span class="w">bmap</span> <span class="c">*</span><span class="pc">b</span><span class="c">map</span> <span class="pc">=</span> <span class="w">JFS_SBI</span><span class="c">(inode</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">i_</span><span class="pc">s</span><span class="c">b</span><span class="w">)</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">b</span><span class="c">map;</span>
+		<span class="w">atomic_dec</span><span class="pc">(&amp;b</span><span class="c">map-&gt;</span><span class="w">db_active[</span><span class="pc">j</span><span class="c">i-&gt;</span><span class="pc">a</span><span class="c">ctive_ag</span><span class="pc">])</span><span class="c">;</span>
+		<span class="pc">j</span><span class="c">i-&gt;</span><span class="pc">ac</span><span class="c">tive_ag</span> <span class="w">= </span><span class="pc">-</span><span class="c">1;</span>
+	<span class="pc">}</span>
+	<span class="w">spin_u</span><span class="pc">nlock_irq</span><span class="c">(&amp;ji-&gt;</span><span class="w">ag_lock</span><span class="c">);</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="pc">i</span><span class="c">nt</span> <span class="w">jfs_setattr</span><span class="c">(struct</span> <span class="w">d</span><span class="pc">en</span><span class="c">try</span> <span class="c">*</span><span class="w">d</span><span class="pc">en</span><span class="c">try,</span> <span class="c">struct</span> <span class="w">iattr</span> <span class="c">*</span><span class="w">ia</span><span class="c">ttr)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">i</span><span class="pc">no</span><span class="c">de</span> <span class="c">*</span><span class="pc">i</span><span class="c">node</span> <span class="pc">=</span> <span class="w">d_</span><span class="c">inode(</span><span class="w">d</span><span class="pc">en</span><span class="c">try);</span>
+	<span class="pc">in</span><span class="c">t</span> <span class="w">r</span><span class="pc">c</span><span class="c">;</span>
+
+	<span class="w">r</span><span class="pc">c</span> <span class="c">=</span> <span class="w">inode_change_ok</span><span class="c">(inode,</span> <span class="w">i</span><span class="pc">a</span><span class="c">ttr);</span>
+	<span class="c">if</span> <span class="c">(rc)</span>
+		<span class="c">return</span> <span class="c">rc;</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">is_quota_modification</span><span class="c">(inode,</span> <span class="pc">ia</span><span class="c">ttr</span><span class="pc">)</span><span class="c">)</span>
+		<span class="w">dquot_initialize</span><span class="c">(inode);</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="pc">((</span><span class="w">i</span><span class="pc">a</span><span class="c">ttr</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">ia_valid</span> <span class="c">&amp;</span> <span class="w">ATTR_UID</span> <span class="w">&amp;</span><span class="pc">&amp; </span><span class="c">!</span><span class="w">uid_eq</span><span class="c">(</span><span class="pc">ia</span><span class="c">ttr</span><span class="w">-</span><span class="c">&gt;</span><span class="w">ia_uid</span><span class="pc">,</span> <span class="w">i</span><span class="pc">n</span><span class="c">ode-&gt;</span><span class="w">i_uid))</span><span class="pc"> |</span><span class="c">|</span>
+	    <span class="c">(</span><span class="pc">ia</span><span class="c">ttr-&gt;ia_valid</span> <span class="pc">&amp;</span> <span class="w">ATTR_GID</span> <span class="w">&amp;</span><span class="pc">&amp; </span><span class="c">!</span><span class="w">gid_eq</span><span class="c">(iattr-&gt;</span><span class="w">ia_gid</span><span class="c">,</span> <span class="w">in</span><span class="pc">o</span><span class="c">de-&gt;</span><span class="w">i_gid)))</span><span class="pc"> </span><span class="c">{</span>
+		<span class="w">r</span><span class="pc">c</span> <span class="c">=</span> <span class="w">dquot_transfer</span><span class="c">(</span><span class="w">i</span><span class="pc">n</span><span class="c">ode</span><span class="pc">,</span> <span class="pc">ia</span><span class="c">ttr</span><span class="pc">)</span><span class="c">;</span>
+		<span class="c">if</span> <span class="c">(</span><span class="pc">rc</span><span class="c">)</span>
+			<span class="pc">r</span><span class="c">eturn</span> <span class="pc">rc</span><span class="c">;</span>
+	<span class="c">}</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="pc">((i</span><span class="c">attr-&gt;ia_valid</span> <span class="c">&amp;</span> <span class="w">ATTR_SIZE</span><span class="pc">) </span><span class="c">&amp;&amp;</span>
+	    <span class="w">i</span><span class="c">attr-&gt;</span><span class="w">ia_size</span> <span class="pc">!</span><span class="c">=</span> <span class="w">i_size_read(in</span><span class="pc">o</span><span class="c">de</span><span class="w">)</span><span class="pc">) </span><span class="c">{</span>
+		<span class="w">inode_dio_wait</span><span class="c">(</span><span class="w">i</span><span class="pc">n</span><span class="c">ode</span><span class="pc">)</span><span class="c">;</span>
+
+		<span class="w">r</span><span class="pc">c</span> <span class="c">=</span> <span class="w">inode_newsize_ok</span><span class="c">(</span><span class="pc">in</span><span class="c">ode,</span> <span class="pc">ia</span><span class="c">ttr</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">i</span><span class="pc">a_s</span><span class="c">ize</span><span class="pc">)</span><span class="c">;</span>
+		<span class="c">if</span> <span class="c">(rc)</span>
+			<span class="pc">r</span><span class="c">eturn</span> <span class="c">rc;</span>
+
+		<span class="w">truncate_setsize</span><span class="c">(</span><span class="w">i</span><span class="pc">n</span><span class="c">ode,</span> <span class="pc">ia</span><span class="c">ttr</span><span class="pc">-</span><span class="c">&gt;ia_size</span><span class="pc">)</span><span class="c">;</span>
+		<span class="w">jfs_truncate</span><span class="c">(inode</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">}</span>
+
+	<span class="w">setattr_copy</span><span class="c">(inode</span><span class="pc">,</span> <span class="pc">ia</span><span class="c">ttr);</span>
+	<span class="w">mark_inode_dirty</span><span class="c">(</span><span class="pc">in</span><span class="c">ode);</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">i</span><span class="pc">a</span><span class="c">ttr-&gt;</span><span class="w">ia_valid</span> <span class="pc">&amp;</span> <span class="w">ATTR_MODE</span><span class="pc">)</span>
+		<span class="pc">rc</span> <span class="c">=</span> <span class="w">posix_acl_chmod</span><span class="c">(inode,</span> <span class="pc">in</span><span class="c">ode</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">i_</span><span class="c">mode</span><span class="pc">)</span><span class="c">;</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">rc;</span>
+<span class="c">}</span>
+
+<span class="w">c</span><span class="c">onst</span> <span class="c">struct</span> <span class="w">inode_operations</span> <span class="w">jfs_file_inode_operations</span> <span class="c">= {</span>
+	<span class="c">.</span><span class="w">setxattr</span>	<span class="c">=</span> <span class="w">jfs_setxattr</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">getxattr</span>	<span class="c">=</span> <span class="w">jfs_getxattr</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">listxattr</span>	<span class="c">=</span> <span class="w">jfs_listxattr</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">removexattr</span>	<span class="c">=</span> <span class="w">jfs_removexattr</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">setattr</span>	<span class="c">=</span> <span class="w">jfs_setattr</span><span class="c">,</span>
+<span class="pc">#</span><span class="c">ifdef</span> <span class="w">CONFIG_JFS_POSIX_ACL</span>
+	<span class="c">.</span><span class="w">get_acl</span>	<span class="c">=</span> <span class="w">jfs_get_acl</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">set_acl</span>	<span class="c">=</span> <span class="w">jfs_set_acl</span><span class="c">,</span>
+<span class="c">#endif</span>
+<span class="c">};</span>
+
+<span class="w">c</span><span class="c">onst</span> <span class="c">struct</span> <span class="w">f</span><span class="c">ile_operations</span> <span class="w">jfs_file_operations</span> <span class="c">= {</span>
+	<span class="c">.</span><span class="w">o</span><span class="pc">p</span><span class="c">en</span>		<span class="c">=</span> <span class="w">jfs_open</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">l</span><span class="c">lseek</span>		<span class="c">=</span> <span class="w">generic_file_llseek</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">read_iter</span>	<span class="c">=</span> <span class="w">generic_file_read_iter</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">write_iter</span>	<span class="c">=</span> <span class="w">generic_file_write_iter</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">mmap</span>		<span class="c">=</span> <span class="w">generic_file_mmap</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">splice_read</span>	<span class="c">=</span> <span class="w">generic_file_splice_read</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">splice_write</span>	<span class="c">=</span> <span class="w">iter_file_splice_write</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">fsync</span>		<span class="c">=</span> <span class="w">jfs_fsync</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">r</span><span class="pc">el</span><span class="c">ease</span>	<span class="c">=</span> <span class="w">jfs_release</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">unlocked_ioctl</span> <span class="c">=</span> <span class="w">jfs_ioctl</span><span class="c">,</span>
+<span class="pc">#</span><span class="c">ifdef</span> <span class="w">CONFIG_COMPAT</span>
+	<span class="c">.</span><span class="w">compat_ioctl</span>	<span class="c">=</span> <span class="w">jfs_compat_ioctl</span><span class="c">,</span>
+<span class="pc">#</span><span class="c">endif</span>
+<span class="pc">}</span><span class="c">;</span>
+
+</pre>
+</body>
+</html>
+

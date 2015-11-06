@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+<span class="w">#ifdef</span> <span class="w">__KERNEL__</span>
+<span class="w">#ifndef</span> <span class="w">__ASM_POWERPC_PMAC_FEATURE_H</span>
+<span class="w">#define</span> <span class="w">__ASM_POWERPC_PMAC_FEATURE_H</span>
+
+<span class="w">#include</span> <span class="w">&lt;asm/macio.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;asm/machdep.h&gt;</span>
+
+
+
+
+<span class="w">#define</span> <span class="w">PMAC_TYPE_PSURGE</span>		<span class="w">0x10</span>	
+<span class="w">#define</span> <span class="w">PMAC_TYPE_ANS</span>			<span class="w">0x11</span>	
+
+
+<span class="w">#define</span> <span class="w">PMAC_TYPE_COMET</span>			<span class="w">0x20</span>	
+<span class="w">#</span><span class="c">define</span> <span class="w">PMAC_TYPE_HOOPER</span>		<span class="w">0x2</span><span class="pc">1</span>	
+<span class="c">#define</span> <span class="w">PMAC_TYPE_KANGA</span>			<span class="c">0x22</span>	
+<span class="c">#define</span> <span class="w">PMAC_TYPE_ALCHEMY</span>		<span class="c">0x23</span>	
+<span class="c">#define</span> <span class="w">PMAC_TYPE_GAZELLE</span>		<span class="pc">0x2</span><span class="c">4</span>	
+<span class="c">#define</span> <span class="w">PMAC_TYPE_UNKNOWN_OHARE</span>		<span class="w">0x2f</span>	
+
+
+<span class="c">#define</span> <span class="w">PMAC_TYPE_GOSSAMER</span>		<span class="c">0x30</span>	
+<span class="c">#define</span> <span class="w">PMAC_TYPE_SILK</span>			<span class="pc">0x31</span>	
+<span class="c">#define</span> <span class="w">PMAC_TYPE_WALLSTREET</span>		<span class="c">0x32</span>	
+<span class="c">#define</span> <span class="w">PMAC_TYPE_UNKNOWN_HEATHROW</span>	<span class="w">0x3f</span>	
+
+
+<span class="c">#define</span> <span class="w">PMAC_TYPE_101_PBOOK</span>		<span class="w">0x4</span><span class="c">0</span>	
+<span class="c">#define</span> <span class="w">PMAC_TYPE_ORIG_IMAC</span>		<span class="w">0x41</span>	
+<span class="c">#define</span> <span class="w">PMAC_TYPE_YOSEMITE</span>		<span class="w">0x4</span><span class="c">2</span>	
+<span class="c">#define</span> <span class="w">PMAC_TYPE_YIKES</span>			<span class="c">0x43</span>	
+<span class="c">#define</span> <span class="w">PMAC_TYPE_UNKNOWN_PADDINGTON</span>	<span class="w">0x4f</span>	
+
+
+<span class="c">#define</span> <span class="w">PMAC_TYPE_ORIG_IBOOK</span>		<span class="w">0x40</span>	
+<span class="c">#define</span> <span class="w">PMAC_TYPE_SAWTOOTH</span>		<span class="w">0x41</span>	
+<span class="c">#define</span> <span class="w">PMAC_TYPE_FW_IMAC</span>		<span class="pc">0x42</span>	
+<span class="c">#define</span> <span class="w">PMAC_TYPE_FW_IBOOK</span>		<span class="c">0x43</span>	
+<span class="c">#define</span> <span class="w">PMAC_TYPE_CUBE</span>			<span class="c">0x44</span>	
+<span class="c">#define</span> <span class="w">PMAC_TYPE_QUICKSILVER</span>		<span class="pc">0x45</span>	
+<span class="c">#define</span> <span class="w">PMAC_TYPE_PISMO</span>			<span class="c">0x46</span>	
+<span class="c">#define</span> <span class="w">PMAC_TYPE_TITANIUM</span>		<span class="pc">0x47</span>	
+<span class="c">#define</span> <span class="w">PMAC_TYPE_TITANIUM2</span>		<span class="pc">0x48</span>	
+<span class="c">#define</span> <span class="w">PMAC_TYPE_TITANIUM3</span>		<span class="w">0x49</span>	
+<span class="c">#define</span> <span class="w">PMAC_TYPE_TITANIUM4</span>		<span class="c">0x50</span>	
+<span class="c">#define</span> <span class="w">PMAC_TYPE_EMAC</span>			<span class="c">0x50</span>	
+<span class="c">#define</span> <span class="w">PMAC_TYPE_UNKNOWN_CORE99</span>	<span class="w">0x5f</span>
+
+
+<span class="c">#define</span> <span class="w">PMAC_TYPE_RACKMAC</span>		<span class="w">0x8</span><span class="c">0</span>	
+<span class="c">#define</span> <span class="w">PMAC_TYPE_WINDTUNNEL</span>		<span class="w">0x8</span><span class="pc">1</span>
+
+
+<span class="c">#define</span> <span class="w">PMAC_TYPE_PANGEA_IMAC</span>		<span class="w">0x1</span><span class="pc">0</span><span class="c">0</span>	
+<span class="c">#define</span> <span class="w">PMAC_TYPE_IBOOK2</span>		<span class="w">0x101</span>	
+<span class="c">#define</span> <span class="w">PMAC_TYPE_FLAT_PANEL_IMAC</span>	<span class="w">0x102</span>	
+<span class="c">#define</span> <span class="w">PMAC_TYPE_UNKNOWN_PANGEA</span>	<span class="w">0x10f</span>
+
+
+<span class="c">#define</span> <span class="w">PMAC_TYPE_UNKNOWN_INTREPID</span>	<span class="w">0x11f</span>	
+
+
+<span class="c">#define</span> <span class="w">PMAC_TYPE_POWERMAC_G5</span>		<span class="w">0x150</span>	
+<span class="c">#define</span> <span class="w">PMAC_TYPE_POWERMAC_G5_U3L</span>	<span class="w">0x151</span>	
+<span class="c">#define</span> <span class="w">PMAC_TYPE_IMAC_G5</span>		<span class="w">0x152</span>	
+<span class="c">#define</span> <span class="w">PMAC_TYPE_XSERVE_G5</span>		<span class="w">0x153</span>	
+<span class="c">#define</span> <span class="w">PMAC_TYPE_UNKNOWN_K2</span>		<span class="w">0x19f</span>	
+<span class="c">#define</span> <span class="w">PMAC_TYPE_UNKNOWN_SHASTA</span>       	<span class="w">0x19e</span>	
+
+
+
+<span class="c">#define</span> <span class="w">PMAC_MB_CAN_SLEEP</span>		<span class="w">0x0</span><span class="pc">0000001</span>
+<span class="c">#define</span> <span class="w">PMAC_MB_HAS_FW_POWER</span>		<span class="c">0x00000002</span>
+<span class="c">#define</span> <span class="w">PMAC_MB_OLD_CORE99</span>		<span class="c">0x00000004</span>
+<span class="c">#define</span> <span class="w">PMAC_MB_MOBILE</span>			<span class="c">0x00000008</span>
+<span class="c">#define</span> <span class="w">PMAC_MB_MAY_SLEEP</span>		<span class="c">0x00000010</span>
+
+
+
+
+<span class="pc">s</span><span class="c">truct</span> <span class="w">d</span><span class="pc">evice_</span><span class="c">node</span><span class="pc">;</span>
+
+<span class="w">s</span><span class="pc">ta</span><span class="c">tic</span> <span class="pc">inl</span><span class="c">ine</span> <span class="w">l</span><span class="c">ong</span> <span class="w">pmac_call_feature</span><span class="c">(</span><span class="w">i</span><span class="c">nt</span> <span class="w">selector</span><span class="c">,</span> <span class="c">struct</span> <span class="pc">device_</span><span class="c">node*</span> <span class="pc">no</span><span class="c">de,</span>
+					<span class="w">l</span><span class="c">ong</span> <span class="w">pa</span><span class="pc">r</span><span class="c">am,</span> <span class="w">l</span><span class="c">ong</span> <span class="w">v</span><span class="pc">alu</span><span class="c">e</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">i</span><span class="pc">f</span> <span class="pc">(!</span><span class="w">ppc_md.feature_call</span> <span class="w">|</span><span class="pc">| </span><span class="c">!</span><span class="w">machine_is</span><span class="pc">(</span><span class="w">powermac</span><span class="pc">)</span><span class="c">)</span>
+		<span class="c">return</span> <span class="c">-</span><span class="pc">EN</span><span class="c">ODEV;</span>
+	<span class="c">return</span> <span class="w">p</span><span class="c">pc_md</span><span class="w">.</span><span class="pc">f</span><span class="c">eature_call</span><span class="pc">(</span><span class="w">s</span><span class="c">elector,</span> <span class="pc">n</span><span class="c">ode,</span> <span class="w">pa</span><span class="pc">ra</span><span class="c">m</span><span class="pc">,</span> <span class="w">v</span><span class="c">alue);</span>
+<span class="c">}</span>
+
+
+<span class="pc">#d</span><span class="c">efine</span> <span class="w">PMAC_FTR_SCC_ENABLE</span>		<span class="w">PMAC_FTR_DEF</span><span class="pc">(</span><span class="w">0</span><span class="pc">)</span>
+	<span class="c">#define</span> <span class="w">PMAC_SCC_ASYNC</span>		<span class="w">0</span>
+	<span class="c">#define</span> <span class="w">PMAC_SCC_IRDA</span>		<span class="c">1</span>
+	<span class="c">#define</span> <span class="w">PMAC_SCC_I2S1</span>		<span class="c">2</span>
+	<span class="c">#define</span> <span class="w">PMAC_SCC_FLAG_XMON</span>	<span class="w">0x00001000</span>
+
+
+<span class="c">#define</span> <span class="w">PMAC_FTR_MODEM_ENABLE</span>		<span class="w">P</span><span class="c">MAC_FTR_DEF</span><span class="pc">(1</span><span class="c">)</span>
+
+
+<span class="c">#define</span> <span class="w">PMAC_FTR_SWIM3_ENABLE</span>		<span class="pc">P</span><span class="c">MAC_FTR_DEF(</span><span class="pc">2</span><span class="c">)</span>
+
+
+<span class="c">#define</span> <span class="w">PMAC_FTR_MESH_ENABLE</span>		<span class="w">P</span><span class="pc">MAC_FTR_D</span><span class="c">EF(</span><span class="pc">3</span><span class="c">)</span>
+
+
+<span class="c">#define</span> <span class="w">PMAC_FTR_IDE_ENABLE</span>		<span class="c">PMAC_FTR_DEF(</span><span class="pc">4</span><span class="c">)</span>
+
+
+<span class="c">#define</span> <span class="w">PMAC_FTR_IDE_RESET</span>		<span class="c">PMAC_FTR_DEF(</span><span class="pc">5</span><span class="c">)</span>
+
+
+<span class="c">#define</span> <span class="w">PMAC_FTR_BMAC_ENABLE</span>		<span class="c">PMAC_FTR_DEF(</span><span class="pc">6</span><span class="c">)</span>
+
+
+<span class="c">#define</span> <span class="w">PMAC_FTR_GMAC_ENABLE</span>		<span class="c">PMAC_FTR_DEF(</span><span class="pc">7</span><span class="c">)</span>
+
+
+<span class="c">#define</span> <span class="w">PMAC_FTR_GMAC_PHY_RESET</span>		<span class="c">PMAC_FTR_DEF(</span><span class="pc">8</span><span class="c">)</span>
+
+
+<span class="c">#define</span> <span class="w">PMAC_FTR_SOUND_CHIP_ENABLE</span>	<span class="c">PMAC_FTR_DEF(</span><span class="pc">9</span><span class="c">)</span>
+
+
+
+
+<span class="c">#define</span> <span class="w">PMAC_FTR_AIRPORT_ENABLE</span>		<span class="c">PMAC_FTR_DEF(</span><span class="w">10</span><span class="c">)</span>
+
+
+<span class="c">#define</span> <span class="w">PMAC_FTR_RESET_CPU</span>		<span class="c">PMAC_FTR_DEF(</span><span class="pc">11</span><span class="c">)</span>
+
+
+<span class="c">#define</span> <span class="w">PMAC_FTR_USB_ENABLE</span>		<span class="c">PMAC_FTR_DEF(12)</span>
+
+
+<span class="c">#define</span> <span class="w">PMAC_FTR_1394_ENABLE</span>		<span class="c">PMAC_FTR_DEF(13)</span>
+
+
+<span class="c">#define</span> <span class="w">PMAC_FTR_1394_CABLE_POWER</span>	<span class="c">PMAC_FTR_DEF(</span><span class="pc">14</span><span class="c">)</span>
+
+
+<span class="c">#define</span> <span class="w">PMAC_FTR_SLEEP_STATE</span>		<span class="c">PMAC_FTR_DEF(15)</span>
+
+
+<span class="c">#define</span> <span class="w">PMAC_FTR_GET_MB_INFO</span>		<span class="c">PMAC_FTR_DEF(</span><span class="w">1</span><span class="pc">6</span><span class="c">)</span>
+<span class="c">#define</span>   <span class="w">PMAC_MB_INFO_MODEL</span>	<span class="w">0</span>
+<span class="c">#define</span>   <span class="w">PMAC_MB_INFO_FLAGS</span>	<span class="c">1</span>
+<span class="c">#define</span>   <span class="w">PMAC_MB_INFO_NAME</span>	<span class="c">2</span>
+
+
+<span class="c">#define</span> <span class="w">PMAC_FTR_READ_GPIO</span>		<span class="w">P</span><span class="c">MAC_FTR_DEF(</span><span class="w">17</span><span class="c">)</span>
+
+
+<span class="c">#define</span> <span class="w">PMAC_FTR_WRITE_GPIO</span>		<span class="pc">PMAC_F</span><span class="c">TR_DEF(</span><span class="w">1</span><span class="pc">8</span><span class="c">)</span>
+
+
+<span class="c">#define</span> <span class="w">PMAC_FTR_ENABLE_MPIC</span>		<span class="c">PMAC_FTR_DEF(</span><span class="w">19</span><span class="c">)</span>
+
+
+<span class="c">#define</span> <span class="w">PMAC_FTR_AACK_DELAY_ENABLE</span>     	<span class="c">PMAC_FTR_DEF(</span><span class="w">20</span><span class="c">)</span>
+
+
+<span class="c">#define</span> <span class="w">PMAC_FTR_DEVICE_CAN_WAKE</span>	<span class="c">PMAC_FTR_DEF(</span><span class="w">22</span><span class="c">)</span>
+
+
+
+<span class="pc">e</span><span class="c">xtern</span> <span class="w">l</span><span class="c">ong</span> <span class="w">pmac_do_feature_call</span><span class="c">(</span><span class="pc">un</span><span class="c">signed</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">selector, ...);</span>
+<span class="w">e</span><span class="c">xtern</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">pmac_feature_init</span><span class="c">(</span><span class="pc">v</span><span class="c">oid);</span>
+
+
+<span class="c">extern</span> <span class="c">void</span> <span class="w">pmac_set_early_video_resume</span><span class="c">(void</span> <span class="w">(</span><span class="c">*</span><span class="w">pro</span><span class="pc">c</span><span class="c">)(void</span> <span class="pc">*</span><span class="c">data</span><span class="pc">),</span> <span class="c">void</span> <span class="c">*</span><span class="pc">d</span><span class="c">ata);</span>
+<span class="c">extern</span> <span class="c">void</span> <span class="w">pmac_call_early_video_resume</span><span class="c">(void);</span>
+
+<span class="pc">#</span><span class="c">define</span> <span class="w">PMAC_FTR_DEF</span><span class="c">(</span><span class="w">x) </span><span class="pc">((</span><span class="w">0x6660000) |</span><span class="pc"> </span><span class="c">(</span><span class="pc">x))</span>
+
+
+<span class="pc">e</span><span class="c">xtern</span> <span class="c">void</span> <span class="w">pmac_register_agp_pm</span><span class="c">(</span><span class="pc">s</span><span class="c">truct</span> <span class="pc">pc</span><span class="c">i_dev</span> <span class="c">*</span><span class="w">br</span><span class="pc">i</span><span class="c">dge,</span>
+				 <span class="pc">i</span><span class="c">nt</span> <span class="pc">(</span><span class="c">*</span><span class="pc">s</span><span class="c">uspend)(</span><span class="pc">s</span><span class="c">truct</span> <span class="w">p</span><span class="pc">c</span><span class="c">i_dev</span> <span class="pc">*</span><span class="w">br</span><span class="c">idge</span><span class="pc">),</span>
+				 <span class="c">int</span> <span class="pc">(</span><span class="c">*resume)(struct</span> <span class="pc">pc</span><span class="c">i_dev</span> <span class="c">*</span><span class="w">b</span><span class="pc">r</span><span class="c">idge</span><span class="pc">))</span><span class="c">;</span>
+
+
+<span class="pc">e</span><span class="c">xtern</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">pmac_suspend_agp_for_card</span><span class="c">(struct</span> <span class="pc">pc</span><span class="c">i_dev</span> <span class="c">*dev);</span>
+<span class="c">extern</span> <span class="c">void</span> <span class="w">pmac_resume_agp_for_card</span><span class="c">(struct</span> <span class="pc">pc</span><span class="c">i_dev</span> <span class="c">*dev);</span>
+
+
+
+<span class="pc">#d</span><span class="c">efine</span> <span class="w">MAX_MACIO_CHIPS</span>		<span class="w">2</span>
+
+<span class="w">e</span><span class="pc">n</span><span class="c">um</span> <span class="c">{</span>
+	<span class="w">macio_unknown</span> <span class="c">=</span> <span class="c">0,</span>
+	<span class="w">macio_grand_central</span><span class="pc">,</span>
+	<span class="w">macio_ohare</span><span class="c">,</span>
+	<span class="w">macio_ohareII</span><span class="c">,</span>
+	<span class="w">macio_heathrow</span><span class="c">,</span>
+	<span class="w">macio_gatwick</span><span class="c">,</span>
+	<span class="w">macio_paddington</span><span class="c">,</span>
+	<span class="w">macio_keylargo</span><span class="c">,</span>
+	<span class="w">macio_pangea</span><span class="c">,</span>
+	<span class="w">macio_intrepid</span><span class="c">,</span>
+	<span class="w">macio_keylargo2</span><span class="c">,</span>
+	<span class="w">macio_shasta</span><span class="c">,</span>
+<span class="c">};</span>
+
+<span class="pc">s</span><span class="c">truct</span> <span class="w">macio_chip</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">d</span><span class="pc">evice_</span><span class="c">node</span>	<span class="c">*</span><span class="w">o</span><span class="pc">f_</span><span class="c">node;</span>
+	<span class="w">i</span><span class="c">nt</span>			<span class="w">t</span><span class="c">ype;</span>
+	<span class="pc">c</span><span class="c">onst</span> <span class="c">char</span>		<span class="c">*name;</span>
+	<span class="w">i</span><span class="c">nt</span>			<span class="w">rev</span><span class="c">;</span>
+	<span class="w">v</span><span class="pc">ol</span><span class="c">atile</span> <span class="w">u</span><span class="pc">3</span><span class="c">2</span>		<span class="w">_</span><span class="c">_iomem</span> <span class="c">*</span><span class="w">b</span><span class="c">ase;</span>
+	<span class="pc">un</span><span class="c">signed</span> <span class="c">long</span>		<span class="c">flags;</span>
+
+	
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">macio_bus</span>	<span class="w">lbus</span><span class="c">;</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="pc">e</span><span class="c">xtern</span> <span class="c">struct</span> <span class="pc">macio_c</span><span class="c">hip</span> <span class="w">macio_chips</span><span class="pc">[</span><span class="w">MAX_MACIO_CHIPS</span><span class="c">];</span>
+
+<span class="w">#</span><span class="c">define</span> <span class="w">MACIO_FLAG_SCCA_ON</span>	<span class="w">0x</span><span class="pc">000</span><span class="c">00001</span>
+<span class="c">#define</span> <span class="w">MACIO_FLAG_SCCB_ON</span>	<span class="c">0x00000002</span>
+<span class="c">#define</span> <span class="w">MACIO_FLAG_SCC_LOCKED</span>	<span class="pc">0x00000004</span>
+<span class="c">#define</span> <span class="w">MACIO_FLAG_AIRPORT_ON</span>	<span class="pc">0x0000001</span><span class="c">0</span>
+<span class="c">#define</span> <span class="w">MACIO_FLAG_FW_SUPPORTED</span>	<span class="c">0x00000020</span>
+
+<span class="pc">ex</span><span class="c">tern</span> <span class="c">struct</span> <span class="pc">macio_c</span><span class="c">hip*</span> <span class="w">macio_find</span><span class="c">(struct</span> <span class="w">d</span><span class="pc">evice_</span><span class="c">node*</span> <span class="w">ch</span><span class="pc">il</span><span class="c">d</span><span class="pc">,</span> <span class="pc">i</span><span class="c">nt</span> <span class="pc">t</span><span class="c">ype);</span>
+
+<span class="pc">#d</span><span class="c">efine</span> <span class="w">MACIO_FCR32</span><span class="c">(</span><span class="w">macio</span><span class="pc">,</span> <span class="w">r)</span><span class="pc">	(</span><span class="c">(macio</span><span class="pc">)</span><span class="c">-&gt;</span><span class="pc">b</span><span class="c">ase</span> <span class="w">+</span><span class="pc"> </span><span class="c">((</span><span class="w">r) &gt;</span><span class="c">&gt;</span> <span class="pc">2))</span>
+<span class="c">#define</span> <span class="w">MACIO_FCR8</span><span class="c">(macio,</span> <span class="w">r)	(</span><span class="pc">((</span><span class="w">vo</span><span class="pc">l</span><span class="c">atile</span> <span class="w">u8</span> <span class="w">_</span><span class="c">_iomem</span> <span class="w">*)((m</span><span class="c">acio)-&gt;</span><span class="pc">b</span><span class="c">ase</span><span class="w">)) + (</span><span class="pc">r))</span>
+
+<span class="c">#define</span> <span class="w">MACIO_IN32</span><span class="c">(</span><span class="pc">r</span><span class="w">)	</span><span class="pc">	(</span><span class="w">in_le32</span><span class="c">(</span><span class="w">M</span><span class="pc">ACIO_FCR3</span><span class="c">2</span><span class="pc">(</span><span class="w">m</span><span class="pc">a</span><span class="c">cio</span><span class="pc">,r)))</span>
+<span class="c">#define</span> <span class="w">MACIO_OUT32</span><span class="c">(r</span><span class="pc">,</span><span class="w">v)</span><span class="pc">	(</span><span class="w">out_le32</span><span class="c">(</span><span class="w">M</span><span class="c">ACIO_FCR32(</span><span class="w">m</span><span class="pc">a</span><span class="c">cio</span><span class="pc">,</span><span class="c">r</span><span class="w">),</span><span class="pc"> </span><span class="c">(v</span><span class="pc">)))</span>
+<span class="c">#define</span> <span class="w">MACIO_BIS</span><span class="c">(r,</span><span class="pc">v</span><span class="w">)		(M</span><span class="pc">ACIO_O</span><span class="c">UT32</span><span class="pc">((</span><span class="c">r</span><span class="pc">),</span> <span class="w">MACIO_IN32</span><span class="c">(</span><span class="pc">r</span><span class="w">) |</span><span class="pc"> </span><span class="c">(v</span><span class="pc">)))</span>
+<span class="c">#define</span> <span class="w">MACIO_BIC</span><span class="c">(r,v</span><span class="w">)		(M</span><span class="pc">ACIO_O</span><span class="c">UT32</span><span class="pc">((r),</span> <span class="pc">M</span><span class="c">ACIO_IN32(</span><span class="pc">r</span><span class="w">) &amp; ~(</span><span class="pc">v)))</span>
+<span class="c">#define</span> <span class="w">MACIO_IN8</span><span class="c">(r</span><span class="w">)	</span><span class="pc">	(</span><span class="w">in_8</span><span class="c">(</span><span class="w">MACIO_FCR8</span><span class="c">(</span><span class="w">macio</span><span class="pc">,</span><span class="c">r</span><span class="pc">)))</span>
+<span class="c">#define</span> <span class="w">MACIO_OUT8</span><span class="c">(r,</span><span class="pc">v</span><span class="w">)		(out_8</span><span class="c">(</span><span class="w">M</span><span class="c">ACIO_FCR8(</span><span class="w">m</span><span class="pc">a</span><span class="c">cio</span><span class="pc">,r</span><span class="w">),</span><span class="pc"> </span><span class="c">(v</span><span class="pc">)))</span>
+
+
+<span class="w">e</span><span class="c">xtern</span> <span class="w">raw_spinlock_t</span> <span class="w">feature_lock;</span>
+<span class="pc">e</span><span class="c">xtern</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">de</span><span class="pc">vice_n</span><span class="c">ode</span> <span class="c">*</span><span class="w">uninorth_node</span><span class="pc">;</span>
+<span class="c">extern</span> <span class="w">u</span><span class="pc">3</span><span class="c">2</span> <span class="w">_</span><span class="pc">_io</span><span class="c">mem</span> <span class="c">*</span><span class="w">uninorth_base</span><span class="c">;</span>
+
+
+
+<span class="pc">#</span><span class="c">define</span> <span class="w">UN_REG</span><span class="c">(</span><span class="w">r</span><span class="pc">)	</span><span class="c">(</span><span class="w">u</span><span class="pc">ninorth_b</span><span class="c">ase</span> <span class="w">+</span><span class="pc"> ((r) &gt;</span><span class="c">&gt;</span> <span class="pc">2</span><span class="c">))</span>
+<span class="c">#define</span> <span class="w">UN_IN</span><span class="c">(r</span><span class="pc">)	</span><span class="c">(</span><span class="w">in_be32</span><span class="c">(</span><span class="w">U</span><span class="c">N_REG</span><span class="pc">(</span><span class="w">r</span><span class="pc">)))</span>
+<span class="c">#define</span> <span class="w">UN_OUT</span><span class="c">(r,</span><span class="pc">v)	</span><span class="c">(</span><span class="w">out_be32</span><span class="c">(</span><span class="w">U</span><span class="c">N_REG</span><span class="pc">(</span><span class="c">r</span><span class="w">),</span><span class="pc"> </span><span class="c">(</span><span class="pc">v)))</span>
+<span class="c">#define</span> <span class="w">UN_BIS</span><span class="c">(r,</span><span class="pc">v)	</span><span class="c">(</span><span class="w">U</span><span class="pc">N_O</span><span class="c">UT</span><span class="pc">((r),</span> <span class="w">U</span><span class="pc">N_I</span><span class="c">N(</span><span class="pc">r</span><span class="w">) |</span><span class="pc"> </span><span class="c">(</span><span class="pc">v)))</span>
+<span class="c">#define</span> <span class="w">UN_BIC</span><span class="c">(r,</span><span class="pc">v)	</span><span class="c">(</span><span class="w">U</span><span class="pc">N_O</span><span class="c">UT</span><span class="pc">((</span><span class="c">r</span><span class="pc">),</span> <span class="pc">U</span><span class="c">N_IN(</span><span class="pc">r</span><span class="w">) &amp; ~(</span><span class="pc">v)))</span>
+
+
+<span class="w">e</span><span class="c">xtern</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">pmac_get_uninorth_variant</span><span class="c">(</span><span class="w">v</span><span class="pc">o</span><span class="c">id</span><span class="pc">);</span>
+
+<span class="pc">#</span><span class="w">e</span><span class="pc">n</span><span class="c">dif</span> 
+<span class="c">#</span><span class="w">e</span><span class="pc">n</span><span class="c">dif</span> 
+
+</pre>
+</body>
+</html>
+

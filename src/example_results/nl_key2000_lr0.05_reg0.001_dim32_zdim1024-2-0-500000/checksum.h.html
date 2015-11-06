@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+<span class="w">#ifndef</span> <span class="w">_ASM_CHECKSUM_H</span>
+<span class="w">#define</span> <span class="w">_ASM_CHECKSUM_H</span>
+
+<span class="w">#include</span> <span class="w">&lt;linux/in6.h&gt;</span>
+
+
+<span class="w">__wsum</span> <span class="w">csum_partial(const</span> <span class="w">void</span> <span class="w">*buff,</span> <span class="w">int</span> <span class="w">len,</span> <span class="w">__wsum</span> <span class="w">sum);</span>
+
+
+<span class="w">__wsum</span> <span class="w">csum_partial_copy_nocheck(const</span> <span class="w">void</span> <span class="w">*src,</span> <span class="w">void</span> <span class="w">*dst</span><span class="c">,</span> <span class="w">i</span><span class="c">nt</span> <span class="pc">len</span><span class="c">,</span> <span class="w">__w</span><span class="c">sum</span> <span class="w">s</span><span class="pc">u</span><span class="c">m</span><span class="pc">)</span><span class="c">;</span>
+
+
+<span class="pc">e</span><span class="c">xtern</span> <span class="w">_</span><span class="c">_wsum</span> <span class="w">csum_partial_copy_from_user</span><span class="c">(</span><span class="pc">c</span><span class="c">onst</span> <span class="pc">v</span><span class="c">oid</span> <span class="pc">_</span><span class="c">_user</span> <span class="c">*</span><span class="pc">s</span><span class="c">rc,</span> <span class="w">v</span><span class="c">oid</span> <span class="c">*dst,</span>
+						<span class="c">int</span> <span class="pc">l</span><span class="c">en,</span> <span class="w">_</span><span class="c">_wsum</span> <span class="w">s</span><span class="pc">u</span><span class="c">m</span><span class="pc">,</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">*csum_err</span><span class="c">);</span>
+
+
+<span class="w">s</span><span class="c">tatic</span> <span class="c">inline</span>
+<span class="w">__sum16</span> <span class="w">ip_fast_csum</span><span class="c">(</span><span class="pc">c</span><span class="c">onst</span> <span class="c">void</span> <span class="c">*</span><span class="w">ip</span><span class="pc">h</span><span class="c">,</span> <span class="pc">u</span><span class="c">nsigned</span> <span class="c">int</span> <span class="w">ihl</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="c">int</span> <span class="w">tm</span><span class="c">p</span><span class="pc">,</span> <span class="w">inc</span><span class="pc">,</span> <span class="w">s</span><span class="pc">u</span><span class="c">m</span> <span class="pc">=</span> <span class="c">0;</span>
+
+	<span class="w">as</span><span class="pc">m</span><span class="w">("</span>	<span class="w">addcc</span>		<span class="w">gr0,</span><span class="pc">g</span><span class="c">r0,</span><span class="pc">g</span><span class="c">r0,</span><span class="w">icc0\</span><span class="c">n</span><span class="pc">"</span> 
+	    <span class="pc">"</span>	<span class="w">subi</span>		<span class="pc">%</span><span class="w">1,#4,%</span><span class="pc">1</span>	<span class="c">\n</span><span class="pc">"</span>
+	    <span class="c">"</span><span class="w">0:					\</span><span class="pc">n</span><span class="w">"</span>
+	    <span class="c">"</span>	<span class="w">ldu.p</span>		<span class="w">@(%</span><span class="pc">1</span><span class="w">,%3),%4</span>	<span class="w">\</span><span class="c">n"</span>
+	    <span class="c">"</span>	<span class="w">subicc</span>		<span class="w">%2,</span><span class="c">#</span><span class="w">1,%</span><span class="pc">2,</span><span class="w">icc1</span>	<span class="w">\</span><span class="c">n"</span>
+	    <span class="c">"</span>	<span class="w">addxcc.p</span>	<span class="w">%</span><span class="pc">4</span><span class="w">,%0,%0</span><span class="c">,</span><span class="w">icc0</span>	<span class="w">\</span><span class="c">n</span><span class="pc">"</span>
+	    <span class="c">"</span>	<span class="w">bhi</span>		<span class="w">ic</span><span class="pc">c1</span><span class="w">,</span><span class="c">#</span><span class="w">2</span><span class="pc">,</span><span class="w">0b</span>	<span class="w">\</span><span class="c">n"</span>
+
+	    
+	    <span class="c">"</span>	<span class="pc">a</span><span class="c">ddxcc</span>		<span class="w">gr0,%0,%</span><span class="pc">0,</span><span class="w">i</span><span class="pc">cc0</span>	<span class="pc">\</span><span class="c">n</span><span class="pc">"</span>
+	    <span class="c">"</span>	<span class="w">srli</span>		<span class="w">%0,</span><span class="pc">#</span><span class="w">1</span><span class="pc">6</span><span class="w">,%</span><span class="pc">1</span>	<span class="c">\n"</span>
+	    <span class="c">"</span>	<span class="w">sethi</span>		<span class="w">#0,%</span><span class="c">0</span>		<span class="pc">\</span><span class="c">n"</span>
+	    <span class="c">"</span>	<span class="w">ad</span><span class="pc">d</span>		<span class="w">%</span><span class="pc">1</span><span class="w">,%</span><span class="c">0</span><span class="w">,%</span><span class="c">0</span>	<span class="pc">\</span><span class="c">n</span><span class="pc">"</span>
+	    <span class="c">"</span>	<span class="c">srli</span>		<span class="w">%0,</span><span class="pc">#</span><span class="w">1</span><span class="pc">6</span><span class="w">,%</span><span class="pc">1</span>	<span class="c">\n</span><span class="pc">"</span>
+	    <span class="c">"</span>	<span class="w">ad</span><span class="pc">d</span>		<span class="w">%1,%</span><span class="pc">0</span><span class="w">,%</span><span class="c">0</span>	<span class="c">\n</span><span class="pc">"</span>
+
+	    <span class="w">: "=r"</span><span class="pc"> </span><span class="c">(</span><span class="w">sum), "=r"</span><span class="c"> (</span><span class="w">ip</span><span class="pc">h</span><span class="w">),</span><span class="pc"> "=r"</span><span class="c"> (</span><span class="w">ihl),</span><span class="pc"> </span><span class="c">"=</span><span class="pc">r"</span><span class="c"> (</span><span class="w">inc), "=&amp;</span><span class="c">r</span><span class="w">"</span><span class="pc">(</span><span class="w">tm</span><span class="c">p</span><span class="w">)</span>
+	    <span class="w">:</span><span class="pc"> "</span><span class="w">0"</span><span class="pc"> </span><span class="c">(</span><span class="w">su</span><span class="c">m</span><span class="w">),</span><span class="pc"> "1"</span><span class="c"> (</span><span class="w">ip</span><span class="pc">h</span><span class="w">),</span><span class="pc"> "</span><span class="w">2</span><span class="pc">"</span><span class="c"> (</span><span class="w">i</span><span class="pc">h</span><span class="c">l</span><span class="w">),</span><span class="pc"> "</span><span class="w">3</span><span class="pc">"</span><span class="c"> (</span><span class="w">4</span><span class="pc">),</span>
+	    <span class="w">"m"(*(vo</span><span class="pc">l</span><span class="c">atile</span> <span class="w">s</span><span class="pc">t</span><span class="c">ruct</span> <span class="w">{</span> <span class="w">i</span><span class="pc">n</span><span class="c">t</span> <span class="w">_</span><span class="c">[</span><span class="w">10</span><span class="pc">0</span><span class="w">]; } *)ip</span><span class="pc">h</span><span class="w">)</span>
+	    <span class="w">:</span><span class="pc"> </span><span class="c">"</span><span class="w">icc0"</span><span class="pc">, </span><span class="c">"</span><span class="w">icc1"</span><span class="pc">, </span><span class="c">"</span><span class="w">me</span><span class="pc">mo</span><span class="c">ry</span><span class="pc">"</span>
+	    <span class="w">);</span>
+
+	<span class="w">r</span><span class="c">eturn</span> <span class="w">(__f</span><span class="c">orce</span> <span class="w">__sum16)~su</span><span class="c">m</span><span class="w">;</span>
+<span class="c">}</span>
+
+
+<span class="c">static</span> <span class="c">inline</span> <span class="w">__s</span><span class="c">um16</span> <span class="w">csum_fold</span><span class="c">(</span><span class="w">__wsum</span> <span class="w">su</span><span class="c">m)</span>
+<span class="c">{</span>
+	<span class="w">un</span><span class="c">signed</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">t</span><span class="pc">m</span><span class="c">p;</span>
+
+	<span class="w">a</span><span class="pc">s</span><span class="c">m</span><span class="w">("</span>	<span class="w">srli</span>		<span class="c">%</span><span class="w">0,#1</span><span class="pc">6</span><span class="w">,</span><span class="pc">%1</span>	<span class="pc">\</span><span class="c">n</span><span class="pc">"</span>
+	    <span class="pc">"</span>	<span class="w">sethi</span>		<span class="w">#0,%</span><span class="pc">0</span>		<span class="c">\n</span><span class="pc">"</span>
+	    <span class="c">"</span>	<span class="w">ad</span><span class="pc">d</span>		<span class="pc">%</span><span class="w">1,%</span><span class="pc">0</span><span class="w">,</span><span class="pc">%</span><span class="c">0</span>	<span class="pc">\</span><span class="c">n</span><span class="pc">"</span>
+	    <span class="c">"</span>	<span class="c">srli</span>		<span class="w">%0,</span><span class="pc">#</span><span class="w">1</span><span class="pc">6</span><span class="w">,%</span><span class="pc">1</span>	<span class="c">\n</span><span class="pc">"</span>
+	    <span class="c">"</span>	<span class="w">ad</span><span class="pc">d</span>		<span class="w">%1,%</span><span class="pc">0</span><span class="w">,%</span><span class="c">0</span>	<span class="c">\n</span><span class="pc">"</span>
+	    <span class="w">: "=r"(sum), "=&amp;r"</span><span class="pc">(</span><span class="w">tm</span><span class="c">p</span><span class="w">)</span>
+	    <span class="w">:</span><span class="pc"> "</span><span class="w">0"</span><span class="pc">(</span><span class="w">su</span><span class="pc">m</span><span class="w">)</span>
+	    <span class="w">);</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">(</span><span class="w">_</span><span class="c">_force</span> <span class="w">__sum16)~su</span><span class="c">m</span><span class="w">;</span>
+<span class="c">}</span>
+
+
+<span class="c">static</span> <span class="pc">inl</span><span class="c">ine</span> <span class="w">__wsum</span>
+<span class="w">csum_tcpudp_nofold</span><span class="c">(</span><span class="w">_</span><span class="pc">_b</span><span class="c">e32</span> <span class="w">s</span><span class="pc">a</span><span class="c">ddr,</span> <span class="pc">_</span><span class="c">_be32</span> <span class="c">daddr</span><span class="pc">,</span> <span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="pc">s</span><span class="c">hort</span> <span class="pc">l</span><span class="c">en</span><span class="pc">,</span>
+		  <span class="c">unsigned</span> <span class="c">short</span> <span class="w">p</span><span class="c">roto</span><span class="pc">,</span> <span class="w">__w</span><span class="c">sum</span> <span class="w">s</span><span class="c">um)</span>
+<span class="c">{</span>
+	<span class="w">as</span><span class="pc">m</span><span class="w">("</span>	<span class="w">addcc</span>		<span class="pc">%</span><span class="w">1,</span><span class="pc">%</span><span class="w">0,</span><span class="pc">%</span><span class="w">0</span><span class="pc">,</span><span class="w">icc0</span>	<span class="w">\</span><span class="c">n</span><span class="pc">"</span>
+	    <span class="c">"</span>	<span class="w">addxcc</span>		<span class="pc">%</span><span class="w">2,</span><span class="pc">%</span><span class="w">0,</span><span class="pc">%</span><span class="w">0</span><span class="c">,</span><span class="w">i</span><span class="pc">c</span><span class="c">c0</span>	<span class="w">\</span><span class="c">n"</span>
+	    <span class="c">"</span>	<span class="pc">addx</span><span class="c">cc</span>		<span class="pc">%</span><span class="w">3,%0,</span><span class="pc">%</span><span class="c">0,</span><span class="pc">i</span><span class="c">cc0</span>	<span class="pc">\</span><span class="c">n</span><span class="pc">"</span>
+	    <span class="c">"</span>	<span class="c">addxcc</span>		<span class="w">gr0,%</span><span class="pc">0</span><span class="w">,%</span><span class="pc">0,i</span><span class="c">cc0</span>	<span class="pc">\</span><span class="c">n</span><span class="pc">"</span>
+	    <span class="w">: "=r"</span><span class="pc"> </span><span class="c">(</span><span class="w">sum</span><span class="pc">)</span>
+	    <span class="w">:</span><span class="pc"> "</span><span class="w">r"</span><span class="c"> (</span><span class="w">da</span><span class="pc">d</span><span class="c">dr</span><span class="w">),</span><span class="pc"> "</span><span class="w">r</span><span class="pc">"</span><span class="c"> (</span><span class="w">sa</span><span class="pc">d</span><span class="c">dr</span><span class="w">),</span><span class="pc"> </span><span class="c">"</span><span class="pc">r</span><span class="c">" (</span><span class="w">le</span><span class="pc">n</span> <span class="w">+</span> <span class="w">prot</span><span class="pc">o</span><span class="w">),</span><span class="pc"> </span><span class="c">"0</span><span class="w">"(su</span><span class="c">m</span><span class="w">)</span>
+	    <span class="w">:</span><span class="pc"> "</span><span class="w">i</span><span class="pc">c</span><span class="c">c0</span><span class="w">"</span>
+	    <span class="w">);</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">su</span><span class="c">m;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">inl</span><span class="c">ine</span> <span class="w">__sum16</span>
+<span class="w">csum_tcpudp_magic</span><span class="c">(</span><span class="w">_</span><span class="pc">_b</span><span class="c">e32</span> <span class="w">s</span><span class="pc">a</span><span class="c">ddr,</span> <span class="pc">__b</span><span class="c">e32</span> <span class="c">daddr,</span> <span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="pc">s</span><span class="c">hort</span> <span class="w">l</span><span class="c">en</span><span class="pc">,</span>
+		  <span class="c">unsigned</span> <span class="pc">s</span><span class="c">hort</span> <span class="w">p</span><span class="pc">roto,</span> <span class="w">__wsum</span> <span class="w">s</span><span class="pc">u</span><span class="c">m)</span>
+<span class="c">{</span>
+	<span class="c">return</span> <span class="w">csum_fold</span><span class="c">(</span><span class="w">csum_tcpudp_nofold</span><span class="pc">(</span><span class="w">s</span><span class="pc">a</span><span class="c">ddr,</span><span class="w">d</span><span class="pc">a</span><span class="c">ddr,</span><span class="w">l</span><span class="c">en,</span><span class="pc">p</span><span class="c">roto,</span><span class="w">su</span><span class="c">m</span><span class="pc">))</span><span class="c">;</span>
+<span class="c">}</span>
+
+
+<span class="w">e</span><span class="c">xtern</span> <span class="w">_</span><span class="c">_sum16</span> <span class="w">ip_compute_csum</span><span class="c">(</span><span class="pc">c</span><span class="c">onst</span> <span class="w">v</span><span class="c">oid</span> <span class="c">*</span><span class="w">b</span><span class="c">uff,</span> <span class="pc">i</span><span class="c">nt</span> <span class="c">len</span><span class="pc">);</span>
+
+<span class="pc">#d</span><span class="c">efine</span> <span class="w">_HAVE_ARCH_IPV6_CSUM</span>
+<span class="w">s</span><span class="pc">ta</span><span class="c">tic</span> <span class="c">inline</span> <span class="w">__s</span><span class="c">um16</span>
+<span class="w">csum_ipv6_magic</span><span class="c">(</span><span class="w">c</span><span class="c">onst</span> <span class="c">struct</span> <span class="w">in6_addr</span> <span class="c">*</span><span class="w">s</span><span class="pc">a</span><span class="c">ddr,</span> <span class="c">const</span> <span class="c">struct</span> <span class="c">in6_addr</span> <span class="c">*</span><span class="w">d</span><span class="pc">a</span><span class="c">ddr,</span>
+		<span class="w">_</span><span class="c">_u32</span> <span class="pc">l</span><span class="c">en,</span> <span class="w">u</span><span class="c">nsigned</span> <span class="w">s</span><span class="pc">h</span><span class="c">ort</span> <span class="w">pr</span><span class="pc">oto,</span> <span class="w">__wsum</span> <span class="w">su</span><span class="c">m)</span>
+<span class="c">{</span>
+	<span class="w">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">t</span><span class="c">mp</span><span class="pc">,</span> <span class="w">tmp2</span><span class="c">;</span>
+
+	<span class="w">as</span><span class="pc">m</span><span class="w">("</span>	<span class="w">addcc</span>		<span class="pc">%</span><span class="w">2,</span><span class="pc">%</span><span class="w">0,</span><span class="pc">%</span><span class="w">0</span><span class="c">,</span><span class="w">icc0</span>	<span class="w">\</span><span class="c">n</span><span class="pc">"</span>
+
+	    
+	    <span class="c">"</span>	<span class="w">ldi</span>		<span class="w">@(%3</span><span class="c">,</span><span class="pc">0</span><span class="w">),%1</span>	<span class="w">\</span><span class="c">n</span><span class="pc">"</span>
+	    <span class="c">"</span>	<span class="w">addxcc</span>		<span class="pc">%</span><span class="w">1,</span><span class="pc">%0</span><span class="w">,</span><span class="pc">%0</span><span class="c">,</span><span class="w">i</span><span class="pc">c</span><span class="c">c0</span>	<span class="w">\</span><span class="c">n</span><span class="pc">"</span>
+	    <span class="c">"</span>	<span class="pc">l</span><span class="c">di</span>		<span class="pc">@</span><span class="c">(%</span><span class="w">3</span><span class="pc">,</span><span class="w">4</span><span class="pc">)</span><span class="c">,%</span><span class="w">2</span>	<span class="w">\</span><span class="c">n"</span>
+	    <span class="c">"</span>	<span class="pc">a</span><span class="c">ddxcc</span>		<span class="w">%</span><span class="pc">2</span><span class="w">,</span><span class="pc">%0</span><span class="w">,</span><span class="pc">%0,</span><span class="w">i</span><span class="pc">c</span><span class="c">c0</span>	<span class="w">\</span><span class="c">n</span><span class="pc">"</span>
+	    <span class="c">"</span>	<span class="pc">l</span><span class="c">di</span>		<span class="pc">@</span><span class="c">(%</span><span class="w">3</span><span class="pc">,</span><span class="w">8</span><span class="pc">)</span><span class="c">,%</span><span class="w">1</span>	<span class="pc">\</span><span class="c">n"</span>
+	    <span class="c">"</span>	<span class="pc">a</span><span class="c">ddxcc</span>		<span class="w">%1,</span><span class="pc">%0</span><span class="w">,%</span><span class="pc">0,</span><span class="w">i</span><span class="pc">c</span><span class="c">c0</span>	<span class="w">\</span><span class="c">n</span><span class="pc">"</span>
+	    <span class="c">"</span>	<span class="pc">l</span><span class="c">di</span>		<span class="pc">@</span><span class="c">(%</span><span class="w">3</span><span class="pc">,</span><span class="w">1</span><span class="pc">2</span><span class="c">),%</span><span class="w">2</span>	<span class="w">\</span><span class="c">n</span><span class="pc">"</span>
+	    <span class="c">"</span>	<span class="pc">a</span><span class="c">ddxcc</span>		<span class="w">%2,%</span><span class="pc">0</span><span class="w">,</span><span class="pc">%0,</span><span class="w">i</span><span class="pc">c</span><span class="c">c0</span>	<span class="w">\</span><span class="c">n</span><span class="pc">"</span>
+
+	    
+	    <span class="c">"</span>	<span class="pc">l</span><span class="c">di</span>		<span class="pc">@</span><span class="c">(%</span><span class="w">4</span><span class="pc">,0)</span><span class="c">,%</span><span class="w">1</span>	<span class="pc">\</span><span class="c">n"</span>
+	    <span class="c">"</span>	<span class="pc">a</span><span class="c">ddxcc</span>		<span class="w">%1,%</span><span class="pc">0</span><span class="w">,%</span><span class="pc">0,</span><span class="w">i</span><span class="pc">c</span><span class="c">c0</span>	<span class="w">\</span><span class="c">n</span><span class="pc">"</span>
+	    <span class="c">"</span>	<span class="pc">l</span><span class="c">di</span>		<span class="c">@(%</span><span class="w">4</span><span class="pc">,</span><span class="w">4</span><span class="c">),%</span><span class="w">2</span>	<span class="w">\</span><span class="c">n"</span>
+	    <span class="c">"</span>	<span class="w">a</span><span class="c">ddxcc</span>		<span class="w">%</span><span class="pc">2</span><span class="w">,</span><span class="pc">%0</span><span class="w">,</span><span class="pc">%0,</span><span class="w">i</span><span class="pc">c</span><span class="c">c0</span>	<span class="w">\</span><span class="c">n</span><span class="pc">"</span>
+	    <span class="c">"</span>	<span class="pc">l</span><span class="c">di</span>		<span class="pc">@</span><span class="c">(%</span><span class="w">4</span><span class="pc">,</span><span class="w">8</span><span class="pc">)</span><span class="c">,%</span><span class="w">1</span>	<span class="pc">\</span><span class="c">n"</span>
+	    <span class="c">"</span>	<span class="pc">a</span><span class="c">ddxcc</span>		<span class="w">%1,</span><span class="pc">%0</span><span class="w">,%</span><span class="pc">0,</span><span class="w">i</span><span class="pc">c</span><span class="c">c0</span>	<span class="w">\</span><span class="c">n</span><span class="pc">"</span>
+	    <span class="c">"</span>	<span class="pc">l</span><span class="c">di</span>		<span class="pc">@</span><span class="c">(%</span><span class="w">4</span><span class="pc">,</span><span class="w">1</span><span class="pc">2</span><span class="c">),%</span><span class="w">2</span>	<span class="w">\</span><span class="c">n"</span>
+	    <span class="c">"</span>	<span class="w">a</span><span class="c">ddxcc</span>		<span class="w">%2,%</span><span class="pc">0</span><span class="w">,</span><span class="pc">%0,</span><span class="w">i</span><span class="pc">c</span><span class="c">c0</span>	<span class="w">\</span><span class="c">n</span><span class="pc">"</span>
+
+	    
+	    <span class="c">"</span>	<span class="pc">a</span><span class="c">ddxcc</span>		<span class="w">gr0,%0,%</span><span class="pc">0,</span><span class="w">i</span><span class="c">cc0</span>	<span class="w">\</span><span class="c">n</span><span class="pc">"</span>
+	    <span class="c">"</span>	<span class="w">srli</span>		<span class="w">%0,#1</span><span class="pc">6</span><span class="w">,%</span><span class="c">1</span>	<span class="c">\n</span><span class="pc">"</span>
+	    <span class="c">"</span>	<span class="w">sethi</span>		<span class="w">#0,%</span><span class="c">0</span>		<span class="pc">\</span><span class="c">n"</span>
+	    <span class="c">"</span>	<span class="w">ad</span><span class="pc">d</span>		<span class="w">%1,%</span><span class="c">0</span><span class="w">,%</span><span class="c">0</span>	<span class="pc">\</span><span class="c">n</span><span class="pc">"</span>
+	    <span class="c">"</span>	<span class="c">srli</span>		<span class="w">%0,</span><span class="pc">#</span><span class="w">1</span><span class="pc">6</span><span class="w">,%</span><span class="pc">1</span>	<span class="c">\n</span><span class="pc">"</span>
+	    <span class="c">"</span>	<span class="w">ad</span><span class="pc">d</span>		<span class="w">%1,%</span><span class="pc">0</span><span class="w">,%</span><span class="c">0</span>	<span class="c">\n</span><span class="pc">"</span>
+
+	    <span class="w">: "=r"</span><span class="pc"> </span><span class="c">(</span><span class="w">sum), "=&amp;r"</span><span class="c"> (</span><span class="w">tm</span><span class="c">p</span><span class="w">), "=</span><span class="pc">r</span><span class="c">" (</span><span class="w">tmp2)</span>
+	    <span class="w">:</span><span class="pc"> "r</span><span class="w">"</span><span class="c"> (</span><span class="w">sa</span><span class="pc">d</span><span class="c">dr</span><span class="w">),</span><span class="pc"> "</span><span class="w">r</span><span class="c">" (</span><span class="w">da</span><span class="c">ddr</span><span class="w">),</span><span class="pc"> "0</span><span class="c">" (</span><span class="w">su</span><span class="pc">m</span><span class="w">),</span><span class="pc"> </span><span class="c">"</span><span class="w">2</span><span class="pc">"</span><span class="c"> (</span><span class="w">le</span><span class="pc">n</span> <span class="w">+</span> <span class="w">pro</span><span class="pc">to</span><span class="w">)</span>
+	    <span class="w">:</span><span class="pc"> "</span><span class="w">icc0"</span>
+	    <span class="w">);</span>
+
+	<span class="w">r</span><span class="c">eturn</span> <span class="w">(_</span><span class="c">_force</span> <span class="w">__sum16)~su</span><span class="c">m</span><span class="w">;</span>
+<span class="c">}</span>
+
+<span class="pc">#e</span><span class="c">ndif</span> 
+
+</pre>
+</body>
+</html>
+

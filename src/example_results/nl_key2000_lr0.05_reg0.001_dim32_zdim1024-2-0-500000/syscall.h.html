@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+<span class="w">#ifndef</span> <span class="w">_ASM_HEXAGON_SYSCALL_H</span>
+<span class="w">#define</span> <span class="w">_ASM_HEXAGON_SYSCALL_H</span>
+
+<span class="w">typedef</span> <span class="w">long</span> <span class="w">(*syscall_fn)(unsigned</span> <span class="w">long,</span> <span class="w">unsigned</span> <span class="w">long,</span>
+	<span class="w">unsigned</span> <span class="w">long,</span> <span class="w">unsigned</span> <span class="w">long,</span>
+	<span class="w">unsigned</span> <span class="w">long,</span> <span class="w">unsigned</span> <span class="w">long);</span>
+
+<span class="w">#include</span> <span class="w">&lt;asm-generic/syscalls.h&gt;</span>
+
+<span class="w">e</span><span class="c">xtern</span> <span class="pc">v</span><span class="c">oid</span> <span class="pc">*</span><span class="w">sys_call_table[</span><span class="pc">]</span><span class="c">;</span>
+
+<span class="w">s</span><span class="pc">ta</span><span class="c">tic</span> <span class="c">inline</span> <span class="w">l</span><span class="c">ong</span> <span class="w">syscall_get_nr</span><span class="c">(</span><span class="pc">s</span><span class="c">truct</span> <span class="c">task_struct</span> <span class="c">*task,</span>
+				  <span class="pc">s</span><span class="c">truct</span> <span class="pc">p</span><span class="c">t_regs</span> <span class="c">*regs</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">return</span> <span class="w">re</span><span class="pc">g</span><span class="c">s-&gt;</span><span class="w">r06</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">inline</span> <span class="c">void</span> <span class="w">syscall_get_arguments</span><span class="c">(struct</span> <span class="c">task_struct</span> <span class="c">*task</span><span class="pc">,</span>
+					 <span class="c">struct</span> <span class="pc">p</span><span class="c">t_regs</span> <span class="c">*regs</span><span class="pc">,</span>
+					 <span class="c">unsigned</span> <span class="pc">i</span><span class="c">nt</span> <span class="pc">i</span><span class="c">,</span> <span class="c">unsigned</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">n</span><span class="c">,</span>
+					 <span class="c">unsigned</span> <span class="c">long</span> <span class="pc">*</span><span class="w">a</span><span class="pc">rgs</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="w">B</span><span class="c">UG_ON(</span><span class="w">i</span> <span class="w">+</span> <span class="w">n</span> <span class="w">&gt;</span> <span class="w">6)</span><span class="pc">;</span>
+	<span class="w">me</span><span class="c">mcpy(</span><span class="w">a</span><span class="c">rgs</span><span class="w">, &amp;(&amp;reg</span><span class="pc">s-</span><span class="c">&gt;</span><span class="w">r00)[</span><span class="c">i</span><span class="pc">],</span> <span class="w">n</span> <span class="w">*</span> <span class="c">sizeof(</span><span class="w">a</span><span class="c">rgs</span><span class="pc">[0]))</span><span class="c">;</span>
+<span class="pc">}</span>
+<span class="w">#</span><span class="pc">en</span><span class="c">dif</span>
+
+</pre>
+</body>
+</html>
+

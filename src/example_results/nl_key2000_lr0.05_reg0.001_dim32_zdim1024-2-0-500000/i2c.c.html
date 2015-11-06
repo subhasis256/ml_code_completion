@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+<span class="w">#include</span> <span class="w">&lt;linux/init.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/slab.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/module.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/string.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux</span><span class="c">/</span><span class="w">e</span><span class="c">rrno.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;</span><span class="w">s</span><span class="pc">o</span><span class="c">und/</span><span class="w">c</span><span class="pc">o</span><span class="c">re.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;</span><span class="w">s</span><span class="pc">o</span><span class="c">und/</span><span class="w">i2</span><span class="c">c.h&gt;</span>
+
+<span class="w">M</span><span class="c">ODULE_AUTHOR("</span><span class="w">Jaroslav</span> <span class="w">Kysela</span> <span class="c">&lt;</span><span class="w">perex</span><span class="c">@</span><span class="pc">p</span><span class="c">erex.</span><span class="w">cz</span><span class="pc">&gt;</span><span class="c">");</span>
+<span class="c">MODULE_DESCRIPTION("</span><span class="w">Generic</span> <span class="w">i2</span><span class="c">c</span> <span class="w">i</span><span class="pc">nt</span><span class="c">erface</span> <span class="pc">f</span><span class="c">or</span> <span class="w">ALSA</span><span class="pc">"</span><span class="c">);</span>
+<span class="c">MODULE_LICENSE("GPL");</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="c">int</span> <span class="w">snd_i2c_bit_sendbytes</span><span class="pc">(</span><span class="c">struct</span> <span class="w">snd_i2c_device</span> <span class="c">*</span><span class="w">d</span><span class="pc">evi</span><span class="c">ce</span><span class="pc">,</span>
+				 <span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="pc">c</span><span class="c">har</span> <span class="c">*</span><span class="w">by</span><span class="pc">tes</span><span class="c">,</span> <span class="pc">i</span><span class="c">nt</span> <span class="pc">c</span><span class="c">ount</span><span class="pc">);</span>
+<span class="c">static</span> <span class="c">int</span> <span class="w">snd_i2c_bit_readbytes</span><span class="c">(struct</span> <span class="c">snd_i2c_device</span> <span class="c">*</span><span class="w">d</span><span class="pc">evi</span><span class="c">ce,</span>
+				 <span class="pc">un</span><span class="c">signed</span> <span class="pc">c</span><span class="c">har</span> <span class="c">*</span><span class="w">by</span><span class="pc">tes</span><span class="c">,</span> <span class="pc">i</span><span class="c">nt</span> <span class="c">count</span><span class="pc">);</span>
+<span class="c">static</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">snd_i2c_bit_probeaddr</span><span class="c">(struct</span> <span class="w">snd_i2c_bus</span> <span class="c">*</span><span class="w">b</span><span class="pc">u</span><span class="c">s,</span>
+				 <span class="pc">u</span><span class="c">nsigned</span> <span class="pc">s</span><span class="c">hort</span> <span class="pc">a</span><span class="c">ddr</span><span class="pc">);</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="w">s</span><span class="pc">t</span><span class="c">ruct</span> <span class="w">snd_i2c_ops</span> <span class="w">snd_i2c_bit_ops</span> <span class="c">= {</span>
+	<span class="c">.</span><span class="w">sendbytes</span> <span class="c">=</span> <span class="w">snd_i2c_bit_sendbytes</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">readbytes</span> <span class="c">=</span> <span class="w">snd_i2c_bit_readbytes</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">probeaddr</span> <span class="c">=</span> <span class="pc">snd_i2c_bit_p</span><span class="c">robeaddr,</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">snd_i2c_bus_free</span><span class="c">(struct</span> <span class="c">snd_i2c_bus</span> <span class="c">*</span><span class="w">b</span><span class="pc">us)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="pc">s</span><span class="c">nd_i2c_bus</span> <span class="c">*</span><span class="w">sl</span><span class="c">ave</span><span class="pc">;</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">snd_i2c_device</span> <span class="c">*</span><span class="w">d</span><span class="pc">evi</span><span class="c">ce</span><span class="pc">;</span>
+
+	<span class="w">i</span><span class="pc">f</span> <span class="pc">(</span><span class="w">snd_BUG_ON(</span><span class="pc">!b</span><span class="c">us))</span>
+		<span class="c">return</span> <span class="pc">-EI</span><span class="c">NVAL;</span>
+	<span class="w">w</span><span class="c">hile</span> <span class="pc">(!</span><span class="c">list_empty(&amp;</span><span class="pc">b</span><span class="c">us-&gt;</span><span class="w">d</span><span class="pc">evices)) </span><span class="c">{</span>
+		<span class="w">de</span><span class="pc">vi</span><span class="c">ce</span> <span class="c">=</span> <span class="w">s</span><span class="pc">nd_i2c_d</span><span class="c">evice(bus-&gt;</span><span class="w">de</span><span class="pc">vices.</span><span class="w">n</span><span class="c">ext</span><span class="pc">)</span><span class="c">;</span>
+		<span class="w">snd_i2c_device_free</span><span class="c">(</span><span class="pc">devi</span><span class="c">ce);</span>
+	<span class="pc">}</span>
+	<span class="w">i</span><span class="c">f</span> <span class="c">(bus-&gt;</span><span class="w">m</span><span class="pc">a</span><span class="c">ster</span><span class="pc">)</span>
+		<span class="w">l</span><span class="c">ist_del(&amp;</span><span class="pc">b</span><span class="c">us-&gt;</span><span class="w">buses</span><span class="c">);</span>
+	<span class="pc">e</span><span class="c">lse</span> <span class="pc">{</span>
+		<span class="w">w</span><span class="c">hile</span> <span class="pc">(!l</span><span class="c">ist_empty(&amp;bus-&gt;buses</span><span class="pc">)) </span><span class="c">{</span>
+			<span class="w">sl</span><span class="pc">a</span><span class="c">ve</span> <span class="pc">=</span> <span class="w">snd_i2c_slave_bus</span><span class="c">(bus-&gt;</span><span class="w">b</span><span class="pc">use</span><span class="c">s</span><span class="pc">.n</span><span class="c">ext);</span>
+			<span class="w">snd_device_free</span><span class="c">(bus</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">ca</span><span class="pc">r</span><span class="c">d</span><span class="pc">,</span> <span class="w">sl</span><span class="pc">a</span><span class="c">ve</span><span class="pc">)</span><span class="c">;</span>
+		<span class="c">}</span>
+	<span class="c">}</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="pc">bus</span><span class="c">-&gt;</span><span class="w">private_free</span><span class="pc">)</span>
+		<span class="pc">b</span><span class="c">us-&gt;</span><span class="pc">p</span><span class="c">rivate_free(bus);</span>
+	<span class="pc">k</span><span class="c">free(bus);</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">snd_i2c_bus_dev_free</span><span class="c">(struct</span> <span class="w">snd_device</span> <span class="c">*</span><span class="pc">devi</span><span class="c">ce</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">snd_i2c_bus</span> <span class="c">*bus</span> <span class="c">=</span> <span class="w">d</span><span class="pc">evi</span><span class="c">ce-&gt;</span><span class="w">device_data</span><span class="c">;</span>
+	<span class="w">r</span><span class="c">eturn</span> <span class="w">snd_i2c_bus_free</span><span class="c">(</span><span class="pc">b</span><span class="c">us</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="w">i</span><span class="c">nt</span> <span class="w">snd_i2c_bus_create</span><span class="c">(struct</span> <span class="w">snd_card</span> <span class="c">*</span><span class="w">c</span><span class="pc">a</span><span class="c">rd</span><span class="pc">,</span> <span class="w">c</span><span class="c">onst</span> <span class="pc">c</span><span class="c">har</span> <span class="c">*name,</span>
+		       <span class="pc">s</span><span class="c">truct</span> <span class="pc">snd_i2c_bus</span> <span class="c">*</span><span class="w">m</span><span class="c">aster,</span> <span class="pc">s</span><span class="c">truct</span> <span class="pc">s</span><span class="c">nd_i2c_bus</span> <span class="pc">**</span><span class="w">ri2c</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="pc">snd_i</span><span class="c">2c_bus</span> <span class="c">*</span><span class="pc">b</span><span class="c">us</span><span class="pc">;</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="pc">e</span><span class="c">rr;</span>
+	<span class="w">st</span><span class="pc">ati</span><span class="c">c</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">snd_device_ops</span> <span class="w">o</span><span class="c">ps</span> <span class="pc">=</span><span class="c"> {</span>
+		<span class="c">.</span><span class="w">dev_free</span> <span class="c">=</span>	<span class="w">snd_i2c_bus_dev_free</span><span class="c">,</span>
+	<span class="pc">}</span><span class="c">;</span>
+
+	<span class="w">*r</span><span class="pc">i</span><span class="c">2c</span> <span class="pc">=</span> <span class="c">NULL;</span>
+	<span class="w">bu</span><span class="pc">s</span> <span class="c">=</span> <span class="pc">k</span><span class="c">zalloc(sizeof(*</span><span class="pc">b</span><span class="c">us),</span> <span class="c">GFP_KERNEL);</span>
+	<span class="c">if</span> <span class="pc">(</span><span class="w">b</span><span class="c">us</span> <span class="c">==</span> <span class="c">NULL)</span>
+		<span class="c">return</span> <span class="c">-ENOMEM;</span>
+	<span class="w">mu</span><span class="pc">tex_i</span><span class="c">nit(&amp;</span><span class="w">b</span><span class="c">us-&gt;</span><span class="w">lock_mutex</span><span class="c">);</span>
+	<span class="pc">I</span><span class="c">NIT_LIST_HEAD(&amp;</span><span class="pc">b</span><span class="c">us-&gt;</span><span class="w">de</span><span class="pc">vices</span><span class="c">);</span>
+	<span class="pc">I</span><span class="c">NIT_LIST_HEAD(&amp;bus-&gt;</span><span class="w">buses</span><span class="c">);</span>
+	<span class="pc">b</span><span class="c">us-&gt;</span><span class="w">ca</span><span class="pc">r</span><span class="c">d</span> <span class="c">=</span> <span class="w">c</span><span class="pc">a</span><span class="c">rd;</span>
+	<span class="c">bus-&gt;</span><span class="w">o</span><span class="pc">ps</span> <span class="pc">= </span><span class="c">&amp;</span><span class="w">snd_i2c_bit_ops</span><span class="c">;</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">ma</span><span class="pc">s</span><span class="c">ter</span><span class="pc">) </span><span class="c">{</span>
+		<span class="w">l</span><span class="pc">ist_a</span><span class="c">dd_tail(&amp;bus-&gt;</span><span class="w">b</span><span class="pc">use</span><span class="c">s</span><span class="pc">,</span><span class="c"> &amp;</span><span class="w">ma</span><span class="pc">s</span><span class="c">ter-&gt;</span><span class="pc">buse</span><span class="c">s);</span>
+		<span class="w">b</span><span class="c">us-&gt;</span><span class="w">m</span><span class="pc">a</span><span class="c">ster</span> <span class="c">=</span> <span class="w">m</span><span class="pc">a</span><span class="c">ster</span><span class="pc">;</span>
+	<span class="c">}</span>
+	<span class="w">st</span><span class="pc">rl</span><span class="c">cpy(bus-&gt;name,</span> <span class="pc">n</span><span class="c">ame</span><span class="pc">,</span> <span class="pc">s</span><span class="c">izeof(</span><span class="pc">b</span><span class="c">us-&gt;name));</span>
+	<span class="w">e</span><span class="pc">rr</span> <span class="c">=</span> <span class="w">snd_device_new</span><span class="c">(</span><span class="w">c</span><span class="pc">a</span><span class="c">rd</span><span class="pc">,</span> <span class="w">SNDRV_DEV_BUS</span><span class="c">,</span> <span class="w">b</span><span class="c">us</span><span class="pc">, </span><span class="c">&amp;</span><span class="w">o</span><span class="c">ps</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">if</span> <span class="c">(err</span> <span class="pc">&lt;</span> <span class="c">0</span><span class="pc">) </span><span class="c">{</span>
+		<span class="w">snd_i2c_bus_free</span><span class="c">(</span><span class="pc">b</span><span class="c">us);</span>
+		<span class="c">return</span> <span class="c">err;</span>
+	<span class="c">}</span>
+	<span class="w">*ri2c</span> <span class="pc">=</span> <span class="w">b</span><span class="c">us</span><span class="pc">;</span>
+	<span class="c">return</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="w">E</span><span class="pc">XPORT_SYMBOL</span><span class="c">(</span><span class="w">snd_i2c_bus_create</span><span class="c">);</span>
+
+<span class="c">int</span> <span class="w">snd_i2c_device_create</span><span class="c">(struct</span> <span class="w">snd_i2c_bus</span> <span class="c">*</span><span class="pc">b</span><span class="c">us,</span> <span class="w">c</span><span class="c">onst</span> <span class="pc">c</span><span class="c">har</span> <span class="c">*</span><span class="pc">n</span><span class="c">ame,</span>
+			  <span class="pc">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">har</span> <span class="w">a</span><span class="pc">ddr</span><span class="c">,</span> <span class="pc">st</span><span class="c">ruct</span> <span class="w">snd_i2c_device</span> <span class="pc">**</span><span class="w">rdevice</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="pc">snd_i2c_d</span><span class="c">evice</span> <span class="c">*</span><span class="w">d</span><span class="pc">evi</span><span class="c">ce</span><span class="pc">;</span>
+
+	<span class="w">*r</span><span class="pc">d</span><span class="c">evice</span> <span class="pc">=</span> <span class="pc">N</span><span class="c">ULL;</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">snd_BUG_ON(!b</span><span class="pc">us</span><span class="c">))</span>
+		<span class="c">return</span> <span class="c">-</span><span class="pc">EI</span><span class="c">NVAL;</span>
+	<span class="w">d</span><span class="pc">evi</span><span class="c">ce</span> <span class="c">=</span> <span class="pc">k</span><span class="c">zalloc(sizeof(*</span><span class="pc">d</span><span class="c">evice),</span> <span class="c">GFP_KERNEL);</span>
+	<span class="c">if</span> <span class="pc">(</span><span class="c">device</span> <span class="c">==</span> <span class="c">NULL)</span>
+		<span class="c">return</span> <span class="c">-ENOMEM;</span>
+	<span class="pc">d</span><span class="c">evice</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">a</span><span class="c">ddr</span> <span class="c">=</span> <span class="w">a</span><span class="c">ddr;</span>
+	<span class="w">st</span><span class="pc">rl</span><span class="c">cpy(</span><span class="pc">devi</span><span class="c">ce-&gt;name,</span> <span class="pc">n</span><span class="c">ame,</span> <span class="pc">s</span><span class="c">izeof(device-&gt;name));</span>
+	<span class="w">l</span><span class="c">ist_add_tail(&amp;</span><span class="pc">devi</span><span class="c">ce-&gt;</span><span class="w">l</span><span class="pc">i</span><span class="c">st</span><span class="pc">, &amp;</span><span class="w">b</span><span class="pc">us</span><span class="c">-&gt;</span><span class="w">d</span><span class="pc">evices</span><span class="c">);</span>
+	<span class="w">d</span><span class="pc">evi</span><span class="c">ce-&gt;</span><span class="pc">b</span><span class="c">us</span> <span class="c">=</span> <span class="pc">b</span><span class="c">us;</span>
+	<span class="w">*rdevice</span> <span class="c">=</span> <span class="pc">devi</span><span class="c">ce</span><span class="pc">;</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="pc">EXPORT_SYMBOL</span><span class="c">(</span><span class="w">snd_i2c_device_create</span><span class="c">);</span>
+
+<span class="pc">i</span><span class="c">nt</span> <span class="w">snd_i2c_device_free</span><span class="c">(struct</span> <span class="w">snd_i2c_device</span> <span class="c">*device</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">if</span> <span class="c">(</span><span class="pc">devi</span><span class="c">ce-&gt;</span><span class="w">b</span><span class="c">us</span><span class="pc">)</span>
+		<span class="w">li</span><span class="pc">st_d</span><span class="c">el(&amp;device-&gt;</span><span class="w">l</span><span class="pc">i</span><span class="c">st);</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="pc">d</span><span class="c">evice-&gt;</span><span class="w">private_free</span><span class="c">)</span>
+		<span class="pc">d</span><span class="c">evice-&gt;</span><span class="pc">p</span><span class="c">rivate_free</span><span class="pc">(d</span><span class="c">evice);</span>
+	<span class="w">k</span><span class="c">free(device);</span>
+	<span class="c">return</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="pc">EXPORT_SYMBOL</span><span class="c">(</span><span class="w">snd_i2c_device_free</span><span class="c">);</span>
+
+<span class="pc">i</span><span class="c">nt</span> <span class="w">snd_i2c_sendbytes</span><span class="c">(struct</span> <span class="w">snd_i2c_device</span> <span class="c">*device</span><span class="pc">,</span> <span class="pc">un</span><span class="c">signed</span> <span class="c">char</span> <span class="c">*</span><span class="w">by</span><span class="c">tes,</span> <span class="pc">i</span><span class="c">nt</span> <span class="pc">c</span><span class="c">ount)</span>
+<span class="c">{</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">d</span><span class="c">evice-&gt;</span><span class="w">b</span><span class="c">us-&gt;</span><span class="pc">o</span><span class="c">ps-&gt;</span><span class="w">sendbytes</span><span class="c">(device,</span> <span class="w">by</span><span class="pc">tes</span><span class="c">,</span> <span class="w">c</span><span class="c">ount);</span>
+<span class="c">}</span>
+
+<span class="w">E</span><span class="pc">XPORT_SYMBOL</span><span class="c">(</span><span class="pc">snd_i2c_s</span><span class="c">endbytes);</span>
+
+<span class="pc">i</span><span class="c">nt</span> <span class="w">snd_i2c_readbytes</span><span class="c">(struct</span> <span class="c">snd_i2c_device</span> <span class="c">*device,</span> <span class="c">unsigned</span> <span class="c">char</span> <span class="c">*</span><span class="w">by</span><span class="c">tes,</span> <span class="pc">i</span><span class="c">nt</span> <span class="pc">c</span><span class="c">ount</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">d</span><span class="c">evice-&gt;</span><span class="w">b</span><span class="c">us-&gt;</span><span class="pc">o</span><span class="c">ps-&gt;</span><span class="w">readbytes</span><span class="c">(device,</span> <span class="w">by</span><span class="pc">tes</span><span class="c">,</span> <span class="w">c</span><span class="c">ount);</span>
+<span class="c">}</span>
+
+<span class="w">E</span><span class="pc">XPORT_SYMBOL</span><span class="c">(</span><span class="pc">snd_i2c_r</span><span class="c">eadbytes);</span>
+
+<span class="pc">i</span><span class="c">nt</span> <span class="w">snd_i2c_probeaddr</span><span class="c">(struct</span> <span class="w">snd_i2c_bus</span> <span class="c">*</span><span class="pc">b</span><span class="c">us,</span> <span class="pc">u</span><span class="c">nsigned</span> <span class="pc">s</span><span class="c">hort</span> <span class="pc">a</span><span class="c">ddr</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">b</span><span class="c">us-&gt;ops-&gt;</span><span class="w">probeaddr</span><span class="c">(</span><span class="pc">b</span><span class="c">us,</span> <span class="w">a</span><span class="c">ddr</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="w">E</span><span class="pc">XPORT_SYMBOL</span><span class="c">(</span><span class="w">s</span><span class="pc">nd_i2c_p</span><span class="c">robeaddr);</span>
+
+
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="pc">inl</span><span class="c">ine</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">snd_i2c_bit_hw_start</span><span class="c">(struct</span> <span class="pc">s</span><span class="c">nd_i2c_bus</span> <span class="c">*</span><span class="pc">b</span><span class="c">us</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">if</span> <span class="c">(bus-&gt;</span><span class="w">hw_ops</span><span class="pc">.</span><span class="w">b</span><span class="pc">it</span><span class="w">-</span><span class="c">&gt;</span><span class="w">st</span><span class="pc">ar</span><span class="c">t)</span>
+		<span class="pc">b</span><span class="c">us-&gt;hw_ops.</span><span class="w">b</span><span class="pc">it-</span><span class="c">&gt;</span><span class="w">s</span><span class="c">tart</span><span class="w">(</span><span class="pc">b</span><span class="c">us</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">inline</span> <span class="c">void</span> <span class="w">snd_i2c_bit_hw_stop</span><span class="c">(struct</span> <span class="c">snd_i2c_bus</span> <span class="c">*bus</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">if</span> <span class="c">(bus-&gt;hw_ops.</span><span class="w">b</span><span class="pc">i</span><span class="c">t</span><span class="w">-</span><span class="c">&gt;</span><span class="w">s</span><span class="pc">to</span><span class="c">p)</span>
+		<span class="pc">b</span><span class="c">us-&gt;hw_ops.</span><span class="w">bi</span><span class="pc">t-</span><span class="c">&gt;</span><span class="w">s</span><span class="pc">to</span><span class="c">p</span><span class="w">(</span><span class="pc">b</span><span class="c">us</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">snd_i2c_bit_direction</span><span class="c">(struct</span> <span class="c">snd_i2c_bus</span> <span class="c">*bus</span><span class="pc">,</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">c</span><span class="pc">l</span><span class="c">ock</span><span class="pc">,</span> <span class="c">int</span> <span class="w">d</span><span class="pc">a</span><span class="c">ta)</span>
+<span class="c">{</span>
+	<span class="pc">if</span> <span class="c">(bus-&gt;</span><span class="pc">h</span><span class="c">w_ops.</span><span class="w">b</span><span class="pc">i</span><span class="c">t</span><span class="w">-</span><span class="c">&gt;</span><span class="w">di</span><span class="c">rection)</span>
+		<span class="pc">b</span><span class="c">us-&gt;hw_ops.</span><span class="w">b</span><span class="pc">it</span><span class="w">-</span><span class="c">&gt;</span><span class="w">di</span><span class="c">rection</span><span class="w">(</span><span class="pc">b</span><span class="c">us</span><span class="pc">,</span> <span class="w">cl</span><span class="pc">o</span><span class="c">ck</span><span class="pc">,</span> <span class="w">d</span><span class="pc">a</span><span class="c">ta</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">void</span> <span class="w">snd_i2c_bit_set</span><span class="c">(struct</span> <span class="w">snd_i2c_bus</span> <span class="c">*bus</span><span class="pc">,</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">cl</span><span class="pc">o</span><span class="c">ck,</span> <span class="c">int</span> <span class="w">d</span><span class="pc">a</span><span class="c">ta)</span>
+<span class="c">{</span>
+	<span class="w">b</span><span class="c">us-&gt;</span><span class="pc">h</span><span class="c">w_ops</span><span class="pc">.</span><span class="w">b</span><span class="pc">i</span><span class="c">t</span><span class="w">-</span><span class="pc">&gt;</span><span class="w">setlines</span><span class="pc">(</span><span class="c">bus,</span> <span class="w">cl</span><span class="pc">o</span><span class="c">ck</span><span class="pc">,</span> <span class="w">d</span><span class="pc">a</span><span class="c">ta);</span>
+<span class="c">}</span>
+
+<span class="pc">#if</span> <span class="w">0</span>
+<span class="w">s</span><span class="pc">t</span><span class="c">atic</span> <span class="c">int</span> <span class="w">snd_i2c_bit_clock</span><span class="c">(struct</span> <span class="c">snd_i2c_bus</span> <span class="c">*</span><span class="pc">b</span><span class="c">us</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(bus-&gt;hw_ops</span><span class="pc">.</span><span class="w">b</span><span class="pc">i</span><span class="c">t</span><span class="w">-</span><span class="c">&gt;</span><span class="w">getclock</span><span class="c">)</span>
+		<span class="c">return</span> <span class="w">b</span><span class="c">us-&gt;</span><span class="pc">h</span><span class="c">w_ops</span><span class="pc">.</span><span class="w">bi</span><span class="c">t</span><span class="pc">-</span><span class="c">&gt;</span><span class="pc">g</span><span class="c">etclock</span><span class="w">(</span><span class="c">bus</span><span class="pc">)</span><span class="c">;</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">-</span><span class="w">E</span><span class="pc">NX</span><span class="c">IO;</span>
+<span class="c">}</span>
+<span class="w">#</span><span class="c">endif</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="c">int</span> <span class="w">snd_i2c_bit_data</span><span class="c">(struct</span> <span class="c">snd_i2c_bus</span> <span class="c">*bus,</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">ack</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">b</span><span class="c">us-&gt;</span><span class="pc">h</span><span class="c">w_ops.</span><span class="w">b</span><span class="pc">i</span><span class="c">t</span><span class="w">-</span><span class="pc">&gt;</span><span class="w">getdata(</span><span class="pc">b</span><span class="c">us,</span> <span class="pc">a</span><span class="c">ck);</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">snd_i2c_bit_start</span><span class="c">(struct</span> <span class="c">snd_i2c_bus</span> <span class="c">*</span><span class="pc">b</span><span class="c">us)</span>
+<span class="c">{</span>
+	<span class="w">snd_i2c_bit_hw_start</span><span class="c">(</span><span class="pc">b</span><span class="c">us</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">snd_i2c_bit_direction</span><span class="c">(bus</span><span class="pc">,</span> <span class="w">1</span><span class="pc">,</span> <span class="w">1</span><span class="c">);</span>	
+	<span class="w">snd_i2c_bit_set</span><span class="c">(bus</span><span class="pc">,</span> <span class="pc">1,</span> <span class="pc">1</span><span class="c">);</span>
+	<span class="pc">snd_i2c_bit_s</span><span class="c">et(</span><span class="pc">b</span><span class="c">us,</span> <span class="c">1,</span> <span class="c">0);</span>
+	<span class="c">snd_i2c_bit_set(</span><span class="pc">b</span><span class="c">us,</span> <span class="pc">0</span><span class="c">,</span> <span class="c">0);</span>
+<span class="pc">}</span>
+
+<span class="c">static</span> <span class="c">void</span> <span class="w">snd_i2c_bit_stop</span><span class="c">(struct</span> <span class="w">snd_i2c_bus</span> <span class="c">*</span><span class="pc">b</span><span class="c">us</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">s</span><span class="pc">n</span><span class="c">d_i2c_bit_set(</span><span class="pc">b</span><span class="c">us,</span> <span class="c">0,</span> <span class="c">0);</span>
+	<span class="w">s</span><span class="pc">n</span><span class="c">d_i2c_bit_set(</span><span class="pc">b</span><span class="c">us,</span> <span class="pc">1</span><span class="c">,</span> <span class="c">0);</span>
+	<span class="w">s</span><span class="pc">nd_i2c_bit_se</span><span class="c">t(</span><span class="pc">b</span><span class="c">us,</span> <span class="pc">1</span><span class="c">,</span> <span class="pc">1</span><span class="c">);</span>
+	<span class="w">snd_i2c_bit_hw_stop</span><span class="c">(</span><span class="pc">b</span><span class="c">us</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">void</span> <span class="w">snd_i2c_bit_send</span><span class="c">(struct</span> <span class="pc">s</span><span class="c">nd_i2c_bus</span> <span class="c">*</span><span class="pc">b</span><span class="c">us</span><span class="pc">,</span> <span class="c">int</span> <span class="w">da</span><span class="c">ta)</span>
+<span class="c">{</span>
+	<span class="w">s</span><span class="pc">n</span><span class="c">d_i2c_bit_set(</span><span class="pc">b</span><span class="c">us,</span> <span class="c">0,</span> <span class="w">d</span><span class="c">ata);</span>
+	<span class="pc">s</span><span class="c">nd_i2c_bit_set(bus,</span> <span class="w">1</span><span class="c">,</span> <span class="pc">d</span><span class="c">ata);</span>
+	<span class="pc">s</span><span class="c">nd_i2c_bit_set(</span><span class="pc">b</span><span class="c">us,</span> <span class="pc">0</span><span class="c">,</span> <span class="pc">d</span><span class="c">ata);</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">int</span> <span class="w">snd_i2c_bit_ack</span><span class="c">(struct</span> <span class="c">snd_i2c_bus</span> <span class="c">*bus</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">ack</span><span class="c">;</span>
+
+	<span class="pc">sn</span><span class="c">d_i2c_bit_set(bus,</span> <span class="w">0</span><span class="c">,</span> <span class="w">1</span><span class="c">);</span>
+	<span class="pc">s</span><span class="c">nd_i2c_bit_set(</span><span class="pc">b</span><span class="c">us,</span> <span class="w">1</span><span class="c">,</span> <span class="pc">1</span><span class="c">);</span>
+	<span class="w">snd_i2c_bit_direction</span><span class="c">(</span><span class="pc">b</span><span class="c">us,</span> <span class="pc">1</span><span class="c">,</span> <span class="c">0);</span>	
+	<span class="w">a</span><span class="c">ck</span> <span class="pc">=</span> <span class="w">snd_i2c_bit_data</span><span class="c">(</span><span class="w">b</span><span class="c">us,</span> <span class="pc">1</span><span class="c">);</span>
+	<span class="pc">snd_i2c_bit_d</span><span class="c">irection(</span><span class="pc">b</span><span class="c">us,</span> <span class="pc">1</span><span class="c">,</span> <span class="pc">1</span><span class="c">);</span>	
+	<span class="pc">snd_i2c_bit_s</span><span class="c">et(</span><span class="pc">b</span><span class="c">us,</span> <span class="pc">0</span><span class="c">,</span> <span class="pc">1</span><span class="c">);</span>
+	<span class="w">r</span><span class="c">eturn</span> <span class="pc">a</span><span class="c">ck</span> <span class="w">? -E</span><span class="c">IO</span> <span class="c">:</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">snd_i2c_bit_sendbyte</span><span class="c">(struct</span> <span class="w">snd_i2c_bus</span> <span class="c">*</span><span class="pc">b</span><span class="c">us,</span> <span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="pc">c</span><span class="c">har</span> <span class="w">d</span><span class="c">ata</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="c">i</span><span class="pc">,</span> <span class="pc">e</span><span class="c">rr</span><span class="pc">;</span>
+
+	<span class="w">f</span><span class="c">or</span> <span class="c">(i</span> <span class="c">=</span> <span class="w">7</span><span class="c">;</span> <span class="c">i</span> <span class="pc">&gt;</span><span class="c">=</span> <span class="pc">0</span><span class="c">;</span> <span class="c">i</span><span class="w">--)</span>
+		<span class="w">snd_i2c_bit_send</span><span class="pc">(</span><span class="w">b</span><span class="c">us</span><span class="w">, !!(d</span><span class="pc">a</span><span class="c">ta</span> <span class="w">&amp;</span><span class="pc"> </span><span class="c">(1</span> <span class="c">&lt;&lt;</span> <span class="c">i</span><span class="w">)))</span><span class="pc">;</span>
+	<span class="w">e</span><span class="pc">r</span><span class="c">r</span> <span class="c">=</span> <span class="w">snd_i2c_bit_ack</span><span class="c">(</span><span class="w">b</span><span class="c">us</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">if</span> <span class="c">(err</span> <span class="pc">&lt;</span> <span class="c">0)</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="c">err;</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">snd_i2c_bit_readbyte</span><span class="c">(struct</span> <span class="w">snd_i2c_bus</span> <span class="c">*</span><span class="pc">b</span><span class="c">us,</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">la</span><span class="c">st)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="pc">i</span><span class="c">;</span>
+	<span class="w">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">har</span> <span class="w">d</span><span class="c">ata</span> <span class="pc">=</span> <span class="c">0;</span>
+
+	<span class="w">snd_i2c_bit_set</span><span class="c">(</span><span class="pc">b</span><span class="c">us,</span> <span class="c">0</span><span class="pc">,</span> <span class="pc">1)</span><span class="c">;</span>
+	<span class="w">snd_i2c_bit_direction</span><span class="c">(</span><span class="w">b</span><span class="c">us</span><span class="pc">,</span> <span class="pc">1</span><span class="c">,</span> <span class="c">0);</span>	
+	<span class="w">f</span><span class="c">or</span> <span class="c">(i</span> <span class="c">=</span> <span class="w">7</span><span class="c">;</span> <span class="c">i</span> <span class="pc">&gt;=</span> <span class="c">0;</span> <span class="c">i</span><span class="w">-</span><span class="c">-) {</span>
+		<span class="pc">snd_i2c_bit_s</span><span class="c">et(</span><span class="pc">b</span><span class="c">us,</span> <span class="pc">1</span><span class="c">,</span> <span class="pc">1</span><span class="c">);</span>
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">snd_i2c_bit_data</span><span class="c">(</span><span class="pc">b</span><span class="c">us,</span> <span class="c">0</span><span class="pc">)</span><span class="c">)</span>
+			<span class="w">da</span><span class="c">ta</span> <span class="w">|</span><span class="pc">= </span><span class="c">(1</span> <span class="c">&lt;&lt;</span> <span class="w">i</span><span class="c">);</span>
+		<span class="w">s</span><span class="c">nd_i2c_bit_set(</span><span class="w">b</span><span class="c">us,</span> <span class="c">0,</span> <span class="pc">1</span><span class="c">);</span>
+	<span class="c">}</span>
+	<span class="w">snd_i2c_bit_direction</span><span class="c">(</span><span class="pc">b</span><span class="c">us,</span> <span class="pc">1</span><span class="c">,</span> <span class="pc">1</span><span class="c">);</span>	
+	<span class="w">snd_i2c_bit_send</span><span class="c">(</span><span class="pc">b</span><span class="c">us</span><span class="w">, !!la</span><span class="pc">s</span><span class="c">t</span><span class="pc">)</span><span class="c">;</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">d</span><span class="pc">a</span><span class="c">ta;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">snd_i2c_bit_sendbytes</span><span class="c">(struct</span> <span class="w">snd_i2c_device</span> <span class="c">*</span><span class="w">d</span><span class="pc">evi</span><span class="c">ce,</span>
+				 <span class="pc">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">har</span> <span class="c">*</span><span class="w">by</span><span class="c">tes,</span> <span class="c">int</span> <span class="pc">c</span><span class="c">ount)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">snd_i2c_bus</span> <span class="c">*</span><span class="pc">b</span><span class="c">us</span> <span class="c">=</span> <span class="w">d</span><span class="pc">evi</span><span class="c">ce</span><span class="pc">-</span><span class="c">&gt;</span><span class="pc">b</span><span class="c">us;</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="pc">e</span><span class="c">rr</span><span class="pc">,</span> <span class="w">res</span> <span class="pc">=</span> <span class="pc">0</span><span class="c">;</span>
+
+	<span class="c">if</span> <span class="c">(</span><span class="w">d</span><span class="pc">evi</span><span class="c">ce-&gt;</span><span class="pc">f</span><span class="c">lags</span> <span class="c">&amp;</span> <span class="w">SND_I2C_DEVICE_ADDRTEN</span><span class="pc">)</span>
+		<span class="c">return</span> <span class="c">-</span><span class="pc">EIO</span><span class="c">;</span>		
+	<span class="w">snd_i2c_bit_start</span><span class="c">(</span><span class="pc">b</span><span class="c">us</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">e</span><span class="c">rr</span> <span class="c">=</span> <span class="w">snd_i2c_bit_sendbyte</span><span class="c">(</span><span class="pc">b</span><span class="c">us</span><span class="pc">,</span> <span class="w">d</span><span class="pc">evi</span><span class="c">ce-&gt;</span><span class="w">a</span><span class="c">ddr</span> <span class="w">&lt;</span><span class="c">&lt;</span> <span class="pc">1</span><span class="c">);</span>
+	<span class="c">if</span> <span class="c">(err</span> <span class="pc">&lt;</span> <span class="c">0</span><span class="pc">) </span><span class="c">{</span>
+		<span class="w">snd_i2c_bit_hw_stop</span><span class="c">(</span><span class="pc">b</span><span class="c">us</span><span class="pc">)</span><span class="c">;</span>
+		<span class="c">return</span> <span class="c">err;</span>
+	<span class="c">}</span>
+	<span class="w">w</span><span class="c">hile</span> <span class="c">(</span><span class="w">c</span><span class="c">ount</span><span class="w">-- &gt;</span> <span class="c">0) {</span>
+		<span class="pc">e</span><span class="c">rr</span> <span class="c">=</span> <span class="w">s</span><span class="pc">nd_i2c_bit_se</span><span class="c">ndbyte(bus</span><span class="w">, *by</span><span class="pc">tes</span><span class="w">+</span><span class="pc">+)</span><span class="c">;</span>
+		<span class="c">if</span> <span class="c">(err</span> <span class="pc">&lt;</span> <span class="c">0) {</span>
+			<span class="w">s</span><span class="c">nd_i2c_bit_hw_stop(</span><span class="pc">b</span><span class="c">us</span><span class="pc">)</span><span class="c">;</span>
+			<span class="c">return</span> <span class="c">err;</span>
+		<span class="c">}</span>
+		<span class="w">res</span><span class="pc">+</span><span class="c">+;</span>
+	<span class="c">}</span>
+	<span class="w">snd_i2c_bit_stop</span><span class="c">(</span><span class="pc">b</span><span class="c">us);</span>
+	<span class="c">return</span> <span class="w">re</span><span class="pc">s</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">snd_i2c_bit_readbytes</span><span class="c">(struct</span> <span class="w">snd_i2c_device</span> <span class="c">*</span><span class="pc">devi</span><span class="c">ce,</span>
+				 <span class="pc">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">har</span> <span class="c">*</span><span class="w">by</span><span class="c">tes,</span> <span class="pc">i</span><span class="c">nt</span> <span class="pc">c</span><span class="c">ount)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">snd_i2c_bus</span> <span class="c">*bus</span> <span class="c">=</span> <span class="w">d</span><span class="pc">evi</span><span class="c">ce-&gt;</span><span class="pc">b</span><span class="c">us;</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="c">err</span><span class="pc">,</span> <span class="w">res</span> <span class="pc">=</span> <span class="c">0;</span>
+
+	<span class="c">if</span> <span class="c">(</span><span class="w">d</span><span class="pc">evi</span><span class="c">ce-&gt;</span><span class="pc">f</span><span class="c">lags</span> <span class="c">&amp;</span> <span class="w">SND_I2C_DEVICE_ADDRTEN</span><span class="pc">)</span>
+		<span class="c">return</span> <span class="c">-</span><span class="pc">EIO</span><span class="c">;</span>		
+	<span class="w">snd_i2c_bit_start</span><span class="c">(</span><span class="pc">b</span><span class="c">us</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">e</span><span class="c">rr</span> <span class="c">=</span> <span class="w">snd_i2c_bit_sendbyte</span><span class="c">(</span><span class="pc">b</span><span class="c">us</span><span class="w">,</span><span class="pc"> (</span><span class="w">d</span><span class="pc">evi</span><span class="c">ce-&gt;</span><span class="w">a</span><span class="c">ddr</span> <span class="pc">&lt;</span><span class="c">&lt;</span> <span class="c">1</span><span class="pc">) </span><span class="c">|</span> <span class="w">1</span><span class="c">);</span>
+	<span class="c">if</span> <span class="c">(err</span> <span class="pc">&lt;</span> <span class="c">0</span><span class="pc">) </span><span class="c">{</span>
+		<span class="w">snd_i2c_bit_hw_stop</span><span class="c">(</span><span class="pc">b</span><span class="c">us);</span>
+		<span class="c">return</span> <span class="c">err;</span>
+	<span class="c">}</span>
+	<span class="w">w</span><span class="c">hile</span> <span class="c">(</span><span class="pc">c</span><span class="c">ount</span><span class="w">-- &gt;</span> <span class="pc">0</span><span class="c">) {</span>
+		<span class="pc">e</span><span class="c">rr</span> <span class="c">=</span> <span class="w">snd_i2c_bit_readbyte</span><span class="c">(</span><span class="pc">b</span><span class="c">us,</span> <span class="w">c</span><span class="pc">o</span><span class="c">unt</span> <span class="w">=</span><span class="pc">=</span> <span class="c">0</span><span class="pc">);</span>
+		<span class="c">if</span> <span class="c">(err</span> <span class="pc">&lt;</span> <span class="c">0</span><span class="pc">) </span><span class="c">{</span>
+			<span class="w">s</span><span class="c">nd_i2c_bit_hw_stop(</span><span class="pc">b</span><span class="c">us</span><span class="pc">)</span><span class="c">;</span>
+			<span class="c">return</span> <span class="c">err;</span>
+		<span class="c">}</span>
+		<span class="w">*by</span><span class="pc">tes</span><span class="w">++ = (u</span><span class="pc">n</span><span class="c">signed</span> <span class="pc">c</span><span class="c">har</span><span class="w">)e</span><span class="c">rr</span><span class="pc">;</span>
+		<span class="w">res+</span><span class="pc">+</span><span class="c">;</span>
+	<span class="c">}</span>
+	<span class="w">snd_i2c_bit_stop</span><span class="c">(</span><span class="pc">b</span><span class="c">us);</span>
+	<span class="c">return</span> <span class="w">re</span><span class="pc">s</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">snd_i2c_bit_probeaddr</span><span class="c">(struct</span> <span class="w">snd_i2c_bus</span> <span class="c">*</span><span class="pc">b</span><span class="c">us,</span> <span class="pc">u</span><span class="c">nsigned</span> <span class="pc">s</span><span class="c">hort</span> <span class="pc">a</span><span class="c">ddr</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="c">err;</span>
+
+	<span class="pc">if</span> <span class="c">(</span><span class="w">a</span><span class="c">ddr</span> <span class="w">&amp;</span> <span class="w">0x8</span><span class="pc">00</span><span class="c">0)</span>	
+		<span class="c">return</span> <span class="c">-</span><span class="pc">EIO</span><span class="c">;</span>	
+	<span class="c">if</span> <span class="c">(</span><span class="w">a</span><span class="c">ddr</span> <span class="c">&amp;</span> <span class="w">0x7f80</span><span class="c">)</span>	
+		<span class="c">return</span> <span class="pc">-</span><span class="c">EINVAL;</span>
+	<span class="w">snd_i2c_bit_start</span><span class="c">(</span><span class="w">b</span><span class="c">us</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">e</span><span class="pc">r</span><span class="c">r</span> <span class="c">=</span> <span class="w">snd_i2c_bit_sendbyte</span><span class="c">(</span><span class="pc">b</span><span class="c">us,</span> <span class="c">addr</span> <span class="w">&lt;</span><span class="c">&lt;</span> <span class="pc">1</span><span class="c">);</span>
+	<span class="w">snd_i2c_bit_stop</span><span class="c">(</span><span class="pc">b</span><span class="c">us</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">return</span> <span class="pc">e</span><span class="c">rr;</span>
+<span class="c">}</span>
+
+
+<span class="c">static</span> <span class="c">int</span> <span class="pc">__i</span><span class="c">nit</span> <span class="w">alsa_i2c_init</span><span class="c">(void)</span>
+<span class="c">{</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">0</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">void</span> <span class="c">__exit</span> <span class="w">alsa_i2c_exit</span><span class="c">(void)</span>
+<span class="c">{</span>
+<span class="pc">}</span>
+
+<span class="c">module_init(alsa_i2c_init</span><span class="pc">)</span>
+<span class="c">module_exit(</span><span class="pc">alsa_i2c_e</span><span class="c">xit</span><span class="pc">)</span>
+
+</pre>
+</body>
+</html>
+

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+<span class="w">#ifndef</span> <span class="w">___ASM_SPARC_ELF_H</span>
+<span class="w">#define</span> <span class="w">___ASM_SPARC_ELF_H</span>
+<span class="w">#if</span> <span class="w">defined(__sparc__) &amp;&amp;</span> <span class="w">defined(__arch64__)</span>
+<span class="w">#include</span> <span class="w">&lt;asm/elf_64.h&gt;</span>
+<span class="w">#else</span>
+<span class="w">#include</span> <span class="w">&lt;asm/elf_32.h&gt;</span>
+<span class="w">#endif</span>
+<span class="w">#endif</span>
+
+</pre>
+</body>
+</html>
+

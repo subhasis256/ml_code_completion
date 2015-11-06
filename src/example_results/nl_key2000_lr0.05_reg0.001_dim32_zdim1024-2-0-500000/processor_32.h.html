@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+<span class="w">#ifndef</span> <span class="w">__ASM_SH_PROCESSOR_32_H</span>
+<span class="w">#define</span> <span class="w">__ASM_SH_PROCESSOR_32_H</span>
+<span class="w">#ifdef</span> <span class="w">__KERNEL__</span>
+
+<span class="w">#include</span> <span class="w">&lt;linux/compiler.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/linkage.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;asm/page.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;asm</span><span class="c">/</span><span class="w">t</span><span class="c">ypes.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">hw_breakpoint</span><span class="c">.h&gt;</span>
+
+
+<span class="c">#</span><span class="pc">d</span><span class="c">efine</span> <span class="w">current_text_addr() ({</span> <span class="w">v</span><span class="pc">o</span><span class="c">id</span> <span class="c">*</span><span class="w">pc</span><span class="pc">;</span> <span class="w">__a</span><span class="pc">s</span><span class="c">m__</span><span class="w">(</span><span class="c">"</span><span class="w">mova</span>	<span class="w">1f,</span><span class="pc"> </span><span class="c">%</span><span class="w">0\</span><span class="c">n</span><span class="w">.al</span><span class="pc">i</span><span class="c">gn</span> <span class="w">2\n1:":"=z" </span><span class="c">(</span><span class="w">pc)</span><span class="pc">);</span> <span class="w">pc; })</span>
+
+
+<span class="w">#</span><span class="pc">d</span><span class="c">efine</span> <span class="w">CCN_PVR</span>		<span class="w">0xff000030</span>
+<span class="c">#define</span> <span class="w">CCN_CVR</span>		<span class="w">0xff000040</span>
+<span class="c">#define</span> <span class="w">CCN_PRR</span>		<span class="w">0xff000044</span>
+
+
+<span class="c">#define</span> <span class="w">TASK_SIZE</span>	<span class="w">0x7c000000UL</span>
+
+<span class="c">#define</span> <span class="w">STACK_TOP</span>	<span class="w">T</span><span class="c">ASK_SIZE</span>
+<span class="c">#define</span> <span class="w">STACK_TOP_MAX</span>	<span class="w">S</span><span class="c">TACK_TOP</span>
+
+
+<span class="c">#define</span> <span class="w">TASK_UNMAPPED_BASE</span>	<span class="w">PAGE_ALIGN</span><span class="pc">(</span><span class="w">T</span><span class="c">ASK_SIZE</span> <span class="w">/</span> <span class="w">3</span><span class="c">)</span>
+
+
+<span class="c">#define</span> <span class="w">SR_DSP</span>		<span class="w">0x00001000</span>
+<span class="c">#define</span> <span class="w">SR_IMASK</span>	<span class="w">0x000000f0</span>
+<span class="c">#define</span> <span class="w">SR_FD</span>		<span class="w">0x00008000</span>
+<span class="c">#define</span> <span class="w">SR_MD</span>		<span class="w">0x4</span><span class="pc">00</span><span class="c">00000</span>
+
+
+<span class="pc">s</span><span class="c">truct</span> <span class="w">sh_dsp_struct</span> <span class="c">{</span>
+	<span class="pc">un</span><span class="c">signed</span> <span class="c">long</span> <span class="w">dsp_regs</span><span class="pc">[</span><span class="w">14</span><span class="c">];</span>
+	<span class="w">l</span><span class="c">ong</span> <span class="w">s</span><span class="pc">t</span><span class="c">atus;</span>
+<span class="c">};</span>
+
+
+
+<span class="pc">s</span><span class="c">truct</span> <span class="w">sh_fpu_hard_struct</span> <span class="c">{</span>
+	<span class="c">unsigned</span> <span class="c">long</span> <span class="w">fp_regs</span><span class="pc">[</span><span class="w">1</span><span class="c">6];</span>
+	<span class="c">unsigned</span> <span class="c">long</span> <span class="w">xfp_regs</span><span class="c">[</span><span class="pc">1</span><span class="c">6];</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">fpscr</span><span class="c">;</span>
+	<span class="c">unsigned</span> <span class="c">long</span> <span class="w">fpul</span><span class="c">;</span>
+
+	<span class="w">l</span><span class="c">ong</span> <span class="w">s</span><span class="pc">tat</span><span class="c">us;</span> 
+<span class="pc">}</span><span class="c">;</span>
+
+
+<span class="pc">s</span><span class="c">truct</span> <span class="w">sh_fpu_soft_struct</span> <span class="c">{</span>
+	<span class="c">unsigned</span> <span class="c">long</span> <span class="w">fp</span><span class="pc">_</span><span class="c">regs</span><span class="pc">[</span><span class="w">1</span><span class="c">6];</span>
+	<span class="c">unsigned</span> <span class="c">long</span> <span class="w">x</span><span class="c">fp_regs[16];</span>
+	<span class="c">unsigned</span> <span class="c">long</span> <span class="pc">fp</span><span class="c">scr;</span>
+	<span class="c">unsigned</span> <span class="c">long</span> <span class="w">f</span><span class="pc">p</span><span class="c">ul;</span>
+
+	<span class="c">unsigned</span> <span class="pc">c</span><span class="c">har</span> <span class="w">lookahead</span><span class="c">;</span>
+	<span class="c">unsigned</span> <span class="c">long</span> <span class="w">entry_pc</span><span class="c">;</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="w">u</span><span class="pc">ni</span><span class="c">on</span> <span class="w">thread_xstate</span> <span class="c">{</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">sh_fpu_hard_struct</span> <span class="w">hardfpu</span><span class="c">;</span>
+	<span class="c">struct</span> <span class="c">sh_fpu_soft_struct</span> <span class="w">softfpu</span><span class="c">;</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="c">struct</span> <span class="w">thread_struct</span> <span class="c">{</span>
+	
+	<span class="c">unsigned</span> <span class="c">long</span> <span class="w">sp</span><span class="c">;</span>
+	<span class="c">unsigned</span> <span class="c">long</span> <span class="w">pc</span><span class="c">;</span>
+
+	
+	<span class="c">unsigned</span> <span class="c">long</span> <span class="c">flags;</span>
+
+	
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">pe</span><span class="pc">r</span><span class="c">f_event</span> <span class="c">*</span><span class="w">ptrace_bps</span><span class="pc">[</span><span class="w">HBP_NUM</span><span class="c">];</span>
+
+<span class="pc">#</span><span class="c">ifdef</span> <span class="w">CONFIG_SH_DSP</span>
+	
+	<span class="c">struct</span> <span class="w">sh_dsp_struct</span> <span class="w">dsp_status</span><span class="c">;</span>
+<span class="c">#endif</span>
+
+	
+	<span class="w">un</span><span class="pc">i</span><span class="c">on</span> <span class="w">thread_xstate</span> <span class="pc">*</span><span class="w">xstate</span><span class="c">;</span>
+
+	
+	<span class="c">unsigned</span> <span class="pc">c</span><span class="c">har</span> <span class="w">fpu_counter</span><span class="pc">;</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="c">#define</span> <span class="w">INIT_THREAD</span>  <span class="w">{						\</span>
+	<span class="w">.sp</span> <span class="pc">=</span> <span class="w">s</span><span class="c">izeof(</span><span class="w">init_stack) +</span><span class="pc"> </span><span class="c">(</span><span class="w">l</span><span class="pc">o</span><span class="c">ng</span><span class="w">) </span><span class="pc">&amp;</span><span class="w">i</span><span class="c">nit_stack</span><span class="w">,</span><span class="pc">	</span><span class="c">	\</span>
+	<span class="pc">.fl</span><span class="c">ags</span> <span class="c">=</span> <span class="w">0,						\</span>
+<span class="w">}</span>
+
+
+<span class="w">s</span><span class="pc">tr</span><span class="c">uct</span> <span class="w">t</span><span class="pc">a</span><span class="c">sk_struct</span><span class="pc">;</span>
+
+<span class="w">e</span><span class="c">xtern</span> <span class="c">void</span> <span class="w">start_thread</span><span class="c">(struct</span> <span class="w">p</span><span class="pc">t</span><span class="c">_regs</span> <span class="c">*regs,</span> <span class="c">unsigned</span> <span class="c">long</span> <span class="w">new_pc</span><span class="c">,</span> <span class="c">unsigned</span> <span class="c">long</span> <span class="w">new_sp</span><span class="pc">);</span>
+
+
+<span class="c">extern</span> <span class="c">void</span> <span class="w">release_thread</span><span class="c">(struct</span> <span class="pc">t</span><span class="c">ask_struct</span> <span class="pc">*)</span><span class="c">;</span>
+
+
+<span class="pc">#d</span><span class="c">efine</span> <span class="w">copy_segments</span><span class="c">(p,</span> <span class="w">mm</span><span class="pc">)</span>	<span class="c">do</span> <span class="c">{ }</span> <span class="c">while(0)</span>
+<span class="pc">#d</span><span class="c">efine</span> <span class="w">release_segments</span><span class="c">(</span><span class="w">m</span><span class="pc">m)</span>	<span class="c">do</span> <span class="c">{ }</span> <span class="c">while(0)</span>
+
+
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="w">__inline__</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">disable_fpu</span><span class="c">(</span><span class="pc">v</span><span class="c">oid)</span>
+<span class="c">{</span>
+	<span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="c">long</span> <span class="w">__dummy</span><span class="pc">;</span>
+
+	
+	<span class="w">__a</span><span class="pc">s</span><span class="c">m__</span> <span class="w">__v</span><span class="c">olatile__("</span><span class="w">stc</span>	<span class="w">sr,</span><span class="pc"> %</span><span class="w">0</span><span class="pc">\</span><span class="c">n</span><span class="w">\</span><span class="pc">t</span><span class="w">"</span>
+			     <span class="pc">"</span><span class="w">or</span>	<span class="w">%1,</span><span class="pc"> </span><span class="c">%</span><span class="w">0</span><span class="c">\n</span><span class="pc">\t"</span>
+			     <span class="c">"</span><span class="w">ldc</span>	<span class="pc">%</span><span class="w">0</span><span class="pc">,</span> <span class="w">sr"</span>
+			     <span class="w">: "=&amp;r"</span><span class="pc"> </span><span class="c">(</span><span class="w">_</span><span class="c">_dummy</span><span class="w">)</span>
+			     <span class="w">:</span><span class="c"> "</span><span class="w">r"</span><span class="pc"> </span><span class="c">(</span><span class="w">SR_FD</span><span class="pc">))</span><span class="c">;</span>
+<span class="w">}</span>
+
+<span class="w">s</span><span class="pc">t</span><span class="c">atic</span> <span class="w">__inline__</span> <span class="w">v</span><span class="c">oid</span> <span class="w">enable_fpu</span><span class="c">(</span><span class="pc">v</span><span class="c">oid)</span>
+<span class="c">{</span>
+	<span class="w">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="pc">_</span><span class="c">_dummy;</span>
+
+	
+	<span class="w">__a</span><span class="pc">s</span><span class="c">m__</span> <span class="w">__v</span><span class="c">olatile__("</span><span class="w">stc</span>	<span class="w">sr,</span><span class="pc"> %</span><span class="w">0</span><span class="pc">\</span><span class="c">n</span><span class="w">\</span><span class="pc">t</span><span class="w">"</span>
+			     <span class="pc">"</span><span class="w">a</span><span class="pc">n</span><span class="c">d</span>	<span class="c">%</span><span class="w">1,</span><span class="pc"> </span><span class="c">%</span><span class="w">0</span><span class="c">\n</span><span class="pc">\t"</span>
+			     <span class="c">"</span><span class="w">ldc</span>	<span class="pc">%</span><span class="w">0</span><span class="pc">,</span> <span class="w">sr</span><span class="pc">"</span>
+			     <span class="w">: "=&amp;r"</span><span class="pc"> </span><span class="c">(</span><span class="w">_</span><span class="c">_dummy</span><span class="w">)</span>
+			     <span class="w">:</span><span class="c"> "</span><span class="w">r" (~SR_FD))</span><span class="c">;</span>
+<span class="w">}</span>
+
+
+<span class="w">#</span><span class="c">define</span> <span class="w">FPSCR_INIT</span>  <span class="w">0x00080000</span>
+
+<span class="c">#define</span>	<span class="w">FPSCR_CAUSE_MASK</span>	<span class="w">0x0001f000</span>	
+<span class="c">#define</span>	<span class="w">FPSCR_FLAG_MASK</span>		<span class="w">0x0000007c</span>	
+
+
+<span class="c">#define</span> <span class="w">thread_saved_pc</span><span class="pc">(</span><span class="w">t</span><span class="pc">s</span><span class="c">k</span><span class="w">)	</span><span class="pc">(</span><span class="w">ts</span><span class="c">k-&gt;</span><span class="w">th</span><span class="pc">read</span><span class="c">.</span><span class="w">pc</span><span class="c">)</span>
+
+<span class="pc">v</span><span class="c">oid</span> <span class="w">show_trace</span><span class="c">(struct</span> <span class="w">t</span><span class="c">ask_struct</span> <span class="c">*tsk</span><span class="pc">,</span> <span class="c">unsigned</span> <span class="c">long</span> <span class="pc">*</span><span class="w">sp</span><span class="c">,</span>
+		<span class="w">s</span><span class="pc">t</span><span class="c">ruct</span> <span class="pc">p</span><span class="c">t_regs</span> <span class="c">*</span><span class="w">r</span><span class="pc">e</span><span class="c">gs</span><span class="pc">);</span>
+
+<span class="c">#</span><span class="pc">i</span><span class="c">fdef</span> <span class="w">CONFIG_DUMP_CODE</span>
+<span class="pc">v</span><span class="c">oid</span> <span class="w">show_code</span><span class="c">(struct</span> <span class="pc">p</span><span class="c">t_regs</span> <span class="c">*</span><span class="pc">r</span><span class="c">egs</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">#else</span>
+<span class="pc">s</span><span class="c">tatic</span> <span class="c">inline</span> <span class="c">void</span> <span class="pc">show_c</span><span class="c">ode(struct</span> <span class="pc">p</span><span class="c">t_regs</span> <span class="c">*regs</span><span class="pc">)</span>
+<span class="c">{</span>
+<span class="c">}</span>
+<span class="pc">#</span><span class="c">endif</span>
+
+<span class="pc">e</span><span class="c">xtern</span> <span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">get_wchan</span><span class="c">(struct</span> <span class="pc">t</span><span class="c">ask_struct</span> <span class="c">*</span><span class="w">p</span><span class="pc">);</span>
+
+<span class="c">#</span><span class="pc">d</span><span class="c">efine</span> <span class="w">KSTK_EIP</span><span class="c">(</span><span class="w">t</span><span class="pc">s</span><span class="c">k</span><span class="w">)  (task_pt_regs</span><span class="c">(</span><span class="w">t</span><span class="pc">s</span><span class="c">k</span><span class="w">)-</span><span class="c">&gt;</span><span class="w">pc</span><span class="c">)</span>
+<span class="c">#define</span> <span class="w">KSTK_ESP</span><span class="c">(</span><span class="pc">t</span><span class="c">sk</span><span class="pc">) </span><span class="c"> (</span><span class="w">t</span><span class="pc">a</span><span class="c">sk_pt_regs(tsk)-&gt;</span><span class="w">r</span><span class="c">egs</span><span class="pc">[</span><span class="w">15</span><span class="c">])</span>
+
+<span class="c">#</span><span class="w">i</span><span class="pc">f</span> <span class="c">defined(</span><span class="w">CONFIG_CPU_SH2A</span><span class="pc">) </span><span class="c">||</span> <span class="c">defined(</span><span class="w">CONFIG_CPU_SH4</span><span class="c">)</span>
+
+<span class="c">#define</span> <span class="w">PREFETCH_STRIDE</span>		<span class="w">L1_CACHE_BYTES</span>
+<span class="c">#</span><span class="pc">d</span><span class="c">efine</span> <span class="w">ARCH_HAS_PREFETCH</span>
+<span class="w">#</span><span class="pc">d</span><span class="c">efine</span> <span class="w">ARCH_HAS_PREFETCHW</span>
+
+<span class="w">s</span><span class="pc">t</span><span class="c">atic</span> <span class="c">inline</span> <span class="c">void</span> <span class="w">prefetch</span><span class="c">(</span><span class="w">c</span><span class="c">onst</span> <span class="w">v</span><span class="c">oid</span> <span class="c">*</span><span class="w">x</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="w">__builtin_prefetch</span><span class="c">(</span><span class="w">x</span><span class="c">,</span> <span class="pc">0</span><span class="c">,</span> <span class="w">3</span><span class="pc">);</span>
+<span class="c">}</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="c">inline</span> <span class="c">void</span> <span class="w">prefetchw</span><span class="c">(</span><span class="pc">c</span><span class="c">onst</span> <span class="pc">v</span><span class="c">oid</span> <span class="c">*</span><span class="w">x</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="pc">_</span><span class="c">_builtin_prefetch(</span><span class="w">x</span><span class="c">,</span> <span class="w">1</span><span class="c">,</span> <span class="w">3</span><span class="c">);</span>
+<span class="c">}</span>
+<span class="pc">#</span><span class="c">endif</span>
+
+<span class="c">#</span><span class="w">e</span><span class="c">ndif</span> 
+<span class="c">#</span><span class="w">e</span><span class="c">ndif</span> 
+
+</pre>
+</body>
+</html>
+

@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+
+
+<span class="w">#ifndef</span> <span class="w">_DRIVERS_MISC_SGIXP_XPC_H</span>
+<span class="w">#define</span> <span class="w">_DRIVERS_MISC_SGIXP_XPC_H</span>
+
+<span class="w">#include</span> <span class="w">&lt;linux/wait.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/completion.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/timer.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/sched.</span><span class="c">h&gt;</span>
+<span class="c">#include</span> <span class="pc">"</span><span class="w">xp</span><span class="c">.h"</span>
+
+
+<span class="c">#</span><span class="pc">d</span><span class="c">efine</span> <span class="w">_XPC_VERSION</span><span class="pc">(</span><span class="w">_maj</span><span class="pc">,</span> <span class="w">_min)	(</span><span class="pc">((</span><span class="c">_maj</span><span class="w">) </span><span class="pc">&lt;</span><span class="c">&lt;</span> <span class="pc">4</span><span class="w">) | ((</span><span class="pc">_mi</span><span class="c">n</span><span class="w">) </span><span class="pc">&amp;</span> <span class="w">0</span><span class="pc">xf))</span>
+<span class="pc">#</span><span class="c">define</span> <span class="w">XPC_VERSION_MAJOR</span><span class="pc">(</span><span class="w">_v)	</span><span class="pc">	</span><span class="c">((_v</span><span class="pc">)</span><span class="c"> &gt;&gt;</span> <span class="c">4)</span>
+<span class="c">#define</span> <span class="w">XPC_VERSION_MINOR</span><span class="c">(_v</span><span class="w">)</span><span class="pc">		</span><span class="c">((</span><span class="w">_</span><span class="pc">v</span><span class="w">)</span><span class="pc"> &amp;</span> <span class="pc">0xf</span><span class="c">)</span>
+
+
+<span class="c">#define</span> <span class="w">XPC_HB_DEFAULT_INTERVAL</span>		<span class="w">5</span>	
+<span class="c">#define</span> <span class="w">XPC_HB_CHECK_DEFAULT_INTERVAL</span>	<span class="w">2</span><span class="pc">0</span>	
+
+
+<span class="c">#define</span> <span class="w">XPC_HB_CHECK_THREAD_NAME</span>	<span class="w">"xpc_hb</span><span class="c">"</span>
+<span class="c">#define</span> <span class="w">XPC_HB_CHECK_CPU</span>		<span class="w">0</span>
+
+
+<span class="c">#define</span> <span class="w">XPC_DISCOVERY_THREAD_NAME</span>	<span class="w">"xpc_discovery</span><span class="c">"</span>
+
+
+<span class="pc">s</span><span class="c">truct</span> <span class="w">xpc_rsvd_page</span> <span class="c">{</span>
+	<span class="w">u6</span><span class="c">4</span> <span class="w">SAL_signature</span><span class="c">;</span>	
+	<span class="pc">u6</span><span class="c">4</span> <span class="w">SAL_version</span><span class="c">;</span>	
+	<span class="w">s</span><span class="pc">h</span><span class="c">ort</span> <span class="w">SAL_partid</span><span class="c">;</span>	
+	<span class="w">s</span><span class="pc">h</span><span class="c">ort</span> <span class="w">max_npartitions</span><span class="c">;</span>	
+	<span class="pc">u</span><span class="c">8</span> <span class="pc">v</span><span class="c">ersion;</span>
+	<span class="c">u8</span> <span class="w">pad1</span><span class="pc">[3</span><span class="c">];</span>		
+	<span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">ts_jiffies</span><span class="c">;</span> 
+	<span class="w">u</span><span class="pc">ni</span><span class="c">on</span> <span class="c">{</span>
+		<span class="c">struct</span> <span class="c">{</span>
+			<span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">vars_pa</span><span class="c">;</span>	
+		<span class="pc">}</span> <span class="w">sn2</span><span class="c">;</span>
+		<span class="pc">s</span><span class="c">truct</span> <span class="c">{</span>
+			<span class="pc">u</span><span class="c">nsigned</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">heartbeat_gpa</span><span class="c">;</span> 
+			<span class="c">unsigned</span> <span class="c">long</span> <span class="w">activate_gru_mq_desc_gpa</span><span class="c">;</span> 
+		<span class="c">}</span> <span class="w">uv</span><span class="c">;</span>
+	<span class="pc">}</span> <span class="w">sn</span><span class="c">;</span>
+	<span class="w">u</span><span class="pc">6</span><span class="c">4</span> <span class="w">pad2</span><span class="pc">[</span><span class="w">9</span><span class="c">];</span>		
+	<span class="w">u</span><span class="pc">6</span><span class="c">4</span> <span class="w">SAL_nasids_size</span><span class="c">;</span>	
+<span class="pc">};</span>
+
+<span class="pc">#</span><span class="c">define</span> <span class="w">XPC_RP_VERSION</span> <span class="w">_XPC_VERSION</span><span class="pc">(</span><span class="w">3</span><span class="c">,</span> <span class="w">0</span><span class="c">)</span> 
+
+
+
+
+<span class="pc">s</span><span class="c">truct</span> <span class="w">xpc_vars_sn2</span> <span class="c">{</span>
+	<span class="w">u8</span> <span class="w">v</span><span class="pc">e</span><span class="c">rsion;</span>
+	<span class="w">u6</span><span class="c">4</span> <span class="w">heartbeat</span><span class="c">;</span>
+	<span class="w">DECLARE_BITMAP</span><span class="c">(</span><span class="w">heartbeating_to_mask</span><span class="c">,</span> <span class="w">XP_MAX_NPARTITIONS_SN2</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">u</span><span class="pc">6</span><span class="c">4</span> <span class="w">heartbeat_offline</span><span class="c">;</span>	
+	<span class="w">i</span><span class="c">nt</span> <span class="w">activate_IRQ_nasid</span><span class="c">;</span>
+	<span class="c">int</span> <span class="w">activate_IRQ_phys_cpuid</span><span class="c">;</span>
+	<span class="pc">un</span><span class="c">signed</span> <span class="c">long</span> <span class="w">vars_part_pa</span><span class="c">;</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">amos_page_pa</span><span class="c">;</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">amo</span> <span class="c">*</span><span class="w">amos_page</span><span class="c">;</span>	
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="pc">#</span><span class="c">define</span> <span class="w">XPC_V_VERSION</span> <span class="w">_XPC_VERSION</span><span class="pc">(</span><span class="w">3</span><span class="c">,</span> <span class="pc">1</span><span class="c">)</span>    
+
+
+<span class="pc">s</span><span class="c">truct</span> <span class="w">xpc_vars_part_sn2</span> <span class="c">{</span>
+	<span class="w">u</span><span class="pc">6</span><span class="c">4</span> <span class="w">m</span><span class="c">agic;</span>
+
+	<span class="pc">un</span><span class="c">signed</span> <span class="c">long</span> <span class="w">openclose_args_pa</span><span class="c">;</span> 
+	<span class="c">unsigned</span> <span class="c">long</span> <span class="w">GPs_pa</span><span class="c">;</span>	
+
+	<span class="c">unsigned</span> <span class="c">long</span> <span class="w">chctl_amo_pa</span><span class="c">;</span> 
+
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">notify_IRQ_nasid</span><span class="c">;</span>	
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">notify_IRQ_phys_cpuid</span><span class="c">;</span>	
+
+	<span class="w">u</span><span class="pc">8</span> <span class="w">nchannels</span><span class="c">;</span>		
+
+	<span class="pc">u</span><span class="c">8</span> <span class="pc">r</span><span class="c">eserved</span><span class="pc">[</span><span class="w">23</span><span class="c">];</span>	
+<span class="c">};</span>
+
+
+<span class="c">#define</span> <span class="w">XPC_VP_MAGIC1_SN2</span> <span class="w">0x0053524156435058L</span> 
+<span class="c">#define</span> <span class="w">XPC_VP_MAGIC2_SN2</span> <span class="w">0x0073726176435058L</span> 
+
+
+
+<span class="c">#define</span> <span class="w">XPC_RP_HEADER_SIZE</span>	<span class="w">L1_CACHE_ALIGN</span><span class="pc">(</span><span class="c">sizeof(struct</span> <span class="w">xpc_rsvd_page</span><span class="c">))</span>
+<span class="c">#define</span> <span class="w">XPC_RP_VARS_SIZE</span>	<span class="w">L</span><span class="c">1_CACHE_ALIGN(</span><span class="w">s</span><span class="pc">i</span><span class="c">zeof(struct</span> <span class="w">xpc_vars_sn2</span><span class="c">))</span>
+
+<span class="c">#define</span> <span class="w">XPC_RP_PART_NASIDS</span><span class="pc">(</span><span class="w">_rp) </span><span class="pc">((</span><span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="c">long</span> <span class="w">*)((u8</span> <span class="pc">*</span><span class="c">)(</span><span class="pc">_</span><span class="c">rp</span><span class="w">) + \</span>
+				 <span class="w">X</span><span class="pc">PC_RP_H</span><span class="c">EADER_SIZE))</span>
+<span class="c">#define</span> <span class="w">XPC_RP_MACH_NASIDS</span><span class="c">(</span><span class="w">_</span><span class="c">rp</span><span class="w">)</span><span class="pc"> (</span><span class="w">X</span><span class="pc">PC_RP_P</span><span class="c">ART_NASIDS(_rp</span><span class="w">) +</span><span class="pc"> </span><span class="c">\</span>
+				 <span class="w">xpc_nasid_mask_nlongs</span><span class="c">)</span>
+<span class="c">#define</span> <span class="w">XPC_RP_VARS</span><span class="c">(_rp</span><span class="w">)	</span><span class="pc">(</span><span class="c">(</span><span class="w">s</span><span class="c">truct</span> <span class="pc">x</span><span class="c">pc_vars_sn2</span> <span class="w">*) \</span>
+				 <span class="pc">(</span><span class="w">X</span><span class="pc">PC_RP_M</span><span class="c">ACH_NASIDS</span><span class="w">(</span><span class="c">_rp</span><span class="w">) +</span><span class="pc"> </span><span class="c">\</span>
+				  <span class="pc">x</span><span class="c">pc_nasid_mask_nlongs))</span>
+
+
+
+<span class="w">s</span><span class="pc">tr</span><span class="c">uct</span> <span class="w">xpc_heartbeat_uv</span> <span class="c">{</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">v</span><span class="pc">alu</span><span class="c">e;</span>
+	<span class="c">unsigned</span> <span class="c">long</span> <span class="w">offline</span><span class="c">;</span>	
+<span class="pc">}</span><span class="c">;</span>
+
+
+<span class="pc">s</span><span class="c">truct</span> <span class="w">xpc_gru_mq_uv</span> <span class="c">{</span>
+	<span class="w">v</span><span class="c">oid</span> <span class="pc">*</span><span class="w">a</span><span class="pc">ddre</span><span class="c">ss;</span>		
+	<span class="c">unsigned</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">or</span><span class="c">der;</span>	
+	<span class="pc">i</span><span class="c">nt</span> <span class="pc">i</span><span class="c">rq;</span>		
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">mmr_blade</span><span class="c">;</span>		
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">mmr_offset</span><span class="c">;</span> 
+	<span class="c">unsigned</span> <span class="c">long</span> <span class="w">mmr_value</span><span class="c">;</span> 
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">watchlist_num</span><span class="c">;</span>	
+	<span class="pc">v</span><span class="c">oid</span> <span class="c">*</span><span class="w">gru_mq_desc</span><span class="c">;</span>	
+<span class="pc">}</span><span class="c">;</span>
+
+
+<span class="pc">s</span><span class="c">truct</span> <span class="w">xpc_activate_mq_msghdr_uv</span> <span class="c">{</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="c">int</span> <span class="w">gru_msg_hdr</span><span class="c">;</span> 
+	<span class="w">s</span><span class="pc">h</span><span class="c">ort</span> <span class="w">partid</span><span class="c">;</span>		
+	<span class="w">u</span><span class="pc">8</span> <span class="w">act_state</span><span class="c">;</span>		
+	<span class="pc">u8</span> <span class="w">t</span><span class="c">ype;</span>		
+	<span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="c">long</span> <span class="w">rp_ts_jiffies</span><span class="c">;</span> 
+<span class="pc">}</span><span class="c">;</span>
+
+
+<span class="pc">#</span><span class="c">define</span> <span class="w">XPC_ACTIVATE_MQ_MSG_SYNC_ACT_STATE_UV</span>		<span class="pc">0</span>
+
+<span class="c">#define</span> <span class="w">XPC_ACTIVATE_MQ_MSG_ACTIVATE_REQ_UV</span>		<span class="c">1</span>
+<span class="c">#define</span> <span class="w">XPC_ACTIVATE_MQ_MSG_DEACTIVATE_REQ_UV</span>		<span class="c">2</span>
+
+<span class="c">#define</span> <span class="w">XPC_ACTIVATE_MQ_MSG_CHCTL_CLOSEREQUEST_UV</span>	<span class="c">3</span>
+<span class="c">#define</span> <span class="w">XPC_ACTIVATE_MQ_MSG_CHCTL_CLOSEREPLY_UV</span>		<span class="c">4</span>
+<span class="c">#define</span> <span class="w">XPC_ACTIVATE_MQ_MSG_CHCTL_OPENREQUEST_UV</span>	<span class="c">5</span>
+<span class="c">#define</span> <span class="w">XPC_ACTIVATE_MQ_MSG_CHCTL_OPENREPLY_UV</span>		<span class="c">6</span>
+<span class="c">#define</span> <span class="w">XPC_ACTIVATE_MQ_MSG_CHCTL_OPENCOMPLETE_UV</span>	<span class="c">7</span>
+
+<span class="c">#define</span> <span class="w">XPC_ACTIVATE_MQ_MSG_MARK_ENGAGED_UV</span>		<span class="c">8</span>
+<span class="c">#define</span> <span class="w">XPC_ACTIVATE_MQ_MSG_MARK_DISENGAGED_UV</span>		<span class="c">9</span>
+
+<span class="pc">s</span><span class="c">truct</span> <span class="w">xpc_activate_mq_msg_uv</span> <span class="c">{</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">xpc_activate_mq_msghdr_uv</span> <span class="w">h</span><span class="pc">d</span><span class="c">r;</span>
+<span class="w">}</span><span class="c">;</span>
+
+<span class="c">struct</span> <span class="w">xpc_activate_mq_msg_activate_req_uv</span> <span class="c">{</span>
+	<span class="c">struct</span> <span class="c">xpc_activate_mq_msghdr_uv</span> <span class="w">h</span><span class="pc">d</span><span class="c">r;</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">rp_gpa</span><span class="c">;</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">heartbeat_gpa</span><span class="c">;</span>
+	<span class="c">unsigned</span> <span class="c">long</span> <span class="w">activate_gru_mq_desc_gpa</span><span class="c">;</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="c">struct</span> <span class="w">xpc_activate_mq_msg_deactivate_req_uv</span> <span class="c">{</span>
+	<span class="c">struct</span> <span class="c">xpc_activate_mq_msghdr_uv</span> <span class="pc">h</span><span class="c">dr;</span>
+	<span class="w">e</span><span class="c">num</span> <span class="w">xp_retval</span> <span class="w">r</span><span class="c">eason;</span>
+<span class="c">};</span>
+
+<span class="c">struct</span> <span class="w">xpc_activate_mq_msg_chctl_closerequest_uv</span> <span class="c">{</span>
+	<span class="c">struct</span> <span class="pc">xpc_activate_mq_msgh</span><span class="c">dr_uv</span> <span class="pc">h</span><span class="c">dr;</span>
+	<span class="w">s</span><span class="pc">h</span><span class="c">ort</span> <span class="w">ch_number</span><span class="c">;</span>
+	<span class="w">e</span><span class="c">num</span> <span class="w">x</span><span class="pc">p_</span><span class="c">retval</span> <span class="w">r</span><span class="pc">e</span><span class="c">ason;</span>
+<span class="c">};</span>
+
+<span class="c">struct</span> <span class="w">xpc_activate_mq_msg_chctl_closereply_uv</span> <span class="c">{</span>
+	<span class="c">struct</span> <span class="c">xpc_activate_mq_msghdr_uv</span> <span class="pc">h</span><span class="c">dr;</span>
+	<span class="w">s</span><span class="pc">h</span><span class="c">ort</span> <span class="w">c</span><span class="c">h_number;</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="c">struct</span> <span class="w">xpc_activate_mq_msg_chctl_openrequest_uv</span> <span class="c">{</span>
+	<span class="c">struct</span> <span class="pc">x</span><span class="c">pc_activate_mq_msghdr_uv</span> <span class="pc">hd</span><span class="c">r;</span>
+	<span class="w">sh</span><span class="c">ort</span> <span class="c">ch_number;</span>
+	<span class="w">s</span><span class="pc">h</span><span class="c">ort</span> <span class="w">entry_size</span><span class="c">;</span>	
+	<span class="w">s</span><span class="pc">h</span><span class="c">ort</span> <span class="w">local_nentries</span><span class="c">;</span>	
+<span class="c">};</span>
+
+<span class="c">struct</span> <span class="w">xpc_activate_mq_msg_chctl_openreply_uv</span> <span class="c">{</span>
+	<span class="c">struct</span> <span class="c">xpc_activate_mq_msghdr_uv</span> <span class="pc">hd</span><span class="c">r;</span>
+	<span class="w">s</span><span class="pc">h</span><span class="c">ort</span> <span class="w">c</span><span class="c">h_number;</span>
+	<span class="w">s</span><span class="pc">h</span><span class="c">ort</span> <span class="w">remote_nentries</span><span class="c">;</span>	
+	<span class="w">s</span><span class="pc">h</span><span class="c">ort</span> <span class="c">local_nentries;</span>	
+	<span class="pc">un</span><span class="c">signed</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">notify_gru_mq_desc_gpa</span><span class="c">;</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="pc">s</span><span class="c">truct</span> <span class="w">xpc_activate_mq_msg_chctl_opencomplete_uv</span> <span class="c">{</span>
+	<span class="c">struct</span> <span class="c">xpc_activate_mq_msghdr_uv</span> <span class="w">h</span><span class="pc">d</span><span class="c">r;</span>
+	<span class="w">s</span><span class="pc">h</span><span class="c">ort</span> <span class="w">c</span><span class="c">h_number;</span>
+<span class="pc">}</span><span class="c">;</span>
+
+
+<span class="pc">#</span><span class="c">define</span> <span class="w">XPC_PACK_ARGS</span><span class="c">(</span><span class="w">_arg1</span><span class="pc">,</span> <span class="w">_arg2</span><span class="pc">)</span><span class="c"> \</span>
+			<span class="w">((((u</span><span class="pc">6</span><span class="c">4)</span><span class="pc">_</span><span class="c">arg1</span><span class="w">) &amp;</span> <span class="w">0xf</span><span class="pc">ffff</span><span class="c">fff</span><span class="w">) | \</span>
+			<span class="w">(</span><span class="pc">(((</span><span class="w">u</span><span class="pc">6</span><span class="c">4)</span><span class="w">_</span><span class="pc">arg2</span><span class="w">) &amp;</span> <span class="w">0xf</span><span class="pc">ffff</span><span class="c">fff</span><span class="w">)</span><span class="pc"> &lt;</span><span class="c">&lt;</span> <span class="w">3</span><span class="c">2</span><span class="w">))</span>
+
+<span class="c">#define</span> <span class="w">XPC_UNPACK_ARG1</span><span class="c">(</span><span class="w">_args)</span><span class="pc">	(((u</span><span class="c">64</span><span class="pc">)</span><span class="w">_</span><span class="pc">args</span><span class="w">)</span><span class="pc"> &amp;</span> <span class="w">0xf</span><span class="pc">ffff</span><span class="c">fff)</span>
+<span class="c">#define</span> <span class="w">XPC_UNPACK_ARG2</span><span class="c">(_args</span><span class="w">)	((((u</span><span class="c">64)</span><span class="pc">_args</span><span class="w">)</span><span class="pc"> &gt;</span><span class="c">&gt;</span> <span class="pc">3</span><span class="c">2</span><span class="pc">) </span><span class="c">&amp;</span> <span class="w">0xf</span><span class="pc">ffff</span><span class="c">fff)</span>
+
+
+<span class="pc">str</span><span class="c">uct</span> <span class="w">xpc_gp_sn2</span> <span class="c">{</span>
+	<span class="w">s6</span><span class="c">4</span> <span class="w">g</span><span class="pc">et</span><span class="c">;</span>		
+	<span class="w">s6</span><span class="c">4</span> <span class="w">put</span><span class="c">;</span>		
+<span class="w">}</span><span class="c">;</span>
+
+<span class="c">#define</span> <span class="w">XPC_GP_SIZE</span> <span class="w">\</span>
+		<span class="w">L1_CACHE_ALIGN</span><span class="c">(</span><span class="w">s</span><span class="pc">i</span><span class="c">zeof(struct</span> <span class="c">xpc_gp_sn2</span><span class="w">)</span><span class="pc"> *</span> <span class="w">XPC_MAX_NCHANNELS</span><span class="c">)</span>
+
+
+<span class="pc">s</span><span class="c">truct</span> <span class="w">xpc_openclose_args</span> <span class="c">{</span>
+	<span class="w">u1</span><span class="c">6</span> <span class="w">rea</span><span class="pc">s</span><span class="c">on;</span>		
+	<span class="c">u16</span> <span class="w">entry_size</span><span class="c">;</span>		
+	<span class="c">u16</span> <span class="w">remote_nentries</span><span class="c">;</span>	
+	<span class="c">u16</span> <span class="w">local_nentries</span><span class="c">;</span>	
+	<span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">local_msgqueue_pa</span><span class="c">;</span> 
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="pc">#</span><span class="c">define</span> <span class="w">XPC_OPENCLOSE_ARGS_SIZE</span> <span class="w">\</span>
+	      <span class="w">L</span><span class="c">1_CACHE_ALIGN(</span><span class="w">s</span><span class="c">izeof(struct</span> <span class="c">xpc_openclose_args</span><span class="w">) * \</span>
+	      <span class="c">XPC_MAX_NCHANNELS)</span>
+
+
+
+
+<span class="pc">s</span><span class="c">truct</span> <span class="w">xpc_fifo_entry_uv</span> <span class="c">{</span>
+	<span class="c">struct</span> <span class="w">x</span><span class="pc">pc_f</span><span class="c">ifo_entry_uv</span> <span class="c">*</span><span class="pc">n</span><span class="c">ext;</span>
+<span class="w">}</span><span class="c">;</span>
+
+<span class="pc">s</span><span class="c">truct</span> <span class="w">xpc_fifo_head_uv</span> <span class="c">{</span>
+	<span class="c">struct</span> <span class="pc">xpc_f</span><span class="c">ifo_entry_uv</span> <span class="c">*</span><span class="w">fi</span><span class="pc">r</span><span class="c">st;</span>
+	<span class="c">struct</span> <span class="pc">xpc_f</span><span class="c">ifo_entry_uv</span> <span class="c">*</span><span class="w">la</span><span class="pc">s</span><span class="c">t;</span>
+	<span class="w">s</span><span class="pc">p</span><span class="c">inlock_t</span> <span class="c">lock;</span>
+	<span class="w">i</span><span class="c">nt</span> <span class="w">n_entries</span><span class="c">;</span>
+<span class="c">};</span>
+
+
+<span class="c">struct</span> <span class="w">xpc_msg_sn2</span> <span class="c">{</span>
+	<span class="w">u</span><span class="pc">8</span> <span class="pc">f</span><span class="c">lags;</span>		
+	<span class="pc">u</span><span class="c">8</span> <span class="w">r</span><span class="c">eserved</span><span class="pc">[</span><span class="w">7</span><span class="c">];</span>		
+	<span class="w">s6</span><span class="c">4</span> <span class="w">nu</span><span class="pc">mb</span><span class="c">er;</span>		
+
+	<span class="w">u6</span><span class="c">4</span> <span class="w">pa</span><span class="pc">y</span><span class="c">load;</span>		
+<span class="c">};</span>
+
+
+
+<span class="pc">#</span><span class="c">define</span>	<span class="w">XPC_M_SN2_DONE</span>		<span class="w">0</span><span class="pc">x01</span>	
+<span class="c">#define</span>	<span class="w">XPC_M_SN2_READY</span>		<span class="c">0x02</span>	
+<span class="c">#define</span>	<span class="w">XPC_M_SN2_INTERRUPT</span>	<span class="c">0x04</span>	
+
+
+
+<span class="pc">s</span><span class="c">truct</span> <span class="w">xpc_notify_mq_msghdr_uv</span> <span class="c">{</span>
+	<span class="pc">uni</span><span class="c">on</span> <span class="pc">{</span>
+		<span class="w">u</span><span class="pc">ns</span><span class="c">igned</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">gru_msg_hdr</span><span class="c">;</span>	
+		<span class="c">struct</span> <span class="w">xpc_fifo_entry_uv</span> <span class="w">ne</span><span class="pc">x</span><span class="c">t;</span>	
+	<span class="pc">}</span> <span class="w">u</span><span class="c">;</span>
+	<span class="w">s</span><span class="pc">h</span><span class="c">ort</span> <span class="w">partid</span><span class="c">;</span>		
+	<span class="w">u</span><span class="pc">8</span> <span class="w">ch_number</span><span class="c">;</span>		
+	<span class="c">u8</span> <span class="w">s</span><span class="pc">i</span><span class="c">ze;</span>		
+	<span class="pc">un</span><span class="c">signed</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">msg_slot_number</span><span class="c">;</span>	
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="c">struct</span> <span class="w">xpc_notify_mq_msg_uv</span> <span class="c">{</span>
+	<span class="c">struct</span> <span class="c">xpc_notify_mq_msghdr_uv</span> <span class="pc">h</span><span class="c">dr;</span>
+	<span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="c">long</span> <span class="w">pa</span><span class="pc">y</span><span class="c">load;</span>
+<span class="pc">}</span><span class="c">;</span>
+
+
+<span class="c">struct</span> <span class="w">xpc_notify_sn2</span> <span class="c">{</span>
+	<span class="pc">u8</span> <span class="c">type;</span>		
+
+	
+	<span class="w">xpc_notify_func</span> <span class="w">f</span><span class="pc">u</span><span class="c">nc;</span>	
+	<span class="w">v</span><span class="c">oid</span> <span class="c">*</span><span class="w">k</span><span class="c">ey;</span>		
+<span class="c">};</span>
+
+
+
+<span class="c">#define</span>	<span class="w">XPC_N_CALL</span>	<span class="pc">0x01</span>	
+
+
+<span class="pc">s</span><span class="c">truct</span> <span class="w">xpc_send_msg_slot_uv</span> <span class="c">{</span>
+	<span class="c">struct</span> <span class="w">xpc_fifo_entry_uv</span> <span class="w">ne</span><span class="pc">x</span><span class="c">t;</span>
+	<span class="w">u</span><span class="pc">ns</span><span class="c">igned</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">msg_slot_number</span><span class="c">;</span>
+	<span class="w">x</span><span class="pc">pc_notify_f</span><span class="c">unc</span> <span class="w">f</span><span class="pc">u</span><span class="c">nc;</span>	
+	<span class="pc">v</span><span class="c">oid</span> <span class="pc">*</span><span class="w">k</span><span class="c">ey;</span>		
+<span class="pc">}</span><span class="c">;</span>
+
+
+
+
+
+<span class="pc">s</span><span class="c">truct</span> <span class="w">xpc_channel_sn2</span> <span class="c">{</span>
+	<span class="c">struct</span> <span class="w">xpc_openclose_args</span> <span class="c">*</span><span class="w">local_openclose_args</span><span class="c">;</span> 
+					     
+
+	<span class="pc">v</span><span class="c">oid</span> <span class="c">*</span><span class="w">local_msgqueue_base</span><span class="c">;</span>	
+	<span class="c">struct</span> <span class="w">xpc_msg_sn2</span> <span class="c">*</span><span class="w">local_msgqueue</span><span class="c">;</span>	
+	<span class="pc">v</span><span class="c">oid</span> <span class="c">*</span><span class="w">remote_msgqueue_base</span><span class="c">;</span>	
+	<span class="c">struct</span> <span class="pc">xpc_m</span><span class="c">sg_sn2</span> <span class="c">*</span><span class="w">remote_msgqueue</span><span class="c">;</span> 
+					   
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">remote_msgqueue_pa</span><span class="c">;</span> 
+					  
+
+	<span class="c">struct</span> <span class="w">xpc_notify_sn2</span> <span class="c">*</span><span class="w">notify_queue</span><span class="c">;</span>
+
+	
+
+	<span class="c">struct</span> <span class="w">xpc_gp_sn2</span> <span class="c">*</span><span class="w">local_GP</span><span class="c">;</span>	
+	<span class="c">struct</span> <span class="pc">xpc_g</span><span class="c">p_sn2</span> <span class="w">remote_GP</span><span class="c">;</span>	
+	<span class="c">struct</span> <span class="pc">x</span><span class="c">pc_gp_sn2</span> <span class="w">w_local_GP</span><span class="c">;</span>	
+	<span class="c">struct</span> <span class="pc">xpc_g</span><span class="c">p_sn2</span> <span class="w">w_remote_GP</span><span class="c">;</span>	
+	<span class="w">s6</span><span class="c">4</span> <span class="w">next_msg_to_pull</span><span class="c">;</span>	
+
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">m</span><span class="c">utex</span> <span class="w">msg_to_pull_mutex</span><span class="c">;</span>	
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="c">struct</span> <span class="w">xpc_channel_uv</span> <span class="c">{</span>
+	<span class="w">v</span><span class="c">oid</span> <span class="pc">*</span><span class="w">cached_notify_gru_mq_desc</span><span class="c">;</span> 
+					 
+
+	<span class="c">struct</span> <span class="w">xpc_send_msg_slot_uv</span> <span class="c">*</span><span class="w">send_msg_slots</span><span class="c">;</span>
+	<span class="w">v</span><span class="c">oid</span> <span class="c">*</span><span class="w">recv_msg_slots</span><span class="c">;</span>	
+				
+
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">xpc_fifo_head_uv</span> <span class="w">msg_slot_free_list</span><span class="c">;</span>
+	<span class="c">struct</span> <span class="c">xpc_fifo_head_uv</span> <span class="w">recv_msg_list</span><span class="c">;</span>	
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="c">struct</span> <span class="w">xpc_channel</span> <span class="c">{</span>
+	<span class="w">sh</span><span class="c">ort</span> <span class="w">partid</span><span class="c">;</span>		
+	<span class="w">s</span><span class="pc">p</span><span class="c">inlock_t</span> <span class="c">lock;</span>	
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="c">int</span> <span class="c">flags;</span>	
+
+	<span class="w">e</span><span class="c">num</span> <span class="w">xp_retval</span> <span class="w">r</span><span class="c">eason;</span>	
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">reason_line</span><span class="c">;</span>	
+
+	<span class="w">u</span><span class="pc">1</span><span class="c">6</span> <span class="w">nu</span><span class="pc">mb</span><span class="c">er;</span>		
+
+	<span class="w">u</span><span class="pc">1</span><span class="c">6</span> <span class="w">entry_size</span><span class="c">;</span>		
+	<span class="pc">u</span><span class="c">16</span> <span class="w">local_nentries</span><span class="c">;</span>	
+	<span class="c">u16</span> <span class="w">remote_nentries</span><span class="c">;</span>	
+
+	<span class="w">a</span><span class="c">tomic_t</span> <span class="w">references</span><span class="c">;</span>	
+
+	<span class="w">a</span><span class="c">tomic_t</span> <span class="w">n_on_msg_allocate_wq</span><span class="c">;</span>	
+	<span class="w">wait_queue_head_t</span> <span class="w">msg_allocate_wq</span><span class="c">;</span>	
+
+	<span class="w">u</span><span class="pc">8</span> <span class="w">delayed_chctl_flags</span><span class="c">;</span>	
+				
+
+	<span class="w">a</span><span class="c">tomic_t</span> <span class="w">n_to_notify</span><span class="c">;</span>	
+
+	<span class="w">xpc_channel_func</span> <span class="w">f</span><span class="pc">u</span><span class="c">nc;</span>	
+	<span class="w">v</span><span class="c">oid</span> <span class="c">*</span><span class="w">k</span><span class="c">ey;</span>		
+
+	<span class="pc">st</span><span class="c">ruct</span> <span class="w">c</span><span class="c">ompletion</span> <span class="w">wdisconnect_wait</span><span class="c">;</span>    
+
+	
+
+	<span class="w">a</span><span class="c">tomic_t</span> <span class="w">kthreads_assigned</span><span class="c">;</span>	
+	<span class="w">u</span><span class="pc">3</span><span class="c">2</span> <span class="w">kthreads_assigned_limit</span><span class="c">;</span>	
+	<span class="w">a</span><span class="c">tomic_t</span> <span class="w">kthreads_idle</span><span class="c">;</span>	
+	<span class="w">u</span><span class="pc">3</span><span class="c">2</span> <span class="w">kthreads_idle_limit</span><span class="c">;</span>	
+	<span class="w">a</span><span class="c">tomic_t</span> <span class="w">kthreads_active</span><span class="c">;</span>	
+
+	<span class="w">w</span><span class="c">ait_queue_head_t</span> <span class="w">idle_wq</span><span class="c">;</span>	
+
+	<span class="w">u</span><span class="pc">ni</span><span class="c">on</span> <span class="c">{</span>
+		<span class="c">struct</span> <span class="w">xpc_channel_sn2</span> <span class="w">sn2</span><span class="c">;</span>
+		<span class="c">struct</span> <span class="w">xpc_channel_uv</span> <span class="w">uv</span><span class="c">;</span>
+	<span class="pc">}</span> <span class="w">sn</span><span class="c">;</span>
+
+<span class="pc">}</span> <span class="w">____cacheline_aligned</span><span class="c">;</span>
+
+
+
+<span class="c">#define</span>	<span class="w">XPC_C_WASCONNECTED</span>	<span class="w">0</span><span class="pc">x00</span><span class="c">000001</span>	
+
+<span class="c">#define</span> <span class="w">XPC_C_ROPENCOMPLETE</span>	<span class="c">0x00000002</span>    
+<span class="c">#define</span> <span class="w">XPC_C_OPENCOMPLETE</span>	<span class="c">0x00000004</span>     
+<span class="c">#define</span>	<span class="w">XPC_C_ROPENREPLY</span>	<span class="c">0x00000008</span>	
+<span class="c">#define</span>	<span class="w">XPC_C_OPENREPLY</span>		<span class="c">0x00000010</span>	
+<span class="c">#define</span>	<span class="w">XPC_C_ROPENREQUEST</span>	<span class="c">0x00000020</span>     
+<span class="c">#define</span>	<span class="w">XPC_C_OPENREQUEST</span>	<span class="pc">0x0000004</span><span class="c">0</span>	
+
+<span class="c">#define</span>	<span class="w">XPC_C_SETUP</span>		<span class="w">0x00000080</span> 
+<span class="c">#define</span>	<span class="w">XPC_C_CONNECTEDCALLOUT</span>	<span class="c">0x00000100</span>     
+<span class="c">#define</span>	<span class="w">XPC_C_CONNECTEDCALLOUT_MADE</span> <span class="w">\</span>
+				<span class="w">0x00000200</span>     
+<span class="w">#</span><span class="c">define</span>	<span class="w">XPC_C_CONNECTED</span>		<span class="w">0x00000400</span>	
+<span class="c">#define</span>	<span class="w">XPC_C_CONNECTING</span>	<span class="w">0x00000800</span>	
+
+<span class="c">#define</span>	<span class="w">XPC_C_RCLOSEREPLY</span>	<span class="w">0x00001000</span>	
+<span class="c">#define</span>	<span class="w">XPC_C_CLOSEREPLY</span>	<span class="w">0x00002000</span>	
+<span class="c">#define</span>	<span class="w">XPC_C_RCLOSEREQUEST</span>	<span class="w">0x00004000</span>    
+<span class="c">#define</span>	<span class="w">XPC_C_CLOSEREQUEST</span>	<span class="w">0x00008000</span>     
+
+<span class="c">#define</span>	<span class="w">XPC_C_DISCONNECTED</span>	<span class="pc">0x0001</span><span class="c">0000</span>	
+<span class="c">#define</span>	<span class="w">XPC_C_DISCONNECTING</span>	<span class="w">0x00020000</span>   
+<span class="c">#define</span>	<span class="w">XPC_C_DISCONNECTINGCALLOUT</span> <span class="w">\</span>
+				<span class="w">0x00040000</span> 
+<span class="w">#</span><span class="c">define</span>	<span class="w">XPC_C_DISCONNECTINGCALLOUT_MADE</span> <span class="w">\</span>
+				<span class="w">0x00080000</span> 
+<span class="pc">#</span><span class="c">define</span>	<span class="w">XPC_C_WDISCONNECT</span>	<span class="w">0x00100000</span>  
+
+
+
+<span class="w">un</span><span class="pc">i</span><span class="c">on</span> <span class="w">xpc_channel_ctl_flags</span> <span class="c">{</span>
+	<span class="pc">u6</span><span class="c">4</span> <span class="w">all_flags</span><span class="c">;</span>
+	<span class="pc">u8</span> <span class="pc">f</span><span class="c">lags</span><span class="pc">[</span><span class="w">XPC_MAX_NCHANNELS</span><span class="c">];</span>
+<span class="c">};</span>
+
+
+<span class="c">#define</span>	<span class="w">XPC_CHCTL_CLOSEREQUEST</span>	<span class="w">0</span><span class="pc">x01</span>
+<span class="c">#define</span>	<span class="w">XPC_CHCTL_CLOSEREPLY</span>	<span class="pc">0x02</span>
+<span class="c">#define</span>	<span class="w">XPC_CHCTL_OPENREQUEST</span>	<span class="c">0x04</span>
+<span class="c">#define</span>	<span class="w">XPC_CHCTL_OPENREPLY</span>	<span class="c">0x08</span>
+<span class="c">#define</span> <span class="w">XPC_CHCTL_OPENCOMPLETE</span>	<span class="c">0x10</span>
+<span class="c">#define</span>	<span class="w">XPC_CHCTL_MSGREQUEST</span>	<span class="c">0x20</span>
+
+<span class="c">#define</span> <span class="w">XPC_OPENCLOSE_CHCTL_FLAGS</span> <span class="w">\</span>
+			<span class="c">(</span><span class="w">XPC_C</span><span class="pc">HCTL_CLOSEREQ</span><span class="c">UEST</span> <span class="pc">|</span> <span class="w">XPC_C</span><span class="pc">HCTL_C</span><span class="c">LOSEREPLY</span> <span class="pc">| </span><span class="c">\</span>
+			 <span class="w">X</span><span class="pc">PC_CHCTL_OPENREQ</span><span class="c">UEST</span> <span class="c">|</span> <span class="pc">XPC_CHCTL_OPENREP</span><span class="c">LY</span> <span class="pc">| </span><span class="c">\</span>
+			 <span class="w">X</span><span class="pc">PC_CHCTL_OPENC</span><span class="c">OMPLETE)</span>
+<span class="c">#define</span> <span class="w">XPC_MSG_CHCTL_FLAGS</span>	<span class="w">X</span><span class="c">PC_CHCTL_MSGREQUEST</span>
+
+<span class="w">s</span><span class="pc">ta</span><span class="c">tic</span> <span class="pc">inl</span><span class="c">ine</span> <span class="w">i</span><span class="c">nt</span>
+<span class="w">xpc_any_openclose_chctl_flags_set</span><span class="c">(</span><span class="w">u</span><span class="pc">ni</span><span class="c">on</span> <span class="w">xpc_channel_ctl_flags</span> <span class="c">*</span><span class="w">chctl</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="pc">in</span><span class="c">t</span> <span class="w">ch_number</span><span class="pc">;</span>
+
+	<span class="w">f</span><span class="c">or</span> <span class="c">(ch_number</span> <span class="c">=</span> <span class="c">0;</span> <span class="c">ch_number</span> <span class="c">&lt;</span> <span class="w">XPC_MAX_NCHANNELS</span><span class="c">;</span> <span class="c">ch_number++) {</span>
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="pc">chc</span><span class="c">tl-&gt;</span><span class="w">f</span><span class="c">lags</span><span class="w">[</span><span class="c">ch_number</span><span class="w">] </span><span class="pc">&amp;</span> <span class="w">XPC_OPENCLOSE_CHCTL_FLAGS</span><span class="c">)</span>
+			<span class="pc">r</span><span class="c">eturn</span> <span class="w">1</span><span class="c">;</span>
+	<span class="w">}</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">0</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">inl</span><span class="c">ine</span> <span class="pc">i</span><span class="c">nt</span>
+<span class="w">xpc_any_msg_chctl_flags_set</span><span class="c">(</span><span class="w">un</span><span class="pc">i</span><span class="c">on</span> <span class="w">xpc_channel_ctl_flags</span> <span class="c">*</span><span class="pc">chc</span><span class="c">tl</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">in</span><span class="c">t</span> <span class="w">c</span><span class="pc">h_</span><span class="c">number</span><span class="pc">;</span>
+
+	<span class="w">f</span><span class="c">or</span> <span class="c">(</span><span class="w">c</span><span class="pc">h_</span><span class="c">number</span> <span class="c">=</span> <span class="c">0;</span> <span class="w">c</span><span class="pc">h_</span><span class="c">number</span> <span class="c">&lt;</span> <span class="w">XPC_MAX_NCHANNELS</span><span class="c">;</span> <span class="pc">ch_</span><span class="c">number++) {</span>
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="pc">chc</span><span class="c">tl-&gt;</span><span class="pc">f</span><span class="c">lags</span><span class="w">[</span><span class="c">ch_number</span><span class="w">] </span><span class="pc">&amp;</span> <span class="w">XPC_MSG_CHCTL_FLAGS</span><span class="pc">)</span>
+			<span class="pc">r</span><span class="c">eturn</span> <span class="w">1</span><span class="c">;</span>
+	<span class="w">}</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">0</span><span class="c">;</span>
+<span class="c">}</span>
+
+
+
+<span class="pc">str</span><span class="c">uct</span> <span class="w">xpc_partition_sn2</span> <span class="pc">{</span>
+	<span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="c">long</span> <span class="w">remote_amos_page_pa</span><span class="c">;</span> 
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">activate_IRQ_nasid</span><span class="c">;</span>	
+	<span class="c">int</span> <span class="w">activate_IRQ_phys_cpuid</span><span class="c">;</span>	
+
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">remote_vars_pa</span><span class="c">;</span>	
+	<span class="c">unsigned</span> <span class="c">long</span> <span class="w">remote_vars_part_pa</span><span class="c">;</span> 
+	<span class="w">u</span><span class="pc">8</span> <span class="w">remote_vars_version</span><span class="c">;</span>	
+
+	<span class="w">v</span><span class="c">oid</span> <span class="pc">*</span><span class="w">local_GPs_base</span><span class="c">;</span>	
+	<span class="c">struct</span> <span class="w">xpc_gp_sn2</span> <span class="c">*</span><span class="w">local_GPs</span><span class="c">;</span>	
+	<span class="pc">v</span><span class="c">oid</span> <span class="c">*</span><span class="w">remote_GPs_base</span><span class="c">;</span>	
+	<span class="c">struct</span> <span class="pc">xpc_g</span><span class="c">p_sn2</span> <span class="c">*</span><span class="w">remote_GPs</span><span class="c">;</span>	
+					
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">remote_GPs_pa</span><span class="c">;</span> 
+				     
+
+	<span class="pc">v</span><span class="c">oid</span> <span class="c">*</span><span class="w">local_openclose_args_base</span><span class="c">;</span>   
+	<span class="c">struct</span> <span class="w">xpc_openclose_args</span> <span class="c">*</span><span class="w">local_openclose_args</span><span class="c">;</span>      
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">remote_openclose_args_pa</span><span class="c">;</span>	
+
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">notify_IRQ_nasid</span><span class="c">;</span>	
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">notify_IRQ_phys_cpuid</span><span class="c">;</span>	
+	<span class="w">c</span><span class="c">har</span> <span class="w">notify_IRQ_owner</span><span class="pc">[</span><span class="w">8</span><span class="c">];</span>	
+
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">amo</span> <span class="c">*</span><span class="w">remote_chctl_amo_va</span><span class="c">;</span> 
+	<span class="c">struct</span> <span class="c">amo</span> <span class="c">*</span><span class="w">local_chctl_amo_va</span><span class="c">;</span>	
+
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">timer_list</span> <span class="w">dropped_notify_IRQ_timer</span><span class="c">;</span>	
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="c">struct</span> <span class="w">xpc_partition_uv</span> <span class="c">{</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">heartbeat_gpa</span><span class="c">;</span> 
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">xpc_heartbeat_uv</span> <span class="w">cached_heartbeat</span><span class="c">;</span> 
+						  
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">activate_gru_mq_desc_gpa</span><span class="c">;</span>	
+						
+						
+	<span class="pc">v</span><span class="c">oid</span> <span class="pc">*</span><span class="w">cached_activate_gru_mq_desc</span><span class="c">;</span> 
+					   
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">m</span><span class="c">utex</span> <span class="w">cached_activate_gru_mq_desc_mutex</span><span class="c">;</span>
+	<span class="pc">sp</span><span class="c">inlock_t</span> <span class="w">flags_lock</span><span class="c">;</span>	
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="pc">i</span><span class="c">nt</span> <span class="c">flags;</span>	
+	<span class="w">u</span><span class="pc">8</span> <span class="w">remote_act_state</span><span class="c">;</span>	
+	<span class="pc">u8</span> <span class="w">act_state_req</span><span class="c">;</span>	
+	<span class="w">e</span><span class="c">num</span> <span class="w">xp_retval</span> <span class="w">r</span><span class="c">eason;</span>	
+<span class="c">};</span>
+
+
+
+<span class="pc">#</span><span class="c">define</span> <span class="w">XPC_P_CACHED_ACTIVATE_GRU_MQ_DESC_UV</span>	<span class="w">0x</span><span class="pc">0000</span><span class="c">0001</span>
+<span class="c">#define</span> <span class="w">XPC_P_ENGAGED_UV</span>			<span class="c">0x00000002</span>
+
+
+
+<span class="c">#define</span> <span class="w">XPC_P_ASR_ACTIVATE_UV</span>		<span class="w">0x01</span>
+<span class="c">#define</span> <span class="w">XPC_P_ASR_REACTIVATE_UV</span>		<span class="c">0x02</span>
+<span class="c">#define</span> <span class="w">XPC_P_ASR_DEACTIVATE_UV</span>		<span class="c">0x03</span>
+
+<span class="pc">s</span><span class="c">truct</span> <span class="w">xpc_partition</span> <span class="c">{</span>
+
+	
+
+	<span class="pc">u</span><span class="c">8</span> <span class="w">remote_rp_version</span><span class="c">;</span>	
+	<span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">remote_rp_ts_jiffies</span><span class="c">;</span> 
+	<span class="c">unsigned</span> <span class="c">long</span> <span class="w">remote_rp_pa</span><span class="c">;</span>	
+	<span class="w">u6</span><span class="c">4</span> <span class="w">last_heartbeat</span><span class="c">;</span>	
+	<span class="pc">u3</span><span class="c">2</span> <span class="w">activate_IRQ_rcvd</span><span class="c">;</span>	
+	<span class="w">s</span><span class="pc">p</span><span class="c">inlock_t</span> <span class="w">act_lock</span><span class="c">;</span>	
+	<span class="pc">u8</span> <span class="w">act_state</span><span class="c">;</span>		
+	<span class="w">e</span><span class="c">num</span> <span class="w">xp_retval</span> <span class="w">r</span><span class="pc">ea</span><span class="c">son;</span>	
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">reason_line</span><span class="c">;</span>	
+
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">disengage_timeout</span><span class="c">;</span>	
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">timer_list</span> <span class="w">disengage_timer</span><span class="c">;</span>
+
+	
+
+	<span class="w">u</span><span class="pc">8</span> <span class="w">setup_state</span><span class="c">;</span>		
+	<span class="w">wait_queue_head_t</span> <span class="w">teardown_wq</span><span class="c">;</span>	
+	<span class="w">a</span><span class="c">tomic_t</span> <span class="w">references</span><span class="c">;</span>	
+
+	<span class="w">u</span><span class="pc">8</span> <span class="w">nchannels</span><span class="c">;</span>		
+	<span class="w">a</span><span class="c">tomic_t</span> <span class="w">nchannels_active</span><span class="c">;</span>  
+	<span class="w">a</span><span class="c">tomic_t</span> <span class="w">nchannels_engaged</span><span class="c">;</span>  
+	<span class="c">struct</span> <span class="w">xpc_channel</span> <span class="c">*</span><span class="w">ch</span><span class="pc">annels</span><span class="c">;</span>	
+
+	
+
+	<span class="w">u</span><span class="pc">ni</span><span class="c">on</span> <span class="w">xpc_channel_ctl_flags</span> <span class="w">chctl</span><span class="c">;</span> 
+	<span class="w">s</span><span class="pc">p</span><span class="c">inlock_t</span> <span class="w">chctl_lock</span><span class="c">;</span>	
+
+	<span class="w">v</span><span class="c">oid</span> <span class="pc">*</span><span class="w">remote_openclose_args_base</span><span class="c">;</span>  
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">xpc_openclose_args</span> <span class="c">*</span><span class="w">remote_openclose_args</span><span class="c">;</span> 
+							  
+
+	
+
+	<span class="w">a</span><span class="c">tomic_t</span> <span class="w">channel_mgr_requests</span><span class="c">;</span>	
+	<span class="w">w</span><span class="c">ait_queue_head_t</span> <span class="w">channel_mgr_wq</span><span class="c">;</span>	
+
+	<span class="w">u</span><span class="pc">n</span><span class="c">ion</span> <span class="c">{</span>
+		<span class="c">struct</span> <span class="w">xpc_partition_sn2</span> <span class="w">sn2</span><span class="c">;</span>
+		<span class="c">struct</span> <span class="w">xpc_partition_uv</span> <span class="w">uv</span><span class="c">;</span>
+	<span class="pc">}</span> <span class="w">sn</span><span class="c">;</span>
+
+<span class="pc">}</span> <span class="w">____cacheline_aligned</span><span class="c">;</span>
+
+<span class="pc">s</span><span class="c">truct</span> <span class="w">xpc_arch_operations</span> <span class="c">{</span>
+	<span class="w">i</span><span class="c">nt</span> <span class="c">(*</span><span class="w">setup_partitions</span><span class="pc">) </span><span class="c">(</span><span class="pc">v</span><span class="c">oid</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">void</span> <span class="c">(*</span><span class="w">teardown_partitions</span><span class="pc">) </span><span class="c">(</span><span class="pc">v</span><span class="c">oid);</span>
+	<span class="c">void</span> <span class="c">(*</span><span class="w">process_activate_IRQ_rcvd</span><span class="pc">) </span><span class="c">(</span><span class="pc">v</span><span class="c">oid);</span>
+	<span class="w">e</span><span class="c">num</span> <span class="w">xp_retval</span> <span class="pc">(</span><span class="c">*</span><span class="w">get_partition_rsvd_page_pa)</span>
+		<span class="w">(</span><span class="pc">v</span><span class="c">oid</span> <span class="pc">*,</span> <span class="w">u</span><span class="pc">6</span><span class="c">4</span> <span class="w">*</span><span class="pc">,</span> <span class="c">unsigned</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">*</span><span class="pc">,</span> <span class="pc">s</span><span class="c">ize_t</span> <span class="pc">*</span><span class="c">);</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="c">(*</span><span class="w">setup_rsvd_page</span><span class="pc">) </span><span class="c">(struct</span> <span class="w">xpc_rsvd_page</span> <span class="pc">*)</span><span class="c">;</span>
+
+	<span class="c">void</span> <span class="c">(*</span><span class="w">allow_hb</span><span class="c">) (</span><span class="w">sh</span><span class="c">ort</span><span class="w">)</span><span class="c">;</span>
+	<span class="c">void</span> <span class="c">(*</span><span class="w">disallow_hb</span><span class="c">) (</span><span class="w">sh</span><span class="c">ort</span><span class="pc">)</span><span class="c">;</span>
+	<span class="pc">v</span><span class="c">oid</span> <span class="c">(*</span><span class="w">disallow_all_hbs</span><span class="c">) (void);</span>
+	<span class="pc">v</span><span class="c">oid</span> <span class="c">(*</span><span class="w">increment_heartbeat</span><span class="c">) (void);</span>
+	<span class="pc">v</span><span class="c">oid</span> <span class="c">(*</span><span class="w">offline_heartbeat</span><span class="c">) (void);</span>
+	<span class="pc">v</span><span class="c">oid</span> <span class="c">(*</span><span class="w">online_heartbeat</span><span class="c">) (void);</span>
+	<span class="pc">v</span><span class="c">oid</span> <span class="c">(*</span><span class="w">heartbeat_init</span><span class="c">) (void);</span>
+	<span class="pc">v</span><span class="c">oid</span> <span class="c">(*</span><span class="w">heartbeat_exit</span><span class="c">) (void);</span>
+	<span class="w">e</span><span class="c">num</span> <span class="w">xp_retval</span> <span class="pc">(</span><span class="c">*</span><span class="w">get_remote_heartbeat</span><span class="pc">) </span><span class="c">(struct</span> <span class="w">xpc_partition</span> <span class="pc">*)</span><span class="c">;</span>
+
+	<span class="c">void</span> <span class="c">(*</span><span class="w">request_partition_activation</span><span class="c">) (</span><span class="pc">s</span><span class="c">truct</span> <span class="w">xpc_rsvd_page</span> <span class="pc">*,</span>
+						 <span class="c">unsigned</span> <span class="pc">l</span><span class="c">ong</span><span class="pc">,</span> <span class="w">i</span><span class="c">nt);</span>
+	<span class="c">void</span> <span class="c">(*</span><span class="w">request_partition_reactivation</span><span class="c">) (struct</span> <span class="pc">xpc_p</span><span class="c">artition</span> <span class="c">*);</span>
+	<span class="c">void</span> <span class="c">(*</span><span class="w">request_partition_deactivation</span><span class="pc">) </span><span class="c">(struct</span> <span class="pc">xpc_p</span><span class="c">artition</span> <span class="c">*);</span>
+	<span class="pc">v</span><span class="c">oid</span> <span class="c">(*</span><span class="w">cancel_partition_deactivation_request</span><span class="c">) (struct</span> <span class="c">xpc_partition</span> <span class="c">*);</span>
+	<span class="w">e</span><span class="pc">n</span><span class="c">um</span> <span class="w">xp_retval</span> <span class="c">(*</span><span class="w">setup_ch_structures</span><span class="pc">) </span><span class="c">(</span><span class="pc">s</span><span class="c">truct</span> <span class="pc">xpc_p</span><span class="c">artition</span> <span class="c">*);</span>
+	<span class="pc">v</span><span class="c">oid</span> <span class="c">(*</span><span class="w">teardown_ch_structures</span><span class="c">) (struct</span> <span class="pc">xpc</span><span class="c">_partition</span> <span class="c">*);</span>
+
+	<span class="w">e</span><span class="pc">n</span><span class="c">um</span> <span class="w">x</span><span class="pc">p_</span><span class="c">retval</span> <span class="c">(*</span><span class="w">make_first_contact</span><span class="pc">) </span><span class="c">(struct</span> <span class="c">xpc_partition</span> <span class="c">*);</span>
+
+	<span class="w">u6</span><span class="c">4</span> <span class="c">(*</span><span class="w">get_chctl_all_flags</span><span class="c">) (struct</span> <span class="c">xpc_partition</span> <span class="c">*);</span>
+	<span class="c">void</span> <span class="c">(*</span><span class="w">send_chctl_closerequest</span><span class="c">) (struct</span> <span class="w">xpc_channel</span> <span class="pc">*,</span> <span class="pc">un</span><span class="c">signed</span> <span class="pc">l</span><span class="c">ong</span> <span class="pc">*</span><span class="c">);</span>
+	<span class="c">void</span> <span class="c">(*</span><span class="w">send_chctl_closereply</span><span class="c">) (struct</span> <span class="pc">xpc_c</span><span class="c">hannel</span> <span class="c">*,</span> <span class="c">unsigned</span> <span class="c">long</span> <span class="pc">*</span><span class="c">);</span>
+	<span class="pc">v</span><span class="c">oid</span> <span class="c">(*</span><span class="w">send_chctl_openrequest</span><span class="c">) (struct</span> <span class="pc">xpc_c</span><span class="c">hannel</span> <span class="pc">*,</span> <span class="c">unsigned</span> <span class="c">long</span> <span class="pc">*</span><span class="c">);</span>
+	<span class="pc">v</span><span class="c">oid</span> <span class="c">(*</span><span class="w">send_chctl_openreply</span><span class="c">) (struct</span> <span class="c">xpc_channel</span> <span class="c">*,</span> <span class="c">unsigned</span> <span class="c">long</span> <span class="pc">*</span><span class="c">);</span>
+	<span class="c">void</span> <span class="c">(*</span><span class="w">send_chctl_opencomplete</span><span class="c">) (struct</span> <span class="c">xpc_channel</span> <span class="c">*,</span> <span class="c">unsigned</span> <span class="c">long</span> <span class="pc">*</span><span class="c">);</span>
+	<span class="c">void</span> <span class="c">(*</span><span class="w">process_msg_chctl_flags</span><span class="c">) (struct</span> <span class="w">xpc_partition</span> <span class="c">*,</span> <span class="pc">i</span><span class="c">nt</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="w">e</span><span class="pc">n</span><span class="c">um</span> <span class="w">xp_retval</span> <span class="pc">(</span><span class="c">*</span><span class="w">save_remote_msgqueue_pa</span><span class="pc">) </span><span class="c">(struct</span> <span class="c">xpc_channel</span> <span class="c">*,</span>
+						      <span class="c">unsigned</span> <span class="c">long);</span>
+
+	<span class="w">e</span><span class="pc">n</span><span class="c">um</span> <span class="w">x</span><span class="pc">p_</span><span class="c">retval</span> <span class="c">(*</span><span class="w">setup_msg_structures</span><span class="pc">) </span><span class="c">(struct</span> <span class="pc">xpc_c</span><span class="c">hannel</span> <span class="pc">*)</span><span class="c">;</span>
+	<span class="c">void</span> <span class="c">(*</span><span class="w">teardown_msg_structures</span><span class="c">) (struct</span> <span class="pc">x</span><span class="c">pc_channel</span> <span class="c">*);</span>
+
+	<span class="c">void</span> <span class="c">(*</span><span class="w">indicate_partition_engaged</span><span class="c">) (struct</span> <span class="c">xpc_partition</span> <span class="c">*);</span>
+	<span class="pc">v</span><span class="c">oid</span> <span class="c">(*</span><span class="w">indicate_partition_disengaged</span><span class="c">) (struct</span> <span class="pc">xpc_p</span><span class="c">artition</span> <span class="c">*);</span>
+	<span class="c">void</span> <span class="c">(*</span><span class="w">assume_partition_disengaged</span><span class="c">) (</span><span class="w">sh</span><span class="c">ort</span><span class="pc">)</span><span class="c">;</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="c">(*</span><span class="w">partition_engaged</span><span class="c">) (</span><span class="w">sh</span><span class="c">ort</span><span class="w">)</span><span class="pc">;</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="c">(*</span><span class="w">any_partition_engaged</span><span class="c">) (</span><span class="pc">v</span><span class="c">oid);</span>
+
+	<span class="pc">i</span><span class="c">nt</span> <span class="c">(*</span><span class="w">n_of_deliverable_payloads</span><span class="c">) (struct</span> <span class="pc">xpc_c</span><span class="c">hannel</span> <span class="c">*);</span>
+	<span class="w">e</span><span class="pc">n</span><span class="c">um</span> <span class="w">xp_retval</span> <span class="c">(*</span><span class="w">send_payload</span><span class="pc">) </span><span class="c">(struct</span> <span class="c">xpc_channel</span> <span class="pc">*,</span> <span class="pc">u3</span><span class="c">2</span><span class="pc">,</span> <span class="w">v</span><span class="c">oid</span> <span class="pc">*,</span>
+					   <span class="pc">u1</span><span class="c">6</span><span class="pc">,</span> <span class="w">u</span><span class="pc">8,</span> <span class="w">xpc_notify_func</span><span class="pc">,</span> <span class="w">v</span><span class="c">oid</span> <span class="w">*</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">void</span> <span class="w">*(*get_deliverable_payload)</span><span class="pc"> </span><span class="c">(struct</span> <span class="c">xpc_channel</span> <span class="pc">*)</span><span class="c">;</span>
+	<span class="pc">v</span><span class="c">oid</span> <span class="c">(*</span><span class="w">received_payload</span><span class="c">) (struct</span> <span class="c">xpc_channel</span> <span class="c">*,</span> <span class="w">v</span><span class="c">oid</span> <span class="pc">*)</span><span class="c">;</span>
+	<span class="c">void</span> <span class="c">(*</span><span class="w">notify_senders_of_disconnect</span><span class="c">) (struct</span> <span class="c">xpc_channel</span> <span class="pc">*)</span><span class="c">;</span>
+<span class="pc">}</span><span class="c">;</span>
+
+
+
+<span class="w">#</span><span class="c">define</span>	<span class="w">XPC_P_AS_INACTIVE</span>	<span class="w">0x00</span>	
+<span class="c">#define</span> <span class="w">XPC_P_AS_ACTIVATION_REQ</span>	<span class="pc">0</span><span class="c">x01</span>	
+<span class="c">#define</span> <span class="w">XPC_P_AS_ACTIVATING</span>	<span class="c">0x02</span>	
+<span class="c">#define</span> <span class="w">XPC_P_AS_ACTIVE</span>		<span class="pc">0x03</span>	
+<span class="c">#define</span> <span class="w">XPC_P_AS_DEACTIVATING</span>	<span class="c">0x04</span>	
+
+<span class="c">#define</span> <span class="w">XPC_DEACTIVATE_PARTITION</span><span class="pc">(</span><span class="w">_p</span><span class="c">,</span> <span class="w">_reason</span><span class="pc">) </span><span class="c">\</span>
+			<span class="w">xpc_deactivate_partition</span><span class="c">(</span><span class="w">__</span><span class="pc">L</span><span class="c">INE__</span><span class="pc">, </span><span class="c">(_p</span><span class="w">),</span><span class="pc"> (</span><span class="w">_</span><span class="pc">r</span><span class="c">eason))</span>
+
+
+
+<span class="c">#define</span> <span class="w">XPC_P_SS_UNSET</span>		<span class="w">0</span><span class="pc">x</span><span class="c">00</span>	
+<span class="c">#define</span> <span class="w">XPC_P_SS_SETUP</span>		<span class="c">0x01</span>	
+<span class="c">#define</span> <span class="w">XPC_P_SS_WTEARDOWN</span>	<span class="c">0x02</span>	
+<span class="c">#define</span> <span class="w">XPC_P_SS_TORNDOWN</span>	<span class="c">0x03</span>	
+
+
+<span class="c">#define</span> <span class="w">XPC_DROPPED_NOTIFY_IRQ_WAIT_INTERVAL</span>	<span class="w">(</span><span class="pc">0</span><span class="w">.2</span><span class="pc">5</span> <span class="w">*</span> <span class="w">H</span><span class="c">Z)</span>
+
+
+<span class="c">#define</span> <span class="w">XPC_DISENGAGE_DEFAULT_TIMELIMIT</span>		<span class="w">90</span>
+
+
+<span class="c">#define</span> <span class="w">XPC_DEACTIVATE_PRINTMSG_INTERVAL</span>	<span class="w">10</span>
+
+<span class="c">#define</span> <span class="w">XPC_PARTID</span><span class="pc">(</span><span class="w">_p)</span><span class="pc">	</span><span class="c">((</span><span class="w">sh</span><span class="c">ort</span><span class="w">)((</span><span class="pc">_</span><span class="c">p</span><span class="w">) - &amp;xpc_partitions[</span><span class="pc">0</span><span class="w">]))</span>
+
+
+<span class="w">e</span><span class="pc">x</span><span class="c">tern</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">xpc_registration</span> <span class="w">xpc_registrations</span><span class="pc">[]</span><span class="c">;</span>
+
+
+<span class="pc">e</span><span class="c">xtern</span> <span class="c">struct</span> <span class="w">d</span><span class="pc">e</span><span class="c">vice</span> <span class="c">*</span><span class="w">xpc_part</span><span class="c">;</span>
+<span class="c">extern</span> <span class="c">struct</span> <span class="pc">d</span><span class="c">evice</span> <span class="c">*</span><span class="w">xpc_chan</span><span class="c">;</span>
+<span class="c">extern</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">xpc_arch_operations</span> <span class="w">xpc_arch_ops</span><span class="c">;</span>
+<span class="c">extern</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">xpc_disengage_timelimit</span><span class="pc">;</span>
+<span class="c">extern</span> <span class="c">int</span> <span class="w">xpc_disengage_timedout</span><span class="pc">;</span>
+<span class="c">extern</span> <span class="c">int</span> <span class="w">xpc_activate_IRQ_rcvd</span><span class="c">;</span>
+<span class="c">extern</span> <span class="w">s</span><span class="pc">p</span><span class="c">inlock_t</span> <span class="w">xpc_activate_IRQ_rcvd_lock</span><span class="c">;</span>
+<span class="c">extern</span> <span class="w">wait_queue_head_t</span> <span class="w">xpc_activate_IRQ_wq</span><span class="pc">;</span>
+<span class="c">extern</span> <span class="w">v</span><span class="c">oid</span> <span class="c">*</span><span class="w">xpc_kzalloc_cacheline_aligned</span><span class="c">(</span><span class="pc">si</span><span class="c">ze_t</span><span class="w">,</span> <span class="w">g</span><span class="c">fp_t</span><span class="pc">,</span> <span class="w">v</span><span class="pc">o</span><span class="c">id</span> <span class="w">**);</span>
+<span class="c">extern</span> <span class="c">void</span> <span class="w">xpc_activate_partition</span><span class="c">(</span><span class="pc">s</span><span class="c">truct</span> <span class="w">xpc_partition</span> <span class="pc">*)</span><span class="c">;</span>
+<span class="c">extern</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">xpc_activate_kthreads</span><span class="c">(struct</span> <span class="w">xpc_channel</span> <span class="pc">*,</span> <span class="pc">i</span><span class="c">nt);</span>
+<span class="c">extern</span> <span class="c">void</span> <span class="w">xpc_create_kthreads</span><span class="c">(struct</span> <span class="c">xpc_channel</span> <span class="pc">*,</span> <span class="c">int</span><span class="pc">,</span> <span class="pc">i</span><span class="c">nt);</span>
+<span class="c">extern</span> <span class="c">void</span> <span class="w">xpc_disconnect_wait</span><span class="c">(</span><span class="pc">i</span><span class="c">nt);</span>
+
+
+<span class="c">extern</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">xpc_init_sn2</span><span class="c">(</span><span class="pc">v</span><span class="c">oid);</span>
+<span class="c">extern</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">xpc_exit_sn2</span><span class="c">(</span><span class="pc">v</span><span class="c">oid);</span>
+
+
+<span class="c">extern</span> <span class="c">int</span> <span class="w">xpc_init_uv</span><span class="c">(void);</span>
+<span class="c">extern</span> <span class="c">void</span> <span class="w">xpc_exit_uv</span><span class="c">(void);</span>
+
+
+<span class="c">extern</span> <span class="c">int</span> <span class="w">xpc_exiting</span><span class="pc">;</span>
+<span class="c">extern</span> <span class="c">int</span> <span class="w">xpc_nasid_mask_nlongs</span><span class="pc">;</span>
+<span class="c">extern</span> <span class="w">s</span><span class="c">truct</span> <span class="w">xpc_rsvd_page</span> <span class="c">*</span><span class="w">xpc_r</span><span class="c">svd_page;</span>
+<span class="c">extern</span> <span class="w">u</span><span class="c">nsigned</span> <span class="pc">l</span><span class="c">ong</span> <span class="c">*</span><span class="w">xpc_mach_nasids</span><span class="c">;</span>
+<span class="c">extern</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">xpc_partition</span> <span class="c">*</span><span class="w">xpc_partitions</span><span class="c">;</span>
+<span class="c">extern</span> <span class="c">void</span> <span class="c">*</span><span class="w">xpc_kmalloc_cacheline_aligned</span><span class="c">(</span><span class="pc">si</span><span class="c">ze_t</span><span class="w">,</span> <span class="w">g</span><span class="c">fp_t</span><span class="pc">,</span> <span class="w">v</span><span class="c">oid</span> <span class="w">**);</span>
+<span class="c">extern</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">xpc_setup_rsvd_page</span><span class="c">(</span><span class="pc">v</span><span class="c">oid</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">extern</span> <span class="c">void</span> <span class="w">xpc_teardown_rsvd_page</span><span class="c">(void);</span>
+<span class="c">extern</span> <span class="c">int</span> <span class="w">xpc_identify_activate_IRQ_sender</span><span class="c">(void);</span>
+<span class="c">extern</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">xpc_partition_disengaged</span><span class="c">(</span><span class="pc">s</span><span class="c">truct</span> <span class="w">x</span><span class="pc">pc_p</span><span class="c">artition</span> <span class="pc">*)</span><span class="c">;</span>
+<span class="c">extern</span> <span class="w">e</span><span class="pc">n</span><span class="c">um</span> <span class="w">xp_retval</span> <span class="w">xpc_mark_partition_active</span><span class="c">(</span><span class="pc">s</span><span class="c">truct</span> <span class="c">xpc_partition</span> <span class="c">*);</span>
+<span class="c">extern</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">xpc_mark_partition_inactive</span><span class="c">(struct</span> <span class="c">xpc_partition</span> <span class="c">*);</span>
+<span class="c">extern</span> <span class="c">void</span> <span class="w">xpc_discovery</span><span class="c">(</span><span class="pc">v</span><span class="c">oid);</span>
+<span class="c">extern</span> <span class="w">e</span><span class="c">num</span> <span class="pc">x</span><span class="c">p_retval</span> <span class="w">xpc_get_remote_rp</span><span class="c">(</span><span class="pc">i</span><span class="c">nt</span><span class="w">,</span> <span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">*</span><span class="pc">,</span>
+					<span class="w">s</span><span class="pc">t</span><span class="c">ruct</span> <span class="w">xpc_rsvd_page</span> <span class="pc">*,</span>
+					<span class="pc">u</span><span class="c">nsigned</span> <span class="pc">l</span><span class="c">ong</span> <span class="pc">*)</span><span class="c">;</span>
+<span class="c">extern</span> <span class="c">void</span> <span class="w">xpc_deactivate_partition</span><span class="c">(</span><span class="pc">c</span><span class="c">onst</span> <span class="w">i</span><span class="pc">nt</span><span class="w">,</span> <span class="pc">s</span><span class="c">truct</span> <span class="c">xpc_partition</span> <span class="pc">*,</span>
+				     <span class="w">e</span><span class="c">num</span> <span class="pc">xp_</span><span class="c">retval</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">extern</span> <span class="w">e</span><span class="c">num</span> <span class="w">x</span><span class="pc">p_</span><span class="c">retval</span> <span class="w">xpc_initiate_partid_to_nasids</span><span class="c">(</span><span class="w">s</span><span class="pc">h</span><span class="c">ort</span><span class="pc">,</span> <span class="w">v</span><span class="c">oid</span> <span class="pc">*)</span><span class="c">;</span>
+
+
+<span class="c">extern</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">xpc_initiate_connect</span><span class="c">(</span><span class="w">i</span><span class="c">nt);</span>
+<span class="c">extern</span> <span class="c">void</span> <span class="w">xpc_initiate_disconnect</span><span class="c">(</span><span class="pc">i</span><span class="c">nt);</span>
+<span class="c">extern</span> <span class="pc">e</span><span class="c">num</span> <span class="w">x</span><span class="pc">p_</span><span class="c">retval</span> <span class="w">xpc_allocate_msg_wait</span><span class="c">(struct</span> <span class="w">xpc_channel</span> <span class="pc">*)</span><span class="c">;</span>
+<span class="c">extern</span> <span class="pc">e</span><span class="c">num</span> <span class="pc">xp_</span><span class="c">retval</span> <span class="w">xpc_initiate_send</span><span class="c">(</span><span class="w">s</span><span class="pc">h</span><span class="c">ort</span><span class="pc">,</span> <span class="w">i</span><span class="c">nt</span><span class="pc">,</span> <span class="w">u3</span><span class="c">2,</span> <span class="w">v</span><span class="pc">o</span><span class="c">id</span> <span class="pc">*,</span> <span class="w">u</span><span class="pc">1</span><span class="c">6);</span>
+<span class="c">extern</span> <span class="w">e</span><span class="pc">n</span><span class="c">um</span> <span class="pc">xp_</span><span class="c">retval</span> <span class="w">xpc_initiate_send_notify</span><span class="c">(</span><span class="w">sh</span><span class="c">ort</span><span class="w">,</span> <span class="w">i</span><span class="c">nt,</span> <span class="w">u</span><span class="pc">3</span><span class="c">2,</span> <span class="w">v</span><span class="c">oid</span> <span class="pc">*</span><span class="c">,</span> <span class="pc">u1</span><span class="c">6</span><span class="pc">,</span>
+					       <span class="w">xpc_notify_func</span><span class="pc">,</span> <span class="w">v</span><span class="c">oid</span> <span class="pc">*)</span><span class="c">;</span>
+<span class="c">extern</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">xpc_initiate_received</span><span class="c">(</span><span class="w">s</span><span class="pc">h</span><span class="c">ort</span><span class="w">,</span> <span class="pc">i</span><span class="c">nt,</span> <span class="w">v</span><span class="c">oid</span> <span class="pc">*)</span><span class="c">;</span>
+<span class="pc">e</span><span class="c">xtern</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">xpc_process_sent_chctl_flags</span><span class="c">(</span><span class="pc">s</span><span class="c">truct</span> <span class="w">xpc_partition</span> <span class="pc">*)</span><span class="c">;</span>
+<span class="c">extern</span> <span class="c">void</span> <span class="w">xpc_connected_callout</span><span class="c">(</span><span class="pc">s</span><span class="c">truct</span> <span class="w">xpc_channel</span> <span class="c">*);</span>
+<span class="c">extern</span> <span class="c">void</span> <span class="w">xpc_deliver_payload</span><span class="c">(struct</span> <span class="c">xpc_channel</span> <span class="c">*);</span>
+<span class="c">extern</span> <span class="c">void</span> <span class="w">xpc_disconnect_channel</span><span class="c">(</span><span class="pc">c</span><span class="c">onst</span> <span class="w">i</span><span class="c">nt</span><span class="w">,</span> <span class="w">s</span><span class="pc">t</span><span class="c">ruct</span> <span class="c">xpc_channel</span> <span class="pc">*,</span>
+				   <span class="w">e</span><span class="c">num</span> <span class="w">xp_retval,</span> <span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="pc">l</span><span class="c">ong</span> <span class="pc">*)</span><span class="c">;</span>
+<span class="c">extern</span> <span class="c">void</span> <span class="w">xpc_disconnect_callout</span><span class="c">(struct</span> <span class="pc">xpc_c</span><span class="c">hannel</span> <span class="pc">*,</span> <span class="pc">e</span><span class="c">num</span> <span class="c">xp_retval);</span>
+<span class="c">extern</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">xpc_partition_going_down</span><span class="c">(struct</span> <span class="w">xpc_partition</span> <span class="c">*,</span> <span class="pc">e</span><span class="c">num</span> <span class="pc">xp_</span><span class="c">retval);</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="pc">inl</span><span class="c">ine</span> <span class="c">void</span>
+<span class="w">xpc_wakeup_channel_mgr</span><span class="c">(struct</span> <span class="pc">xpc_p</span><span class="c">artition</span> <span class="c">*</span><span class="w">pa</span><span class="pc">r</span><span class="c">t</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">atomic_inc_return</span><span class="pc">(&amp;</span><span class="w">pa</span><span class="pc">rt</span><span class="c">-&gt;</span><span class="w">channel_mgr_requests)</span><span class="pc"> </span><span class="c">==</span> <span class="pc">1</span><span class="c">)</span>
+		<span class="w">wake_up</span><span class="pc">(&amp;</span><span class="w">pa</span><span class="pc">r</span><span class="c">t-&gt;</span><span class="w">channel_mgr_wq</span><span class="c">);</span>
+<span class="c">}</span>
+
+
+<span class="c">static</span> <span class="c">inline</span> <span class="c">void</span>
+<span class="w">xpc_msgqueue_ref</span><span class="c">(struct</span> <span class="w">xpc_channel</span> <span class="c">*</span><span class="w">c</span><span class="pc">h)</span>
+<span class="c">{</span>
+	<span class="w">a</span><span class="c">tomic_inc(&amp;</span><span class="w">c</span><span class="pc">h</span><span class="c">-&gt;</span><span class="w">references</span><span class="c">);</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">inline</span> <span class="c">void</span>
+<span class="w">xpc_msgqueue_deref</span><span class="c">(struct</span> <span class="c">xpc_channel</span> <span class="c">*</span><span class="w">c</span><span class="pc">h</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="w">s3</span><span class="c">2</span> <span class="w">refs</span> <span class="pc">=</span> <span class="w">atomic_dec_return</span><span class="pc">(&amp;</span><span class="c">ch-&gt;</span><span class="pc">r</span><span class="c">eferences);</span>
+
+	<span class="w">DBUG_ON</span><span class="c">(refs</span> <span class="w">&lt;</span> <span class="pc">0</span><span class="c">);</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(refs</span> <span class="pc">=</span><span class="c">=</span> <span class="c">0)</span>
+		<span class="w">xpc_wakeup_channel_mgr</span><span class="pc">(&amp;</span><span class="w">xpc_partitions[c</span><span class="c">h</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">partid</span><span class="c">]);</span>
+<span class="pc">}</span>
+
+<span class="w">#</span><span class="pc">d</span><span class="c">efine</span> <span class="w">XPC_DISCONNECT_CHANNEL</span><span class="c">(</span><span class="w">_ch</span><span class="pc">,</span> <span class="w">_reason</span><span class="c">,</span> <span class="w">_irqflgs</span><span class="pc">) </span><span class="c">\</span>
+		<span class="w">xpc_disconnect_channel</span><span class="c">(</span><span class="w">__L</span><span class="c">INE__,</span> <span class="c">_ch,</span> <span class="c">_reason,</span> <span class="c">_irqflgs</span><span class="pc">)</span>
+
+
+<span class="w">s</span><span class="c">tatic</span> <span class="pc">inl</span><span class="c">ine</span> <span class="c">void</span>
+<span class="w">xpc_part_deref</span><span class="c">(struct</span> <span class="w">xpc_partition</span> <span class="c">*</span><span class="w">par</span><span class="pc">t)</span>
+<span class="c">{</span>
+	<span class="w">s3</span><span class="c">2</span> <span class="w">refs</span> <span class="c">=</span> <span class="w">atomic_dec_return(</span><span class="pc">&amp;</span><span class="w">par</span><span class="pc">t</span><span class="c">-&gt;</span><span class="w">references</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="w">DBUG_ON</span><span class="c">(refs</span> <span class="w">&lt;</span> <span class="pc">0</span><span class="c">);</span>
+	<span class="w">i</span><span class="c">f</span> <span class="c">(refs</span> <span class="pc">=</span><span class="c">=</span> <span class="pc">0</span> <span class="pc">&amp;</span><span class="c">&amp;</span> <span class="w">pa</span><span class="pc">rt</span><span class="c">-&gt;</span><span class="w">setup_state</span> <span class="pc">=</span><span class="c">=</span> <span class="w">XPC_P_SS_WTEARDOWN</span><span class="c">)</span>
+		<span class="w">wake_up</span><span class="pc">(&amp;</span><span class="w">pa</span><span class="pc">r</span><span class="c">t-&gt;</span><span class="w">teardown_wq</span><span class="c">);</span>
+<span class="pc">}</span>
+
+<span class="c">static</span> <span class="pc">inl</span><span class="c">ine</span> <span class="pc">i</span><span class="c">nt</span>
+<span class="w">xpc_part_ref</span><span class="c">(struct</span> <span class="w">xpc_partition</span> <span class="c">*</span><span class="w">pa</span><span class="pc">r</span><span class="c">t</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">in</span><span class="c">t</span> <span class="w">set</span><span class="pc">up;</span>
+
+	<span class="w">a</span><span class="pc">tomic_i</span><span class="c">nc(&amp;</span><span class="w">pa</span><span class="pc">r</span><span class="c">t-&gt;</span><span class="w">references</span><span class="c">);</span>
+	<span class="w">set</span><span class="pc">up</span> <span class="pc">= </span><span class="c">(</span><span class="w">pa</span><span class="pc">rt</span><span class="c">-&gt;</span><span class="pc">s</span><span class="c">etup_state</span> <span class="w">=</span><span class="c">=</span> <span class="w">XPC_P_SS_SETUP</span><span class="pc">)</span><span class="c">;</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="pc">(!</span><span class="w">set</span><span class="pc">up)</span>
+		<span class="w">xpc_part_deref</span><span class="c">(</span><span class="w">pa</span><span class="pc">r</span><span class="c">t</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="c">return</span> <span class="w">set</span><span class="pc">up;</span>
+<span class="c">}</span>
+
+
+<span class="w">#</span><span class="pc">d</span><span class="c">efine</span> <span class="w">XPC_SET_REASON</span><span class="c">(</span><span class="w">_p</span><span class="c">,</span> <span class="w">_reason</span><span class="c">,</span> <span class="w">_line</span><span class="pc">) </span><span class="c">\</span>
+	<span class="w">{ \</span>
+		<span class="c">(_p</span><span class="pc">)</span><span class="c">-&gt;</span><span class="w">rea</span><span class="pc">s</span><span class="c">on</span> <span class="pc">=</span> <span class="c">_reason</span><span class="w">;</span><span class="pc"> </span><span class="c">\</span>
+		<span class="pc">(</span><span class="w">_</span><span class="pc">p)</span><span class="c">-&gt;</span><span class="w">reason_line</span> <span class="c">=</span> <span class="w">_</span><span class="pc">l</span><span class="c">ine</span><span class="w">;</span><span class="pc"> </span><span class="c">\</span>
+	<span class="c">}</span>
+
+<span class="c">#</span><span class="pc">e</span><span class="c">ndif</span> 
+
+</pre>
+</body>
+</html>
+

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+<span class="w">#ifndef</span> <span class="w">_AT91_GENERIC_H</span>
+<span class="w">#define</span> <span class="w">_AT91_GENERIC_H</span>
+
+<span class="w">#include</span> <span class="w">&lt;linux/of.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/reboot.h&gt;</span>
+
+ 
+<span class="w">extern</span> <span class="w">void</span> <span class="w">__init</span> <span class="w">at91_map_io(void);</span>
+<span class="w">extern</span> <span class="w">void</span> <span class="w">__init</span> <span class="w">at91_alt_map_io(void);</span>
+
+
+<span class="w">extern</span> <span class="w">void</span> <span class="w">at91rm9200_idle</span><span class="c">(</span><span class="pc">v</span><span class="c">oid);</span>
+<span class="pc">e</span><span class="c">xtern</span> <span class="c">void</span> <span class="w">at91sam9_idle</span><span class="c">(void);</span>
+
+<span class="c">#</span><span class="pc">ifd</span><span class="c">ef</span> <span class="w">CONFIG_PM</span>
+<span class="c">extern</span> <span class="c">void</span> <span class="c">__init</span> <span class="w">at91rm9200_pm_init</span><span class="c">(void);</span>
+<span class="c">extern</span> <span class="c">void</span> <span class="c">__init</span> <span class="w">at91sam9260_pm_init</span><span class="c">(void);</span>
+<span class="c">extern</span> <span class="c">void</span> <span class="c">__init</span> <span class="w">at91sam9g45_pm_init</span><span class="c">(void);</span>
+<span class="c">extern</span> <span class="c">void</span> <span class="c">__init</span> <span class="w">at91sam9x5_pm_init</span><span class="c">(void);</span>
+<span class="pc">#</span><span class="c">else</span>
+<span class="pc">s</span><span class="c">tatic</span> <span class="c">inline</span> <span class="c">void</span> <span class="pc">__i</span><span class="c">nit</span> <span class="w">at</span><span class="pc">91r</span><span class="c">m9200_pm_init(void</span><span class="w">) { }</span>
+<span class="w">s</span><span class="c">tatic</span> <span class="c">inline</span> <span class="c">void</span> <span class="pc">__i</span><span class="c">nit</span> <span class="w">a</span><span class="c">t91sam9260_pm_init(void</span><span class="w">)</span><span class="pc"> { </span><span class="c">}</span>
+<span class="w">s</span><span class="c">tatic</span> <span class="c">inline</span> <span class="c">void</span> <span class="pc">__i</span><span class="c">nit</span> <span class="w">at</span><span class="pc">91sam9g</span><span class="c">45_pm_init(void</span><span class="pc">) { </span><span class="c">}</span>
+<span class="pc">s</span><span class="c">tatic</span> <span class="c">inline</span> <span class="c">void</span> <span class="pc">__i</span><span class="c">nit</span> <span class="pc">a</span><span class="c">t91sam9x5_pm_init(void</span><span class="pc">) { </span><span class="c">}</span>
+<span class="w">#</span><span class="c">endif</span>
+
+<span class="c">#</span><span class="w">e</span><span class="pc">n</span><span class="c">dif</span> 
+
+</pre>
+</body>
+</html>
+

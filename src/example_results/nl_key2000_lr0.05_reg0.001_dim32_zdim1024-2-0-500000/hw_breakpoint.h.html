@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+<span class="w">#ifndef</span> <span class="w">__ASM_HW_BREAKPOINT_H</span>
+<span class="w">#define</span> <span class="w">__ASM_HW_BREAKPOINT_H</span>
+
+<span class="w">#ifdef</span> <span class="w">__KERNEL__</span>
+
+<span class="w">struct</span> <span class="w">arch_hw_breakpoint_ctrl</span> <span class="w">{</span>
+	<span class="w">u32</span> <span class="w">__reserved</span>	<span class="w">:</span> <span class="w">19,</span>
+	<span class="w">len</span>		<span class="w">:</span> <span class="w">8,</span>
+	<span class="w">type</span>		<span class="w">:</span> <span class="w">2,</span>
+	<span class="w">privilege</span>	<span class="w">:</span> <span class="w">2,</span>
+	<span class="w">enabled</span>		<span class="w">:</span> <span class="w">1;</span>
+<span class="w">};</span>
+
+<span class="w">struct</span> <span class="w">arch_hw_breakpoint</span> <span class="w">{</span>
+	<span class="w">u64</span> <span class="w">address;</span>
+	<span class="pc">u6</span><span class="c">4</span> <span class="w">tr</span><span class="c">igger;</span>
+	<span class="w">s</span><span class="c">truct</span> <span class="c">arch_hw_breakpoint_ctrl</span> <span class="w">ct</span><span class="c">rl;</span>
+<span class="w">}</span><span class="pc">;</span>
+
+<span class="pc">sta</span><span class="c">tic</span> <span class="c">inline</span> <span class="pc">u</span><span class="c">32</span> <span class="w">encode_ctrl_reg</span><span class="c">(</span><span class="pc">s</span><span class="c">truct</span> <span class="pc">arch_hw_breakpoint_</span><span class="c">ctrl</span> <span class="w">ct</span><span class="c">rl</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">(</span><span class="w">c</span><span class="pc">t</span><span class="c">rl</span><span class="w">.le</span><span class="pc">n</span> <span class="pc">&lt;</span><span class="c">&lt;</span> <span class="w">5</span><span class="pc">) | </span><span class="c">(</span><span class="w">c</span><span class="c">trl</span><span class="w">.t</span><span class="c">ype</span> <span class="w">&lt;</span><span class="c">&lt;</span> <span class="w">3</span><span class="pc">) | </span><span class="c">(</span><span class="pc">c</span><span class="c">trl</span><span class="pc">.</span><span class="w">privilege</span> <span class="pc">&lt;</span><span class="c">&lt;</span> <span class="pc">1</span><span class="c">) |</span>
+		<span class="w">c</span><span class="c">trl</span><span class="pc">.</span><span class="w">e</span><span class="pc">nabled</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">inl</span><span class="c">ine</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">decode_ctrl_reg</span><span class="c">(</span><span class="w">u</span><span class="pc">3</span><span class="c">2</span> <span class="pc">r</span><span class="c">eg,</span>
+				   <span class="w">s</span><span class="c">truct</span> <span class="c">arch_hw_breakpoint_ctrl</span> <span class="c">*ctrl)</span>
+<span class="c">{</span>
+	<span class="w">c</span><span class="pc">t</span><span class="c">rl-&gt;</span><span class="w">e</span><span class="pc">nabled</span>	<span class="c">=</span> <span class="pc">r</span><span class="c">eg</span> <span class="pc">&amp;</span> <span class="pc">0x1</span><span class="c">;</span>
+	<span class="pc">r</span><span class="c">eg</span> <span class="w">&gt;</span><span class="c">&gt;=</span> <span class="c">1;</span>
+	<span class="w">c</span><span class="c">trl</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">p</span><span class="pc">r</span><span class="c">ivilege</span>	<span class="pc">=</span> <span class="c">reg</span> <span class="pc">&amp;</span> <span class="w">0x3</span><span class="c">;</span>
+	<span class="c">reg</span> <span class="w">&gt;</span><span class="c">&gt;=</span> <span class="pc">2</span><span class="c">;</span>
+	<span class="w">c</span><span class="c">trl-&gt;</span><span class="w">t</span><span class="pc">y</span><span class="c">pe</span>	<span class="c">=</span> <span class="c">reg</span> <span class="pc">&amp;</span> <span class="pc">0x3</span><span class="c">;</span>
+	<span class="c">reg</span> <span class="w">&gt;</span><span class="c">&gt;=</span> <span class="pc">2</span><span class="c">;</span>
+	<span class="pc">c</span><span class="c">trl-&gt;</span><span class="w">le</span><span class="pc">n</span>	<span class="c">=</span> <span class="c">reg</span> <span class="pc">&amp;</span> <span class="c">0xff;</span>
+<span class="pc">}</span>
+
+
+<span class="w">#</span><span class="c">define</span> <span class="w">ARM_BREAKPOINT_EXECUTE</span>	<span class="pc">0</span>
+
+
+<span class="c">#define</span> <span class="w">ARM_BREAKPOINT_LOAD</span>	<span class="pc">1</span>
+<span class="c">#define</span> <span class="w">ARM_BREAKPOINT_STORE</span>	<span class="c">2</span>
+<span class="c">#define</span> <span class="w">AARCH64_ESR_ACCESS_MASK</span>	<span class="pc">(</span><span class="c">1</span> <span class="c">&lt;&lt;</span> <span class="w">6</span><span class="c">)</span>
+
+
+<span class="c">#define</span> <span class="w">AARCH64_BREAKPOINT_EL1</span>	<span class="w">1</span>
+<span class="c">#define</span> <span class="w">AARCH64_BREAKPOINT_EL0</span>	<span class="c">2</span>
+
+
+<span class="c">#define</span> <span class="w">ARM_BREAKPOINT_LEN_1</span>	<span class="w">0</span><span class="pc">x</span><span class="c">1</span>
+<span class="c">#define</span> <span class="w">ARM_BREAKPOINT_LEN_2</span>	<span class="w">0x3</span>
+<span class="c">#define</span> <span class="w">ARM_BREAKPOINT_LEN_4</span>	<span class="w">0xf</span>
+<span class="c">#define</span> <span class="w">ARM_BREAKPOINT_LEN_8</span>	<span class="w">0xf</span><span class="pc">f</span>
+
+
+<span class="c">#define</span> <span class="w">ARM_KERNEL_STEP_NONE</span>	<span class="pc">0</span>
+<span class="c">#define</span> <span class="w">ARM_KERNEL_STEP_ACTIVE</span>	<span class="c">1</span>
+<span class="c">#define</span> <span class="w">ARM_KERNEL_STEP_SUSPEND</span>	<span class="c">2</span>
+
+
+<span class="c">#define</span> <span class="w">ARM_MAX_BRP</span>		<span class="w">1</span><span class="pc">6</span>
+<span class="c">#define</span> <span class="w">ARM_MAX_WRP</span>		<span class="w">1</span><span class="pc">6</span>
+
+
+<span class="c">#define</span> <span class="w">AARCH64_DBG_REG_BVR</span>	<span class="pc">0</span>
+<span class="c">#define</span> <span class="w">AARCH64_DBG_REG_BCR</span>	<span class="w">(</span><span class="pc">A</span><span class="c">ARCH64_DBG_REG_BVR</span> <span class="c">+</span> <span class="w">A</span><span class="pc">RM_MAX_B</span><span class="c">RP)</span>
+<span class="c">#define</span> <span class="w">AARCH64_DBG_REG_WVR</span>	<span class="c">(</span><span class="pc">A</span><span class="c">ARCH64_DBG_REG_BCR</span> <span class="c">+</span> <span class="pc">ARM_MAX_B</span><span class="c">RP)</span>
+<span class="c">#define</span> <span class="w">AARCH64_DBG_REG_WCR</span>	<span class="c">(AARCH64_DBG_REG_WVR</span> <span class="c">+</span> <span class="pc">ARM_MAX_W</span><span class="c">RP)</span>
+
+
+<span class="c">#define</span> <span class="w">AARCH64_DBG_REG_NAME_BVR</span>	<span class="w">"bvr</span><span class="c">"</span>
+<span class="pc">#</span><span class="c">define</span> <span class="w">AARCH64_DBG_REG_NAME_BCR</span>	<span class="c">"</span><span class="w">bcr</span><span class="c">"</span>
+<span class="c">#define</span> <span class="w">AARCH64_DBG_REG_NAME_WVR</span>	<span class="c">"</span><span class="w">wvr</span><span class="c">"</span>
+<span class="c">#define</span> <span class="w">AARCH64_DBG_REG_NAME_WCR</span>	<span class="c">"</span><span class="w">wcr</span><span class="c">"</span>
+
+
+<span class="c">#define</span> <span class="w">AARCH64_DBG_READ</span><span class="pc">(</span><span class="w">N</span><span class="pc">,</span> <span class="w">REG</span><span class="c">,</span> <span class="w">VAL</span><span class="pc">)</span> <span class="w">d</span><span class="c">o</span> <span class="w">{\</span>
+	<span class="w">as</span><span class="pc">m</span> <span class="w">v</span><span class="pc">o</span><span class="c">latile</span><span class="w">("mrs</span> <span class="w">%0,</span> <span class="w">dbg</span><span class="c">"</span> <span class="pc">R</span><span class="c">EG</span> <span class="w">#N</span> <span class="pc">"</span><span class="w">_el1" : "=r"</span><span class="pc"> </span><span class="c">(</span><span class="pc">V</span><span class="c">AL</span><span class="w">));\</span>
+<span class="w">}</span> <span class="pc">w</span><span class="c">hile</span> <span class="c">(0)</span>
+
+<span class="c">#define</span> <span class="w">AARCH64_DBG_WRITE</span><span class="c">(</span><span class="w">N</span><span class="c">,</span> <span class="pc">R</span><span class="c">EG,</span> <span class="c">VAL</span><span class="w">)</span> <span class="c">do</span> <span class="w">{</span><span class="pc">\</span>
+	<span class="w">as</span><span class="c">m</span> <span class="w">v</span><span class="c">olatile</span><span class="w">("ms</span><span class="pc">r</span> <span class="w">d</span><span class="c">bg</span><span class="w">"</span> <span class="pc">R</span><span class="c">EG</span> <span class="w">#N</span> <span class="w">"_</span><span class="c">el1</span><span class="w">, </span><span class="pc">%</span><span class="w">0" :: "r"</span><span class="c"> (</span><span class="pc">V</span><span class="c">AL</span><span class="w">)</span><span class="pc">);</span><span class="c">\</span>
+<span class="w">}</span> <span class="pc">w</span><span class="c">hile</span> <span class="c">(0)</span>
+
+<span class="w">s</span><span class="pc">tr</span><span class="c">uct</span> <span class="w">t</span><span class="c">ask_struct</span><span class="pc">;</span>
+<span class="pc">s</span><span class="c">truct</span> <span class="w">n</span><span class="pc">o</span><span class="c">tifier_block;</span>
+<span class="c">struct</span> <span class="w">pe</span><span class="pc">r</span><span class="c">f_event;</span>
+<span class="c">struct</span> <span class="w">pm</span><span class="pc">u</span><span class="c">;</span>
+
+<span class="w">e</span><span class="c">xtern</span> <span class="c">int</span> <span class="w">arch_bp_generic_fields</span><span class="c">(struct</span> <span class="w">arch_hw_breakpoint_ctrl</span> <span class="w">ct</span><span class="pc">r</span><span class="c">l</span><span class="w">,</span>
+				  <span class="pc">i</span><span class="c">nt</span> <span class="w">*gen_len</span><span class="c">,</span> <span class="c">int</span> <span class="c">*</span><span class="w">gen_type</span><span class="c">);</span>
+<span class="pc">e</span><span class="c">xtern</span> <span class="c">int</span> <span class="w">arch_check_bp_in_kernelspace</span><span class="c">(struct</span> <span class="w">pe</span><span class="c">rf_event</span> <span class="c">*</span><span class="w">b</span><span class="pc">p)</span><span class="c">;</span>
+<span class="c">extern</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">arch_validate_hwbkpt_settings</span><span class="c">(struct</span> <span class="w">p</span><span class="pc">e</span><span class="c">rf_event</span> <span class="c">*</span><span class="w">b</span><span class="c">p);</span>
+<span class="c">extern</span> <span class="c">int</span> <span class="w">hw_breakpoint_exceptions_notify</span><span class="c">(struct</span> <span class="w">n</span><span class="pc">o</span><span class="c">tifier_block</span> <span class="c">*</span><span class="w">unused</span><span class="pc">,</span>
+					   <span class="c">unsigned</span> <span class="pc">l</span><span class="c">ong</span> <span class="pc">v</span><span class="c">al</span><span class="pc">,</span> <span class="pc">v</span><span class="c">oid</span> <span class="c">*data);</span>
+
+<span class="c">extern</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">arch_install_hw_breakpoint</span><span class="c">(struct</span> <span class="w">pe</span><span class="c">rf_event</span> <span class="c">*</span><span class="w">b</span><span class="c">p</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">extern</span> <span class="c">void</span> <span class="w">arch_uninstall_hw_breakpoint</span><span class="c">(struct</span> <span class="w">p</span><span class="pc">e</span><span class="c">rf_event</span> <span class="c">*</span><span class="w">b</span><span class="c">p);</span>
+<span class="c">extern</span> <span class="c">void</span> <span class="w">hw_breakpoint_pmu_read</span><span class="c">(struct</span> <span class="w">p</span><span class="pc">e</span><span class="c">rf_event</span> <span class="c">*</span><span class="pc">b</span><span class="c">p);</span>
+<span class="c">extern</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">hw_breakpoint_slots</span><span class="c">(</span><span class="w">i</span><span class="c">nt</span> <span class="w">t</span><span class="c">ype);</span>
+
+<span class="pc">#i</span><span class="c">fdef</span> <span class="w">CONFIG_HAVE_HW_BREAKPOINT</span>
+<span class="c">extern</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">hw_breakpoint_thread_switch</span><span class="c">(struct</span> <span class="w">t</span><span class="c">ask_struct</span> <span class="c">*</span><span class="w">n</span><span class="pc">e</span><span class="c">xt</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">extern</span> <span class="c">void</span> <span class="w">ptrace_hw_copy_thread</span><span class="c">(struct</span> <span class="pc">t</span><span class="c">ask_struct</span> <span class="c">*</span><span class="pc">ta</span><span class="c">sk);</span>
+<span class="pc">#</span><span class="c">else</span>
+<span class="c">static</span> <span class="c">inline</span> <span class="c">void</span> <span class="pc">h</span><span class="c">w_breakpoint_thread_switch(struct</span> <span class="c">task_struct</span> <span class="c">*</span><span class="w">n</span><span class="pc">e</span><span class="c">xt)</span>
+<span class="c">{</span>
+<span class="c">}</span>
+<span class="pc">s</span><span class="c">tatic</span> <span class="c">inline</span> <span class="c">void</span> <span class="c">ptrace_hw_copy_thread(struct</span> <span class="c">task_struct</span> <span class="c">*</span><span class="pc">ta</span><span class="c">sk)</span>
+<span class="c">{</span>
+<span class="c">}</span>
+<span class="c">#endif</span>
+
+<span class="pc">e</span><span class="c">xtern</span> <span class="w">s</span><span class="c">truct</span> <span class="w">pm</span><span class="pc">u</span> <span class="w">perf_ops_bp</span><span class="c">;</span>
+
+<span class="pc">#</span><span class="c">endif</span>	
+<span class="c">#</span><span class="pc">e</span><span class="c">ndif</span>	
+
+</pre>
+</body>
+</html>
+

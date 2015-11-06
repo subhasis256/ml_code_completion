@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+<span class="w">#include</span> <span class="w">&lt;linux/bcd.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/export.h&gt;</span>
+
+<span class="w">unsigned</span> <span class="w">_bcd2bin(unsigned</span> <span class="w">char</span> <span class="w">val)</span>
+<span class="w">{</span>
+	<span class="w">return</span> <span class="w">(val</span> <span class="w">&amp;</span> <span class="w">0x0f) + (val</span> <span class="w">&gt;&gt;</span> <span class="w">4) *</span> <span class="w">10;</span>
+<span class="w">}</span>
+<span class="w">EXPORT_SYMBOL</span><span class="c">(_bcd2bin);</span>
+
+<span class="pc">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">har</span> <span class="w">_bin2bcd</span><span class="c">(unsigned</span> <span class="pc">v</span><span class="c">al)</span>
+<span class="c">{</span>
+	<span class="c">return</span> <span class="pc">((v</span><span class="c">al</span> <span class="w">/</span> <span class="w">1</span><span class="pc">0) &lt;</span><span class="c">&lt;</span> <span class="pc">4</span><span class="w">) </span><span class="pc">+</span> <span class="w">v</span><span class="c">al</span> <span class="w">%</span> <span class="w">1</span><span class="pc">0;</span>
+<span class="c">}</span>
+<span class="w">E</span><span class="pc">XPORT_SYMBOL</span><span class="c">(</span><span class="pc">_bi</span><span class="c">n2bcd);</span>
+
+</pre>
+</body>
+</html>
+

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+<span class="w">#include</span> <span class="w">&lt;linux/types.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;asm/sn/sn_sal.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;asm/sn/pcibr_provider.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;asm/sn/pcibus_provider_defs.</span><span class="c">h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/sn/</span><span class="w">pci</span><span class="pc">d</span><span class="c">ev.h&gt;</span>
+
+<span class="pc">i</span><span class="c">nt</span> <span class="w">pcibr_invalidate_ate</span><span class="pc">;</span>	
+
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">mark_ate</span><span class="c">(struct</span> <span class="w">ate_resource</span> <span class="c">*</span><span class="w">a</span><span class="c">te_resource,</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">s</span><span class="pc">tar</span><span class="c">t,</span> <span class="c">int</span> <span class="w">n</span><span class="pc">umb</span><span class="c">er</span><span class="pc">,</span>
+		     <span class="w">u</span><span class="pc">6</span><span class="c">4</span> <span class="w">v</span><span class="pc">alu</span><span class="c">e</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">u</span><span class="pc">6</span><span class="c">4</span> <span class="c">*</span><span class="w">ate</span> <span class="pc">=</span> <span class="pc">a</span><span class="c">te_resource</span><span class="pc">-</span><span class="c">&gt;ate;</span>
+	<span class="c">int</span> <span class="w">i</span><span class="pc">n</span><span class="c">dex</span><span class="pc">;</span>
+	<span class="pc">in</span><span class="c">t</span> <span class="w">le</span><span class="pc">ng</span><span class="c">th</span> <span class="pc">=</span> <span class="c">0;</span>
+
+	<span class="w">f</span><span class="c">or</span> <span class="c">(</span><span class="pc">in</span><span class="c">dex</span> <span class="c">=</span> <span class="w">s</span><span class="pc">t</span><span class="c">art;</span> <span class="w">l</span><span class="pc">eng</span><span class="c">th</span> <span class="c">&lt;</span> <span class="w">nu</span><span class="pc">mb</span><span class="c">er;</span> <span class="c">index</span><span class="w">+</span><span class="pc">+,</span> <span class="w">l</span><span class="c">ength</span><span class="w">+</span><span class="pc">+)</span>
+		<span class="pc">a</span><span class="c">te[index</span><span class="pc">] </span><span class="c">=</span> <span class="w">v</span><span class="c">alue;</span>
+<span class="c">}</span>
+
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="pc">int</span> <span class="w">find_free_ate</span><span class="c">(struct</span> <span class="w">a</span><span class="pc">te_</span><span class="c">resource</span> <span class="c">*</span><span class="pc">ate_</span><span class="c">resource,</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">s</span><span class="pc">tar</span><span class="c">t,</span>
+			 <span class="c">int</span> <span class="pc">c</span><span class="c">ount</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">u</span><span class="pc">6</span><span class="c">4</span> <span class="c">*</span><span class="w">a</span><span class="c">te</span> <span class="c">=</span> <span class="w">a</span><span class="pc">te_</span><span class="c">resource-&gt;</span><span class="w">a</span><span class="pc">t</span><span class="c">e</span><span class="pc">;</span>
+	<span class="pc">in</span><span class="c">t</span> <span class="pc">in</span><span class="c">dex;</span>
+	<span class="c">int</span> <span class="w">start_free</span><span class="c">;</span>
+
+	<span class="w">f</span><span class="c">or</span> <span class="c">(</span><span class="pc">in</span><span class="c">dex</span> <span class="c">=</span> <span class="w">s</span><span class="pc">tart</span><span class="c">;</span> <span class="pc">in</span><span class="c">dex</span> <span class="c">&lt;</span> <span class="w">a</span><span class="pc">te_</span><span class="c">resource</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">num_ate;) {</span>
+		<span class="w">i</span><span class="pc">f</span> <span class="pc">(!</span><span class="c">ate</span><span class="pc">[i</span><span class="c">ndex</span><span class="pc">]) </span><span class="c">{</span>
+			<span class="w">i</span><span class="pc">nt</span> <span class="c">i</span><span class="pc">;</span>
+			<span class="pc">in</span><span class="c">t</span> <span class="w">fr</span><span class="pc">ee;</span>
+			<span class="w">fr</span><span class="pc">ee</span> <span class="c">=</span> <span class="pc">0</span><span class="c">;</span>
+			<span class="w">s</span><span class="pc">t</span><span class="c">art_free</span> <span class="c">=</span> <span class="w">i</span><span class="c">ndex;</span>	
+			<span class="pc">f</span><span class="c">or</span> <span class="c">(i</span> <span class="c">=</span> <span class="pc">s</span><span class="c">tart_free;</span> <span class="c">i</span> <span class="c">&lt;</span> <span class="c">ate_resource</span><span class="pc">-</span><span class="c">&gt;</span><span class="pc">n</span><span class="c">um_ate</span><span class="pc">;</span> <span class="c">i++) {</span>
+				<span class="c">if</span> <span class="pc">(!ate[</span><span class="c">i</span><span class="pc">]) </span><span class="c">{</span>	
+					<span class="pc">i</span><span class="c">f</span> <span class="w">(++fr</span><span class="pc">ee</span> <span class="pc">=</span><span class="c">=</span> <span class="w">c</span><span class="c">ount</span><span class="pc">)</span>
+						<span class="pc">r</span><span class="c">eturn</span> <span class="w">s</span><span class="c">tart_free;</span>
+				<span class="c">}</span> <span class="c">else</span> <span class="c">{</span>
+					<span class="w">i</span><span class="pc">nd</span><span class="c">ex</span> <span class="c">=</span> <span class="w">i</span> <span class="pc">+</span> <span class="pc">1</span><span class="c">;</span>
+					<span class="w">b</span><span class="c">reak;</span>
+				<span class="c">}</span>
+			<span class="c">}</span>
+			<span class="c">if</span> <span class="c">(</span><span class="pc">i</span> <span class="pc">&gt;</span><span class="c">=</span> <span class="pc">ate_</span><span class="c">resource</span><span class="pc">-</span><span class="c">&gt;num_ate</span><span class="pc">)</span>
+				<span class="c">return</span> <span class="c">-</span><span class="pc">1</span><span class="c">;</span>
+		<span class="c">}</span> <span class="pc">e</span><span class="c">lse</span>
+			<span class="w">i</span><span class="pc">nd</span><span class="c">ex</span><span class="pc">+</span><span class="c">+;</span>	
+	<span class="c">}</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">-1</span><span class="c">;</span>
+<span class="c">}</span>
+
+
+<span class="c">static</span> <span class="pc">inl</span><span class="c">ine</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">free_ate_resource</span><span class="c">(struct</span> <span class="w">a</span><span class="c">te_resource</span> <span class="c">*</span><span class="pc">a</span><span class="c">te_resource</span><span class="pc">,</span>
+				     <span class="c">int</span> <span class="w">s</span><span class="pc">tar</span><span class="c">t</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">mark_ate</span><span class="c">(ate_resource,</span> <span class="w">st</span><span class="pc">ar</span><span class="c">t,</span> <span class="c">ate_resource</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">ate</span><span class="pc">[</span><span class="w">st</span><span class="pc">a</span><span class="c">rt</span><span class="pc">],</span> <span class="pc">0)</span><span class="c">;</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="pc">((</span><span class="c">ate_resource-&gt;</span><span class="w">lowest_free_index</span> <span class="pc">&gt;</span> <span class="w">st</span><span class="pc">a</span><span class="c">rt</span><span class="w">) |</span><span class="pc">|</span>
+	    <span class="c">(</span><span class="pc">a</span><span class="c">te_resource-&gt;lowest_free_index</span> <span class="pc">&lt;</span> <span class="c">0</span><span class="pc">))</span>
+		<span class="w">a</span><span class="pc">te_</span><span class="c">resource-&gt;</span><span class="pc">l</span><span class="c">owest_free_index</span> <span class="c">=</span> <span class="w">s</span><span class="pc">t</span><span class="c">art;</span>
+<span class="pc">}</span>
+
+
+<span class="w">s</span><span class="c">tatic</span> <span class="c">inline</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">alloc_ate_resource</span><span class="c">(struct</span> <span class="c">ate_resource</span> <span class="c">*ate_resource,</span>
+				     <span class="pc">i</span><span class="c">nt</span> <span class="w">ate_needed</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="pc">in</span><span class="c">t</span> <span class="w">start_index</span><span class="pc">;</span>
+
+	
+	<span class="c">if</span> <span class="c">(ate_resource-&gt;lowest_free_index</span> <span class="pc">&lt;</span> <span class="pc">0</span><span class="c">)</span>
+		<span class="c">return</span> <span class="pc">-1</span><span class="c">;</span>
+
+	
+	<span class="pc">s</span><span class="c">tart_index</span> <span class="c">=</span>
+	    <span class="w">find_free_ate</span><span class="c">(ate_resource,</span> <span class="w">a</span><span class="pc">te_r</span><span class="c">esource</span><span class="pc">-</span><span class="c">&gt;</span><span class="pc">l</span><span class="c">owest_free_index,</span>
+			  <span class="pc">a</span><span class="c">te_needed);</span>
+	<span class="c">if</span> <span class="c">(</span><span class="pc">s</span><span class="c">tart_index</span> <span class="w">&gt;</span><span class="pc">=</span> <span class="c">0)</span>
+		<span class="w">mark_ate</span><span class="c">(ate_resource,</span> <span class="pc">s</span><span class="c">tart_index</span><span class="pc">,</span> <span class="pc">ate_n</span><span class="c">eeded</span><span class="pc">,</span> <span class="pc">ate_n</span><span class="c">eeded);</span>
+
+	<span class="w">a</span><span class="c">te_resource</span><span class="pc">-</span><span class="c">&gt;lowest_free_index</span> <span class="c">=</span>
+	    <span class="w">f</span><span class="c">ind_free_ate</span><span class="pc">(ate_r</span><span class="c">esource,</span> <span class="c">ate_resource</span><span class="pc">-</span><span class="c">&gt;lowest_free_index,</span> <span class="w">1</span><span class="c">);</span>
+
+	<span class="w">r</span><span class="c">eturn</span> <span class="w">s</span><span class="c">tart_index;</span>
+<span class="c">}</span>
+
+
+<span class="pc">in</span><span class="c">t</span> <span class="w">pcibr_ate_alloc</span><span class="c">(struct</span> <span class="w">pcibus_info</span> <span class="c">*</span><span class="w">p</span><span class="pc">c</span><span class="c">ibus_info,</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">c</span><span class="c">ount</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">s</span><span class="c">tatus;</span>
+	<span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="c">long</span> <span class="c">flags;</span>
+
+	<span class="pc">s</span><span class="c">pin_lock_irqsave(&amp;</span><span class="pc">p</span><span class="c">cibus_info-&gt;</span><span class="w">pbi_lock</span><span class="c">,</span> <span class="c">flags);</span>
+	<span class="w">s</span><span class="pc">t</span><span class="c">atus</span> <span class="c">=</span> <span class="w">alloc_ate_resource</span><span class="pc">(&amp;</span><span class="c">pcibus_info-&gt;</span><span class="w">pbi_int_ate_resource</span><span class="pc">,</span> <span class="w">c</span><span class="c">ount</span><span class="pc">)</span><span class="c">;</span>
+	<span class="pc">s</span><span class="c">pin_unlock_irqrestore(&amp;pcibus_info-&gt;</span><span class="pc">p</span><span class="c">bi_lock,</span> <span class="c">flags);</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">s</span><span class="c">tatus;</span>
+<span class="c">}</span>
+
+
+<span class="c">static</span> <span class="pc">inl</span><span class="c">ine</span> <span class="w">u</span><span class="pc">6</span><span class="c">4</span> <span class="w">_</span><span class="pc">_io</span><span class="c">mem</span> <span class="c">*</span><span class="w">pcibr_ate_addr</span><span class="c">(struct</span> <span class="pc">p</span><span class="c">cibus_info</span> <span class="c">*</span><span class="pc">pc</span><span class="c">ibus_info,</span>
+				       <span class="pc">i</span><span class="c">nt</span> <span class="w">ate_index</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="pc">a</span><span class="c">te_index</span> <span class="pc">&lt;</span> <span class="c">pcibus_info-&gt;</span><span class="w">pbi_int_ate_size</span><span class="pc">) </span><span class="c">{</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="w">pcireg_int_ate_addr</span><span class="c">(pcibus_info,</span> <span class="pc">a</span><span class="c">te_index);</span>
+	<span class="c">}</span>
+	<span class="w">panic(</span><span class="pc">"pcibr</span><span class="c">_ate_addr</span><span class="pc">:</span> <span class="w">i</span><span class="pc">n</span><span class="c">valid</span> <span class="pc">a</span><span class="c">te_index</span> <span class="w">0</span><span class="pc">x</span><span class="c">%x</span><span class="w">"</span><span class="pc">,</span> <span class="c">ate_index);</span>
+<span class="pc">}</span>
+
+
+<span class="w">v</span><span class="c">oid</span> <span class="w">inl</span><span class="c">ine</span>
+<span class="w">ate_write</span><span class="c">(</span><span class="pc">s</span><span class="c">truct</span> <span class="pc">pcib</span><span class="c">us_info</span> <span class="c">*</span><span class="w">p</span><span class="pc">cib</span><span class="c">us_info,</span> <span class="pc">i</span><span class="c">nt</span> <span class="c">ate_index,</span> <span class="c">int</span> <span class="w">c</span><span class="c">ount</span><span class="pc">,</span>
+	  <span class="w">v</span><span class="pc">ol</span><span class="c">atile</span> <span class="w">u</span><span class="pc">6</span><span class="c">4</span> <span class="w">ate</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">w</span><span class="c">hile</span> <span class="c">(</span><span class="pc">c</span><span class="c">ount</span><span class="w">-- &gt;</span> <span class="w">0</span><span class="pc">) </span><span class="c">{</span>
+		<span class="c">if</span> <span class="pc">(ate_</span><span class="c">index</span> <span class="w">&lt;</span> <span class="w">p</span><span class="pc">c</span><span class="c">ibus_info-&gt;</span><span class="w">pbi_int_ate_size</span><span class="c">) {</span>
+			<span class="w">pcireg_int_ate_set</span><span class="c">(</span><span class="pc">p</span><span class="c">cibus_info,</span> <span class="c">ate_index,</span> <span class="w">a</span><span class="pc">te</span><span class="c">);</span>
+		<span class="c">}</span> <span class="c">else</span> <span class="c">{</span>
+			<span class="w">panic(</span><span class="pc">"</span><span class="w">ate_write</span><span class="c">:</span> <span class="w">i</span><span class="c">nvalid</span> <span class="w">a</span><span class="c">te_index</span> <span class="w">0</span><span class="c">x%x</span><span class="pc">"</span><span class="c">,</span> <span class="pc">a</span><span class="c">te_index);</span>
+		<span class="pc">}</span>
+		<span class="pc">a</span><span class="c">te_index</span><span class="pc">+</span><span class="c">+;</span>
+		<span class="w">a</span><span class="pc">te</span> <span class="w">+</span><span class="pc">=</span> <span class="w">IOPGSIZE</span><span class="c">;</span>
+	<span class="c">}</span>
+
+	<span class="w">pcireg_tflush_get</span><span class="c">(</span><span class="pc">p</span><span class="c">cibus_info</span><span class="pc">)</span><span class="c">;</span>	
+<span class="c">}</span>
+
+<span class="pc">v</span><span class="c">oid</span> <span class="w">pcibr_ate_free</span><span class="c">(struct</span> <span class="c">pcibus_info</span> <span class="c">*</span><span class="pc">p</span><span class="c">cibus_info</span><span class="pc">,</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">i</span><span class="c">ndex</span><span class="pc">)</span>
+<span class="c">{</span>
+
+	<span class="w">v</span><span class="pc">ol</span><span class="c">atile</span> <span class="w">u6</span><span class="c">4</span> <span class="w">a</span><span class="pc">te</span><span class="c">;</span>
+	<span class="c">int</span> <span class="pc">c</span><span class="c">ount;</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="pc">l</span><span class="c">ong</span> <span class="c">flags;</span>
+
+	<span class="pc">if</span> <span class="c">(</span><span class="w">pcibr_invalidate_ate</span><span class="pc">)</span><span class="c"> {</span>
+		
+		<span class="pc">a</span><span class="c">te</span> <span class="w">=</span><span class="pc"> *</span><span class="w">pcibr_ate_addr</span><span class="pc">(</span><span class="c">pcibus_info,</span> <span class="w">i</span><span class="pc">n</span><span class="c">dex);</span>
+		<span class="w">c</span><span class="c">ount</span> <span class="c">=</span> <span class="pc">p</span><span class="c">cibus_info</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">pbi_int_ate_resource</span><span class="pc">.a</span><span class="c">te</span><span class="pc">[i</span><span class="c">ndex];</span>
+		<span class="w">ate_write</span><span class="c">(</span><span class="pc">p</span><span class="c">cibus_info,</span> <span class="w">i</span><span class="c">ndex,</span> <span class="w">c</span><span class="c">ount</span><span class="w">,</span><span class="pc"> (</span><span class="c">ate</span> <span class="w">&amp;</span><span class="pc"> </span><span class="c">~</span><span class="w">PCI32_ATE_V</span><span class="c">));</span>
+	<span class="pc">}</span>
+
+	<span class="w">sp</span><span class="pc">in_l</span><span class="c">ock_irqsave(&amp;</span><span class="pc">pcibu</span><span class="c">s_info-&gt;</span><span class="w">pbi_lock</span><span class="c">,</span> <span class="c">flags);</span>
+	<span class="w">free_ate_resource</span><span class="pc">(&amp;</span><span class="c">pcibus_info-&gt;</span><span class="pc">pbi_i</span><span class="c">nt_ate_resource,</span> <span class="w">i</span><span class="c">ndex);</span>
+	<span class="pc">s</span><span class="c">pin_unlock_irqrestore(&amp;pcibus_info-&gt;</span><span class="pc">p</span><span class="c">bi_lock,</span> <span class="c">flags);</span>
+<span class="c">}</span>
+
+</pre>
+</body>
+</html>
+

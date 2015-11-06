@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+<span class="w">#include</span> <span class="w">&lt;linux/module.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/init.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/platform_device.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/slab.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux</span><span class="c">/</span><span class="w">d</span><span class="pc">m</span><span class="c">a</span><span class="pc">-</span><span class="c">mapping.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">atmel_pdc</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">atmel</span><span class="pc">-</span><span class="w">ssc</span><span class="c">.h&gt;</span>
+
+<span class="c">#include</span> <span class="c">&lt;</span><span class="w">s</span><span class="c">ound/</span><span class="w">c</span><span class="pc">o</span><span class="c">re.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;</span><span class="w">s</span><span class="c">ound/</span><span class="w">p</span><span class="pc">cm</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;</span><span class="pc">so</span><span class="c">und/</span><span class="w">pcm_params</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;</span><span class="w">s</span><span class="pc">o</span><span class="c">und/</span><span class="w">so</span><span class="pc">c</span><span class="c">.h&gt;</span>
+
+<span class="c">#include</span> <span class="pc">"</span><span class="w">atmel</span><span class="pc">-</span><span class="w">pc</span><span class="pc">m</span><span class="c">.h"</span>
+
+
+<span class="pc">sta</span><span class="c">tic</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">atmel_pcm_preallocate_dma_buffer</span><span class="pc">(</span><span class="c">struct</span> <span class="w">snd_pcm</span> <span class="c">*</span><span class="w">pcm</span><span class="c">,</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">s</span><span class="pc">tr</span><span class="c">eam</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">sn</span><span class="pc">d_pcm_</span><span class="c">substream</span> <span class="c">*substream</span> <span class="c">=</span> <span class="w">pcm</span><span class="c">-&gt;</span><span class="w">streams</span><span class="pc">[</span><span class="w">s</span><span class="pc">tr</span><span class="c">eam</span><span class="pc">].</span><span class="w">su</span><span class="pc">b</span><span class="c">stream;</span>
+	<span class="c">struct</span> <span class="w">snd_dma_buffer</span> <span class="c">*</span><span class="w">bu</span><span class="pc">f</span> <span class="pc">= </span><span class="c">&amp;</span><span class="w">su</span><span class="c">bstream-&gt;</span><span class="w">dma_buffer</span><span class="pc">;</span>
+	<span class="w">s</span><span class="pc">i</span><span class="c">ze_t</span> <span class="w">s</span><span class="c">ize</span> <span class="c">=</span> <span class="w">ATMEL_SSC_DMABUF_SIZE</span><span class="pc">;</span>
+
+	<span class="w">b</span><span class="c">uf</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">dev</span><span class="pc">.</span><span class="w">t</span><span class="c">ype</span> <span class="c">=</span> <span class="w">SNDRV_DMA_TYPE_DEV</span><span class="c">;</span>
+	<span class="pc">b</span><span class="c">uf-&gt;</span><span class="w">d</span><span class="pc">ev</span><span class="c">.</span><span class="w">d</span><span class="pc">e</span><span class="c">v</span> <span class="pc">=</span> <span class="w">pcm</span><span class="c">-&gt;</span><span class="w">ca</span><span class="c">rd</span><span class="pc">-</span><span class="c">&gt;dev;</span>
+	<span class="pc">b</span><span class="c">uf-&gt;</span><span class="w">p</span><span class="pc">ri</span><span class="c">vate_data</span> <span class="c">=</span> <span class="pc">N</span><span class="c">ULL;</span>
+	<span class="pc">b</span><span class="c">uf-&gt;</span><span class="w">are</span><span class="c">a</span> <span class="pc">=</span> <span class="w">dma_alloc_coherent</span><span class="pc">(</span><span class="w">pcm</span><span class="c">-&gt;</span><span class="w">c</span><span class="pc">a</span><span class="c">rd-&gt;dev</span><span class="pc">,</span> <span class="w">si</span><span class="pc">ze,</span>
+			<span class="w">&amp;</span><span class="pc">b</span><span class="c">uf-&gt;</span><span class="w">a</span><span class="c">ddr</span><span class="pc">,</span> <span class="pc">G</span><span class="c">FP_KERNEL);</span>
+	<span class="w">p</span><span class="pc">r_</span><span class="c">debug("</span><span class="w">atmel</span><span class="pc">-</span><span class="w">pc</span><span class="pc">m:</span> <span class="w">al</span><span class="pc">lo</span><span class="c">c</span> <span class="w">dm</span><span class="pc">a</span> <span class="w">b</span><span class="pc">uff</span><span class="c">er</span><span class="w">:</span> <span class="w">are</span><span class="pc">a</span><span class="w">=</span><span class="pc">%p</span><span class="c">,</span> <span class="w">a</span><span class="pc">d</span><span class="c">dr=%</span><span class="pc">p</span><span class="c">,</span> <span class="pc">s</span><span class="c">ize=%</span><span class="w">zu</span><span class="c">\n",</span>
+			<span class="pc">(</span><span class="w">v</span><span class="c">oid</span> <span class="pc">*</span><span class="c">)</span><span class="w">b</span><span class="c">uf</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">are</span><span class="c">a</span><span class="w">,</span><span class="pc"> </span><span class="c">(</span><span class="pc">v</span><span class="c">oid</span> <span class="pc">*)(</span><span class="w">l</span><span class="pc">o</span><span class="c">ng</span><span class="pc">)</span><span class="w">b</span><span class="c">uf</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">a</span><span class="pc">d</span><span class="c">dr,</span> <span class="w">s</span><span class="c">ize);</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="pc">(!b</span><span class="c">uf</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">are</span><span class="c">a)</span>
+		<span class="c">return</span> <span class="c">-ENOMEM;</span>
+
+	<span class="pc">b</span><span class="c">uf-&gt;</span><span class="w">b</span><span class="pc">y</span><span class="c">tes</span> <span class="c">=</span> <span class="w">s</span><span class="c">ize;</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">atmel_pcm_mmap</span><span class="c">(struct</span> <span class="w">sn</span><span class="c">d_pcm_substream</span> <span class="c">*substream,</span>
+	<span class="c">struct</span> <span class="c">vm_area_struct</span> <span class="c">*vma)</span>
+<span class="c">{</span>
+	<span class="w">r</span><span class="c">eturn</span> <span class="w">remap_pfn_range</span><span class="c">(</span><span class="pc">v</span><span class="c">ma,</span> <span class="c">vma</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">vm_start</span><span class="pc">,</span>
+		       <span class="w">su</span><span class="pc">bs</span><span class="c">tream</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">dma_buffer.a</span><span class="pc">d</span><span class="c">dr</span> <span class="w">&gt;</span><span class="c">&gt;</span> <span class="pc">P</span><span class="c">AGE_SHIFT</span><span class="pc">,</span>
+		       <span class="c">vma-&gt;</span><span class="w">vm_end</span> <span class="w">-</span> <span class="pc">v</span><span class="c">ma-&gt;</span><span class="pc">vm_s</span><span class="c">tart</span><span class="pc">,</span> <span class="c">vma-&gt;</span><span class="w">vm_page_prot</span><span class="pc">)</span><span class="c">;</span>
+<span class="pc">}</span>
+
+<span class="c">static</span> <span class="pc">int</span> <span class="w">atmel_pcm_new</span><span class="c">(struct</span> <span class="w">snd_soc_pcm_runtime</span> <span class="c">*</span><span class="w">rtd</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">snd_card</span> <span class="c">*</span><span class="w">ca</span><span class="pc">r</span><span class="c">d</span> <span class="c">=</span> <span class="c">rtd-&gt;</span><span class="w">ca</span><span class="c">rd</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">s</span><span class="pc">n</span><span class="c">d_card;</span>
+	<span class="c">struct</span> <span class="w">snd_pcm</span> <span class="c">*</span><span class="w">pc</span><span class="pc">m</span> <span class="c">=</span> <span class="pc">r</span><span class="c">td-&gt;</span><span class="w">pcm</span><span class="c">;</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="pc">r</span><span class="c">et;</span>
+
+	<span class="pc">r</span><span class="c">et</span> <span class="c">=</span> <span class="w">dma_coerce_mask_and_coherent</span><span class="c">(</span><span class="pc">c</span><span class="c">ard-&gt;</span><span class="pc">d</span><span class="c">ev,</span> <span class="w">DMA_BIT_MASK</span><span class="pc">(</span><span class="w">3</span><span class="pc">2))</span><span class="c">;</span>
+	<span class="c">if</span> <span class="c">(</span><span class="pc">r</span><span class="c">et)</span>
+		<span class="c">return</span> <span class="pc">r</span><span class="c">et;</span>
+
+	<span class="c">if</span> <span class="c">(</span><span class="w">pcm</span><span class="c">-&gt;</span><span class="w">streams[SNDRV_PCM_STREAM_PLAYBACK</span><span class="c">].</span><span class="w">su</span><span class="pc">bs</span><span class="c">tream) {</span>
+		<span class="w">p</span><span class="pc">r_d</span><span class="c">ebug("</span><span class="w">atmel</span><span class="pc">-</span><span class="w">pc</span><span class="pc">m:</span> <span class="w">allocating</span> <span class="w">PCM</span> <span class="w">playback</span> <span class="w">D</span><span class="pc">MA</span> <span class="w">bu</span><span class="pc">f</span><span class="c">fer\n");</span>
+		<span class="w">r</span><span class="pc">et</span> <span class="pc">=</span> <span class="w">atmel_pcm_preallocate_dma_buffer</span><span class="c">(</span><span class="w">pcm</span><span class="c">,</span>
+			<span class="pc">S</span><span class="c">NDRV_PCM_STREAM_PLAYBACK);</span>
+		<span class="c">if</span> <span class="c">(ret</span><span class="pc">)</span>
+			<span class="c">goto</span> <span class="c">out;</span>
+	<span class="pc">}</span>
+
+	<span class="c">if</span> <span class="c">(</span><span class="w">pcm</span><span class="c">-&gt;</span><span class="w">s</span><span class="pc">tr</span><span class="c">eams</span><span class="pc">[</span><span class="w">SNDRV_PCM_STREAM_CAPTURE</span><span class="pc">].</span><span class="w">su</span><span class="pc">bs</span><span class="c">tream) {</span>
+		<span class="w">p</span><span class="pc">r_d</span><span class="c">ebug("</span><span class="w">a</span><span class="pc">tmel</span><span class="w">-pc</span><span class="pc">m:</span> <span class="w">a</span><span class="c">llocating</span> <span class="w">P</span><span class="c">CM</span> <span class="w">capture</span> <span class="w">D</span><span class="c">MA</span> <span class="w">b</span><span class="pc">uf</span><span class="c">fer\n");</span>
+		<span class="w">r</span><span class="pc">et</span> <span class="pc">=</span> <span class="w">a</span><span class="pc">t</span><span class="c">mel_pcm_preallocate_dma_buffer(</span><span class="w">pcm</span><span class="pc">,</span>
+			<span class="pc">SNDRV_PCM_STREAM_C</span><span class="c">APTURE);</span>
+		<span class="c">if</span> <span class="c">(ret</span><span class="pc">)</span>
+			<span class="c">goto</span> <span class="c">out;</span>
+	<span class="pc">}</span>
+ <span class="w">o</span><span class="c">ut:</span>
+	<span class="c">return</span> <span class="c">ret;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">void</span> <span class="w">atmel_pcm_free</span><span class="c">(struct</span> <span class="w">snd_pcm</span> <span class="c">*</span><span class="w">pcm</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">sn</span><span class="pc">d_pcm_</span><span class="c">substream</span> <span class="c">*</span><span class="w">s</span><span class="pc">u</span><span class="c">bstream</span><span class="pc">;</span>
+	<span class="c">struct</span> <span class="w">snd_dma_buffer</span> <span class="c">*</span><span class="w">b</span><span class="pc">uf</span><span class="c">;</span>
+	<span class="c">int</span> <span class="w">st</span><span class="pc">r</span><span class="c">eam</span><span class="pc">;</span>
+
+	<span class="w">f</span><span class="c">or</span> <span class="c">(</span><span class="w">st</span><span class="pc">r</span><span class="c">eam</span> <span class="c">=</span> <span class="c">0;</span> <span class="w">st</span><span class="pc">re</span><span class="c">am</span> <span class="c">&lt;</span> <span class="pc">2</span><span class="c">;</span> <span class="w">s</span><span class="pc">tre</span><span class="c">am++) {</span>
+		<span class="w">su</span><span class="c">bstream</span> <span class="c">=</span> <span class="w">pc</span><span class="pc">m</span><span class="c">-&gt;</span><span class="w">streams</span><span class="pc">[</span><span class="w">s</span><span class="c">tream</span><span class="pc">].</span><span class="w">su</span><span class="pc">b</span><span class="c">stream;</span>
+		<span class="pc">i</span><span class="c">f</span> <span class="pc">(!</span><span class="w">su</span><span class="c">bstream</span><span class="pc">)</span>
+			<span class="pc">co</span><span class="c">ntinue;</span>
+
+		<span class="w">b</span><span class="pc">uf</span> <span class="pc">= </span><span class="c">&amp;</span><span class="w">su</span><span class="c">bstream-&gt;</span><span class="w">dma_buffer</span><span class="pc">;</span>
+		<span class="c">if</span> <span class="pc">(!</span><span class="w">b</span><span class="c">uf</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">are</span><span class="c">a</span><span class="pc">)</span>
+			<span class="pc">c</span><span class="c">ontinue;</span>
+		<span class="w">dma_free_coherent</span><span class="c">(</span><span class="w">pcm</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">c</span><span class="pc">a</span><span class="c">rd</span><span class="pc">-</span><span class="c">&gt;dev,</span> <span class="w">b</span><span class="c">uf</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">by</span><span class="c">tes,</span>
+				  <span class="pc">b</span><span class="c">uf-&gt;</span><span class="w">are</span><span class="c">a</span><span class="pc">,</span> <span class="c">buf-&gt;</span><span class="w">a</span><span class="c">ddr);</span>
+		<span class="pc">b</span><span class="c">uf-&gt;</span><span class="w">are</span><span class="c">a</span> <span class="pc">=</span> <span class="pc">N</span><span class="c">ULL;</span>
+	<span class="c">}</span>
+<span class="c">}</span>
+
+
+
+<span class="c">static</span> <span class="w">c</span><span class="c">onst</span> <span class="c">struct</span> <span class="w">snd_pcm_hardware</span> <span class="w">atmel_pcm_hardware</span> <span class="pc">=</span><span class="c"> {</span>
+	<span class="c">.</span><span class="w">i</span><span class="pc">nf</span><span class="c">o</span>			<span class="c">=</span> <span class="w">SNDRV_PCM_INFO_MMAP</span> <span class="pc">|</span>
+				  <span class="w">SNDRV_PCM_INFO_MMAP_VALID</span> <span class="c">|</span>
+				  <span class="w">SNDRV_PCM_INFO_INTERLEAVED</span> <span class="pc">|</span>
+				  <span class="w">SNDRV_PCM_INFO_PAUSE</span><span class="pc">,</span>
+	<span class="c">.</span><span class="w">period_bytes_min</span>	<span class="c">=</span> <span class="w">3</span><span class="pc">2</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">period_bytes_max</span>	<span class="c">=</span> <span class="w">8192</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">periods_min</span>		<span class="c">=</span> <span class="pc">2</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">periods_max</span>		<span class="c">=</span> <span class="w">10</span><span class="pc">2</span><span class="c">4,</span>
+	<span class="c">.</span><span class="w">buffer_bytes_max</span>	<span class="c">=</span> <span class="w">ATMEL_SSC_DMABUF_SIZE</span><span class="c">,</span>
+<span class="pc">}</span><span class="c">;</span>
+
+
+
+<span class="pc">str</span><span class="c">uct</span> <span class="w">atmel_runtime_data</span> <span class="pc">{</span>
+	<span class="c">struct</span> <span class="w">atmel_pcm_dma_params</span> <span class="c">*</span><span class="w">pa</span><span class="pc">ra</span><span class="c">ms;</span>
+	<span class="w">d</span><span class="c">ma_addr_t</span> <span class="w">dma_buffer</span><span class="c">;</span>		
+	<span class="w">d</span><span class="pc">ma_a</span><span class="c">ddr_t</span> <span class="w">dma_buffer_end</span><span class="c">;</span>	
+	<span class="w">s</span><span class="pc">i</span><span class="c">ze_t</span> <span class="w">period_size</span><span class="c">;</span>
+
+	<span class="w">d</span><span class="c">ma_addr_t</span> <span class="w">period_ptr</span><span class="c">;</span>		
+<span class="pc">}</span><span class="c">;</span>
+
+
+<span class="pc">sta</span><span class="c">tic</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">atmel_pcm_dma_irq</span><span class="c">(</span><span class="w">u</span><span class="c">32</span> <span class="w">ssc_sr</span><span class="c">,</span>
+	<span class="c">struct</span> <span class="w">sn</span><span class="c">d_pcm_substream</span> <span class="c">*</span><span class="w">s</span><span class="pc">ubs</span><span class="c">tream)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="c">atmel_runtime_data</span> <span class="c">*</span><span class="w">prtd</span> <span class="c">=</span> <span class="w">s</span><span class="pc">u</span><span class="c">bstream-&gt;</span><span class="w">r</span><span class="pc">u</span><span class="c">ntime</span><span class="pc">-</span><span class="c">&gt;private_data;</span>
+	<span class="c">struct</span> <span class="w">atmel_pcm_dma_params</span> <span class="c">*</span><span class="w">pa</span><span class="c">rams</span> <span class="pc">=</span> <span class="c">prtd-&gt;</span><span class="w">pa</span><span class="pc">rams</span><span class="c">;</span>
+	<span class="w">s</span><span class="pc">ta</span><span class="c">tic</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">c</span><span class="pc">o</span><span class="c">unt;</span>
+
+	<span class="w">co</span><span class="pc">u</span><span class="c">nt</span><span class="w">+</span><span class="pc">+;</span>
+
+	<span class="c">if</span> <span class="c">(</span><span class="pc">s</span><span class="c">sc_sr</span> <span class="w">&amp;</span> <span class="w">pa</span><span class="pc">ra</span><span class="c">ms-&gt;</span><span class="w">mas</span><span class="pc">k</span><span class="w">-</span><span class="pc">&gt;</span><span class="w">ssc_endbuf</span><span class="c">) {</span>
+		<span class="w">pr_</span><span class="pc">w</span><span class="c">arn("</span><span class="w">atmel-pc</span><span class="pc">m</span><span class="c">:</span> <span class="w">b</span><span class="pc">u</span><span class="c">ffer</span> <span class="pc">%</span><span class="c">s</span> <span class="w">o</span><span class="pc">n</span> <span class="c">%</span><span class="pc">s</span> <span class="w">(SSC_SR=%#x,</span> <span class="w">c</span><span class="pc">ou</span><span class="c">nt</span><span class="pc">=</span><span class="c">%d</span><span class="pc">)</span><span class="c">\n",</span>
+				<span class="w">su</span><span class="pc">bs</span><span class="c">tream-&gt;</span><span class="w">str</span><span class="pc">e</span><span class="c">am</span> <span class="w">=</span><span class="c">=</span> <span class="w">SNDRV_PCM_STREAM_PLAYBACK</span>
+				<span class="c">? "</span><span class="w">underrun</span><span class="c">" : "</span><span class="w">overrun</span><span class="c">",</span>
+				<span class="w">pa</span><span class="pc">rams</span><span class="c">-&gt;</span><span class="pc">n</span><span class="c">ame,</span> <span class="w">ssc_sr</span><span class="c">,</span> <span class="w">c</span><span class="c">ount);</span>
+
+		
+		<span class="w">ssc_writex</span><span class="c">(</span><span class="w">pa</span><span class="pc">rams</span><span class="c">-&gt;</span><span class="w">ssc</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">r</span><span class="pc">eg</span><span class="c">s</span><span class="pc">,</span> <span class="w">ATMEL_PDC_PTCR</span><span class="c">,</span>
+			   <span class="w">p</span><span class="pc">arams</span><span class="c">-&gt;</span><span class="w">mas</span><span class="pc">k</span><span class="w">-</span><span class="c">&gt;</span><span class="w">pdc_disable</span><span class="pc">)</span><span class="c">;</span>
+		<span class="w">prtd</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">period_ptr</span> <span class="w">+</span><span class="pc">=</span> <span class="pc">p</span><span class="c">rtd</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">period_size</span><span class="c">;</span>
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(prtd-&gt;period_ptr</span> <span class="w">&gt;</span><span class="pc">=</span> <span class="pc">p</span><span class="c">rtd-&gt;</span><span class="w">dma_buffer_end</span><span class="pc">)</span>
+			<span class="c">prtd-&gt;</span><span class="pc">p</span><span class="c">eriod_ptr</span> <span class="pc">=</span> <span class="pc">p</span><span class="c">rtd-&gt;</span><span class="w">dma_buffer</span><span class="c">;</span>
+
+		<span class="w">ssc_writex</span><span class="c">(</span><span class="w">par</span><span class="pc">ams</span><span class="c">-&gt;</span><span class="w">ssc</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">r</span><span class="pc">e</span><span class="c">gs</span><span class="pc">,</span> <span class="w">p</span><span class="pc">a</span><span class="c">rams-&gt;</span><span class="w">pdc</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">xpr</span><span class="c">,</span>
+			   <span class="pc">p</span><span class="c">rtd-&gt;</span><span class="w">p</span><span class="pc">eriod_p</span><span class="c">tr</span><span class="pc">)</span><span class="c">;</span>
+		<span class="w">s</span><span class="pc">s</span><span class="c">c_writex</span><span class="pc">(</span><span class="w">pa</span><span class="pc">r</span><span class="c">ams-&gt;</span><span class="pc">s</span><span class="c">sc</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">r</span><span class="c">egs,</span> <span class="w">p</span><span class="pc">ar</span><span class="c">ams-&gt;</span><span class="pc">p</span><span class="c">dc</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">xcr</span><span class="pc">,</span>
+			   <span class="pc">pr</span><span class="c">td-&gt;</span><span class="w">period_size</span> <span class="w">/</span> <span class="w">pa</span><span class="pc">r</span><span class="c">ams-&gt;</span><span class="w">pdc_xfer_size</span><span class="c">);</span>
+		<span class="w">s</span><span class="pc">sc_</span><span class="c">writex</span><span class="pc">(</span><span class="w">pa</span><span class="pc">ra</span><span class="c">ms-&gt;</span><span class="pc">s</span><span class="c">sc</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">r</span><span class="c">egs,</span> <span class="w">ATMEL_PDC_PTCR</span><span class="pc">,</span>
+			   <span class="w">p</span><span class="pc">a</span><span class="c">rams-&gt;</span><span class="w">ma</span><span class="pc">s</span><span class="c">k</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">pdc_enable</span><span class="c">);</span>
+	<span class="c">}</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">ssc_sr</span> <span class="w">&amp;</span> <span class="w">pa</span><span class="pc">rams</span><span class="c">-&gt;</span><span class="w">m</span><span class="pc">as</span><span class="c">k</span><span class="w">-</span><span class="c">&gt;</span><span class="w">ssc_endx</span><span class="pc">) </span><span class="c">{</span>
+		
+		<span class="pc">p</span><span class="c">rtd-&gt;</span><span class="w">period_ptr</span> <span class="w">+</span><span class="pc">=</span> <span class="pc">p</span><span class="c">rtd-&gt;</span><span class="pc">period_s</span><span class="c">ize</span><span class="pc">;</span>
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(prtd-&gt;</span><span class="pc">p</span><span class="c">eriod_ptr</span> <span class="w">&gt;</span><span class="pc">=</span> <span class="c">prtd-&gt;</span><span class="w">dma_buffer_end</span><span class="pc">)</span>
+			<span class="c">prtd-&gt;</span><span class="pc">p</span><span class="c">eriod_ptr</span> <span class="pc">=</span> <span class="pc">p</span><span class="c">rtd-&gt;</span><span class="w">dma_buffer</span><span class="c">;</span>
+
+		<span class="w">ssc_writex</span><span class="c">(</span><span class="w">pa</span><span class="pc">rams</span><span class="c">-&gt;</span><span class="w">ssc</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">r</span><span class="pc">e</span><span class="c">gs</span><span class="pc">,</span> <span class="w">p</span><span class="pc">ar</span><span class="c">ams-&gt;</span><span class="w">pdc</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">xnpr</span><span class="c">,</span>
+			   <span class="pc">p</span><span class="c">rtd-&gt;</span><span class="w">p</span><span class="pc">eriod_p</span><span class="c">tr</span><span class="pc">)</span><span class="c">;</span>
+		<span class="w">s</span><span class="pc">s</span><span class="c">c_writex</span><span class="pc">(</span><span class="w">pa</span><span class="pc">r</span><span class="c">ams-&gt;</span><span class="pc">s</span><span class="c">sc</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">r</span><span class="c">egs,</span> <span class="w">p</span><span class="pc">ar</span><span class="c">ams-&gt;</span><span class="pc">p</span><span class="c">dc</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">xncr</span><span class="pc">,</span>
+			   <span class="pc">pr</span><span class="c">td-&gt;</span><span class="w">period_size</span> <span class="w">/</span> <span class="w">pa</span><span class="pc">r</span><span class="c">ams-&gt;</span><span class="w">pdc_xfer_size</span><span class="c">);</span>
+	<span class="c">}</span>
+
+	<span class="w">snd_pcm_period_elapsed</span><span class="c">(</span><span class="w">su</span><span class="pc">bs</span><span class="c">tream</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">}</span>
+
+
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">atmel_pcm_hw_params</span><span class="c">(struct</span> <span class="w">s</span><span class="pc">n</span><span class="c">d_pcm_substream</span> <span class="c">*substream,</span>
+	<span class="c">struct</span> <span class="w">snd_pcm_hw_params</span> <span class="c">*</span><span class="pc">pa</span><span class="c">rams)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">snd_pcm_runtime</span> <span class="c">*</span><span class="w">ru</span><span class="c">ntime</span> <span class="c">=</span> <span class="w">s</span><span class="pc">u</span><span class="c">bstream-&gt;</span><span class="w">r</span><span class="c">untime;</span>
+	<span class="c">struct</span> <span class="w">atmel_runtime_data</span> <span class="c">*</span><span class="w">prtd</span> <span class="c">=</span> <span class="w">ru</span><span class="c">ntime-&gt;</span><span class="pc">private_</span><span class="c">data;</span>
+	<span class="c">struct</span> <span class="w">snd_soc_pcm_runtime</span> <span class="c">*</span><span class="w">rtd</span> <span class="c">=</span> <span class="w">su</span><span class="c">bstream-&gt;</span><span class="pc">pri</span><span class="c">vate_data;</span>
+
+	
+
+	<span class="w">snd_pcm_set_runtime_buffer</span><span class="c">(</span><span class="w">s</span><span class="pc">u</span><span class="c">bstream</span><span class="pc">, </span><span class="c">&amp;</span><span class="w">su</span><span class="c">bstream-&gt;</span><span class="w">dma_buffer</span><span class="c">);</span>
+	<span class="w">ru</span><span class="c">ntime-&gt;</span><span class="w">dma_bytes</span> <span class="c">=</span> <span class="w">params_buffer_bytes</span><span class="c">(</span><span class="w">par</span><span class="pc">ams)</span><span class="c">;</span>
+
+	<span class="w">p</span><span class="c">rtd-&gt;</span><span class="w">pa</span><span class="pc">rams</span> <span class="pc">=</span> <span class="w">snd_soc_dai_get_dma_data</span><span class="c">(</span><span class="pc">r</span><span class="c">td</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">cpu_dai</span><span class="pc">,</span> <span class="w">su</span><span class="c">bstream);</span>
+	<span class="pc">p</span><span class="c">rtd-&gt;</span><span class="w">p</span><span class="pc">a</span><span class="c">rams</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">dma_intr_handler</span> <span class="c">=</span> <span class="w">atmel_pcm_dma_irq</span><span class="c">;</span>
+
+	<span class="c">prtd-&gt;</span><span class="pc">dma_bu</span><span class="c">ffer</span> <span class="c">=</span> <span class="w">r</span><span class="pc">u</span><span class="c">ntime-&gt;</span><span class="w">dm</span><span class="pc">a_a</span><span class="c">ddr;</span>
+	<span class="c">prtd-&gt;</span><span class="w">dma_buffer_end</span> <span class="c">=</span> <span class="w">ru</span><span class="c">ntime-&gt;</span><span class="w">dma_</span><span class="pc">a</span><span class="c">ddr</span> <span class="pc">+</span> <span class="w">ru</span><span class="c">ntime-&gt;</span><span class="w">dma_bytes</span><span class="c">;</span>
+	<span class="c">prtd-&gt;</span><span class="w">period_size</span> <span class="c">=</span> <span class="w">params_period_bytes</span><span class="c">(</span><span class="w">par</span><span class="pc">ams)</span><span class="c">;</span>
+
+	<span class="w">pr</span><span class="pc">_d</span><span class="c">ebug("</span><span class="w">atmel-pc</span><span class="pc">m</span><span class="w">:</span><span class="pc"> "</span>
+		<span class="pc">"</span><span class="w">hw_params</span><span class="pc">:</span> <span class="w">D</span><span class="c">MA</span> <span class="w">f</span><span class="c">or</span> <span class="c">%s</span> <span class="w">initialized</span> <span class="pc">"</span>
+		<span class="w">"</span><span class="pc">(</span><span class="w">d</span><span class="pc">ma_</span><span class="c">bytes</span><span class="pc">=</span><span class="c">%</span><span class="w">zu,</span> <span class="w">p</span><span class="pc">e</span><span class="c">riod_size=%</span><span class="pc">z</span><span class="c">u</span><span class="pc">)</span><span class="c">\n",</span>
+		<span class="pc">p</span><span class="c">rtd-&gt;</span><span class="w">p</span><span class="pc">a</span><span class="c">rams</span><span class="pc">-</span><span class="c">&gt;</span><span class="pc">n</span><span class="c">ame,</span>
+		<span class="w">ru</span><span class="c">ntime-&gt;</span><span class="w">d</span><span class="pc">m</span><span class="c">a_bytes,</span>
+		<span class="pc">p</span><span class="c">rtd-&gt;</span><span class="w">p</span><span class="pc">e</span><span class="c">riod_size</span><span class="pc">)</span><span class="c">;</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">atmel_pcm_hw_free</span><span class="c">(struct</span> <span class="w">s</span><span class="pc">n</span><span class="c">d_pcm_substream</span> <span class="c">*substream)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">atmel_runtime_data</span> <span class="c">*prtd</span> <span class="c">=</span> <span class="w">s</span><span class="pc">u</span><span class="c">bstream-&gt;</span><span class="w">r</span><span class="pc">u</span><span class="c">ntime</span><span class="pc">-</span><span class="c">&gt;</span><span class="pc">p</span><span class="c">rivate_data;</span>
+	<span class="c">struct</span> <span class="w">atmel_pcm_dma_params</span> <span class="c">*</span><span class="w">pa</span><span class="c">rams</span> <span class="pc">=</span> <span class="pc">p</span><span class="c">rtd-&gt;</span><span class="w">pa</span><span class="pc">rams</span><span class="c">;</span>
+
+	<span class="pc">if</span> <span class="c">(</span><span class="w">pa</span><span class="pc">rams</span> <span class="w">!</span><span class="c">=</span> <span class="pc">N</span><span class="c">ULL</span><span class="pc">) </span><span class="c">{</span>
+		<span class="w">ssc_writex</span><span class="c">(</span><span class="w">pa</span><span class="pc">r</span><span class="c">ams-&gt;</span><span class="w">ssc-</span><span class="c">&gt;</span><span class="w">r</span><span class="pc">eg</span><span class="c">s</span><span class="pc">,</span> <span class="w">SSC_PDC_PTCR</span><span class="c">,</span>
+			   <span class="w">p</span><span class="pc">arams</span><span class="c">-&gt;</span><span class="w">ma</span><span class="pc">s</span><span class="c">k</span><span class="w">-</span><span class="c">&gt;</span><span class="w">pdc_disable</span><span class="c">);</span>
+		<span class="w">p</span><span class="c">rtd-&gt;</span><span class="w">p</span><span class="pc">a</span><span class="c">rams</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">dma_intr_handler</span> <span class="c">=</span> <span class="w">N</span><span class="c">ULL;</span>
+	<span class="c">}</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">atmel_pcm_prepare</span><span class="c">(struct</span> <span class="w">sn</span><span class="c">d_pcm_substream</span> <span class="c">*substream)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">atmel_runtime_data</span> <span class="c">*</span><span class="pc">p</span><span class="c">rtd</span> <span class="c">=</span> <span class="w">s</span><span class="pc">u</span><span class="c">bstream-&gt;</span><span class="w">r</span><span class="pc">u</span><span class="c">ntime</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">p</span><span class="pc">ri</span><span class="c">vate_data;</span>
+	<span class="c">struct</span> <span class="w">atmel_pcm_dma_params</span> <span class="c">*</span><span class="w">pa</span><span class="c">rams</span> <span class="pc">=</span> <span class="pc">p</span><span class="c">rtd-&gt;</span><span class="w">pa</span><span class="pc">rams</span><span class="c">;</span>
+
+	<span class="w">ssc_writex</span><span class="c">(</span><span class="w">pa</span><span class="pc">rams</span><span class="c">-&gt;</span><span class="w">ssc-</span><span class="c">&gt;</span><span class="w">r</span><span class="c">egs</span><span class="pc">,</span> <span class="w">SSC_IDR</span><span class="pc">,</span>
+		   <span class="w">p</span><span class="pc">a</span><span class="c">rams-&gt;</span><span class="w">ma</span><span class="pc">s</span><span class="c">k</span><span class="w">-</span><span class="c">&gt;</span><span class="w">ssc_endx</span> <span class="w">|</span> <span class="w">p</span><span class="pc">a</span><span class="c">rams-&gt;</span><span class="w">m</span><span class="pc">as</span><span class="c">k</span><span class="w">-</span><span class="c">&gt;</span><span class="w">ssc_endbuf</span><span class="c">);</span>
+	<span class="w">ss</span><span class="pc">c_</span><span class="c">writex</span><span class="pc">(</span><span class="w">pa</span><span class="pc">rams</span><span class="c">-&gt;ssc</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">r</span><span class="pc">egs,</span> <span class="w">ATMEL_PDC_PTCR</span><span class="pc">,</span>
+		   <span class="w">p</span><span class="pc">a</span><span class="c">rams-&gt;</span><span class="w">m</span><span class="c">ask</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">pdc_disable</span><span class="c">);</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">atmel_pcm_trigger</span><span class="c">(struct</span> <span class="w">s</span><span class="pc">n</span><span class="c">d_pcm_substream</span> <span class="c">*substream</span><span class="pc">,</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">c</span><span class="pc">m</span><span class="c">d</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">snd_pcm_runtime</span> <span class="c">*</span><span class="w">rtd</span> <span class="c">=</span> <span class="w">su</span><span class="c">bstream-&gt;</span><span class="w">r</span><span class="pc">u</span><span class="c">ntime;</span>
+	<span class="c">struct</span> <span class="w">atmel_runtime_data</span> <span class="c">*</span><span class="w">prtd</span> <span class="c">=</span> <span class="c">rtd-&gt;</span><span class="pc">private_</span><span class="c">data;</span>
+	<span class="c">struct</span> <span class="w">atmel_pcm_dma_params</span> <span class="c">*</span><span class="w">pa</span><span class="pc">ra</span><span class="c">ms</span> <span class="c">=</span> <span class="c">prtd-&gt;</span><span class="w">p</span><span class="pc">a</span><span class="c">rams;</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="c">ret</span> <span class="pc">=</span> <span class="c">0;</span>
+
+	<span class="w">p</span><span class="pc">r_</span><span class="c">debug("</span><span class="w">atmel-pc</span><span class="pc">m:</span><span class="w">buffer_size</span> <span class="w">=</span><span class="pc"> </span><span class="c">%</span><span class="w">l</span><span class="pc">d</span><span class="w">,"</span>
+		<span class="c">"</span><span class="w">dma_area</span> <span class="w">=</span><span class="pc"> </span><span class="c">%</span><span class="pc">p,</span> <span class="w">dma_bytes</span> <span class="pc">= </span><span class="c">%</span><span class="w">zu</span><span class="c">\n",</span>
+		<span class="w">r</span><span class="c">td</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">b</span><span class="pc">uff</span><span class="c">er_size,</span> <span class="c">rtd</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">d</span><span class="pc">ma_a</span><span class="c">rea,</span> <span class="c">rtd-&gt;</span><span class="pc">d</span><span class="c">ma_bytes</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="w">s</span><span class="pc">w</span><span class="c">itch</span> <span class="c">(</span><span class="w">c</span><span class="c">md) {</span>
+	<span class="c">case</span> <span class="w">SNDRV_PCM_TRIGGER_START</span><span class="c">:</span>
+		<span class="w">prtd</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">period_ptr</span> <span class="c">=</span> <span class="pc">p</span><span class="c">rtd</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">dma_buffer</span><span class="c">;</span>
+
+		<span class="w">ssc_writex</span><span class="pc">(</span><span class="w">par</span><span class="pc">ams</span><span class="c">-&gt;</span><span class="w">ssc</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">reg</span><span class="pc">s,</span> <span class="w">pa</span><span class="pc">rams</span><span class="c">-&gt;</span><span class="w">pdc</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">xpr</span><span class="pc">,</span>
+			   <span class="w">p</span><span class="c">rtd-&gt;period_ptr</span><span class="pc">)</span><span class="c">;</span>
+		<span class="w">s</span><span class="pc">sc_</span><span class="c">writex</span><span class="pc">(</span><span class="w">pa</span><span class="pc">rams</span><span class="c">-&gt;</span><span class="pc">s</span><span class="c">sc</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">r</span><span class="c">egs,</span> <span class="w">p</span><span class="pc">ar</span><span class="c">ams-&gt;</span><span class="pc">pd</span><span class="c">c</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">xcr</span><span class="pc">,</span>
+			   <span class="pc">pr</span><span class="c">td-&gt;</span><span class="w">period_size</span> <span class="w">/</span> <span class="w">pa</span><span class="pc">r</span><span class="c">ams-&gt;</span><span class="w">pdc_xfer_size</span><span class="c">);</span>
+
+		<span class="w">p</span><span class="pc">r</span><span class="c">td-&gt;</span><span class="pc">pe</span><span class="c">riod_ptr</span> <span class="w">+</span><span class="pc">=</span> <span class="c">prtd</span><span class="pc">-</span><span class="c">&gt;</span><span class="pc">period_s</span><span class="c">ize;</span>
+		<span class="w">s</span><span class="c">sc_writex</span><span class="pc">(</span><span class="w">pa</span><span class="pc">rams</span><span class="c">-&gt;</span><span class="pc">s</span><span class="c">sc</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">r</span><span class="c">egs,</span> <span class="w">pa</span><span class="pc">r</span><span class="c">ams-&gt;pdc</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">xnpr</span><span class="c">,</span>
+			   <span class="c">prtd-&gt;</span><span class="w">p</span><span class="pc">eriod_p</span><span class="c">tr</span><span class="pc">)</span><span class="c">;</span>
+		<span class="w">s</span><span class="pc">sc_</span><span class="c">writex</span><span class="pc">(</span><span class="w">pa</span><span class="pc">r</span><span class="c">ams-&gt;</span><span class="pc">s</span><span class="c">sc</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">r</span><span class="c">egs</span><span class="pc">,</span> <span class="w">pa</span><span class="c">rams-&gt;</span><span class="pc">p</span><span class="c">dc</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">xncr</span><span class="pc">,</span>
+			   <span class="w">p</span><span class="pc">r</span><span class="c">td-&gt;</span><span class="pc">pe</span><span class="c">riod_size</span> <span class="w">/</span> <span class="w">pa</span><span class="pc">r</span><span class="c">ams-&gt;</span><span class="w">pdc_xfer_size</span><span class="c">);</span>
+
+		<span class="w">pr</span><span class="pc">_</span><span class="c">debug("</span><span class="w">atmel-pc</span><span class="pc">m:</span> <span class="w">tr</span><span class="pc">i</span><span class="c">gger</span><span class="w">:</span><span class="pc"> "</span>
+			<span class="c">"</span><span class="w">p</span><span class="pc">e</span><span class="c">riod_ptr</span><span class="w">=</span><span class="c">%</span><span class="w">l</span><span class="pc">x,</span> <span class="w">xpr</span><span class="c">=%</span><span class="pc">u</span><span class="w">,</span><span class="pc"> "</span>
+			<span class="c">"</span><span class="w">xcr</span><span class="c">=%</span><span class="pc">u,</span> <span class="w">xnpr</span><span class="c">=%u,</span> <span class="w">x</span><span class="pc">nc</span><span class="c">r=%u</span><span class="pc">\</span><span class="c">n",</span>
+			<span class="pc">(</span><span class="c">unsigned</span> <span class="c">long)</span><span class="w">prtd</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">p</span><span class="pc">e</span><span class="c">riod_ptr,</span>
+			<span class="w">ssc_readx</span><span class="pc">(</span><span class="w">par</span><span class="pc">ams</span><span class="c">-&gt;</span><span class="w">ssc</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">reg</span><span class="pc">s</span><span class="c">,</span> <span class="w">pa</span><span class="pc">ra</span><span class="c">ms-&gt;</span><span class="w">pdc</span><span class="pc">-</span><span class="c">&gt;</span><span class="pc">xp</span><span class="c">r</span><span class="w">)</span><span class="pc">,</span>
+			<span class="w">s</span><span class="c">sc_readx(</span><span class="w">pa</span><span class="pc">ra</span><span class="c">ms-&gt;</span><span class="pc">s</span><span class="c">sc</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">r</span><span class="pc">eg</span><span class="c">s,</span> <span class="w">p</span><span class="pc">a</span><span class="c">rams-&gt;</span><span class="pc">p</span><span class="c">dc</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">xcr</span><span class="pc">),</span>
+			<span class="c">ssc_readx</span><span class="pc">(</span><span class="w">pa</span><span class="pc">rams</span><span class="c">-&gt;ssc-&gt;</span><span class="w">r</span><span class="c">egs,</span> <span class="w">p</span><span class="pc">a</span><span class="c">rams-&gt;pdc</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">xnpr</span><span class="pc">),</span>
+			<span class="c">ssc_readx</span><span class="pc">(</span><span class="w">p</span><span class="pc">a</span><span class="c">rams-&gt;ssc-&gt;</span><span class="w">r</span><span class="c">egs,</span> <span class="w">p</span><span class="pc">a</span><span class="c">rams-&gt;pdc</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">xncr)</span><span class="pc">)</span><span class="c">;</span>
+
+		<span class="w">ssc_writex</span><span class="c">(</span><span class="w">p</span><span class="pc">a</span><span class="c">rams-&gt;ssc</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">r</span><span class="c">egs,</span> <span class="w">SSC_IER</span><span class="pc">,</span>
+			   <span class="w">p</span><span class="pc">a</span><span class="c">rams-&gt;</span><span class="w">ma</span><span class="pc">s</span><span class="c">k</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">ssc_endx</span> <span class="w">|</span> <span class="w">p</span><span class="pc">a</span><span class="c">rams-&gt;</span><span class="w">m</span><span class="pc">as</span><span class="c">k</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">ssc_endbuf</span><span class="c">);</span>
+		<span class="w">ss</span><span class="pc">c_w</span><span class="c">ritex(</span><span class="w">pa</span><span class="pc">rams</span><span class="c">-&gt;ssc</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">r</span><span class="pc">egs</span><span class="c">,</span> <span class="w">SSC_PDC_PTCR</span><span class="pc">,</span>
+			   <span class="w">p</span><span class="pc">a</span><span class="c">rams-&gt;</span><span class="w">m</span><span class="c">ask</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">pdc_enable</span><span class="c">);</span>
+
+		<span class="w">p</span><span class="pc">r_d</span><span class="c">ebug("</span><span class="w">sr</span><span class="pc">=</span><span class="c">%</span><span class="pc">u</span> <span class="w">imr</span><span class="pc">=</span><span class="c">%</span><span class="pc">u</span><span class="c">\n",</span>
+			<span class="w">ssc_readx</span><span class="c">(</span><span class="w">pa</span><span class="pc">rams</span><span class="c">-&gt;ssc</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">reg</span><span class="pc">s</span><span class="c">,</span> <span class="w">SSC_SR</span><span class="pc">),</span>
+			<span class="w">ss</span><span class="pc">c_r</span><span class="c">eadx(</span><span class="w">pa</span><span class="pc">rams</span><span class="c">-&gt;ssc</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">r</span><span class="c">egs,</span> <span class="w">SSC_IER</span><span class="pc">))</span><span class="c">;</span>
+		<span class="pc">b</span><span class="c">reak;</span>		
+
+	<span class="c">case</span> <span class="w">SNDRV_PCM_TRIGGER_STOP</span><span class="c">:</span>
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">SNDRV_PCM_TRIGGER_SUSPEND</span><span class="c">:</span>
+	<span class="c">case</span> <span class="w">SNDRV_PCM_TRIGGER_PAUSE_PUSH</span><span class="c">:</span>
+		<span class="w">ssc_writex</span><span class="c">(</span><span class="w">pa</span><span class="pc">rams-</span><span class="c">&gt;</span><span class="pc">s</span><span class="c">sc</span><span class="w">-</span><span class="c">&gt;</span><span class="w">r</span><span class="pc">egs,</span> <span class="w">ATMEL_PDC_PTCR</span><span class="pc">,</span>
+			   <span class="w">p</span><span class="pc">a</span><span class="c">rams-&gt;</span><span class="w">m</span><span class="c">ask</span><span class="w">-</span><span class="pc">&gt;</span><span class="w">pdc_disable</span><span class="pc">)</span><span class="c">;</span>
+		<span class="c">break;</span>
+
+	<span class="c">case</span> <span class="w">SNDRV_PCM_TRIGGER_RESUME</span><span class="c">:</span>
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">SNDRV_PCM_TRIGGER_PAUSE_RELEASE</span><span class="c">:</span>
+		<span class="w">ss</span><span class="pc">c_</span><span class="c">writex</span><span class="pc">(</span><span class="w">par</span><span class="pc">ams-</span><span class="c">&gt;</span><span class="pc">s</span><span class="c">sc</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">r</span><span class="c">egs,</span> <span class="c">ATMEL_PDC_PTCR,</span>
+			   <span class="w">p</span><span class="pc">a</span><span class="c">rams-&gt;</span><span class="w">m</span><span class="pc">a</span><span class="c">sk</span><span class="w">-</span><span class="c">&gt;</span><span class="w">pdc_enable</span><span class="c">);</span>
+		<span class="pc">b</span><span class="c">reak;</span>
+
+	<span class="pc">d</span><span class="c">efault:</span>
+		<span class="w">r</span><span class="pc">et</span> <span class="pc">= </span><span class="c">-EINVAL;</span>
+	<span class="pc">}</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">r</span><span class="c">et;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="w">snd_pcm_uframes_t</span> <span class="w">atmel_pcm_pointer</span><span class="c">(</span>
+	<span class="c">struct</span> <span class="w">sn</span><span class="pc">d_pcm_s</span><span class="c">ubstream</span> <span class="c">*</span><span class="w">s</span><span class="pc">ubs</span><span class="c">tream</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">snd_pcm_runtime</span> <span class="c">*</span><span class="w">ru</span><span class="c">ntime</span> <span class="c">=</span> <span class="w">su</span><span class="c">bstream-&gt;</span><span class="w">r</span><span class="pc">u</span><span class="c">ntime;</span>
+	<span class="c">struct</span> <span class="w">atmel_runtime_data</span> <span class="c">*</span><span class="w">prtd</span> <span class="c">=</span> <span class="w">ru</span><span class="c">ntime-&gt;</span><span class="pc">pri</span><span class="c">vate_data;</span>
+	<span class="c">struct</span> <span class="w">atmel_pcm_dma_params</span> <span class="c">*</span><span class="w">par</span><span class="pc">ams</span> <span class="c">=</span> <span class="c">prtd-&gt;</span><span class="w">pa</span><span class="pc">r</span><span class="c">ams;</span>
+	<span class="w">d</span><span class="pc">m</span><span class="c">a_addr_t</span> <span class="w">pt</span><span class="c">r;</span>
+	<span class="w">sn</span><span class="c">d_pcm_uframes_t</span> <span class="w">x</span><span class="c">;</span>
+
+	<span class="w">p</span><span class="pc">t</span><span class="c">r</span> <span class="pc">= (</span><span class="w">d</span><span class="pc">m</span><span class="c">a_addr_t</span><span class="pc">)</span> <span class="w">ssc_readx</span><span class="c">(</span><span class="w">pa</span><span class="pc">rams</span><span class="c">-&gt;</span><span class="w">ssc-</span><span class="c">&gt;</span><span class="w">r</span><span class="c">egs</span><span class="pc">,</span> <span class="w">p</span><span class="pc">ar</span><span class="c">ams-&gt;</span><span class="w">pdc-</span><span class="c">&gt;</span><span class="w">xpr</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">x</span> <span class="pc">=</span> <span class="w">bytes_to_frames</span><span class="c">(</span><span class="w">ru</span><span class="c">ntime</span><span class="pc">,</span> <span class="w">p</span><span class="pc">t</span><span class="c">r</span> <span class="w">-</span> <span class="w">p</span><span class="pc">r</span><span class="c">td-&gt;</span><span class="w">dma_buffer</span><span class="c">);</span>
+
+	<span class="c">if</span> <span class="c">(</span><span class="pc">x</span> <span class="c">==</span> <span class="w">ru</span><span class="c">ntime-&gt;</span><span class="w">buffer_size</span><span class="c">)</span>
+		<span class="w">x</span> <span class="pc">=</span> <span class="pc">0</span><span class="c">;</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">x</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">atmel_pcm_open</span><span class="c">(struct</span> <span class="w">sn</span><span class="c">d_pcm_substream</span> <span class="c">*substream</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">snd_pcm_runtime</span> <span class="c">*</span><span class="w">ru</span><span class="c">ntime</span> <span class="c">=</span> <span class="w">s</span><span class="pc">u</span><span class="c">bstream-&gt;</span><span class="w">r</span><span class="pc">u</span><span class="c">ntime;</span>
+	<span class="c">struct</span> <span class="w">atmel_runtime_data</span> <span class="c">*</span><span class="w">prtd</span><span class="pc">;</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="c">ret</span> <span class="pc">=</span> <span class="c">0;</span>
+
+	<span class="w">snd_soc_set_runtime_hwparams</span><span class="c">(</span><span class="w">s</span><span class="pc">u</span><span class="c">bstream</span><span class="pc">, </span><span class="c">&amp;</span><span class="w">atmel_pcm_hardware</span><span class="pc">)</span><span class="c">;</span>
+
+	
+	<span class="w">r</span><span class="pc">et</span> <span class="c">=</span> <span class="w">snd_pcm_hw_constraint_integer</span><span class="c">(</span><span class="w">ru</span><span class="c">ntime,</span>
+						<span class="w">SNDRV_PCM_HW_PARAM_PERIODS</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">if</span> <span class="c">(ret</span> <span class="c">&lt;</span> <span class="c">0</span><span class="pc">)</span>
+		<span class="pc">g</span><span class="c">oto</span> <span class="pc">o</span><span class="c">ut;</span>
+
+	<span class="w">p</span><span class="c">rtd</span> <span class="c">=</span> <span class="pc">k</span><span class="c">zalloc(sizeof</span><span class="pc">(</span><span class="c">struct</span> <span class="pc">atmel_r</span><span class="c">untime_data),</span> <span class="c">GFP_KERNEL);</span>
+	<span class="c">if</span> <span class="c">(prtd</span> <span class="c">==</span> <span class="c">NULL</span><span class="pc">) </span><span class="c">{</span>
+		<span class="pc">r</span><span class="c">et</span> <span class="c">= -ENOMEM;</span>
+		<span class="c">goto</span> <span class="c">out;</span>
+	<span class="c">}</span>
+	<span class="w">ru</span><span class="c">ntime-&gt;</span><span class="w">p</span><span class="pc">riva</span><span class="c">te_data</span> <span class="c">=</span> <span class="c">prtd;</span>
+
+ <span class="w">o</span><span class="c">ut:</span>
+	<span class="c">return</span> <span class="pc">r</span><span class="c">et;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">atmel_pcm_close</span><span class="c">(struct</span> <span class="w">sn</span><span class="c">d_pcm_substream</span> <span class="c">*substream</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">atmel_runtime_data</span> <span class="c">*prtd</span> <span class="c">=</span> <span class="w">s</span><span class="pc">u</span><span class="c">bstream-&gt;</span><span class="w">r</span><span class="pc">u</span><span class="c">ntime</span><span class="pc">-</span><span class="c">&gt;</span><span class="pc">p</span><span class="c">rivate_data;</span>
+
+	<span class="w">k</span><span class="c">free(</span><span class="w">p</span><span class="pc">r</span><span class="c">td);</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">snd_pcm_ops</span> <span class="w">atmel_pcm_ops</span> <span class="c">= {</span>
+	<span class="c">.</span><span class="w">o</span><span class="pc">p</span><span class="c">en</span>		<span class="c">=</span> <span class="w">atmel_pcm_open</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">c</span><span class="c">lose</span>		<span class="c">=</span> <span class="w">a</span><span class="pc">tmel_pcm_c</span><span class="c">lose,</span>
+	<span class="c">.</span><span class="w">i</span><span class="pc">o</span><span class="c">ctl</span>		<span class="c">=</span> <span class="w">snd_pcm_lib_ioctl</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">hw_params</span>	<span class="c">=</span> <span class="w">atmel_pcm_hw_params</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">hw_free</span>	<span class="c">=</span> <span class="w">atmel_pcm_hw_free</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">prepare</span>	<span class="c">=</span> <span class="w">atmel_pcm_prepare</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">t</span><span class="pc">r</span><span class="c">igger</span>	<span class="c">=</span> <span class="w">atmel_pcm_trigger</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">po</span><span class="pc">i</span><span class="c">nter</span>	<span class="c">=</span> <span class="w">atmel_pcm_pointer</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">mmap</span>		<span class="c">=</span> <span class="w">atmel_pcm_mmap</span><span class="c">,</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="c">static</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">snd_soc_platform_driver</span> <span class="w">atmel_soc_platform</span> <span class="c">= {</span>
+	<span class="c">.</span><span class="w">o</span><span class="pc">p</span><span class="c">s</span>		<span class="c">= &amp;</span><span class="w">atmel_pcm_ops</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">pcm_new</span>	<span class="c">=</span> <span class="w">atmel_pcm_new</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">pcm_free</span>	<span class="c">=</span> <span class="w">atmel_pcm_free</span><span class="c">,</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="pc">i</span><span class="c">nt</span> <span class="w">atmel_pcm_pdc_platform_register</span><span class="c">(struct</span> <span class="pc">d</span><span class="c">evice</span> <span class="c">*dev</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">snd_soc_register_platform</span><span class="c">(dev</span><span class="pc">, </span><span class="c">&amp;atmel_soc_platform);</span>
+<span class="c">}</span>
+<span class="w">E</span><span class="pc">XPORT_SYMBOL</span><span class="c">(</span><span class="w">a</span><span class="pc">tmel_pcm_p</span><span class="c">dc_platform_register);</span>
+
+<span class="pc">v</span><span class="c">oid</span> <span class="w">atmel_pcm_pdc_platform_unregister</span><span class="c">(struct</span> <span class="pc">d</span><span class="c">evice</span> <span class="c">*dev)</span>
+<span class="c">{</span>
+	<span class="w">snd_soc_unregister_platform</span><span class="c">(dev);</span>
+<span class="c">}</span>
+<span class="pc">EXPORT_SYMBOL</span><span class="c">(</span><span class="pc">atmel_pcm_pdc_platform_u</span><span class="c">nregister);</span>
+
+<span class="w">M</span><span class="c">ODULE_AUTHOR("</span><span class="w">Sedji</span> <span class="w">Gaouaou</span> <span class="pc">&lt;</span><span class="w">sedji</span><span class="pc">.</span><span class="w">gaouaou</span><span class="c">@</span><span class="w">atmel</span><span class="c">.com&gt;");</span>
+<span class="c">MODULE_DESCRIPTION("</span><span class="w">Atmel</span> <span class="w">PCM</span> <span class="w">m</span><span class="c">odule");</span>
+<span class="c">MODULE_LICENSE("GPL");</span>
+
+</pre>
+</body>
+</html>
+

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+<span class="w">#include</span> <span class="w">&lt;linux/init.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/fs.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/file.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/mm_types.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux</span><span class="c">/</span><span class="w">binfmts</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">a</span><span class="c">.</span><span class="w">ou</span><span class="pc">t.</span><span class="c">h&gt;</span>
+
+<span class="pc">sta</span><span class="c">tic</span> <span class="c">int</span> <span class="w">load_binary</span><span class="c">(struct</span> <span class="w">linux_binprm</span> <span class="c">*</span><span class="w">bprm</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">exec</span> <span class="c">*</span><span class="w">eh</span> <span class="pc">= (</span><span class="c">struct</span> <span class="c">exec</span> <span class="c">*)bprm</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">bu</span><span class="pc">f</span><span class="c">;</span>
+	<span class="w">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">loader</span><span class="pc">;</span>
+	<span class="w">s</span><span class="c">truct</span> <span class="w">f</span><span class="c">ile</span> <span class="c">*file;</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">re</span><span class="pc">tv</span><span class="c">al;</span>
+
+	<span class="c">if</span> <span class="c">(eh-&gt;</span><span class="w">fh</span><span class="c">.</span><span class="w">f_magic</span> <span class="pc">!</span><span class="c">=</span> <span class="w">0x183</span> <span class="w">|</span><span class="pc">| (</span><span class="c">eh-&gt;</span><span class="w">fh</span><span class="c">.</span><span class="w">f_flags</span> <span class="w">&amp;</span> <span class="w">0x3000) </span><span class="pc">!</span><span class="c">=</span> <span class="w">0</span><span class="pc">x3</span><span class="c">000</span><span class="pc">)</span>
+		<span class="c">return</span> <span class="c">-</span><span class="w">ENOEXEC</span><span class="c">;</span>
+
+	<span class="c">if</span> <span class="c">(</span><span class="w">bprm-</span><span class="c">&gt;</span><span class="w">l</span><span class="c">oader</span><span class="w">)</span>
+		<span class="c">return</span> <span class="c">-</span><span class="w">EN</span><span class="pc">OEX</span><span class="c">EC;</span>
+
+	<span class="w">allow_write_access</span><span class="c">(bprm</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">fil</span><span class="pc">e)</span><span class="c">;</span>
+	<span class="w">fput</span><span class="c">(bprm</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">fi</span><span class="pc">l</span><span class="c">e);</span>
+	<span class="pc">b</span><span class="c">prm</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">fi</span><span class="pc">le</span> <span class="c">=</span> <span class="c">NULL;</span>
+
+	<span class="w">l</span><span class="c">oader</span> <span class="pc">=</span> <span class="pc">b</span><span class="c">prm</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">v</span><span class="pc">m</span><span class="c">a</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">vm_end</span> <span class="w">-</span> <span class="w">s</span><span class="c">izeof(</span><span class="w">v</span><span class="pc">o</span><span class="c">id</span> <span class="w">*)</span><span class="pc">;</span>
+
+	<span class="w">f</span><span class="pc">i</span><span class="c">le</span> <span class="pc">=</span> <span class="w">open_exec("/sbin/l</span><span class="c">oader</span><span class="w">"</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">re</span><span class="pc">tv</span><span class="c">al</span> <span class="c">=</span> <span class="w">P</span><span class="c">TR_ERR(</span><span class="w">f</span><span class="c">ile);</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">I</span><span class="c">S_ERR(</span><span class="w">f</span><span class="c">ile))</span>
+		<span class="c">return</span> <span class="w">r</span><span class="pc">etv</span><span class="c">al;</span>
+
+	
+	<span class="w">b</span><span class="c">prm</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">taso</span> <span class="c">=</span> <span class="w">eh-</span><span class="c">&gt;</span><span class="w">ah</span><span class="c">.</span><span class="w">e</span><span class="pc">n</span><span class="c">try</span> <span class="w">&lt;</span> <span class="w">0x100000000UL</span><span class="c">;</span>
+
+	<span class="pc">b</span><span class="c">prm-&gt;</span><span class="w">fi</span><span class="pc">l</span><span class="c">e</span> <span class="pc">=</span> <span class="w">f</span><span class="c">ile;</span>
+	<span class="pc">b</span><span class="c">prm-&gt;</span><span class="w">l</span><span class="pc">o</span><span class="c">ader</span> <span class="pc">=</span> <span class="w">l</span><span class="c">oader;</span>
+	<span class="w">r</span><span class="pc">etv</span><span class="c">al</span> <span class="c">=</span> <span class="w">prepare_binprm</span><span class="c">(bprm</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">if</span> <span class="c">(</span><span class="pc">re</span><span class="c">tval</span> <span class="pc">&lt;</span> <span class="c">0)</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="pc">re</span><span class="c">tval;</span>
+	<span class="w">r</span><span class="pc">etu</span><span class="c">rn</span> <span class="w">search_binary_handler</span><span class="c">(</span><span class="pc">b</span><span class="c">prm);</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">linux_binfmt</span> <span class="w">loader_format</span> <span class="c">= {</span>
+	<span class="c">.</span><span class="w">load_binary</span>	<span class="c">=</span> <span class="w">l</span><span class="c">oad_binary,</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="c">__init</span> <span class="w">init_loader_binfmt</span><span class="c">(void)</span>
+<span class="c">{</span>
+	<span class="w">insert_binfmt</span><span class="pc">(&amp;loade</span><span class="c">r_format);</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+<span class="w">arch_initcall</span><span class="c">(</span><span class="pc">i</span><span class="c">nit_loader_binfmt);</span>
+
+</pre>
+</body>
+</html>
+

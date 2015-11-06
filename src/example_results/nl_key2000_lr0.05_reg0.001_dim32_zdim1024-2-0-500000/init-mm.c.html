@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+<span class="w">#include</span> <span class="w">&lt;linux/mm_types.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/rbtree.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/rwsem.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/spinlock.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux</span><span class="c">/</span><span class="w">l</span><span class="c">ist.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">cpumask</span><span class="c">.h&gt;</span>
+
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">atomic</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;</span><span class="pc">a</span><span class="c">sm/</span><span class="w">pgtable</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">mmu</span><span class="c">.h&gt;</span>
+
+<span class="c">#</span><span class="pc">ifn</span><span class="c">def</span> <span class="w">INIT_MM_CONTEXT</span>
+<span class="c">#define</span> <span class="c">INIT_MM_CONTEXT(</span><span class="pc">n</span><span class="c">ame)</span>
+<span class="c">#</span><span class="pc">e</span><span class="c">ndif</span>
+
+<span class="pc">str</span><span class="c">uct</span> <span class="pc">mm_</span><span class="c">struct</span> <span class="w">init_mm</span> <span class="w">=</span><span class="pc"> </span><span class="c">{</span>
+	<span class="c">.</span><span class="w">mm_rb</span>		<span class="c">=</span> <span class="w">RB_ROOT</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">pg</span><span class="pc">d</span>		<span class="c">=</span> <span class="w">swapper_pg_dir</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">mm_users</span>	<span class="c">=</span> <span class="w">ATOMIC_INIT</span><span class="pc">(</span><span class="w">2</span><span class="pc">)</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">mm_count</span>	<span class="c">=</span> <span class="w">A</span><span class="c">TOMIC_INIT(</span><span class="w">1</span><span class="pc">)</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">mmap_sem</span>	<span class="c">=</span> <span class="w">__RWSEM_INITIALIZER</span><span class="pc">(</span><span class="w">i</span><span class="c">nit_mm</span><span class="pc">.</span><span class="c">mmap_sem</span><span class="pc">)</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">page_table_lock</span> <span class="c">=</span>  <span class="w">__SPIN_LOCK_UNLOCKED</span><span class="pc">(</span><span class="w">i</span><span class="c">nit_mm</span><span class="pc">.p</span><span class="c">age_table_lock</span><span class="pc">)</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">mmlist</span>		<span class="c">=</span> <span class="w">LIST_HEAD_INIT</span><span class="pc">(</span><span class="c">init_mm</span><span class="pc">.mml</span><span class="c">ist),</span>
+	<span class="w">INIT_MM_CONTEXT</span><span class="c">(</span><span class="pc">i</span><span class="c">nit_mm</span><span class="w">)</span>
+<span class="w">}</span><span class="pc">;</span>
+
+</pre>
+</body>
+</html>
+

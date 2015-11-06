@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+
+
+
+<span class="w">enum</span> <span class="w">speedstep_processor</span> <span class="w">{</span>
+	<span class="w">SPEEDSTEP_CPU_PIII_C_EARLY</span> <span class="w">=</span> <span class="w">0x00000001,</span>  
+	<span class="w">SPEEDSTEP_CPU_PIII_C</span>	   <span class="w">=</span> <span class="w">0x00000002,</span>  
+	<span class="w">SPEEDSTEP_CPU_PIII_T</span>	   <span class="w">=</span> <span class="w">0x00000003,</span>  
+	<span class="w">SPEEDSTEP_CPU_P4M</span>	   <span class="w">=</span> <span class="w">0x00000004,</span>  
+
+	<span class="w">SPEEDSTEP_CPU_PM</span>	   <span class="w">=</span> <span class="w">0xFFFFFF03,</span>  
+	<span class="w">SPEEDSTEP_CPU_P4D</span>	   <span class="w">=</span> <span class="w">0xFFFFFF04,</span>  
+	<span class="w">SPEEDSTEP_CPU_PCORE</span>	   <span class="w">=</span> <span class="w">0xFFFFFF05,</span>  
+<span class="w">};</span>
+
+
+
+<span class="w">#define</span> <span class="w">SPEEDSTEP_HIGH</span>	<span class="w">0x00000000</span>
+<span class="w">#define</span> <span class="w">SPEEDSTEP_LOW</span>	<span class="w">0x00000001</span>
+
+
+
+<span class="w">e</span><span class="pc">x</span><span class="c">tern</span> <span class="w">e</span><span class="c">num</span> <span class="w">speedstep_processor</span> <span class="w">speedstep_detect_processor</span><span class="c">(</span><span class="pc">v</span><span class="c">oid</span><span class="pc">);</span>
+
+
+<span class="c">extern</span> <span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">speedstep_get_frequency</span><span class="c">(</span><span class="pc">e</span><span class="c">num</span> <span class="pc">s</span><span class="c">peedstep_processor</span> <span class="w">processor</span><span class="pc">)</span><span class="c">;</span>
+
+
+
+<span class="c">extern</span> <span class="w">u</span><span class="c">nsigned</span> <span class="c">int</span> <span class="w">speedstep_get_freqs</span><span class="c">(</span><span class="w">e</span><span class="c">num</span> <span class="c">speedstep_processor</span> <span class="pc">p</span><span class="c">rocessor,</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="c">int</span> <span class="w">*low_speed</span><span class="c">,</span>
+	<span class="c">unsigned</span> <span class="c">int</span> <span class="pc">*</span><span class="w">high_speed</span><span class="pc">,</span>
+	<span class="c">unsigned</span> <span class="c">int</span> <span class="pc">*</span><span class="w">transition_latency</span><span class="pc">,</span>
+	<span class="w">v</span><span class="c">oid</span> <span class="pc">(</span><span class="c">*</span><span class="w">set_state</span><span class="pc">) </span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="c">int</span> <span class="w">s</span><span class="pc">t</span><span class="c">ate</span><span class="pc">))</span><span class="c">;</span>
+
+</pre>
+</body>
+</html>
+

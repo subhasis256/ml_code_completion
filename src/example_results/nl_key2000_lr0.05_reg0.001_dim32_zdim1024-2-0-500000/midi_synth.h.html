@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+<span class="w">int</span> <span class="w">midi_synth_ioctl</span> <span class="w">(int</span> <span class="w">dev,</span>
+	    <span class="w">unsigned</span> <span class="w">int</span> <span class="w">cmd,</span> <span class="w">void</span> <span class="w">__user</span> <span class="w">*</span> <span class="w">arg);</span>
+<span class="w">int</span> <span class="w">midi_synth_kill_note</span> <span class="w">(int</span> <span class="w">dev,</span> <span class="w">int</span> <span class="w">channel,</span> <span class="w">int</span> <span class="w">note,</span> <span class="w">int</span> <span class="w">velocity);</span>
+<span class="w">int</span> <span class="w">midi_synth_set_instr</span> <span class="w">(int</span> <span class="w">dev,</span> <span class="w">int</span> <span class="w">channel,</span> <span class="w">int</span> <span class="w">instr_no</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">int</span> <span class="w">midi_synth_start_note</span> <span class="c">(</span><span class="pc">i</span><span class="c">nt</span> <span class="w">d</span><span class="c">ev,</span> <span class="c">int</span> <span class="w">c</span><span class="pc">h</span><span class="c">annel</span><span class="pc">,</span> <span class="c">int</span> <span class="w">n</span><span class="c">ote,</span> <span class="c">int</span> <span class="w">volume</span><span class="pc">)</span><span class="c">;</span>
+<span class="pc">v</span><span class="c">oid</span> <span class="w">midi_synth_reset</span> <span class="c">(</span><span class="pc">i</span><span class="c">nt</span> <span class="w">d</span><span class="pc">e</span><span class="c">v</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">int</span> <span class="w">midi_synth_open</span> <span class="c">(int</span> <span class="w">d</span><span class="c">ev,</span> <span class="c">int</span> <span class="w">m</span><span class="pc">o</span><span class="c">de);</span>
+<span class="pc">v</span><span class="c">oid</span> <span class="w">midi_synth_close</span> <span class="c">(</span><span class="pc">i</span><span class="c">nt</span> <span class="w">d</span><span class="c">ev</span><span class="pc">)</span><span class="c">;</span>
+<span class="pc">v</span><span class="c">oid</span> <span class="w">midi_synth_hw_control</span> <span class="c">(int</span> <span class="w">d</span><span class="c">ev</span><span class="pc">,</span> <span class="pc">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">har</span> <span class="c">*</span><span class="w">ev</span><span class="c">ent</span><span class="pc">)</span><span class="c">;</span>
+<span class="pc">i</span><span class="c">nt</span> <span class="w">midi_synth_load_patch</span> <span class="c">(</span><span class="pc">i</span><span class="c">nt</span> <span class="w">d</span><span class="c">ev</span><span class="pc">,</span> <span class="c">int</span> <span class="w">fo</span><span class="pc">r</span><span class="c">mat</span><span class="pc">,</span> <span class="pc">c</span><span class="c">onst</span> <span class="c">char</span> <span class="pc">_</span><span class="c">_user</span> <span class="c">*</span> <span class="pc">a</span><span class="c">ddr,</span>
+		 <span class="c">int</span> <span class="c">count,</span> <span class="c">int</span> <span class="w">pmgr_flag</span><span class="c">);</span>
+<span class="pc">v</span><span class="c">oid</span> <span class="w">midi_synth_panning</span> <span class="c">(</span><span class="pc">i</span><span class="c">nt</span> <span class="w">d</span><span class="c">ev,</span> <span class="c">int</span> <span class="w">ch</span><span class="pc">a</span><span class="c">nnel,</span> <span class="c">int</span> <span class="w">pressure</span><span class="pc">)</span><span class="c">;</span>
+<span class="pc">v</span><span class="c">oid</span> <span class="w">midi_synth_aftertouch</span> <span class="c">(int</span> <span class="w">d</span><span class="c">ev,</span> <span class="c">int</span> <span class="w">c</span><span class="pc">h</span><span class="c">annel</span><span class="pc">,</span> <span class="c">int</span> <span class="pc">p</span><span class="c">ressure);</span>
+<span class="pc">v</span><span class="c">oid</span> <span class="w">midi_synth_controller</span> <span class="c">(int</span> <span class="w">d</span><span class="c">ev,</span> <span class="c">int</span> <span class="w">c</span><span class="pc">h</span><span class="c">annel,</span> <span class="c">int</span> <span class="w">ctrl_num</span><span class="pc">,</span> <span class="c">int</span> <span class="w">v</span><span class="c">alue);</span>
+<span class="pc">v</span><span class="c">oid</span> <span class="w">midi_synth_bender</span> <span class="c">(</span><span class="pc">i</span><span class="c">nt</span> <span class="w">d</span><span class="c">ev,</span> <span class="c">int</span> <span class="w">chn</span><span class="c">,</span> <span class="c">int</span> <span class="pc">v</span><span class="c">alue);</span>
+<span class="pc">v</span><span class="c">oid</span> <span class="w">midi_synth_setup_voice</span> <span class="c">(</span><span class="pc">i</span><span class="c">nt</span> <span class="w">d</span><span class="c">ev,</span> <span class="c">int</span> <span class="w">voice</span><span class="c">,</span> <span class="c">int</span> <span class="w">c</span><span class="pc">h</span><span class="c">n);</span>
+<span class="c">int</span> <span class="w">midi_synth_send_sysex</span><span class="c">(int</span> <span class="w">d</span><span class="c">ev,</span> <span class="pc">un</span><span class="c">signed</span> <span class="pc">c</span><span class="c">har</span> <span class="c">*</span><span class="w">by</span><span class="pc">tes</span><span class="c">,int</span> <span class="pc">l</span><span class="c">en);</span>
+
+<span class="pc">#ifn</span><span class="c">def</span> <span class="w">_MIDI_SYNTH_C_</span>
+<span class="pc">s</span><span class="c">tatic</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">synth_info</span> <span class="w">std_synth_info</span> <span class="w">=</span>
+<span class="w">{MIDI_SYNTH_NAME</span><span class="pc">,</span> <span class="c">0,</span> <span class="w">SYNTH_TYPE_MIDI</span><span class="c">,</span> <span class="pc">0</span><span class="c">,</span> <span class="c">0,</span> <span class="w">1</span><span class="pc">2</span><span class="c">8</span><span class="pc">,</span> <span class="c">0,</span> <span class="w">1</span><span class="pc">2</span><span class="c">8,</span> <span class="w">MIDI_SYNTH_CAPS</span><span class="pc">}</span><span class="c">;</span>
+
+<span class="c">static</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">synth_operations</span> <span class="w">std_midi_synth</span> <span class="pc">=</span>
+<span class="pc">{</span>
+	<span class="w">.o</span><span class="pc">w</span><span class="c">ner</span>		<span class="c">=</span> <span class="c">THIS_MODULE,</span>
+	<span class="c">.</span><span class="w">i</span><span class="c">d</span>		<span class="w">=</span><span class="pc"> "</span><span class="w">MIDI</span><span class="c">",</span>
+	<span class="c">.</span><span class="w">inf</span><span class="c">o</span>		<span class="pc">= </span><span class="c">&amp;</span><span class="pc">s</span><span class="c">td_synth_info,</span>
+	<span class="c">.</span><span class="w">midi_dev</span>	<span class="c">=</span> <span class="pc">0</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">synth_type</span>	<span class="c">=</span> <span class="w">SYNTH_TYPE_MIDI</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">synth_subtype</span>	<span class="c">=</span> <span class="w">0</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">o</span><span class="pc">pe</span><span class="c">n</span>		<span class="c">=</span> <span class="w">midi_synth_open</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">c</span><span class="pc">lo</span><span class="c">se</span>		<span class="c">=</span> <span class="w">midi_synth_close</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">i</span><span class="c">octl</span>		<span class="c">=</span> <span class="w">midi_synth_ioctl</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">kill_note</span>	<span class="c">=</span> <span class="w">midi_synth_kill_note</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">start_note</span>	<span class="c">=</span> <span class="w">midi_synth_start_note</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">set_instr</span>	<span class="c">=</span> <span class="w">midi_synth_set_instr</span><span class="c">,</span>
+	<span class="c">.reset</span>		<span class="c">=</span> <span class="w">midi_synth_reset</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">hw_control</span>	<span class="c">=</span> <span class="w">midi_synth_hw_control</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">load_patch</span>	<span class="c">=</span> <span class="w">midi_synth_load_patch</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">aftertouch</span>	<span class="c">=</span> <span class="w">midi_synth_aftertouch</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">con</span><span class="pc">troll</span><span class="c">er</span>	<span class="c">=</span> <span class="w">midi_synth_controller</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">panning</span>		<span class="c">=</span> <span class="w">midi_synth_panning</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">bender</span>		<span class="c">=</span> <span class="w">midi_synth_bender</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">setup_voice</span>	<span class="c">=</span> <span class="w">midi_synth_setup_voice</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">send_sysex</span>	<span class="c">=</span> <span class="w">midi_synth_send_sysex</span>
+<span class="pc">}</span><span class="c">;</span>
+<span class="pc">#e</span><span class="c">ndif</span>
+
+</pre>
+</body>
+</html>
+

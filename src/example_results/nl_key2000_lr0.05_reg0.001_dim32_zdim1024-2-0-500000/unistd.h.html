@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+<span class="w">#ifndef</span> <span class="w">_ASM_UNISTD_H</span>
+<span class="w">#define</span> <span class="w">_ASM_UNISTD_H</span>
+
+<span class="w">#include</span> <span class="w">&lt;uapi/asm/unistd.h&gt;</span>
+
+
+<span class="w">#define</span> <span class="w">NR_syscalls</span> <span class="w">340</span>
+
+
+<span class="w">#define</span> <span class="w">__ARCH_WANT_OLD_READDIR</span>
+<span class="w">#define</span> <span class="w">__ARCH_WANT_OLD_STAT</span>
+<span class="w">#define</span> <span class="w">__ARCH_WANT_STAT64</span>
+<span class="w">#define</span> <span class="w">__ARCH_WANT_SYS_ALARM</span>
+<span class="w">#define</span> <span class="w">__ARCH_WANT_SYS_GETHOSTNAME</span>
+<span class="w">#define</span> <span class="w">__ARCH_WANT_SYS_IPC</span>
+<span class="w">#</span><span class="c">define</span> <span class="w">__ARCH_WANT_SYS_PAUSE</span>
+<span class="c">#define</span> <span class="w">__ARCH_WANT_SYS_SIGNAL</span>
+<span class="c">#define</span> <span class="w">__ARCH_WANT_SYS_TIME</span>
+<span class="c">#define</span> <span class="w">__ARCH_WANT_SYS_UTIME</span>
+<span class="c">#define</span> <span class="w">__ARCH_WANT_SYS_WAITPID</span>
+<span class="c">#define</span> <span class="w">__ARCH_WANT_SYS_SOCKETCALL</span>
+<span class="c">#define</span> <span class="w">__ARCH_WANT_SYS_FADVISE64</span>
+<span class="c">#define</span> <span class="w">__ARCH_WANT_SYS_GETPGRP</span>
+<span class="c">#define</span> <span class="w">__ARCH_WANT_SYS_LLSEEK</span>
+<span class="c">#define</span> <span class="w">__ARCH_WANT_SYS_NICE</span>
+<span class="c">#define</span> <span class="w">__ARCH_WANT_SYS_OLD_GETRLIMIT</span>
+<span class="c">#define</span> <span class="w">__ARCH_WANT_SYS_OLD_SELECT</span>
+<span class="c">#define</span> <span class="w">__ARCH_WANT_SYS_OLDUMOUNT</span>
+<span class="c">#define</span> <span class="w">__ARCH_WANT_SYS_SIGPENDING</span>
+<span class="c">#define</span> <span class="w">__ARCH_WANT_SYS_SIGPROCMASK</span>
+<span class="c">#define</span> <span class="w">__ARCH_WANT_SYS_FORK</span>
+<span class="c">#define</span> <span class="w">__ARCH_WANT_SYS_VFORK</span>
+<span class="c">#define</span> <span class="w">__ARCH_WANT_SYS_CLONE</span>
+
+<span class="c">#</span><span class="pc">e</span><span class="c">ndif</span> 
+
+</pre>
+</body>
+</html>
+

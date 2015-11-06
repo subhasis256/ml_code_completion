@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+<span class="w">#include</span> <span class="w">"affs.h"</span>
+
+<span class="w">static</span> <span class="w">int</span> <span class="w">affs_symlink_readpage(struct</span> <span class="w">file</span> <span class="w">*file,</span> <span class="w">struct</span> <span class="w">page</span> <span class="w">*page)</span>
+<span class="w">{</span>
+	<span class="w">struct</span> <span class="w">buffer_head</span> <span class="w">*bh;</span>
+	<span class="w">struct</span> <span class="w">inode</span> <span class="w">*inode</span> <span class="w">=</span> <span class="w">page-&gt;mapping-&gt;host;</span>
+	<span class="w">char</span> <span class="w">*lin</span><span class="pc">k</span> <span class="pc">=</span> <span class="w">kmap</span><span class="c">(</span><span class="w">p</span><span class="c">age);</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">slink_front</span> <span class="c">*</span><span class="w">lf</span><span class="c">;</span>
+	<span class="pc">i</span><span class="c">nt</span>			 <span class="pc">i,</span> <span class="pc">j</span><span class="c">;</span>
+	<span class="w">c</span><span class="pc">h</span><span class="c">ar</span>			 <span class="w">c</span><span class="pc">;</span>
+	<span class="pc">c</span><span class="c">har</span>			 <span class="w">lc</span><span class="pc">;</span>
+
+	<span class="w">pr</span><span class="pc">_</span><span class="c">debug("</span><span class="w">follow_link(ino</span><span class="pc">=</span><span class="c">%</span><span class="pc">l</span><span class="c">u)\n",</span> <span class="w">ino</span><span class="pc">d</span><span class="c">e-&gt;</span><span class="w">i_</span><span class="pc">i</span><span class="c">no);</span>
+
+	<span class="w">bh</span> <span class="pc">=</span> <span class="w">affs_bread</span><span class="c">(</span><span class="w">i</span><span class="c">node</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">i</span><span class="pc">_</span><span class="c">sb</span><span class="pc">,</span> <span class="w">i</span><span class="pc">no</span><span class="c">de</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">i_</span><span class="pc">i</span><span class="c">no);</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="pc">(!</span><span class="w">bh</span><span class="pc">)</span>
+		<span class="pc">g</span><span class="c">oto</span> <span class="pc">f</span><span class="c">ail;</span>
+	<span class="w">i</span>  <span class="c">=</span> <span class="c">0;</span>
+	<span class="w">j</span>  <span class="c">=</span> <span class="pc">0</span><span class="c">;</span>
+	<span class="w">lf</span> <span class="w">=</span><span class="pc"> (</span><span class="c">struct</span> <span class="w">slink_front</span> <span class="c">*)</span><span class="w">bh</span><span class="c">-&gt;</span><span class="w">b_data</span><span class="c">;</span>
+	<span class="w">lc</span> <span class="pc">=</span> <span class="pc">0</span><span class="c">;</span>
+
+	<span class="c">if</span> <span class="c">(</span><span class="w">strchr</span><span class="c">(</span><span class="pc">l</span><span class="c">f-&gt;</span><span class="w">symname,':')) {</span>	
+		<span class="w">st</span><span class="pc">ru</span><span class="c">ct</span> <span class="w">affs_sb_info</span> <span class="c">*</span><span class="w">sb</span><span class="pc">i</span> <span class="c">=</span> <span class="w">AFFS_SB</span><span class="c">(</span><span class="w">i</span><span class="pc">n</span><span class="c">ode</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">i_</span><span class="pc">s</span><span class="c">b);</span>
+		<span class="w">c</span><span class="c">har</span> <span class="c">*</span><span class="w">pf</span><span class="pc">;</span>
+		<span class="w">sp</span><span class="pc">in_lock</span><span class="c">(&amp;</span><span class="w">sb</span><span class="pc">i</span><span class="c">-&gt;</span><span class="w">symlink_lock</span><span class="c">);</span>
+		<span class="w">pf</span> <span class="pc">=</span> <span class="w">sb</span><span class="pc">i</span><span class="c">-&gt;</span><span class="w">s_prefix</span> <span class="w">?</span> <span class="w">sb</span><span class="pc">i</span><span class="c">-&gt;</span><span class="pc">s_</span><span class="c">prefix</span> <span class="w">: "/";</span>
+		<span class="w">w</span><span class="pc">h</span><span class="c">ile</span> <span class="c">(</span><span class="w">i</span> <span class="pc">&lt;</span> <span class="w">1023</span> <span class="w">&amp;</span><span class="pc">&amp; (</span><span class="w">c</span> <span class="w">=</span> <span class="w">pf[</span><span class="c">i</span><span class="w">]))</span>
+			<span class="w">lin</span><span class="pc">k</span><span class="w">[</span><span class="c">i</span><span class="w">+</span><span class="c">+] =</span> <span class="w">c</span><span class="pc">;</span>
+		<span class="w">s</span><span class="pc">pin_unlock</span><span class="c">(&amp;</span><span class="w">sb</span><span class="pc">i</span><span class="c">-&gt;</span><span class="pc">sy</span><span class="c">mlink_lock</span><span class="pc">)</span><span class="c">;</span>
+		<span class="w">w</span><span class="c">hile</span> <span class="c">(</span><span class="pc">i</span> <span class="pc">&lt;</span> <span class="w">10</span><span class="pc">23</span> <span class="w">&amp;</span><span class="c">&amp;</span> <span class="w">lf-</span><span class="c">&gt;</span><span class="w">symname</span><span class="c">[</span><span class="pc">j</span><span class="w">] != ':')</span>
+			<span class="w">lin</span><span class="pc">k</span><span class="w">[</span><span class="c">i</span><span class="w">+</span><span class="c">+] =</span> <span class="c">lf</span><span class="pc">-</span><span class="c">&gt;symname[</span><span class="pc">j</span><span class="w">++];</span>
+		<span class="w">i</span><span class="pc">f</span> <span class="c">(</span><span class="pc">i</span> <span class="pc">&lt;</span> <span class="w">1</span><span class="pc">0</span><span class="c">23</span><span class="pc">)</span>
+			<span class="w">li</span><span class="c">nk</span><span class="pc">[</span><span class="c">i</span><span class="w">++] = '/';</span>
+		<span class="w">j+</span><span class="c">+;</span>
+		<span class="w">lc</span> <span class="w">= '/';</span>
+	<span class="w">}</span>
+	<span class="pc">w</span><span class="c">hile</span> <span class="c">(i</span> <span class="c">&lt;</span> <span class="w">1</span><span class="c">023</span> <span class="w">&amp;</span><span class="pc">&amp; </span><span class="c">(</span><span class="w">c</span> <span class="w">=</span> <span class="pc">l</span><span class="c">f-&gt;symname</span><span class="pc">[j</span><span class="w">])) {</span>
+		<span class="w">i</span><span class="pc">f</span> <span class="c">(</span><span class="w">c</span> <span class="w">== '/' &amp;&amp;</span> <span class="w">l</span><span class="pc">c</span> <span class="w">=</span><span class="pc">= '</span><span class="c">/' &amp;&amp;</span> <span class="w">i</span> <span class="w">&lt;</span> <span class="w">1020</span><span class="pc">) </span><span class="c">{</span>	
+			<span class="w">lin</span><span class="pc">k</span><span class="w">[</span><span class="c">i</span><span class="w">++] = '.';</span>
+			<span class="w">li</span><span class="pc">nk[</span><span class="c">i</span><span class="w">++</span><span class="pc">] = '.</span><span class="c">';</span>
+		<span class="w">}</span>
+		<span class="w">lin</span><span class="pc">k[</span><span class="c">i</span><span class="w">+</span><span class="pc">+</span><span class="c">] =</span> <span class="w">c</span><span class="pc">;</span>
+		<span class="w">l</span><span class="pc">c</span> <span class="pc">=</span> <span class="w">c</span><span class="pc">;</span>
+		<span class="w">j</span><span class="pc">++</span><span class="c">;</span>
+	<span class="c">}</span>
+	<span class="w">lin</span><span class="pc">k[</span><span class="c">i</span><span class="w">] = '\</span><span class="pc">0</span><span class="c">';</span>
+	<span class="w">affs_brelse</span><span class="c">(</span><span class="w">bh</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">SetPageUptodate</span><span class="pc">(</span><span class="w">pag</span><span class="c">e);</span>
+	<span class="w">kunmap</span><span class="c">(</span><span class="w">pa</span><span class="pc">g</span><span class="c">e);</span>
+	<span class="w">unlock_page</span><span class="c">(</span><span class="w">pa</span><span class="c">ge);</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="w">f</span><span class="pc">a</span><span class="c">il:</span>
+	<span class="w">SetPageError</span><span class="c">(</span><span class="w">p</span><span class="pc">a</span><span class="c">ge);</span>
+	<span class="w">k</span><span class="pc">u</span><span class="c">nmap</span><span class="pc">(p</span><span class="c">age);</span>
+	<span class="w">u</span><span class="c">nlock_page(page);</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">-</span><span class="w">E</span><span class="pc">IO</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="w">c</span><span class="pc">on</span><span class="c">st</span> <span class="c">struct</span> <span class="w">address_space_operations</span> <span class="w">affs_symlink_aops</span> <span class="c">= {</span>
+	<span class="c">.</span><span class="w">readpage</span>	<span class="c">=</span> <span class="w">affs_symlink_readpage</span><span class="c">,</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="w">c</span><span class="c">onst</span> <span class="c">struct</span> <span class="w">inode_operations</span> <span class="w">affs_symlink_inode_operations</span> <span class="c">= {</span>
+	<span class="c">.</span><span class="w">readlink</span>	<span class="c">=</span> <span class="w">generic_readlink</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">follow_link</span>	<span class="c">=</span> <span class="w">page_follow_link_light</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">put_link</span>	<span class="c">=</span> <span class="w">page_put_link</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">setattr</span>	<span class="c">=</span> <span class="w">affs_notify_change</span><span class="c">,</span>
+<span class="pc">}</span><span class="c">;</span>
+
+</pre>
+</body>
+</html>
+

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+<span class="w">#include</span> <span class="w">&lt;linux/kernel.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/init.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/acpi.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/efi.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux</span><span class="c">/</span><span class="w">e</span><span class="pc">f</span><span class="c">i</span><span class="pc">-</span><span class="w">bgrt</span><span class="c">.h&gt;</span>
+
+<span class="pc">s</span><span class="c">truct</span> <span class="w">acpi_table_bgrt</span> <span class="pc">*</span><span class="w">bgrt_tab</span><span class="c">;</span>
+<span class="c">void</span> <span class="c">*</span><span class="w">_</span><span class="pc">_initd</span><span class="c">ata</span> <span class="w">bgrt_image;</span>
+<span class="w">s</span><span class="pc">i</span><span class="c">ze_t</span> <span class="w">__i</span><span class="pc">nitd</span><span class="c">ata</span> <span class="w">bgrt_image_size;</span>
+
+<span class="pc">s</span><span class="c">truct</span> <span class="w">bmp_header</span> <span class="pc">{</span>
+	<span class="w">u1</span><span class="c">6</span> <span class="w">i</span><span class="c">d;</span>
+	<span class="pc">u3</span><span class="c">2</span> <span class="pc">s</span><span class="c">ize;</span>
+<span class="w">}</span> <span class="c">__packed;</span>
+
+<span class="w">v</span><span class="c">oid</span> <span class="w">_</span><span class="pc">_in</span><span class="c">it</span> <span class="w">efi_bgrt_init</span><span class="c">(</span><span class="pc">v</span><span class="c">oid</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">a</span><span class="c">cpi_status</span> <span class="c">status;</span>
+	<span class="w">v</span><span class="c">oid</span> <span class="c">__iomem</span> <span class="c">*</span><span class="w">im</span><span class="c">age;</span>
+	<span class="w">b</span><span class="pc">o</span><span class="c">ol</span> <span class="w">ioremapped</span> <span class="pc">=</span> <span class="c">false;</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">b</span><span class="c">mp_header</span> <span class="w">b</span><span class="pc">m</span><span class="c">p_header;</span>
+
+	<span class="w">i</span><span class="pc">f</span> <span class="c">(</span><span class="w">acpi_disabled</span><span class="pc">)</span>
+		<span class="pc">r</span><span class="c">eturn;</span>
+
+	<span class="pc">s</span><span class="c">tatus</span> <span class="c">=</span> <span class="w">acpi_get_table(</span><span class="pc">"</span><span class="w">BGRT</span><span class="pc">"</span><span class="c">,</span> <span class="pc">0,</span>
+	                        <span class="w">(</span><span class="pc">s</span><span class="c">truct</span> <span class="w">acpi_table_header</span> <span class="w">**)&amp;bgrt_tab</span><span class="pc">)</span><span class="c">;</span>
+	<span class="pc">if</span> <span class="c">(</span><span class="w">ACPI_FAILURE</span><span class="c">(</span><span class="pc">s</span><span class="c">tatus</span><span class="pc">))</span>
+		<span class="c">return</span><span class="pc">;</span>
+
+	<span class="c">if</span> <span class="c">(</span><span class="w">b</span><span class="c">grt_tab</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">h</span><span class="pc">eade</span><span class="c">r.</span><span class="w">l</span><span class="c">ength</span> <span class="w">&lt;</span> <span class="w">s</span><span class="c">izeof</span><span class="pc">(*</span><span class="c">bgrt_tab</span><span class="w">))</span><span class="pc"> </span><span class="c">{</span>
+		<span class="w">p</span><span class="pc">r_</span><span class="c">err("</span><span class="w">Ignoring</span> <span class="w">B</span><span class="c">GRT</span><span class="pc">:</span> <span class="w">i</span><span class="c">nvalid</span> <span class="w">l</span><span class="c">ength</span> <span class="c">%</span><span class="pc">u</span> <span class="w">(expected</span> <span class="pc">%</span><span class="w">zu</span><span class="c">)\n",</span>
+		       <span class="pc">b</span><span class="c">grt_tab-&gt;</span><span class="w">he</span><span class="pc">a</span><span class="c">der.</span><span class="pc">l</span><span class="c">ength,</span> <span class="pc">s</span><span class="c">izeof</span><span class="pc">(*</span><span class="c">bgrt_tab));</span>
+		<span class="pc">r</span><span class="c">eturn</span><span class="pc">;</span>
+	<span class="c">}</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(bgrt_tab-&gt;</span><span class="w">v</span><span class="c">ersion</span> <span class="pc">!</span><span class="c">=</span> <span class="w">1</span><span class="c">) {</span>
+		<span class="w">p</span><span class="pc">r_e</span><span class="c">rr("</span><span class="w">I</span><span class="pc">g</span><span class="c">noring</span> <span class="w">B</span><span class="c">GRT</span><span class="pc">:</span> <span class="pc">i</span><span class="c">nvalid</span> <span class="w">v</span><span class="pc">e</span><span class="c">rsion</span> <span class="c">%</span><span class="pc">u</span> <span class="w">(</span><span class="pc">e</span><span class="c">xpected</span> <span class="w">1)</span><span class="pc">\</span><span class="c">n",</span>
+		       <span class="c">bgrt_tab-&gt;</span><span class="w">v</span><span class="c">ersion);</span>
+		<span class="c">return</span><span class="pc">;</span>
+	<span class="c">}</span>
+	<span class="c">if</span> <span class="c">(bgrt_tab-&gt;</span><span class="w">s</span><span class="pc">tatu</span><span class="c">s</span> <span class="pc">!</span><span class="c">=</span> <span class="pc">1</span><span class="c">) {</span>
+		<span class="w">p</span><span class="pc">r_e</span><span class="c">rr("</span><span class="w">I</span><span class="pc">g</span><span class="c">noring</span> <span class="w">B</span><span class="c">GRT</span><span class="pc">:</span> <span class="w">i</span><span class="c">nvalid</span> <span class="w">s</span><span class="c">tatus</span> <span class="pc">%u</span> <span class="w">(</span><span class="pc">e</span><span class="c">xpected</span> <span class="w">1)</span><span class="pc">\</span><span class="c">n",</span>
+		       <span class="c">bgrt_tab-&gt;</span><span class="pc">statu</span><span class="c">s);</span>
+		<span class="c">return</span><span class="pc">;</span>
+	<span class="c">}</span>
+	<span class="c">if</span> <span class="c">(bgrt_tab-&gt;</span><span class="w">image_type</span> <span class="pc">!</span><span class="c">=</span> <span class="c">0) {</span>
+		<span class="w">p</span><span class="pc">r_e</span><span class="c">rr("</span><span class="w">I</span><span class="pc">g</span><span class="c">noring</span> <span class="w">B</span><span class="c">GRT</span><span class="w">:</span> <span class="w">i</span><span class="c">nvalid</span> <span class="w">im</span><span class="pc">age</span> <span class="w">t</span><span class="pc">y</span><span class="c">pe</span> <span class="c">%</span><span class="pc">u</span> <span class="w">(</span><span class="pc">e</span><span class="c">xpected</span> <span class="w">0)</span><span class="pc">\</span><span class="c">n",</span>
+		       <span class="c">bgrt_tab-&gt;image_type);</span>
+		<span class="c">return</span><span class="pc">;</span>
+	<span class="c">}</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="pc">(!</span><span class="c">bgrt_tab-&gt;</span><span class="w">image_address</span><span class="c">) {</span>
+		<span class="w">p</span><span class="pc">r_e</span><span class="c">rr("</span><span class="pc">I</span><span class="c">gnoring</span> <span class="pc">B</span><span class="c">GRT</span><span class="pc">:</span> <span class="w">null</span> <span class="w">im</span><span class="pc">age</span> <span class="w">a</span><span class="c">ddress</span><span class="pc">\</span><span class="c">n");</span>
+		<span class="c">return</span><span class="pc">;</span>
+	<span class="c">}</span>
+
+	<span class="w">im</span><span class="pc">age</span> <span class="pc">=</span> <span class="w">efi_lookup_mapped_addr</span><span class="c">(bgrt_tab</span><span class="pc">-</span><span class="c">&gt;image_address);</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="pc">(!</span><span class="w">im</span><span class="pc">age)</span><span class="c"> {</span>
+		<span class="w">im</span><span class="pc">age</span> <span class="pc">=</span> <span class="w">early_ioremap</span><span class="c">(bgrt_tab</span><span class="pc">-</span><span class="c">&gt;image_address</span><span class="pc">,</span>
+				       <span class="w">s</span><span class="c">izeof(</span><span class="w">bmp_header</span><span class="c">));</span>
+		<span class="w">ioremapped</span> <span class="pc">=</span> <span class="w">t</span><span class="c">rue;</span>
+		<span class="pc">i</span><span class="c">f</span> <span class="pc">(!</span><span class="w">i</span><span class="pc">mage) </span><span class="c">{</span>
+			<span class="w">p</span><span class="c">r_err("</span><span class="w">Ignoring</span> <span class="w">BGRT</span><span class="pc">:</span> <span class="pc">f</span><span class="c">ailed</span> <span class="c">to</span> <span class="w">m</span><span class="pc">a</span><span class="c">p</span> <span class="w">i</span><span class="pc">m</span><span class="c">age</span> <span class="w">h</span><span class="c">eader</span> <span class="w">m</span><span class="c">emory\n");</span>
+			<span class="c">return</span><span class="pc">;</span>
+		<span class="c">}</span>
+	<span class="c">}</span>
+
+	<span class="w">memcpy_fromio(</span><span class="pc">&amp;bm</span><span class="c">p_header</span><span class="pc">,</span> <span class="w">i</span><span class="pc">mage,</span> <span class="w">s</span><span class="pc">izeo</span><span class="c">f(</span><span class="w">b</span><span class="pc">m</span><span class="c">p_header));</span>
+	<span class="pc">if</span> <span class="c">(ioremapped</span><span class="pc">)</span>
+		<span class="w">early_iounmap</span><span class="c">(</span><span class="w">i</span><span class="pc">m</span><span class="c">age,</span> <span class="pc">s</span><span class="c">izeof(</span><span class="pc">b</span><span class="c">mp_header));</span>
+	<span class="w">bgrt_image_size</span> <span class="pc">=</span> <span class="w">b</span><span class="c">mp_header</span><span class="pc">.s</span><span class="c">ize;</span>
+
+	<span class="w">bgrt_image</span> <span class="pc">=</span> <span class="w">k</span><span class="c">malloc(</span><span class="pc">b</span><span class="c">grt_image_size,</span> <span class="c">GFP_KERNEL</span> <span class="w">|</span> <span class="w">__GFP_NOWARN</span><span class="c">);</span>
+	<span class="c">if</span> <span class="pc">(!</span><span class="c">bgrt_image</span><span class="pc">) </span><span class="c">{</span>
+		<span class="pc">p</span><span class="c">r_err("</span><span class="w">Ignoring</span> <span class="w">BGRT</span><span class="pc">:</span> <span class="pc">f</span><span class="c">ailed</span> <span class="c">to</span> <span class="c">allocate</span> <span class="c">memory</span> <span class="pc">f</span><span class="c">or</span> <span class="w">im</span><span class="c">age</span> <span class="w">(wanted</span> <span class="w">%zu</span> <span class="w">b</span><span class="pc">y</span><span class="c">tes</span><span class="w">)</span><span class="c">\n",</span>
+		       <span class="c">bgrt_image_size);</span>
+		<span class="pc">r</span><span class="c">eturn</span><span class="pc">;</span>
+	<span class="c">}</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">ioremapped</span><span class="pc">)</span><span class="c"> {</span>
+		<span class="w">im</span><span class="c">age</span> <span class="pc">=</span> <span class="w">early_ioremap</span><span class="c">(</span><span class="w">bgrt_tab-</span><span class="c">&gt;</span><span class="w">image_address</span><span class="c">,</span>
+				       <span class="w">bmp_header.</span><span class="pc">s</span><span class="c">ize</span><span class="pc">)</span><span class="c">;</span>
+		<span class="c">if</span> <span class="pc">(!</span><span class="w">i</span><span class="pc">mage</span><span class="c">) {</span>
+			<span class="w">p</span><span class="c">r_err("</span><span class="w">Ignoring</span> <span class="w">BGRT:</span> <span class="pc">f</span><span class="c">ailed</span> <span class="c">to</span> <span class="w">m</span><span class="pc">a</span><span class="c">p</span> <span class="w">im</span><span class="pc">age</span> <span class="w">m</span><span class="c">emory\n");</span>
+			<span class="pc">k</span><span class="c">free(</span><span class="w">bgrt_image</span><span class="c">);</span>
+			<span class="w">b</span><span class="pc">g</span><span class="c">rt_image</span> <span class="c">=</span> <span class="pc">N</span><span class="c">ULL;</span>
+			<span class="pc">r</span><span class="c">eturn</span><span class="pc">;</span>
+		<span class="c">}</span>
+	<span class="c">}</span>
+
+	<span class="w">memcpy_fromio</span><span class="c">(</span><span class="pc">bgrt_i</span><span class="c">mage</span><span class="pc">,</span> <span class="w">i</span><span class="pc">mage,</span> <span class="w">bgrt_image_size</span><span class="c">);</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">ioremapped</span><span class="pc">)</span>
+		<span class="w">early_iounmap</span><span class="c">(</span><span class="w">im</span><span class="c">age</span><span class="pc">,</span> <span class="w">bmp_header.s</span><span class="pc">i</span><span class="c">ze</span><span class="pc">)</span><span class="c">;</span>
+<span class="pc">}</span>
+
+</pre>
+</body>
+</html>
+

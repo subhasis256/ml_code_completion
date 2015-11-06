@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+<span class="w">#ifndef</span> <span class="w">__ASM_ARCH_GPIO_H</span>
+<span class="w">#define</span> <span class="w">__ASM_ARCH_GPIO_H</span>
+
+<span class="w">#include</span> <span class="w">&lt;linux/kernel.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/errno.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/io.h&gt;</span>
+
+
+<span class="w">static</span> <span class="w">inline</span> <span class="w">void</span> <span class="w">__init</span> <span class="w">gpio_direction_none(void</span> <span class="pc">_</span><span class="c">_iomem</span> <span class="c">*</span> <span class="c">addr</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">__raw_writeb</span><span class="c">(</span><span class="w">0</span><span class="pc">x00</span><span class="c">,</span> <span class="pc">a</span><span class="c">ddr</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="pc">#en</span><span class="c">dif</span> 
+
+</pre>
+</body>
+</html>
+

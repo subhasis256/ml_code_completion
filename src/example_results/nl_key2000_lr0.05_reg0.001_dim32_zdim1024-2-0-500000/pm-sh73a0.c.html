@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+<span class="w">#include</span> <span class="w">&lt;linux/suspend.h&gt;</span>
+<span class="w">#include</span> <span class="w">"common.h"</span>
+
+<span class="w">#ifdef</span> <span class="w">CONFIG_SUSPEND</span>
+<span class="w">static</span> <span class="w">int</span> <span class="w">sh73a0_enter_suspend(suspend_state_t</span> <span class="w">suspend_state)</span>
+<span class="w">{</span>
+	<span class="w">cpu_do_idle();</span>
+	<span class="w">return</span> <span class="w">0;</span>
+<span class="w">}</span>
+
+<span class="w">static</span> <span class="w">void</span> <span class="w">sh73a0_suspend_init(void)</span>
+<span class="w">{</span>
+	<span class="w">shmobile_suspend_ops.enter</span> <span class="c">=</span> <span class="w">s</span><span class="pc">h73a0_e</span><span class="c">nter_suspend</span><span class="pc">;</span>
+<span class="c">}</span>
+<span class="pc">#</span><span class="w">e</span><span class="pc">l</span><span class="c">se</span>
+<span class="c">static</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">sh</span><span class="pc">73a0_s</span><span class="c">uspend_init(</span><span class="pc">v</span><span class="c">oid</span><span class="w">) {}</span>
+<span class="pc">#</span><span class="c">endif</span>
+
+<span class="pc">v</span><span class="c">oid</span> <span class="pc">__in</span><span class="c">it</span> <span class="w">sh73a0_pm_init</span><span class="c">(void)</span>
+<span class="c">{</span>
+	<span class="w">sh</span><span class="pc">73a0_s</span><span class="c">uspend_init</span><span class="w">(</span><span class="pc">)</span><span class="c">;</span>
+<span class="pc">}</span>
+
+</pre>
+</body>
+</html>
+

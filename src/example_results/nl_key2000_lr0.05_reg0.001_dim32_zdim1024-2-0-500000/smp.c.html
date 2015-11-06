@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+<span class="w">#include</span> <span class="w">&lt;linux/acpi.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/delay.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/init.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/spinlock.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux</span><span class="c">/</span><span class="w">sc</span><span class="c">hed.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">i</span><span class="pc">nt</span><span class="c">errupt.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">ca</span><span class="pc">c</span><span class="c">he.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">profile</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">e</span><span class="c">rrno.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">m</span><span class="pc">m</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">e</span><span class="pc">rr</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">c</span><span class="pc">p</span><span class="c">u.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">sm</span><span class="c">p.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">se</span><span class="c">q_file.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">i</span><span class="pc">r</span><span class="c">q.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">percpu</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">clockchips</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">c</span><span class="pc">o</span><span class="c">mpletion.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">o</span><span class="c">f.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">irq_work</span><span class="c">.h&gt;</span>
+
+<span class="c">#include</span> <span class="c">&lt;</span><span class="pc">a</span><span class="c">sm/</span><span class="w">alternative</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">atomic</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">cacheflush</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">c</span><span class="pc">p</span><span class="c">u.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">cputype</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">cpu_ops</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">mmu_context</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">pgtable</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">pgalloc</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">processor</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">smp_plat</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">sections</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">tlbflush</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;asm/</span><span class="w">ptrace</span><span class="c">.h&gt;</span>
+
+<span class="c">#</span><span class="pc">d</span><span class="c">efine</span> <span class="w">CREATE_TRACE_POINTS</span>
+<span class="pc">#i</span><span class="c">nclude</span> <span class="pc">&lt;t</span><span class="c">race/</span><span class="w">e</span><span class="pc">v</span><span class="c">ents</span><span class="pc">/</span><span class="w">ipi</span><span class="c">.h&gt;</span>
+
+
+<span class="pc">str</span><span class="c">uct</span> <span class="w">secondary_data</span> <span class="pc">s</span><span class="c">econdary_data;</span>
+
+<span class="w">e</span><span class="c">num</span> <span class="w">ipi_msg_type</span> <span class="c">{</span>
+	<span class="w">IPI_RESCHEDULE</span><span class="pc">,</span>
+	<span class="w">IPI_CALL_FUNC</span><span class="c">,</span>
+	<span class="w">IPI_CPU_STOP</span><span class="c">,</span>
+	<span class="w">IPI_TIMER</span><span class="c">,</span>
+	<span class="w">IPI_IRQ_WORK</span><span class="c">,</span>
+<span class="c">};</span>
+
+
+<span class="pc">sta</span><span class="c">tic</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">boot_secondary</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">c</span><span class="pc">p</span><span class="c">u</span><span class="pc">,</span> <span class="c">struct</span> <span class="w">t</span><span class="pc">a</span><span class="c">sk_struct</span> <span class="c">*</span><span class="w">idle</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="pc">if</span> <span class="c">(</span><span class="w">cpu_ops[c</span><span class="pc">pu</span><span class="w">]-</span><span class="c">&gt;</span><span class="w">cpu_boot</span><span class="pc">)</span>
+		<span class="c">return</span> <span class="w">c</span><span class="c">pu_ops</span><span class="pc">[</span><span class="w">c</span><span class="pc">pu</span><span class="w">]</span><span class="pc">-</span><span class="c">&gt;</span><span class="pc">c</span><span class="c">pu_boot</span><span class="pc">(</span><span class="w">c</span><span class="pc">pu)</span><span class="c">;</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">-</span><span class="w">EO</span><span class="c">PNOTSUPP;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="w">DECLARE_COMPLETION</span><span class="c">(</span><span class="w">cpu_running</span><span class="c">);</span>
+
+<span class="pc">i</span><span class="c">nt</span> <span class="w">__cpu_up</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="pc">i</span><span class="c">nt</span> <span class="c">cpu</span><span class="pc">,</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">t</span><span class="c">ask_struct</span> <span class="c">*</span><span class="w">i</span><span class="pc">d</span><span class="c">le)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="pc">re</span><span class="c">t;</span>
+
+	
+	<span class="w">secondary_data.stack</span> <span class="c">=</span> <span class="w">task_stack_page</span><span class="pc">(i</span><span class="c">dle</span><span class="w">) </span><span class="pc">+</span> <span class="w">THREAD_START_SP</span><span class="c">;</span>
+	<span class="w">__flush_dcache_area</span><span class="pc">(&amp;</span><span class="c">secondary_data,</span> <span class="w">s</span><span class="pc">i</span><span class="c">zeof(</span><span class="pc">se</span><span class="c">condary_data</span><span class="pc">))</span><span class="c">;</span>
+
+	
+	<span class="w">r</span><span class="pc">et</span> <span class="c">=</span> <span class="w">boot_secondary</span><span class="c">(</span><span class="w">cp</span><span class="pc">u,</span> <span class="pc">i</span><span class="c">dle);</span>
+	<span class="c">if</span> <span class="c">(</span><span class="pc">r</span><span class="c">et</span> <span class="pc">=</span><span class="c">=</span> <span class="c">0) {</span>
+		
+		<span class="w">wait_for_completion_timeout</span><span class="pc">(&amp;</span><span class="w">cpu_running</span><span class="pc">,</span>
+					    <span class="w">ms</span><span class="pc">e</span><span class="c">cs_to_jiffies(</span><span class="w">1</span><span class="pc">000</span><span class="c">));</span>
+
+		<span class="c">if</span> <span class="pc">(!</span><span class="w">cpu_online</span><span class="c">(</span><span class="w">cp</span><span class="pc">u)) </span><span class="c">{</span>
+			<span class="w">pr_crit</span><span class="pc">("</span><span class="w">C</span><span class="pc">P</span><span class="c">U%</span><span class="w">u:</span> <span class="pc">f</span><span class="c">ailed</span> <span class="c">to</span> <span class="w">come</span> <span class="w">online</span><span class="c">\n</span><span class="pc">",</span> <span class="w">c</span><span class="pc">pu</span><span class="c">);</span>
+			<span class="w">r</span><span class="pc">et</span> <span class="c">= -</span><span class="pc">EIO</span><span class="c">;</span>
+		<span class="pc">}</span>
+	<span class="c">}</span> <span class="pc">e</span><span class="c">lse</span> <span class="c">{</span>
+		<span class="w">p</span><span class="pc">r_e</span><span class="c">rr("</span><span class="w">C</span><span class="pc">P</span><span class="c">U%</span><span class="pc">u</span><span class="c">:</span> <span class="w">f</span><span class="pc">a</span><span class="c">iled</span> <span class="c">to</span> <span class="w">boot:</span><span class="pc"> </span><span class="c">%d\n",</span> <span class="w">cp</span><span class="c">u,</span> <span class="c">ret);</span>
+	<span class="pc">}</span>
+
+	<span class="w">secondary_data.stack</span> <span class="c">=</span> <span class="w">N</span><span class="c">ULL;</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">re</span><span class="c">t;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">smp_store_cpu_info</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">cpuid</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">store_cpu_topology</span><span class="c">(cpuid</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">}</span>
+
+
+<span class="w">as</span><span class="c">mlinkage</span> <span class="w">v</span><span class="c">oid</span> <span class="w">secondary_start_kernel</span><span class="c">(</span><span class="pc">v</span><span class="c">oid)</span>
+<span class="c">{</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">m</span><span class="pc">m</span><span class="c">_struct</span> <span class="c">*mm</span> <span class="w">=</span><span class="pc"> &amp;</span><span class="w">init_mm</span><span class="pc">;</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="c">int</span> <span class="pc">c</span><span class="c">pu</span> <span class="c">=</span> <span class="w">smp_processor_id</span><span class="pc">()</span><span class="c">;</span>
+
+	
+	<span class="w">a</span><span class="pc">tomic_i</span><span class="c">nc(&amp;</span><span class="w">m</span><span class="pc">m</span><span class="c">-&gt;</span><span class="w">mm_count</span><span class="c">);</span>
+	<span class="w">cu</span><span class="c">rrent</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">active_mm</span> <span class="c">=</span> <span class="w">m</span><span class="c">m;</span>
+	<span class="w">cpumask_set_cpu</span><span class="c">(</span><span class="pc">c</span><span class="c">pu</span><span class="pc">,</span> <span class="w">mm_cpumask</span><span class="pc">(</span><span class="w">m</span><span class="c">m</span><span class="pc">)</span><span class="c">);</span>
+
+	<span class="w">set_my_cpu_offset</span><span class="c">(</span><span class="w">per_cpu_offset</span><span class="c">(</span><span class="w">sm</span><span class="c">p_processor_id</span><span class="w">()));</span>
+	<span class="w">pri</span><span class="pc">ntk("</span><span class="w">C</span><span class="pc">P</span><span class="c">U%</span><span class="pc">u</span><span class="w">:</span> <span class="w">Booted</span> <span class="w">secondary</span> <span class="w">processor</span><span class="c">\n",</span> <span class="w">c</span><span class="pc">pu</span><span class="c">);</span>
+
+	
+	<span class="w">cpu_set_reserved_ttbr0</span><span class="pc">()</span><span class="c">;</span>
+	<span class="w">flush_tlb_all</span><span class="pc">()</span><span class="c">;</span>
+	<span class="w">cpu_set_default_tcr_t0sz</span><span class="pc">()</span><span class="c">;</span>
+
+	<span class="w">preempt_disable</span><span class="c">();</span>
+	<span class="w">trace_hardirqs_off</span><span class="pc">()</span><span class="c">;</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">cpu_ops[</span><span class="pc">cpu</span><span class="w">]-</span><span class="c">&gt;</span><span class="w">cpu_postboot</span><span class="pc">)</span>
+		<span class="c">cpu_ops</span><span class="w">[c</span><span class="pc">pu</span><span class="w">]</span><span class="pc">-</span><span class="c">&gt;cpu_postboot</span><span class="w">(</span><span class="pc">)</span><span class="c">;</span>
+
+	
+	<span class="w">cpuinfo_store_cpu</span><span class="c">();</span>
+
+	
+	<span class="w">notify_cpu_starting</span><span class="pc">(</span><span class="c">cpu);</span>
+
+	<span class="w">smp_store_cpu_info</span><span class="pc">(</span><span class="c">cpu);</span>
+
+	
+	<span class="w">set_cpu_online</span><span class="pc">(</span><span class="c">cpu</span><span class="pc">,</span> <span class="w">tr</span><span class="pc">u</span><span class="c">e);</span>
+	<span class="w">co</span><span class="pc">mp</span><span class="c">lete(&amp;</span><span class="w">cpu_running</span><span class="c">);</span>
+
+	<span class="w">local_dbg_enable</span><span class="pc">()</span><span class="c">;</span>
+	<span class="w">local_irq_enable</span><span class="c">();</span>
+	<span class="w">local_async_enable</span><span class="c">();</span>
+
+	
+	<span class="w">cpu_startup_entry</span><span class="pc">(</span><span class="w">CPUHP_ONLINE</span><span class="c">);</span>
+<span class="c">}</span>
+
+<span class="w">#</span><span class="pc">i</span><span class="c">fdef</span> <span class="w">CONFIG_HOTPLUG_CPU</span>
+<span class="c">static</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">op_cpu_disable</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="c">int</span> <span class="pc">c</span><span class="c">pu)</span>
+<span class="c">{</span>
+	
+	<span class="pc">if</span> <span class="pc">(!</span><span class="w">cpu_ops[</span><span class="pc">cpu</span><span class="w">] || !c</span><span class="c">pu_ops</span><span class="w">[</span><span class="pc">cpu</span><span class="w">]</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">cpu_die</span><span class="pc">)</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="c">-</span><span class="w">EO</span><span class="c">PNOTSUPP;</span>
+
+	
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(cpu_ops</span><span class="pc">[c</span><span class="c">pu</span><span class="pc">]-</span><span class="c">&gt;</span><span class="w">cpu_disable</span><span class="pc">)</span>
+		<span class="c">return</span> <span class="pc">c</span><span class="c">pu_ops</span><span class="pc">[</span><span class="w">c</span><span class="pc">pu</span><span class="w">]</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">c</span><span class="pc">pu_dis</span><span class="c">able</span><span class="pc">(cpu</span><span class="c">);</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+
+<span class="pc">i</span><span class="c">nt</span> <span class="w">__cpu_disable</span><span class="c">(</span><span class="pc">v</span><span class="c">oid)</span>
+<span class="c">{</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="pc">i</span><span class="c">nt</span> <span class="pc">cpu</span> <span class="pc">=</span> <span class="w">smp_processor_id</span><span class="pc">()</span><span class="c">;</span>
+	<span class="pc">in</span><span class="c">t</span> <span class="w">r</span><span class="pc">e</span><span class="c">t</span><span class="pc">;</span>
+
+	<span class="w">re</span><span class="pc">t</span> <span class="c">=</span> <span class="w">op_cpu_disable</span><span class="c">(</span><span class="w">c</span><span class="pc">pu</span><span class="c">);</span>
+	<span class="c">if</span> <span class="c">(</span><span class="pc">re</span><span class="c">t)</span>
+		<span class="c">return</span> <span class="c">ret;</span>
+
+	
+	<span class="w">set_cpu_online</span><span class="c">(</span><span class="pc">c</span><span class="c">pu,</span> <span class="w">f</span><span class="pc">a</span><span class="c">lse);</span>
+
+	
+	<span class="w">migrate_irqs</span><span class="pc">()</span><span class="c">;</span>
+
+	
+	<span class="w">clear_tasks_mm_cpumask</span><span class="c">(</span><span class="w">c</span><span class="pc">p</span><span class="c">u);</span>
+
+	<span class="c">return</span> <span class="pc">0</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">op_cpu_kill</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="c">int</span> <span class="pc">c</span><span class="c">pu)</span>
+<span class="c">{</span>
+	
+	<span class="pc">if</span> <span class="pc">(!</span><span class="w">cpu_ops[</span><span class="pc">cp</span><span class="c">u</span><span class="w">]-</span><span class="c">&gt;</span><span class="w">cpu_kill</span><span class="pc">)</span>
+		<span class="c">return</span> <span class="pc">0</span><span class="c">;</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">c</span><span class="c">pu_ops</span><span class="w">[</span><span class="pc">c</span><span class="c">pu</span><span class="w">]</span><span class="pc">-</span><span class="c">&gt;</span><span class="pc">cpu_k</span><span class="c">ill</span><span class="pc">(cpu</span><span class="c">);</span>
+<span class="c">}</span>
+
+
+<span class="pc">v</span><span class="c">oid</span> <span class="w">__cpu_die</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="pc">i</span><span class="c">nt</span> <span class="c">cpu)</span>
+<span class="c">{</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="pc">e</span><span class="c">rr;</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="pc">(!</span><span class="w">cpu_wait_death</span><span class="c">(cpu</span><span class="pc">,</span> <span class="w">5</span><span class="pc">)) </span><span class="c">{</span>
+		<span class="w">pr_crit</span><span class="pc">("</span><span class="w">C</span><span class="pc">P</span><span class="c">U%</span><span class="w">u</span><span class="pc">:</span> <span class="pc">c</span><span class="c">pu</span> <span class="w">didn'</span><span class="c">t</span> <span class="w">die</span><span class="c">\n",</span> <span class="pc">c</span><span class="c">pu);</span>
+		<span class="c">return</span><span class="pc">;</span>
+	<span class="c">}</span>
+	<span class="w">pr_notice</span><span class="pc">("</span><span class="w">CP</span><span class="c">U%</span><span class="w">u:</span> <span class="w">shutdown\</span><span class="c">n",</span> <span class="w">c</span><span class="pc">pu</span><span class="c">);</span>
+
+	
+	<span class="w">e</span><span class="pc">r</span><span class="c">r</span> <span class="pc">=</span> <span class="w">op_cpu_kill</span><span class="c">(</span><span class="w">c</span><span class="pc">p</span><span class="c">u</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">if</span> <span class="c">(</span><span class="pc">e</span><span class="c">rr)</span>
+		<span class="w">p</span><span class="pc">r_w</span><span class="c">arn("</span><span class="w">C</span><span class="pc">P</span><span class="c">U%</span><span class="pc">d</span> <span class="w">may</span> <span class="w">n</span><span class="pc">o</span><span class="c">t</span> <span class="w">have</span> <span class="w">shut</span> <span class="w">down</span> <span class="w">cleanly</span><span class="pc">:</span><span class="c"> %d\n",</span>
+			<span class="w">cp</span><span class="c">u,</span> <span class="pc">e</span><span class="c">rr);</span>
+<span class="pc">}</span>
+
+
+<span class="w">v</span><span class="c">oid</span> <span class="w">cpu_die</span><span class="c">(</span><span class="pc">v</span><span class="c">oid)</span>
+<span class="c">{</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">c</span><span class="pc">p</span><span class="c">u</span> <span class="pc">=</span> <span class="w">smp_processor_id</span><span class="pc">()</span><span class="c">;</span>
+
+	<span class="w">idle_task_exit</span><span class="pc">()</span><span class="c">;</span>
+
+	<span class="w">local_irq_disable</span><span class="pc">()</span><span class="c">;</span>
+
+	
+	<span class="w">(</span><span class="c">void)</span><span class="w">cpu_report_death</span><span class="pc">()</span><span class="c">;</span>
+
+	
+	<span class="w">cpu_ops[</span><span class="pc">c</span><span class="c">pu</span><span class="w">]-</span><span class="c">&gt;</span><span class="w">cp</span><span class="pc">u_d</span><span class="c">ie</span><span class="w">(</span><span class="pc">c</span><span class="c">pu);</span>
+
+	<span class="w">B</span><span class="pc">UG</span><span class="c">();</span>
+<span class="c">}</span>
+<span class="pc">#e</span><span class="c">ndif</span>
+
+<span class="w">v</span><span class="c">oid</span> <span class="pc">__i</span><span class="c">nit</span> <span class="w">smp_cpus_done</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="c">int</span> <span class="w">max_cpus</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">p</span><span class="pc">r</span><span class="c">_info("</span><span class="w">SMP</span><span class="c">:</span> <span class="w">Total</span> <span class="w">o</span><span class="pc">f</span> <span class="pc">%d</span> <span class="w">processors</span> <span class="w">activated</span><span class="pc">.</span><span class="c">\n",</span> <span class="w">num_online_cpus(</span><span class="pc">))</span><span class="c">;</span>
+	<span class="w">do_post_cpus_up_work</span><span class="pc">()</span><span class="c">;</span>
+<span class="pc">}</span>
+
+<span class="pc">v</span><span class="c">oid</span> <span class="pc">__i</span><span class="c">nit</span> <span class="w">smp_prepare_boot_cpu</span><span class="c">(void)</span>
+<span class="c">{</span>
+	<span class="w">set_my_cpu_offset</span><span class="pc">(</span><span class="w">per_cpu_offset</span><span class="pc">(</span><span class="w">smp_processor_id()));</span>
+<span class="w">}</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="w">u</span><span class="pc">6</span><span class="c">4</span> <span class="c">__init</span> <span class="w">of_get_cpu_mpidr</span><span class="c">(</span><span class="pc">s</span><span class="c">truct</span> <span class="c">device_node</span> <span class="c">*</span><span class="w">d</span><span class="pc">n</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="w">c</span><span class="c">onst</span> <span class="w">_</span><span class="c">_be32</span> <span class="c">*</span><span class="w">cell</span><span class="c">;</span>
+	<span class="w">u</span><span class="pc">6</span><span class="c">4</span> <span class="w">hwid</span><span class="c">;</span>
+
+	
+	<span class="w">c</span><span class="pc">e</span><span class="c">ll</span> <span class="c">=</span> <span class="w">of_get_property</span><span class="c">(</span><span class="w">d</span><span class="pc">n, </span><span class="c">"</span><span class="w">r</span><span class="c">eg",</span> <span class="pc">N</span><span class="c">ULL);</span>
+	<span class="c">if</span> <span class="pc">(!</span><span class="c">cell</span><span class="pc">) </span><span class="c">{</span>
+		<span class="pc">p</span><span class="c">r_err</span><span class="pc">("%</span><span class="c">s:</span> <span class="w">missing</span> <span class="w">reg</span> <span class="w">pr</span><span class="pc">op</span><span class="c">erty\n",</span> <span class="w">dn</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">full_name</span><span class="c">);</span>
+		<span class="c">return</span> <span class="w">INVALID_HWID</span><span class="c">;</span>
+	<span class="c">}</span>
+
+	<span class="w">h</span><span class="c">wid</span> <span class="pc">=</span> <span class="w">of_read_number</span><span class="c">(cell</span><span class="pc">,</span> <span class="w">of_n_addr_cells</span><span class="pc">(</span><span class="w">d</span><span class="pc">n</span><span class="c">));</span>
+	
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(hwid</span> <span class="w">&amp; </span><span class="pc">~</span><span class="w">MPIDR_HWID_BITMASK</span><span class="pc">) </span><span class="c">{</span>
+		<span class="w">p</span><span class="pc">r_</span><span class="c">err</span><span class="pc">("%</span><span class="c">s:</span> <span class="w">i</span><span class="c">nvalid</span> <span class="w">reg</span> <span class="w">pr</span><span class="pc">op</span><span class="c">erty\n",</span> <span class="w">dn</span><span class="c">-&gt;</span><span class="pc">f</span><span class="c">ull_name);</span>
+		<span class="c">return</span> <span class="w">I</span><span class="c">NVALID_HWID;</span>
+	<span class="c">}</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">h</span><span class="c">wid;</span>
+<span class="c">}</span>
+
+
+<span class="c">static</span> <span class="w">b</span><span class="c">ool</span> <span class="c">__init</span> <span class="w">is_mpidr_duplicate</span><span class="c">(</span><span class="w">u</span><span class="c">nsigned</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">c</span><span class="pc">p</span><span class="c">u</span><span class="pc">,</span> <span class="w">u6</span><span class="c">4</span> <span class="pc">h</span><span class="c">wid</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="pc">i</span><span class="c">nt</span> <span class="c">i;</span>
+
+	<span class="c">for</span> <span class="c">(i</span> <span class="c">=</span> <span class="pc">1</span><span class="w">; (</span><span class="c">i</span> <span class="c">&lt;</span> <span class="w">cp</span><span class="c">u</span><span class="w">) &amp;</span><span class="pc">&amp; </span><span class="c">(i</span> <span class="c">&lt;</span> <span class="w">NR_CPUS</span><span class="pc">);</span> <span class="c">i++)</span>
+		<span class="c">if</span> <span class="c">(</span><span class="w">cpu_logical_map</span><span class="c">(i</span><span class="w">)</span><span class="pc"> =</span><span class="c">=</span> <span class="pc">h</span><span class="c">wid)</span>
+			<span class="c">return</span> <span class="w">t</span><span class="c">rue;</span>
+	<span class="c">return</span> <span class="w">f</span><span class="c">alse;</span>
+<span class="c">}</span>
+
+
+<span class="c">static</span> <span class="c">int</span> <span class="c">__init</span> <span class="w">smp_cpu_setup</span><span class="c">(</span><span class="pc">i</span><span class="c">nt</span> <span class="w">c</span><span class="c">pu)</span>
+<span class="c">{</span>
+	<span class="pc">if</span> <span class="c">(</span><span class="w">cpu_read_ops</span><span class="c">(</span><span class="pc">cpu)</span><span class="c">)</span>
+		<span class="c">return</span> <span class="c">-ENODEV;</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">cpu_ops[</span><span class="pc">c</span><span class="c">pu</span><span class="w">]-</span><span class="c">&gt;</span><span class="w">cpu_init(</span><span class="pc">cpu</span><span class="c">))</span>
+		<span class="c">return</span> <span class="c">-</span><span class="pc">EN</span><span class="c">ODEV;</span>
+
+	<span class="w">set_cpu_possible</span><span class="c">(</span><span class="pc">cpu,</span> <span class="w">tr</span><span class="c">ue);</span>
+
+	<span class="c">return</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="w">b</span><span class="c">ool</span> <span class="w">bootcpu_valid</span> <span class="w">_</span><span class="pc">_initd</span><span class="c">ata</span><span class="w">;</span>
+<span class="c">static</span> <span class="w">u</span><span class="c">nsigned</span> <span class="c">int</span> <span class="w">cpu_count</span> <span class="pc">=</span> <span class="pc">1</span><span class="c">;</span>
+
+<span class="pc">#</span><span class="c">ifdef</span> <span class="w">CONFIG_ACPI</span>
+
+<span class="c">static</span> <span class="pc">v</span><span class="c">oid</span> <span class="pc">__i</span><span class="c">nit</span>
+<span class="w">acpi_map_gic_cpu_interface</span><span class="c">(</span><span class="pc">s</span><span class="c">truct</span> <span class="w">acpi_madt_generic_interrupt</span> <span class="c">*</span><span class="w">processor</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">u</span><span class="pc">6</span><span class="c">4</span> <span class="w">hwid</span> <span class="pc">=</span> <span class="c">processor</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">arm_mpidr</span><span class="c">;</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="pc">(!(</span><span class="c">processor-&gt;flags</span> <span class="c">&amp;</span> <span class="w">ACPI_MADT_ENABLED</span><span class="pc">)) </span><span class="c">{</span>
+		<span class="w">p</span><span class="pc">r_</span><span class="c">debug("</span><span class="w">skipping</span> <span class="w">d</span><span class="pc">i</span><span class="c">sabled</span> <span class="w">C</span><span class="pc">P</span><span class="c">U</span> <span class="w">e</span><span class="pc">nt</span><span class="c">ry</span> <span class="w">w</span><span class="c">ith</span> <span class="pc">0</span><span class="c">x%</span><span class="w">l</span><span class="pc">l</span><span class="c">x</span> <span class="w">MPIDR</span><span class="c">\n",</span> <span class="pc">h</span><span class="c">wid);</span>
+		<span class="c">return</span><span class="pc">;</span>
+	<span class="c">}</span>
+
+	<span class="c">if</span> <span class="c">(</span><span class="pc">h</span><span class="c">wid</span> <span class="w">&amp; </span><span class="pc">~</span><span class="w">MPIDR_HWID_BITMASK</span> <span class="w">|</span><span class="c">|</span> <span class="pc">h</span><span class="c">wid</span> <span class="pc">=</span><span class="c">=</span> <span class="w">INVALID_HWID</span><span class="c">) {</span>
+		<span class="w">pr_</span><span class="pc">e</span><span class="c">rr("</span><span class="w">s</span><span class="c">kipping</span> <span class="w">C</span><span class="c">PU</span> <span class="w">en</span><span class="pc">t</span><span class="c">ry</span> <span class="w">w</span><span class="c">ith</span> <span class="w">in</span><span class="pc">v</span><span class="c">alid</span> <span class="w">M</span><span class="pc">PIDR</span> <span class="pc">0</span><span class="c">x%</span><span class="w">l</span><span class="pc">l</span><span class="c">x\n",</span> <span class="c">hwid);</span>
+		<span class="c">return</span><span class="pc">;</span>
+	<span class="c">}</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">is_mpidr_duplicate</span><span class="c">(</span><span class="w">cpu_count</span><span class="c">,</span> <span class="c">hwid</span><span class="pc">)</span><span class="c">) {</span>
+		<span class="w">p</span><span class="pc">r_</span><span class="c">err("</span><span class="w">duplicate</span> <span class="w">C</span><span class="c">PU</span> <span class="w">M</span><span class="c">PIDR</span> <span class="c">0x%</span><span class="w">l</span><span class="pc">l</span><span class="c">x</span> <span class="w">i</span><span class="pc">n</span> <span class="w">MADT</span><span class="c">\n",</span> <span class="c">hwid);</span>
+		<span class="c">return</span><span class="pc">;</span>
+	<span class="c">}</span>
+
+	
+	<span class="c">if</span> <span class="c">(</span><span class="w">cpu_logical_map</span><span class="c">(</span><span class="w">0)</span><span class="pc"> =</span><span class="c">=</span> <span class="w">h</span><span class="c">wid) {</span>
+		<span class="c">if</span> <span class="c">(</span><span class="w">bootcpu_valid)</span><span class="pc"> </span><span class="c">{</span>
+			<span class="w">p</span><span class="pc">r_</span><span class="c">err("</span><span class="w">d</span><span class="c">uplicate</span> <span class="w">boot</span> <span class="w">C</span><span class="pc">P</span><span class="c">U</span> <span class="w">M</span><span class="pc">P</span><span class="c">IDR</span><span class="w">:</span> <span class="c">0x%</span><span class="w">l</span><span class="pc">l</span><span class="c">x</span> <span class="w">i</span><span class="c">n</span> <span class="w">M</span><span class="c">ADT\n",</span>
+			       <span class="c">hwid);</span>
+			<span class="c">return</span><span class="pc">;</span>
+		<span class="c">}</span>
+		<span class="w">b</span><span class="c">ootcpu_valid</span> <span class="c">=</span> <span class="w">t</span><span class="c">rue;</span>
+		<span class="pc">r</span><span class="c">eturn</span><span class="pc">;</span>
+	<span class="c">}</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">cpu_count</span> <span class="w">&gt;</span><span class="pc">=</span> <span class="w">NR_CPUS</span><span class="pc">)</span>
+		<span class="c">return;</span>
+
+	
+	<span class="w">cpu_logical_map</span><span class="c">(cpu_count</span><span class="w">) =</span> <span class="pc">h</span><span class="c">wid;</span>
+
+	<span class="pc">c</span><span class="c">pu_count</span><span class="w">+</span><span class="pc">+</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">i</span><span class="c">nt</span> <span class="c">__init</span>
+<span class="w">acpi_parse_gic_cpu_interface</span><span class="c">(</span><span class="pc">s</span><span class="c">truct</span> <span class="w">acpi_subtable_header</span> <span class="c">*</span><span class="w">he</span><span class="c">ader,</span>
+			     <span class="pc">c</span><span class="c">onst</span> <span class="pc">un</span><span class="c">signed</span> <span class="c">long</span> <span class="w">e</span><span class="c">nd</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">acpi_madt_generic_interrupt</span> <span class="c">*</span><span class="w">processor</span><span class="pc">;</span>
+
+	<span class="pc">p</span><span class="c">rocessor</span> <span class="pc">= </span><span class="c">(</span><span class="pc">s</span><span class="c">truct</span> <span class="pc">acpi_m</span><span class="c">adt_generic_interrupt</span> <span class="c">*)</span><span class="w">he</span><span class="pc">ade</span><span class="c">r;</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="pc">(</span><span class="w">BAD_MADT_GICC_ENTRY</span><span class="c">(processor,</span> <span class="w">e</span><span class="pc">n</span><span class="c">d</span><span class="pc">)</span><span class="c">)</span>
+		<span class="c">return</span> <span class="c">-EINVAL;</span>
+
+	<span class="w">acpi_table_print_madt_entry</span><span class="c">(</span><span class="w">he</span><span class="c">ader</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="w">acpi_map_gic_cpu_interface</span><span class="c">(processor);</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">0</span><span class="c">;</span>
+<span class="c">}</span>
+<span class="pc">#el</span><span class="c">se</span>
+<span class="pc">#</span><span class="c">define</span> <span class="w">acpi_table_parse_madt(...)</span>	<span class="w">d</span><span class="c">o</span> <span class="pc">{ </span><span class="c">}</span> <span class="c">while</span> <span class="c">(0)</span>
+<span class="c">#</span><span class="pc">e</span><span class="c">ndif</span>
+
+
+<span class="w">v</span><span class="c">oid</span> <span class="pc">_</span><span class="c">_init</span> <span class="w">of_parse_and_init_cpus</span><span class="c">(void)</span>
+<span class="c">{</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="pc">d</span><span class="c">evice_node</span> <span class="c">*</span><span class="w">d</span><span class="pc">n</span> <span class="pc">=</span> <span class="pc">N</span><span class="c">ULL;</span>
+
+	<span class="w">w</span><span class="c">hile</span> <span class="pc">((</span><span class="w">dn</span> <span class="c">=</span> <span class="w">of_find_node_by_type</span><span class="c">(</span><span class="w">d</span><span class="pc">n</span><span class="w">,</span><span class="pc"> "c</span><span class="c">pu</span><span class="w">"))) {</span>
+		<span class="w">u</span><span class="pc">6</span><span class="c">4</span> <span class="w">hwid</span> <span class="c">=</span> <span class="w">of_get_cpu_mpidr</span><span class="c">(</span><span class="w">d</span><span class="pc">n</span><span class="c">);</span>
+
+		<span class="c">if</span> <span class="c">(</span><span class="pc">h</span><span class="c">wid</span> <span class="pc">=</span><span class="c">=</span> <span class="w">INVALID_HWID</span><span class="c">)</span>
+			<span class="pc">g</span><span class="c">oto</span> <span class="w">n</span><span class="pc">e</span><span class="c">xt;</span>
+
+		<span class="c">if</span> <span class="c">(</span><span class="w">is_mpidr_duplicate</span><span class="c">(</span><span class="w">cpu_count</span><span class="pc">,</span> <span class="c">hwid</span><span class="pc">)) </span><span class="c">{</span>
+			<span class="pc">pr_</span><span class="c">err</span><span class="pc">("%</span><span class="c">s:</span> <span class="w">duplicate</span> <span class="w">cp</span><span class="pc">u</span> <span class="w">reg</span> <span class="w">properties</span> <span class="w">i</span><span class="pc">n</span> <span class="w">t</span><span class="c">he</span> <span class="w">DT</span><span class="c">\n",</span>
+				<span class="w">dn</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">full_name</span><span class="c">);</span>
+			<span class="pc">g</span><span class="c">oto</span> <span class="w">n</span><span class="pc">e</span><span class="c">xt;</span>
+		<span class="c">}</span>
+
+		
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(hwid</span> <span class="pc">=</span><span class="c">=</span> <span class="w">cpu_logical_map</span><span class="pc">(</span><span class="w">0</span><span class="pc">)</span><span class="c">) {</span>
+			<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">bootcpu_valid</span><span class="pc">)</span><span class="c"> {</span>
+				<span class="pc">pr_</span><span class="c">err</span><span class="pc">("%</span><span class="c">s:</span> <span class="w">d</span><span class="c">uplicate</span> <span class="w">boot</span> <span class="w">cp</span><span class="pc">u</span> <span class="w">reg</span> <span class="w">pro</span><span class="pc">perty</span> <span class="w">i</span><span class="c">n</span> <span class="pc">D</span><span class="c">T\n",</span>
+					<span class="w">dn</span><span class="c">-&gt;</span><span class="pc">f</span><span class="c">ull_name);</span>
+				<span class="pc">g</span><span class="c">oto</span> <span class="w">n</span><span class="pc">e</span><span class="c">xt;</span>
+			<span class="c">}</span>
+
+			<span class="w">b</span><span class="pc">ootc</span><span class="c">pu_valid</span> <span class="pc">=</span> <span class="w">t</span><span class="pc">r</span><span class="c">ue;</span>
+
+			
+			<span class="w">c</span><span class="pc">o</span><span class="c">ntinue;</span>
+		<span class="c">}</span>
+
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">cpu_count</span> <span class="w">&gt;</span><span class="pc">=</span> <span class="w">NR_CPUS</span><span class="pc">)</span>
+			<span class="w">g</span><span class="c">oto</span> <span class="w">n</span><span class="pc">e</span><span class="c">xt;</span>
+
+		<span class="w">p</span><span class="c">r_debug("</span><span class="w">cp</span><span class="pc">u</span> <span class="w">logical</span> <span class="w">ma</span><span class="pc">p</span> <span class="w">0</span><span class="c">x%</span><span class="w">l</span><span class="pc">l</span><span class="c">x\n",</span> <span class="w">hwid</span><span class="pc">)</span><span class="c">;</span>
+		<span class="w">cpu_logical_map</span><span class="c">(</span><span class="w">c</span><span class="pc">pu_</span><span class="c">count</span><span class="w">)</span><span class="pc"> </span><span class="c">=</span> <span class="pc">h</span><span class="c">wid;</span>
+<span class="w">n</span><span class="pc">e</span><span class="c">xt</span><span class="w">:</span>
+		<span class="w">c</span><span class="c">pu_count</span><span class="w">+</span><span class="c">+;</span>
+	<span class="c">}</span>
+<span class="pc">}</span>
+
+
+<span class="w">v</span><span class="c">oid</span> <span class="c">__init</span> <span class="w">smp_init_cpus</span><span class="c">(void)</span>
+<span class="c">{</span>
+	<span class="c">int</span> <span class="c">i;</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">acpi_disabled)</span>
+		<span class="w">of_parse_and_init_cpus</span><span class="pc">()</span><span class="c">;</span>
+	<span class="w">el</span><span class="c">se</span>
+		
+		<span class="w">acpi_table_parse_madt</span><span class="c">(</span><span class="w">ACPI_MADT_TYPE_GENERIC_INTERRUPT</span><span class="c">,</span>
+				      <span class="w">acpi_parse_gic_cpu_interface</span><span class="pc">,</span> <span class="c">0);</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(cpu_count</span> <span class="w">&gt;</span> <span class="w">NR_CPUS</span><span class="c">)</span>
+		<span class="w">p</span><span class="pc">r_w</span><span class="c">arn("</span><span class="w">n</span><span class="c">o</span><span class="w">.</span> <span class="w">of</span> <span class="w">cores</span> <span class="w">(</span><span class="pc">%</span><span class="c">d</span><span class="pc">)</span> <span class="w">greater</span> <span class="w">than</span> <span class="w">configured</span> <span class="w">maximum</span> <span class="w">o</span><span class="c">f</span> <span class="c">%d</span> <span class="w">-</span> <span class="w">clipping</span><span class="pc">\</span><span class="c">n",</span>
+			<span class="c">cpu_count,</span> <span class="c">NR_CPUS);</span>
+
+	<span class="c">if</span> <span class="pc">(!</span><span class="w">bootcpu_valid</span><span class="pc">) </span><span class="c">{</span>
+		<span class="w">p</span><span class="pc">r_e</span><span class="c">rr("</span><span class="w">missing</span> <span class="w">boot</span> <span class="w">C</span><span class="pc">P</span><span class="c">U</span> <span class="w">MPIDR,</span> <span class="w">n</span><span class="pc">ot</span> <span class="w">enabling</span> <span class="w">secondaries</span><span class="c">\n");</span>
+		<span class="c">return</span><span class="pc">;</span>
+	<span class="c">}</span>
+
+	
+	<span class="w">f</span><span class="pc">o</span><span class="c">r</span> <span class="c">(i</span> <span class="c">=</span> <span class="pc">1</span><span class="c">;</span> <span class="c">i</span> <span class="c">&lt;</span> <span class="pc">N</span><span class="c">R_CPUS;</span> <span class="c">i++) {</span>
+		<span class="c">if</span> <span class="c">(</span><span class="w">cpu_logical_map</span><span class="c">(</span><span class="w">i) </span><span class="pc">!</span><span class="c">=</span> <span class="w">INVALID_HWID</span><span class="c">) {</span>
+			<span class="pc">if</span> <span class="c">(</span><span class="w">smp_cpu_setup</span><span class="c">(</span><span class="pc">i)</span><span class="c">)</span>
+				<span class="w">c</span><span class="pc">p</span><span class="c">u_logical_map</span><span class="pc">(</span><span class="c">i</span><span class="w">) </span><span class="pc">=</span> <span class="pc">I</span><span class="c">NVALID_HWID;</span>
+		<span class="c">}</span>
+	<span class="pc">}</span>
+<span class="pc">}</span>
+
+<span class="w">v</span><span class="c">oid</span> <span class="pc">__in</span><span class="c">it</span> <span class="w">smp_prepare_cpus</span><span class="c">(</span><span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">max_cpus</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">in</span><span class="c">t</span> <span class="pc">e</span><span class="c">rr;</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="c">int</span> <span class="w">c</span><span class="pc">pu,</span> <span class="w">ncores</span> <span class="w">=</span> <span class="w">num_possible_cpus(</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="w">init_cpu_topology</span><span class="pc">()</span><span class="c">;</span>
+
+	<span class="w">smp_store_cpu_info</span><span class="c">(</span><span class="w">smp_processor_id(</span><span class="pc">))</span><span class="c">;</span>
+
+	
+	<span class="c">if</span> <span class="c">(</span><span class="w">m</span><span class="c">ax_cpus</span> <span class="pc">&gt;</span> <span class="pc">n</span><span class="c">cores</span><span class="pc">)</span>
+		<span class="w">m</span><span class="c">ax_cpus</span> <span class="c">=</span> <span class="pc">n</span><span class="c">cores;</span>
+
+	
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="pc">m</span><span class="c">ax_cpus</span> <span class="w">&lt;</span><span class="pc">=</span> <span class="pc">1</span><span class="c">)</span>
+		<span class="c">return;</span>
+
+	
+	<span class="pc">m</span><span class="c">ax_cpus</span><span class="w">-</span><span class="pc">-</span><span class="c">;</span>
+	<span class="w">for_each_possible_cpu</span><span class="c">(</span><span class="w">c</span><span class="pc">p</span><span class="c">u</span><span class="w">)</span><span class="pc"> </span><span class="c">{</span>
+		<span class="c">if</span> <span class="c">(max_cpus</span> <span class="c">==</span> <span class="c">0)</span>
+			<span class="pc">b</span><span class="c">reak;</span>
+
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">cp</span><span class="c">u</span> <span class="c">==</span> <span class="w">s</span><span class="c">mp_processor_id</span><span class="w">(</span><span class="pc">)</span><span class="c">)</span>
+			<span class="pc">c</span><span class="c">ontinue;</span>
+
+		<span class="c">if</span> <span class="pc">(!</span><span class="w">cpu_ops[c</span><span class="c">pu</span><span class="pc">])</span>
+			<span class="pc">c</span><span class="c">ontinue;</span>
+
+		<span class="w">e</span><span class="pc">r</span><span class="c">r</span> <span class="c">=</span> <span class="c">cpu_ops</span><span class="pc">[c</span><span class="c">pu</span><span class="pc">]-</span><span class="c">&gt;</span><span class="w">cpu_prepare(</span><span class="pc">cpu</span><span class="c">);</span>
+		<span class="c">if</span> <span class="c">(</span><span class="pc">e</span><span class="c">rr)</span>
+			<span class="pc">c</span><span class="c">ontinue;</span>
+
+		<span class="w">set_cpu_present</span><span class="c">(</span><span class="pc">cpu,</span> <span class="w">tr</span><span class="c">ue);</span>
+		<span class="w">max_cpus-</span><span class="pc">-</span><span class="c">;</span>
+	<span class="c">}</span>
+<span class="pc">}</span>
+
+<span class="w">v</span><span class="c">oid</span> <span class="w">(</span><span class="c">*</span><span class="w">__smp_cross_call</span><span class="c">)(</span><span class="w">c</span><span class="pc">o</span><span class="c">nst</span> <span class="c">struct</span> <span class="w">cpumask</span> <span class="pc">*,</span> <span class="pc">u</span><span class="c">nsigned</span> <span class="c">int</span><span class="w">)</span><span class="pc">;</span>
+
+<span class="c">void</span> <span class="pc">_</span><span class="c">_init</span> <span class="w">set_smp_cross_call</span><span class="c">(void</span> <span class="pc">(</span><span class="c">*</span><span class="w">f</span><span class="pc">n</span><span class="c">)(</span><span class="pc">c</span><span class="c">onst</span> <span class="pc">s</span><span class="c">truct</span> <span class="c">cpumask</span> <span class="pc">*,</span> <span class="c">unsigned</span> <span class="c">int</span><span class="w">)</span><span class="pc">)</span>
+<span class="w">{</span>
+	<span class="w">_</span><span class="pc">_s</span><span class="c">mp_cross_call</span> <span class="pc">=</span> <span class="w">f</span><span class="pc">n;</span>
+<span class="w">}</span>
+
+<span class="c">static</span> <span class="pc">c</span><span class="c">onst</span> <span class="pc">c</span><span class="c">har</span> <span class="c">*</span><span class="w">ipi_types</span><span class="pc">[</span><span class="w">NR_IPI]</span> <span class="w">__tracepoint_string</span> <span class="w">=</span><span class="pc"> </span><span class="c">{</span>
+<span class="pc">#d</span><span class="c">efine</span> <span class="w">S</span><span class="c">(</span><span class="w">x</span><span class="c">,</span><span class="w">s)	[x] </span><span class="c">=</span> <span class="w">s</span>
+	<span class="w">S(IPI_RESCHEDULE,</span><span class="pc"> </span><span class="c">"</span><span class="w">Rescheduling</span> <span class="w">interrupts")</span><span class="pc">,</span>
+	<span class="w">S</span><span class="c">(</span><span class="w">IPI_CALL_FUNC</span><span class="pc">, </span><span class="c">"</span><span class="w">Function</span> <span class="w">cal</span><span class="c">l</span> <span class="w">i</span><span class="pc">n</span><span class="c">terrupts</span><span class="w">"</span><span class="pc">),</span>
+	<span class="w">S</span><span class="c">(</span><span class="w">IPI_CPU_STOP</span><span class="c">, "</span><span class="w">C</span><span class="pc">P</span><span class="c">U</span> <span class="w">s</span><span class="pc">to</span><span class="c">p</span> <span class="c">interrupts</span><span class="pc">"</span><span class="c">),</span>
+	<span class="w">S</span><span class="c">(</span><span class="w">IPI_TIMER</span><span class="c">, "</span><span class="w">Timer</span> <span class="w">broadcast</span> <span class="w">i</span><span class="c">nterrupts</span><span class="pc">"</span><span class="c">),</span>
+	<span class="w">S</span><span class="c">(</span><span class="w">IPI_IRQ_WORK</span><span class="c">, "</span><span class="w">IR</span><span class="c">Q</span> <span class="w">w</span><span class="pc">o</span><span class="c">rk</span> <span class="c">interrupts"),</span>
+<span class="w">}</span><span class="pc">;</span>
+
+<span class="c">static</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">smp_cross_call</span><span class="c">(</span><span class="pc">c</span><span class="c">onst</span> <span class="c">struct</span> <span class="w">cpumask</span> <span class="c">*</span><span class="w">ta</span><span class="pc">r</span><span class="c">get,</span> <span class="w">u</span><span class="pc">ns</span><span class="c">igned</span> <span class="c">int</span> <span class="w">ipinr</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">trace_ipi_raise</span><span class="c">(</span><span class="w">ta</span><span class="pc">r</span><span class="c">get</span><span class="pc">,</span> <span class="w">ipi_types[</span><span class="pc">i</span><span class="c">pinr</span><span class="w">]</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">__smp_cross_call</span><span class="c">(</span><span class="w">ta</span><span class="pc">r</span><span class="c">get,</span> <span class="c">ipinr);</span>
+<span class="pc">}</span>
+
+<span class="w">v</span><span class="c">oid</span> <span class="w">show_ipi_list</span><span class="c">(struct</span> <span class="w">s</span><span class="c">eq_file</span> <span class="c">*</span><span class="w">p</span><span class="c">,</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">prec</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">c</span><span class="pc">pu,</span> <span class="w">i</span><span class="c">;</span>
+
+	<span class="pc">f</span><span class="c">or</span> <span class="c">(i</span> <span class="c">=</span> <span class="c">0;</span> <span class="c">i</span> <span class="c">&lt;</span> <span class="w">NR_IPI</span><span class="c">;</span> <span class="c">i++) {</span>
+		<span class="w">s</span><span class="pc">e</span><span class="c">q_printf(</span><span class="w">p, "%*s</span><span class="c">%</span><span class="w">u</span><span class="pc">:</span><span class="c">%</span><span class="pc">s</span><span class="c">",</span> <span class="pc">p</span><span class="c">rec</span> <span class="w">-</span> <span class="w">1,</span><span class="pc"> </span><span class="c">"</span><span class="w">IPI</span><span class="c">",</span> <span class="pc">i</span><span class="c">,</span>
+			   <span class="c">prec</span> <span class="w">&gt;</span><span class="pc">=</span> <span class="pc">4</span> <span class="w">? " " : "");</span>
+		<span class="w">for_each_online_cpu</span><span class="pc">(</span><span class="w">c</span><span class="pc">p</span><span class="c">u</span><span class="pc">)</span>
+			<span class="w">s</span><span class="c">eq_printf(</span><span class="w">p</span><span class="pc">, "%</span><span class="w">10u</span> <span class="c">",</span>
+				   <span class="w">__get_irq_stat</span><span class="c">(</span><span class="w">c</span><span class="pc">pu,</span> <span class="w">ipi_irqs</span><span class="pc">[</span><span class="c">i</span><span class="pc">]))</span><span class="c">;</span>
+		<span class="c">seq_printf(</span><span class="w">p, "      %</span><span class="c">s</span><span class="pc">\</span><span class="c">n",</span> <span class="w">ipi_types</span><span class="c">[i]);</span>
+	<span class="pc">}</span>
+<span class="pc">}</span>
+
+<span class="w">u6</span><span class="c">4</span> <span class="w">smp_irq_stat_cpu</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="pc">i</span><span class="c">nt</span> <span class="pc">c</span><span class="c">pu</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">u</span><span class="pc">6</span><span class="c">4</span> <span class="w">su</span><span class="c">m</span> <span class="pc">=</span> <span class="pc">0</span><span class="c">;</span>
+	<span class="w">i</span><span class="pc">n</span><span class="c">t</span> <span class="c">i;</span>
+
+	<span class="pc">f</span><span class="c">or</span> <span class="c">(i</span> <span class="c">=</span> <span class="c">0;</span> <span class="c">i</span> <span class="c">&lt;</span> <span class="w">NR_IPI</span><span class="c">;</span> <span class="c">i</span><span class="pc">++)</span>
+		<span class="w">s</span><span class="pc">u</span><span class="c">m</span> <span class="c">+=</span> <span class="w">__get_irq_stat</span><span class="c">(</span><span class="w">cp</span><span class="c">u</span><span class="pc">,</span> <span class="w">ipi_irqs</span><span class="pc">[</span><span class="c">i</span><span class="pc">])</span><span class="c">;</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">s</span><span class="pc">u</span><span class="c">m;</span>
+<span class="c">}</span>
+
+<span class="pc">v</span><span class="c">oid</span> <span class="w">arch_send_call_function_ipi_mask</span><span class="c">(</span><span class="pc">c</span><span class="c">onst</span> <span class="c">struct</span> <span class="w">cpumask</span> <span class="c">*</span><span class="w">ma</span><span class="pc">s</span><span class="c">k</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">smp_cross_call</span><span class="c">(</span><span class="w">m</span><span class="pc">as</span><span class="c">k</span><span class="pc">,</span> <span class="w">IPI_CALL_FUNC</span><span class="c">);</span>
+<span class="c">}</span>
+
+<span class="pc">v</span><span class="c">oid</span> <span class="w">arch_send_call_function_single_ipi</span><span class="c">(</span><span class="pc">i</span><span class="c">nt</span> <span class="pc">cpu)</span>
+<span class="c">{</span>
+	<span class="w">s</span><span class="pc">m</span><span class="c">p_cross_call(</span><span class="w">cpumask_of</span><span class="pc">(c</span><span class="c">pu</span><span class="pc">)</span><span class="c">,</span> <span class="pc">I</span><span class="c">PI_CALL_FUNC);</span>
+<span class="c">}</span>
+
+<span class="pc">#i</span><span class="c">fdef</span> <span class="w">CONFIG_IRQ_WORK</span>
+<span class="pc">v</span><span class="c">oid</span> <span class="w">arch_irq_work_raise</span><span class="c">(void)</span>
+<span class="c">{</span>
+	<span class="w">i</span><span class="pc">f</span> <span class="c">(</span><span class="w">__smp_cross_call</span><span class="pc">)</span>
+		<span class="c">smp_cross_call(</span><span class="pc">c</span><span class="c">pumask_of</span><span class="pc">(</span><span class="w">smp_processor_id()),</span> <span class="w">IPI_IRQ_WORK</span><span class="pc">);</span>
+<span class="c">}</span>
+<span class="c">#</span><span class="pc">en</span><span class="c">dif</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="w">DEFINE_RAW_SPINLOCK</span><span class="c">(</span><span class="w">stop_lock</span><span class="c">);</span>
+
+
+<span class="c">static</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">ipi_cpu_stop</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="c">int</span> <span class="pc">cpu</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="c">if</span> <span class="c">(</span><span class="w">system_state</span> <span class="w">=</span><span class="c">=</span> <span class="w">SYSTEM_BOOTING</span> <span class="pc">|</span><span class="c">|</span>
+	    <span class="pc">s</span><span class="c">ystem_state</span> <span class="c">==</span> <span class="w">SYSTEM_RUNNING</span><span class="pc">) </span><span class="c">{</span>
+		<span class="w">raw_spin_lock</span><span class="pc">(&amp;</span><span class="w">s</span><span class="pc">t</span><span class="c">op_lock</span><span class="pc">)</span><span class="c">;</span>
+		<span class="w">pr_crit(</span><span class="pc">"</span><span class="w">C</span><span class="pc">P</span><span class="c">U%</span><span class="w">u</span><span class="pc">:</span> <span class="w">stopping</span><span class="pc">\</span><span class="c">n</span><span class="pc">",</span> <span class="w">c</span><span class="c">pu);</span>
+		<span class="w">dump_stack</span><span class="pc">()</span><span class="c">;</span>
+		<span class="w">raw_spin_unlock</span><span class="pc">(&amp;st</span><span class="c">op_lock);</span>
+	<span class="pc">}</span>
+
+	<span class="w">set_cpu_online</span><span class="c">(</span><span class="w">c</span><span class="c">pu</span><span class="pc">,</span> <span class="w">f</span><span class="pc">a</span><span class="c">lse);</span>
+
+	<span class="w">local_irq_disable</span><span class="pc">()</span><span class="c">;</span>
+
+	<span class="w">w</span><span class="c">hile</span> <span class="c">(</span><span class="w">1</span><span class="pc">)</span>
+		<span class="w">cpu_relax</span><span class="pc">()</span><span class="c">;</span>
+<span class="c">}</span>
+
+
+<span class="pc">v</span><span class="c">oid</span> <span class="w">handle_IPI</span><span class="c">(</span><span class="pc">i</span><span class="c">nt</span> <span class="w">ipinr</span><span class="c">,</span> <span class="w">s</span><span class="c">truct</span> <span class="w">p</span><span class="pc">t</span><span class="c">_regs</span> <span class="c">*</span><span class="w">re</span><span class="pc">g</span><span class="c">s</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">c</span><span class="c">pu</span> <span class="pc">=</span> <span class="w">smp_processor_id</span><span class="pc">()</span><span class="c">;</span>
+	<span class="w">s</span><span class="c">truct</span> <span class="w">p</span><span class="pc">t</span><span class="c">_regs</span> <span class="c">*</span><span class="w">old_regs</span> <span class="pc">=</span> <span class="w">set_irq_regs</span><span class="c">(</span><span class="w">r</span><span class="pc">eg</span><span class="c">s);</span>
+
+	<span class="w">i</span><span class="pc">f</span> <span class="pc">((</span><span class="w">u</span><span class="pc">ns</span><span class="c">igned</span><span class="pc">)i</span><span class="c">pinr</span> <span class="w">&lt;</span> <span class="w">NR_IPI)</span><span class="pc"> </span><span class="c">{</span>
+		<span class="w">trace_ipi_entry_rcuidle</span><span class="c">(</span><span class="w">ipi_types[i</span><span class="pc">p</span><span class="c">inr</span><span class="pc">]</span><span class="c">);</span>
+		<span class="w">__inc_irq_stat</span><span class="c">(</span><span class="w">c</span><span class="pc">p</span><span class="c">u</span><span class="pc">,</span> <span class="w">ipi_irqs[</span><span class="pc">ip</span><span class="c">inr</span><span class="pc">]</span><span class="c">);</span>
+	<span class="c">}</span>
+
+	<span class="w">sw</span><span class="c">itch</span> <span class="c">(</span><span class="w">i</span><span class="pc">pin</span><span class="c">r) {</span>
+	<span class="c">case</span> <span class="w">IPI_RESCHEDULE</span><span class="c">:</span>
+		<span class="w">scheduler_ipi</span><span class="pc">()</span><span class="c">;</span>
+		<span class="pc">b</span><span class="c">reak;</span>
+
+	<span class="c">case</span> <span class="w">IPI_CALL_FUNC</span><span class="c">:</span>
+		<span class="w">irq_enter</span><span class="pc">()</span><span class="c">;</span>
+		<span class="w">generic_smp_call_function_interrupt</span><span class="pc">()</span><span class="c">;</span>
+		<span class="w">irq_exit</span><span class="pc">()</span><span class="c">;</span>
+		<span class="pc">b</span><span class="c">reak;</span>
+
+	<span class="c">case</span> <span class="w">IPI_CPU_STOP</span><span class="c">:</span>
+		<span class="w">i</span><span class="pc">r</span><span class="c">q_enter</span><span class="w">(</span><span class="pc">)</span><span class="c">;</span>
+		<span class="w">ipi_cpu_stop</span><span class="c">(</span><span class="w">c</span><span class="pc">p</span><span class="c">u);</span>
+		<span class="w">i</span><span class="pc">rq_ex</span><span class="c">it</span><span class="w">(</span><span class="pc">)</span><span class="c">;</span>
+		<span class="pc">b</span><span class="c">reak;</span>
+
+<span class="w">#</span><span class="pc">ifd</span><span class="c">ef</span> <span class="w">CONFIG_GENERIC_CLOCKEVENTS_BROADCAST</span>
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">IPI_TIMER</span><span class="c">:</span>
+		<span class="w">i</span><span class="pc">r</span><span class="c">q_enter();</span>
+		<span class="w">tick_receive_broadcast</span><span class="c">();</span>
+		<span class="w">i</span><span class="pc">rq_ex</span><span class="c">it();</span>
+		<span class="pc">b</span><span class="c">reak;</span>
+<span class="w">#</span><span class="c">endif</span>
+
+<span class="pc">#ifd</span><span class="c">ef</span> <span class="w">CONFIG_IRQ_WORK</span>
+	<span class="pc">c</span><span class="c">ase</span> <span class="w">IPI_IRQ_WORK</span><span class="c">:</span>
+		<span class="pc">i</span><span class="c">rq_enter();</span>
+		<span class="w">irq_work_run</span><span class="c">();</span>
+		<span class="w">i</span><span class="pc">rq_ex</span><span class="c">it();</span>
+		<span class="w">b</span><span class="c">reak;</span>
+<span class="pc">#</span><span class="c">endif</span>
+
+	<span class="pc">d</span><span class="c">efault:</span>
+		<span class="w">pr_crit</span><span class="pc">("</span><span class="w">CP</span><span class="c">U%</span><span class="w">u</span><span class="pc">:</span> <span class="w">U</span><span class="c">nknown</span> <span class="w">IPI</span> <span class="w">me</span><span class="pc">s</span><span class="c">sage</span> <span class="w">0</span><span class="c">x%x\n",</span> <span class="w">c</span><span class="pc">p</span><span class="c">u</span><span class="pc">,</span> <span class="w">ipinr</span><span class="pc">)</span><span class="c">;</span>
+		<span class="w">b</span><span class="c">reak;</span>
+	<span class="c">}</span>
+
+	<span class="c">if</span> <span class="pc">((u</span><span class="c">nsigned</span><span class="w">)ip</span><span class="c">inr</span> <span class="w">&lt;</span> <span class="w">NR_IPI)</span>
+		<span class="w">trace_ipi_exit_rcuidle</span><span class="c">(</span><span class="w">ipi_types[i</span><span class="pc">p</span><span class="c">inr]);</span>
+	<span class="w">set_irq_regs</span><span class="c">(</span><span class="w">old_regs</span><span class="pc">);</span>
+<span class="c">}</span>
+
+<span class="w">v</span><span class="c">oid</span> <span class="w">smp_send_reschedule</span><span class="c">(</span><span class="pc">i</span><span class="c">nt</span> <span class="w">c</span><span class="pc">p</span><span class="c">u</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">smp_cross_call</span><span class="c">(</span><span class="w">cpumask_of</span><span class="pc">(</span><span class="w">c</span><span class="pc">p</span><span class="c">u</span><span class="pc">),</span> <span class="w">IPI_RESCHEDULE</span><span class="c">);</span>
+<span class="c">}</span>
+
+<span class="pc">#i</span><span class="c">fdef</span> <span class="w">CONFIG_GENERIC_CLOCKEVENTS_BROADCAST</span>
+<span class="pc">v</span><span class="c">oid</span> <span class="w">tick_broadcast</span><span class="c">(</span><span class="w">c</span><span class="pc">o</span><span class="c">nst</span> <span class="c">struct</span> <span class="w">cpumask</span> <span class="c">*</span><span class="w">ma</span><span class="pc">sk)</span>
+<span class="c">{</span>
+	<span class="w">s</span><span class="pc">m</span><span class="c">p_cross_call(</span><span class="w">m</span><span class="pc">as</span><span class="c">k</span><span class="pc">,</span> <span class="w">IPI_TIMER</span><span class="c">);</span>
+<span class="c">}</span>
+<span class="pc">#</span><span class="c">endif</span>
+
+<span class="pc">v</span><span class="c">oid</span> <span class="w">smp_send_stop</span><span class="c">(</span><span class="pc">v</span><span class="c">oid)</span>
+<span class="c">{</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="c">long</span> <span class="w">t</span><span class="pc">i</span><span class="c">meout;</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">num_online_cpus() &gt;</span> <span class="w">1</span><span class="pc">) </span><span class="c">{</span>
+		<span class="w">cpumask_t</span> <span class="w">m</span><span class="pc">as</span><span class="c">k;</span>
+
+		<span class="w">cpumask_copy</span><span class="pc">(&amp;</span><span class="w">m</span><span class="pc">as</span><span class="c">k</span><span class="pc">,</span> <span class="w">cpu_online_mask</span><span class="c">);</span>
+		<span class="w">cpumask_clear_cpu</span><span class="c">(</span><span class="w">smp_processor_id(), &amp;m</span><span class="c">ask);</span>
+
+		<span class="w">s</span><span class="pc">mp_c</span><span class="c">ross_call</span><span class="pc">(&amp;</span><span class="w">m</span><span class="pc">as</span><span class="c">k</span><span class="pc">,</span> <span class="w">IPI_CPU_STOP</span><span class="c">);</span>
+	<span class="c">}</span>
+
+	
+	<span class="w">t</span><span class="pc">i</span><span class="c">meout</span> <span class="pc">=</span> <span class="w">USEC_PER_SEC</span><span class="pc">;</span>
+	<span class="pc">w</span><span class="c">hile</span> <span class="c">(</span><span class="w">n</span><span class="c">um_online_cpus</span><span class="w">(</span><span class="pc">) </span><span class="c">&gt;</span> <span class="pc">1</span> <span class="w">&amp;</span><span class="pc">&amp;</span> <span class="w">t</span><span class="c">imeout</span><span class="w">--)</span>
+		<span class="w">u</span><span class="pc">d</span><span class="c">elay(1);</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="pc">n</span><span class="c">um_online_cpus</span><span class="w">() </span><span class="c">&gt;</span> <span class="w">1</span><span class="c">)</span>
+		<span class="w">pr_warning(</span><span class="pc">"</span><span class="w">SMP</span><span class="pc">:</span> <span class="w">f</span><span class="pc">ai</span><span class="c">led</span> <span class="c">to</span> <span class="w">st</span><span class="pc">o</span><span class="c">p</span> <span class="w">secondary</span> <span class="w">CPUs</span><span class="c">\n");</span>
+<span class="pc">}</span>
+
+
+<span class="w">i</span><span class="pc">n</span><span class="c">t</span> <span class="w">setup_profiling_timer</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="c">int</span> <span class="w">multiplier</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">r</span><span class="c">eturn</span> <span class="pc">-E</span><span class="c">INVAL;</span>
+<span class="c">}</span>
+
+</pre>
+</body>
+</html>
+

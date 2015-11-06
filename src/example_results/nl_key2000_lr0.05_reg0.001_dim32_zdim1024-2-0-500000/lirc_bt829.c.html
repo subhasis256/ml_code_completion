@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+<span class="w">#define</span> <span class="w">pr_fmt(fmt)</span> <span class="w">KBUILD_MODNAME</span> <span class="w">": "</span> <span class="w">fmt</span>
+
+<span class="w">#include</span> <span class="w">&lt;linux/kernel.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/module.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/threads.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux</span><span class="c">/</span><span class="w">sc</span><span class="c">hed.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">ioport</span><span class="c">.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">p</span><span class="pc">c</span><span class="c">i.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="pc">d</span><span class="c">elay.h&gt;</span>
+
+<span class="c">#include</span> <span class="c">&lt;</span><span class="pc">me</span><span class="c">dia/</span><span class="w">lirc_dev</span><span class="pc">.</span><span class="c">h&gt;</span>
+
+<span class="pc">sta</span><span class="c">tic</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">poll_main</span><span class="c">(</span><span class="pc">v</span><span class="c">oid);</span>
+<span class="c">static</span> <span class="c">int</span> <span class="w">atir_init_start</span><span class="c">(</span><span class="pc">v</span><span class="c">oid);</span>
+
+<span class="c">static</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">write_index</span><span class="c">(</span><span class="w">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">har</span> <span class="w">in</span><span class="pc">d</span><span class="c">ex,</span> <span class="pc">u</span><span class="c">nsigned</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">v</span><span class="pc">alu</span><span class="c">e</span><span class="pc">);</span>
+<span class="c">static</span> <span class="pc">u</span><span class="c">nsigned</span> <span class="c">int</span> <span class="w">read_index</span><span class="c">(unsigned</span> <span class="pc">c</span><span class="c">har</span> <span class="w">in</span><span class="c">dex</span><span class="pc">);</span>
+
+<span class="c">static</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">do_i2c_start</span><span class="c">(void);</span>
+<span class="pc">s</span><span class="c">tatic</span> <span class="c">void</span> <span class="w">do_i2c_stop</span><span class="c">(void</span><span class="pc">);</span>
+
+<span class="c">static</span> <span class="c">void</span> <span class="w">seems_wr_byte</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">har</span> <span class="w">al</span><span class="pc">);</span>
+<span class="c">static</span> <span class="pc">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">har</span> <span class="w">seems_rd_byte</span><span class="c">(</span><span class="pc">v</span><span class="c">oid</span><span class="pc">);</span>
+
+<span class="c">static</span> <span class="pc">u</span><span class="c">nsigned</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">r</span><span class="c">ead_index</span><span class="pc">(u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">har</span> <span class="w">a</span><span class="c">l</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">static</span> <span class="c">void</span> <span class="w">write_index</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="c">char</span> <span class="w">ah</span><span class="c">,</span> <span class="c">unsigned</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">edx</span><span class="pc">)</span><span class="c">;</span>
+
+<span class="c">static</span> <span class="c">void</span> <span class="w">cycle_delay</span><span class="c">(</span><span class="pc">i</span><span class="c">nt</span> <span class="w">cycle</span><span class="pc">);</span>
+
+<span class="c">static</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">do_set_bits</span><span class="c">(unsigned</span> <span class="pc">c</span><span class="c">har</span> <span class="w">bl</span><span class="pc">);</span>
+<span class="c">static</span> <span class="pc">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">har</span> <span class="w">do_get_bits</span><span class="c">(</span><span class="pc">v</span><span class="c">oid</span><span class="pc">);</span>
+
+<span class="pc">#d</span><span class="c">efine</span> <span class="w">DATA_PCI_OFF</span> <span class="w">0x7FFC00</span>
+<span class="c">#define</span> <span class="w">WAIT_CYCLE</span>   <span class="w">2</span><span class="pc">0</span>
+
+<span class="pc">#</span><span class="c">define</span> <span class="w">DRIVER_NAME</span> <span class="w">"lirc_bt829</span><span class="c">"</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="w">b</span><span class="c">ool</span> <span class="w">d</span><span class="pc">e</span><span class="c">bug</span><span class="pc">;</span>
+
+<span class="c">static</span> <span class="pc">int</span> <span class="w">atir_minor</span><span class="pc">;</span>
+<span class="c">static</span> <span class="w">p</span><span class="c">hys_addr_t</span> <span class="w">pci_addr_phys</span><span class="pc">;</span>
+<span class="c">static</span> <span class="pc">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">har</span> <span class="w">_</span><span class="pc">_io</span><span class="c">mem</span> <span class="c">*</span><span class="w">pci_addr_lin</span><span class="pc">;</span>
+
+<span class="c">static</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">lirc_driver</span> <span class="w">atir_driver</span><span class="c">;</span>
+
+<span class="c">static</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">p</span><span class="c">ci_dev</span> <span class="c">*</span><span class="w">do_pci_probe</span><span class="c">(</span><span class="pc">v</span><span class="c">oid</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="c">pci_dev</span> <span class="c">*</span><span class="w">my_dev</span><span class="pc">;</span>
+
+	<span class="w">m</span><span class="c">y_dev</span> <span class="c">=</span> <span class="w">pci_get_device</span><span class="c">(</span><span class="w">PCI_VENDOR_ID_ATI</span><span class="pc">,</span>
+				<span class="w">PCI_DEVICE_ID_ATI_264VT</span><span class="c">,</span> <span class="pc">N</span><span class="c">ULL);</span>
+	<span class="c">if</span> <span class="c">(my_dev</span><span class="pc">) </span><span class="c">{</span>
+		<span class="pc">pr_</span><span class="c">err("</span><span class="w">Using</span> <span class="w">d</span><span class="c">evice</span><span class="w">:</span><span class="c"> %s\n",</span> <span class="w">pci_name</span><span class="pc">(m</span><span class="c">y_dev));</span>
+		<span class="w">pci_addr_phys</span> <span class="pc">=</span> <span class="w">0</span><span class="c">;</span>
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(my_dev-&gt;</span><span class="w">r</span><span class="pc">eso</span><span class="c">urce[0].</span><span class="w">f</span><span class="c">lags</span> <span class="c">&amp;</span> <span class="w">I</span><span class="c">ORESOURCE_MEM) {</span>
+			<span class="w">p</span><span class="pc">ci_a</span><span class="c">ddr_phys</span> <span class="pc">=</span> <span class="pc">m</span><span class="c">y_dev</span><span class="pc">-</span><span class="c">&gt;</span><span class="pc">r</span><span class="c">esource[0].start;</span>
+			<span class="w">pr_</span><span class="pc">i</span><span class="c">nfo("</span><span class="w">m</span><span class="pc">emo</span><span class="c">ry</span> <span class="w">a</span><span class="pc">t</span> <span class="c">%</span><span class="w">pa</span><span class="c">\n</span><span class="w">",</span><span class="pc"> &amp;p</span><span class="c">ci_addr_phys);</span>
+		<span class="pc">}</span>
+		<span class="c">if</span> <span class="c">(</span><span class="pc">p</span><span class="c">ci_addr_phys</span> <span class="pc">=</span><span class="c">=</span> <span class="pc">0</span><span class="c">) {</span>
+			<span class="w">p</span><span class="pc">r_</span><span class="c">err("</span><span class="pc">n</span><span class="c">o</span> <span class="pc">me</span><span class="c">mory</span> <span class="w">r</span><span class="c">esource</span> <span class="w">?\n</span><span class="c">");</span>
+			<span class="w">pci_dev_put</span><span class="c">(</span><span class="pc">m</span><span class="c">y_dev);</span>
+			<span class="pc">r</span><span class="c">eturn</span> <span class="w">N</span><span class="c">ULL;</span>
+		<span class="c">}</span>
+	<span class="c">}</span> <span class="pc">e</span><span class="c">lse</span> <span class="c">{</span>
+		<span class="w">pr</span><span class="pc">_e</span><span class="c">rr("</span><span class="w">pci_probe</span> <span class="w">f</span><span class="pc">a</span><span class="c">iled</span><span class="pc">\</span><span class="c">n");</span>
+		<span class="c">return</span> <span class="pc">N</span><span class="c">ULL;</span>
+	<span class="c">}</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">m</span><span class="c">y_dev;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">atir_add_to_buf</span><span class="c">(</span><span class="pc">v</span><span class="c">oid</span> <span class="pc">*</span><span class="c">data,</span> <span class="pc">s</span><span class="c">truct</span> <span class="w">lirc_buffer</span> <span class="c">*</span><span class="w">b</span><span class="c">uf)</span>
+<span class="c">{</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">har</span> <span class="w">k</span><span class="c">ey;</span>
+	<span class="c">int</span> <span class="pc">s</span><span class="c">tatus;</span>
+
+	<span class="w">st</span><span class="pc">atu</span><span class="c">s</span> <span class="c">=</span> <span class="w">poll_main(</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">k</span><span class="pc">e</span><span class="c">y</span> <span class="pc">= </span><span class="c">(</span><span class="w">s</span><span class="pc">ta</span><span class="c">tus</span> <span class="w">&gt;</span><span class="c">&gt;</span> <span class="c">8</span><span class="pc">) </span><span class="c">&amp;</span> <span class="pc">0xF</span><span class="c">F;</span>
+	<span class="c">if</span> <span class="c">(status</span> <span class="c">&amp;</span> <span class="w">0</span><span class="pc">xF</span><span class="c">F</span><span class="pc">) </span><span class="c">{</span>
+		<span class="w">d</span><span class="pc">ev_d</span><span class="c">bg(</span><span class="w">atir_driver.</span><span class="c">dev, "</span><span class="w">reading</span> <span class="w">k</span><span class="c">ey</span> <span class="pc">%</span><span class="w">02</span><span class="pc">X</span><span class="c">\n",</span> <span class="w">k</span><span class="c">ey);</span>
+		<span class="w">lirc_buffer_write</span><span class="c">(</span><span class="w">b</span><span class="pc">uf, </span><span class="c">&amp;</span><span class="w">k</span><span class="c">ey);</span>
+		<span class="pc">r</span><span class="c">eturn</span> <span class="w">0</span><span class="c">;</span>
+	<span class="c">}</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="pc">-</span><span class="w">ENODATA</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="c">int</span> <span class="w">atir_set_use_inc</span><span class="c">(</span><span class="pc">v</span><span class="c">oid</span> <span class="c">*data</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">d</span><span class="pc">ev_</span><span class="c">dbg</span><span class="pc">(atir_d</span><span class="c">river</span><span class="w">.</span><span class="c">dev, "</span><span class="w">d</span><span class="pc">r</span><span class="c">iver</span> <span class="w">i</span><span class="pc">s</span> <span class="w">opened</span><span class="c">\n");</span>
+	<span class="c">return</span> <span class="pc">0</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">atir_set_use_dec</span><span class="c">(</span><span class="pc">v</span><span class="c">oid</span> <span class="pc">*</span><span class="c">data</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">d</span><span class="pc">ev_</span><span class="c">dbg(</span><span class="pc">a</span><span class="c">tir_driver</span><span class="pc">.</span><span class="c">dev, "</span><span class="w">d</span><span class="pc">r</span><span class="c">iver</span> <span class="w">i</span><span class="c">s</span> <span class="w">closed</span><span class="c">\n");</span>
+<span class="pc">}</span>
+
+<span class="w">i</span><span class="pc">n</span><span class="c">t</span> <span class="w">init_module</span><span class="c">(</span><span class="pc">v</span><span class="c">oid)</span>
+<span class="c">{</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="c">pci_dev</span> <span class="c">*</span><span class="pc">p</span><span class="c">dev</span><span class="pc">;</span>
+	<span class="pc">in</span><span class="c">t</span> <span class="w">r</span><span class="pc">c</span><span class="c">;</span>
+
+	<span class="w">p</span><span class="pc">d</span><span class="c">ev</span> <span class="c">=</span> <span class="w">do_pci_probe</span><span class="pc">()</span><span class="c">;</span>
+	<span class="c">if</span> <span class="c">(pdev</span> <span class="pc">=</span><span class="c">=</span> <span class="c">NULL)</span>
+		<span class="c">return</span> <span class="pc">-</span><span class="c">ENODEV;</span>
+
+	<span class="w">r</span><span class="pc">c</span> <span class="c">=</span> <span class="w">pci_enable_device</span><span class="c">(pdev);</span>
+	<span class="c">if</span> <span class="c">(rc)</span>
+		<span class="pc">g</span><span class="c">oto</span> <span class="w">err_put_dev</span><span class="c">;</span>
+
+	<span class="c">if</span> <span class="pc">(!</span><span class="w">atir_init_start(</span><span class="pc">)) </span><span class="c">{</span>
+		<span class="w">r</span><span class="pc">c</span> <span class="pc">= </span><span class="c">-ENODEV;</span>
+		<span class="c">goto</span> <span class="w">err_disable</span><span class="c">;</span>
+	<span class="c">}</span>
+
+	<span class="w">st</span><span class="pc">rc</span><span class="c">py(</span><span class="w">atir_driver.</span><span class="pc">n</span><span class="c">ame</span><span class="pc">, </span><span class="c">"</span><span class="w">ATIR</span><span class="c">");</span>
+	<span class="w">a</span><span class="pc">tir_d</span><span class="c">river.</span><span class="w">m</span><span class="pc">i</span><span class="c">nor</span>       <span class="pc">= -</span><span class="c">1;</span>
+	<span class="c">atir_driver.</span><span class="w">code_length</span> <span class="c">=</span> <span class="w">8</span><span class="c">;</span>
+	<span class="c">atir_driver.</span><span class="w">sample_rate</span> <span class="c">=</span> <span class="w">1</span><span class="pc">0</span><span class="c">;</span>
+	<span class="c">atir_driver.</span><span class="w">da</span><span class="c">ta</span>        <span class="pc">=</span> <span class="pc">N</span><span class="c">ULL;</span>
+	<span class="c">atir_driver.</span><span class="w">add_to_buf</span>  <span class="c">=</span> <span class="w">atir_add_to_buf</span><span class="c">;</span>
+	<span class="c">atir_driver.</span><span class="w">set_use_inc</span> <span class="c">=</span> <span class="w">atir_set_use_inc</span><span class="c">;</span>
+	<span class="c">atir_driver.</span><span class="w">set_use_dec</span> <span class="c">=</span> <span class="w">atir_set_use_dec</span><span class="c">;</span>
+	<span class="c">atir_driver.</span><span class="w">d</span><span class="c">ev</span>         <span class="pc">= </span><span class="c">&amp;pdev-&gt;dev</span><span class="pc">;</span>
+	<span class="c">atir_driver.</span><span class="w">ow</span><span class="c">ner</span>       <span class="c">=</span> <span class="c">THIS_MODULE;</span>
+
+	<span class="w">atir_minor</span> <span class="pc">=</span> <span class="w">lirc_register_driver</span><span class="pc">(&amp;a</span><span class="c">tir_driver</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">if</span> <span class="c">(</span><span class="w">a</span><span class="pc">tir_m</span><span class="c">inor</span> <span class="pc">&lt;</span> <span class="c">0</span><span class="pc">) </span><span class="c">{</span>
+		<span class="w">p</span><span class="pc">r_</span><span class="c">err("</span><span class="w">f</span><span class="c">ailed</span> <span class="c">to</span> <span class="c">register</span> <span class="w">d</span><span class="pc">r</span><span class="c">iver</span><span class="w">!</span><span class="c">\n");</span>
+		<span class="w">r</span><span class="pc">c</span> <span class="pc">=</span> <span class="c">atir_minor</span><span class="pc">;</span>
+		<span class="c">goto</span> <span class="w">err_unmap</span><span class="c">;</span>
+	<span class="c">}</span>
+	<span class="w">d</span><span class="pc">ev_</span><span class="c">dbg</span><span class="pc">(atir_d</span><span class="c">river</span><span class="pc">.</span><span class="c">dev, "</span><span class="w">d</span><span class="c">river</span> <span class="w">i</span><span class="pc">s</span> <span class="w">registered</span> <span class="w">o</span><span class="c">n</span> <span class="w">m</span><span class="pc">i</span><span class="c">nor</span> <span class="c">%d\n",</span>
+				<span class="c">atir_minor</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="c">return</span> <span class="c">0;</span>
+
+<span class="w">e</span><span class="pc">rr_</span><span class="c">unmap:</span>
+	<span class="w">i</span><span class="pc">o</span><span class="c">unmap(</span><span class="w">pci_addr_lin</span><span class="c">);</span>
+<span class="w">err_disable</span><span class="c">:</span>
+	<span class="w">pci_disable_device</span><span class="c">(</span><span class="pc">p</span><span class="c">dev);</span>
+<span class="w">err_put_dev</span><span class="c">:</span>
+	<span class="w">pci_dev_put</span><span class="c">(</span><span class="pc">p</span><span class="c">dev);</span>
+	<span class="c">return</span> <span class="w">r</span><span class="pc">c</span><span class="c">;</span>
+<span class="c">}</span>
+
+
+<span class="pc">v</span><span class="c">oid</span> <span class="w">cleanup_module</span><span class="c">(</span><span class="pc">v</span><span class="c">oid)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="c">pci_dev</span> <span class="c">*pdev</span> <span class="c">=</span> <span class="w">to_pci_dev</span><span class="c">(</span><span class="w">atir_driver.</span><span class="c">dev);</span>
+
+	<span class="w">lirc_unregister_driver</span><span class="c">(</span><span class="w">atir_minor</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">i</span><span class="pc">o</span><span class="c">unmap(</span><span class="w">pci_addr_lin</span><span class="c">);</span>
+	<span class="w">p</span><span class="c">ci_disable_device(pdev);</span>
+	<span class="w">p</span><span class="pc">ci_d</span><span class="c">ev_put(pdev);</span>
+<span class="c">}</span>
+
+
+<span class="c">static</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">atir_init_start</span><span class="c">(</span><span class="pc">v</span><span class="c">oid)</span>
+<span class="c">{</span>
+	<span class="w">pc</span><span class="pc">i_a</span><span class="c">ddr_lin</span> <span class="pc">=</span> <span class="w">i</span><span class="pc">orem</span><span class="c">ap(</span><span class="w">pci_addr_phys</span> <span class="pc">+</span> <span class="w">DATA_PCI_OFF</span><span class="pc">,</span> <span class="w">0x40</span><span class="pc">0</span><span class="c">);</span>
+	<span class="c">if</span> <span class="pc">(!</span><span class="c">pci_addr_lin</span><span class="pc">) </span><span class="c">{</span>
+		<span class="w">pr</span><span class="pc">_i</span><span class="c">nfo("</span><span class="w">p</span><span class="pc">ci</span> <span class="w">me</span><span class="pc">m</span> <span class="w">must</span> <span class="w">b</span><span class="pc">e</span> <span class="w">mapped</span><span class="c">\n");</span>
+		<span class="c">return</span> <span class="pc">0</span><span class="c">;</span>
+	<span class="c">}</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">1</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">void</span> <span class="w">cycle_delay</span><span class="c">(</span><span class="pc">i</span><span class="c">nt</span> <span class="w">cycle</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="w">ud</span><span class="c">elay(</span><span class="w">WAIT_CYCLE*</span><span class="pc">c</span><span class="c">ycle);</span>
+<span class="pc">}</span>
+
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">poll_main</span><span class="c">(</span><span class="pc">v</span><span class="c">oid)</span>
+<span class="c">{</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">har</span> <span class="w">status_high</span><span class="pc">,</span> <span class="w">status_low</span><span class="c">;</span>
+
+	<span class="w">do_i2c_start</span><span class="pc">()</span><span class="c">;</span>
+
+	<span class="w">seems_wr_byte</span><span class="c">(</span><span class="w">0xAA</span><span class="c">);</span>
+	<span class="pc">s</span><span class="c">eems_wr_byte(</span><span class="w">0x0</span><span class="pc">1</span><span class="c">);</span>
+
+	<span class="w">d</span><span class="c">o_i2c_start</span><span class="pc">()</span><span class="c">;</span>
+
+	<span class="pc">s</span><span class="c">eems_wr_byte(</span><span class="w">0xAB</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="w">s</span><span class="pc">tatus_l</span><span class="c">ow</span> <span class="pc">=</span> <span class="w">seems_rd_byte</span><span class="pc">()</span><span class="c">;</span>
+	<span class="w">s</span><span class="pc">tatus_h</span><span class="c">igh</span> <span class="pc">=</span> <span class="w">s</span><span class="pc">eems_r</span><span class="c">d_byte</span><span class="w">(</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="w">do_i2c_stop</span><span class="c">();</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">(s</span><span class="pc">tatus_h</span><span class="c">igh</span> <span class="w">&lt;</span><span class="pc">&lt;</span> <span class="w">8)</span><span class="pc"> |</span> <span class="pc">st</span><span class="c">atus_low;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">void</span> <span class="w">d</span><span class="pc">o_i2c_sta</span><span class="c">rt(</span><span class="pc">v</span><span class="c">oid)</span>
+<span class="c">{</span>
+	<span class="w">do_set_bits</span><span class="c">(</span><span class="w">3</span><span class="c">);</span>
+	<span class="w">cycle_delay</span><span class="pc">(</span><span class="w">4</span><span class="c">);</span>
+
+	<span class="pc">d</span><span class="c">o_set_bits(</span><span class="pc">1</span><span class="c">);</span>
+	<span class="c">cycle_delay(</span><span class="w">7</span><span class="c">);</span>
+
+	<span class="pc">d</span><span class="c">o_set_bits(</span><span class="pc">0</span><span class="c">);</span>
+	<span class="c">cycle_delay(</span><span class="pc">2</span><span class="c">);</span>
+<span class="pc">}</span>
+
+<span class="c">static</span> <span class="c">void</span> <span class="w">do_i2c_stop</span><span class="c">(</span><span class="pc">v</span><span class="c">oid)</span>
+<span class="c">{</span>
+	<span class="w">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">har</span> <span class="w">bi</span><span class="c">ts;</span>
+
+	<span class="w">bi</span><span class="c">ts</span> <span class="c">=</span>  <span class="w">do_get_bits() &amp;</span> <span class="w">0xFD</span><span class="pc">;</span>
+	<span class="w">d</span><span class="pc">o_s</span><span class="c">et_bits(</span><span class="w">bi</span><span class="pc">ts)</span><span class="c">;</span>
+	<span class="c">cycle_delay(1);</span>
+
+	<span class="w">bi</span><span class="pc">ts</span> <span class="pc">|</span><span class="c">=</span> <span class="c">1;</span>
+	<span class="pc">d</span><span class="c">o_set_bits(</span><span class="w">b</span><span class="pc">its</span><span class="c">);</span>
+	<span class="pc">c</span><span class="c">ycle_delay(</span><span class="w">2</span><span class="c">);</span>
+
+	<span class="w">b</span><span class="pc">i</span><span class="c">ts</span> <span class="pc">|</span><span class="c">=</span> <span class="w">2</span><span class="c">;</span>
+	<span class="c">do_set_bits(</span><span class="w">b</span><span class="pc">its)</span><span class="c">;</span>
+	<span class="w">b</span><span class="pc">its</span> <span class="pc">=</span> <span class="pc">3</span><span class="c">;</span>
+	<span class="pc">d</span><span class="c">o_set_bits(</span><span class="w">b</span><span class="pc">its)</span><span class="c">;</span>
+	<span class="pc">c</span><span class="c">ycle_delay(</span><span class="pc">2</span><span class="c">);</span>
+<span class="pc">}</span>
+
+<span class="c">static</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">seems_wr_byte</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">har</span> <span class="w">v</span><span class="pc">alu</span><span class="c">e)</span>
+<span class="c">{</span>
+	<span class="w">i</span><span class="pc">n</span><span class="c">t</span> <span class="c">i;</span>
+	<span class="w">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">har</span> <span class="w">r</span><span class="c">eg;</span>
+
+	<span class="w">r</span><span class="c">eg</span> <span class="c">=</span> <span class="w">do_get_bits</span><span class="pc">()</span><span class="c">;</span>
+	<span class="w">f</span><span class="c">or</span> <span class="c">(i</span> <span class="c">=</span> <span class="c">0;</span> <span class="c">i</span> <span class="c">&lt;</span> <span class="c">8;</span> <span class="c">i++) {</span>
+		<span class="c">if</span> <span class="c">(</span><span class="w">v</span><span class="pc">alu</span><span class="c">e</span> <span class="pc">&amp;</span> <span class="pc">0x8</span><span class="c">0</span><span class="pc">)</span>
+			<span class="pc">reg</span> <span class="pc">|</span><span class="c">=</span> <span class="w">0x02</span><span class="c">;</span>
+		<span class="c">else</span>
+			<span class="pc">r</span><span class="c">eg</span> <span class="w">&amp;</span><span class="pc">=</span> <span class="w">0xFD</span><span class="c">;</span>
+
+		<span class="w">do_set_bits</span><span class="c">(reg</span><span class="pc">)</span><span class="c">;</span>
+		<span class="w">cycle_delay</span><span class="c">(</span><span class="w">1</span><span class="c">);</span>
+
+		<span class="pc">r</span><span class="c">eg</span> <span class="pc">|</span><span class="c">=</span> <span class="pc">1</span><span class="c">;</span>
+		<span class="pc">d</span><span class="c">o_set_bits(reg</span><span class="pc">)</span><span class="c">;</span>
+		<span class="pc">c</span><span class="c">ycle_delay(</span><span class="pc">1</span><span class="c">);</span>
+
+		<span class="pc">r</span><span class="c">eg</span> <span class="w">&amp;</span><span class="pc">=</span> <span class="w">0xF</span><span class="pc">E</span><span class="c">;</span>
+		<span class="pc">d</span><span class="c">o_set_bits(reg</span><span class="pc">)</span><span class="c">;</span>
+		<span class="c">cycle_delay(</span><span class="pc">1</span><span class="c">);</span>
+		<span class="w">v</span><span class="pc">alu</span><span class="c">e</span> <span class="w">&lt;</span><span class="pc">&lt;</span><span class="c">=</span> <span class="c">1;</span>
+	<span class="pc">}</span>
+	<span class="w">c</span><span class="pc">y</span><span class="c">cle_delay(</span><span class="w">2</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="pc">r</span><span class="c">eg</span> <span class="pc">|</span><span class="c">=</span> <span class="pc">2</span><span class="c">;</span>
+	<span class="w">d</span><span class="c">o_set_bits(</span><span class="pc">r</span><span class="c">eg</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="w">r</span><span class="pc">eg</span> <span class="pc">|</span><span class="c">=</span> <span class="pc">1</span><span class="c">;</span>
+	<span class="pc">d</span><span class="c">o_set_bits(reg</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="w">c</span><span class="c">ycle_delay(</span><span class="pc">1</span><span class="c">);</span>
+	<span class="w">do_get_bits(</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="pc">r</span><span class="c">eg</span> <span class="w">&amp;</span><span class="pc">=</span> <span class="w">0xF</span><span class="pc">E</span><span class="c">;</span>
+	<span class="w">d</span><span class="pc">o_s</span><span class="c">et_bits(reg</span><span class="pc">)</span><span class="c">;</span>
+	<span class="pc">c</span><span class="c">ycle_delay(</span><span class="w">3</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="pc">c</span><span class="c">har</span> <span class="w">seems_rd_byte</span><span class="pc">(v</span><span class="c">oid)</span>
+<span class="c">{</span>
+	<span class="pc">in</span><span class="c">t</span> <span class="c">i;</span>
+	<span class="pc">in</span><span class="c">t</span> <span class="w">rd_byte</span><span class="c">;</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">har</span> <span class="w">bits_2</span><span class="pc">,</span> <span class="w">bits_1</span><span class="c">;</span>
+
+	<span class="w">b</span><span class="pc">its_1</span> <span class="c">=</span> <span class="w">d</span><span class="pc">o_g</span><span class="c">et_bits</span><span class="w">() |</span> <span class="w">2</span><span class="c">;</span>
+	<span class="w">d</span><span class="c">o_set_bits</span><span class="pc">(</span><span class="c">bits_1</span><span class="pc">);</span>
+
+	<span class="pc">r</span><span class="c">d_byte</span> <span class="pc">=</span> <span class="pc">0</span><span class="c">;</span>
+	<span class="w">f</span><span class="c">or</span> <span class="c">(i</span> <span class="c">=</span> <span class="c">0;</span> <span class="c">i</span> <span class="c">&lt;</span> <span class="pc">8</span><span class="c">;</span> <span class="c">i++) {</span>
+		<span class="pc">b</span><span class="c">its_1</span> <span class="w">&amp;</span><span class="pc">=</span> <span class="w">0xF</span><span class="pc">E</span><span class="c">;</span>
+		<span class="w">d</span><span class="pc">o_s</span><span class="c">et_bits</span><span class="pc">(b</span><span class="c">its_1</span><span class="pc">)</span><span class="c">;</span>
+		<span class="w">cycle_delay</span><span class="c">(</span><span class="w">2</span><span class="c">);</span>
+
+		<span class="w">b</span><span class="c">its_1</span> <span class="w">|</span><span class="c">=</span> <span class="c">1;</span>
+		<span class="pc">d</span><span class="c">o_set_bits(bits_1</span><span class="pc">)</span><span class="c">;</span>
+		<span class="pc">c</span><span class="c">ycle_delay(</span><span class="pc">1</span><span class="c">);</span>
+
+		<span class="w">bits_2</span> <span class="pc">=</span> <span class="w">do_get_bits</span><span class="pc">()</span><span class="c">;</span>
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="pc">bits_2</span> <span class="c">&amp;</span> <span class="w">2</span><span class="c">)</span>
+			<span class="w">rd_byte</span> <span class="pc">|</span><span class="c">=</span> <span class="pc">1</span><span class="c">;</span>
+
+		<span class="w">r</span><span class="pc">d</span><span class="c">_byte</span> <span class="w">&lt;</span><span class="pc">&lt;</span><span class="c">=</span> <span class="c">1;</span>
+	<span class="pc">}</span>
+
+	<span class="w">b</span><span class="pc">its_1</span> <span class="pc">=</span> <span class="pc">0</span><span class="c">;</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="pc">bits_2</span> <span class="w">=</span><span class="c">=</span> <span class="c">0)</span>
+		<span class="pc">bits_1</span> <span class="pc">|</span><span class="c">=</span> <span class="w">2</span><span class="c">;</span>
+
+	<span class="w">do_set_bits</span><span class="c">(</span><span class="pc">bits_1)</span><span class="c">;</span>
+	<span class="w">cycle_delay</span><span class="c">(</span><span class="w">2</span><span class="c">);</span>
+
+	<span class="pc">b</span><span class="c">its_1</span> <span class="pc">|</span><span class="c">=</span> <span class="c">1;</span>
+	<span class="w">d</span><span class="c">o_set_bits(</span><span class="w">b</span><span class="c">its_1</span><span class="pc">)</span><span class="c">;</span>
+	<span class="pc">c</span><span class="c">ycle_delay(</span><span class="w">3</span><span class="c">);</span>
+
+	<span class="c">bits_1</span> <span class="w">&amp;</span><span class="pc">=</span> <span class="w">0xF</span><span class="pc">E</span><span class="c">;</span>
+	<span class="c">do_set_bits(bits_1);</span>
+	<span class="c">cycle_delay(</span><span class="w">2</span><span class="c">);</span>
+
+	<span class="w">rd_byte</span> <span class="w">&gt;</span><span class="pc">&gt;=</span> <span class="c">1;</span>
+	<span class="w">r</span><span class="c">d_byte</span> <span class="w">&amp;</span><span class="pc">=</span> <span class="w">0xF</span><span class="pc">F</span><span class="c">;</span>
+	<span class="w">r</span><span class="pc">e</span><span class="c">turn</span> <span class="w">rd</span><span class="c">_byte;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">d</span><span class="c">o_set_bits(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">har</span> <span class="w">new_bits</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="w">i</span><span class="pc">n</span><span class="c">t</span> <span class="w">reg</span><span class="pc">_</span><span class="c">val;</span>
+
+	<span class="w">reg</span><span class="pc">_</span><span class="c">val</span> <span class="c">=</span> <span class="w">read_index</span><span class="c">(</span><span class="w">0x34</span><span class="c">);</span>
+	<span class="c">if</span> <span class="c">(</span><span class="pc">n</span><span class="c">ew_bits</span> <span class="pc">&amp;</span> <span class="w">2</span><span class="pc">) </span><span class="c">{</span>
+		<span class="w">r</span><span class="pc">eg</span><span class="c">_val</span> <span class="w">&amp;</span><span class="pc">=</span> <span class="w">0xFFFFFFDF</span><span class="c">;</span>
+		<span class="w">r</span><span class="c">eg_val</span> <span class="c">|=</span> <span class="pc">1</span><span class="c">;</span>
+	<span class="c">}</span> <span class="pc">e</span><span class="c">lse</span> <span class="c">{</span>
+		<span class="w">r</span><span class="pc">eg_</span><span class="c">val</span> <span class="w">&amp;</span><span class="pc">=</span> <span class="w">0xFFFFFFFE</span><span class="c">;</span>
+		<span class="w">r</span><span class="c">eg_val</span> <span class="c">|=</span> <span class="w">0x2</span><span class="c">0;</span>
+	<span class="c">}</span>
+	<span class="pc">r</span><span class="c">eg_val</span> <span class="c">|=</span> <span class="w">0x1</span><span class="pc">0</span><span class="c">;</span>
+	<span class="w">write_index</span><span class="c">(</span><span class="w">0x34</span><span class="c">,</span> <span class="c">reg_val</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="pc">reg</span><span class="c">_val</span> <span class="w">=</span> <span class="w">read_index</span><span class="c">(</span><span class="w">0x31</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">i</span><span class="c">f</span> <span class="c">(</span><span class="w">new_bits</span> <span class="c">&amp;</span> <span class="w">1</span><span class="c">)</span>
+		<span class="c">reg_val</span> <span class="c">|=</span> <span class="w">0x1000</span><span class="pc">000</span><span class="c">;</span>
+	<span class="pc">e</span><span class="c">lse</span>
+		<span class="pc">r</span><span class="c">eg_val</span> <span class="w">&amp;</span><span class="pc">=</span> <span class="w">0xFEFFFFFF</span><span class="c">;</span>
+
+	<span class="c">reg_val</span> <span class="c">|=</span> <span class="w">0x8000000</span><span class="c">;</span>
+	<span class="w">wr</span><span class="pc">ite_</span><span class="c">index</span><span class="pc">(</span><span class="w">0x31</span><span class="c">,</span> <span class="pc">r</span><span class="c">eg_val</span><span class="pc">)</span><span class="c">;</span>
+<span class="pc">}</span>
+
+<span class="c">static</span> <span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="pc">c</span><span class="c">har</span> <span class="w">do_get_bits</span><span class="pc">(</span><span class="w">v</span><span class="c">oid)</span>
+<span class="c">{</span>
+	<span class="pc">un</span><span class="c">signed</span> <span class="pc">c</span><span class="c">har</span> <span class="w">b</span><span class="pc">i</span><span class="c">ts;</span>
+	<span class="pc">in</span><span class="c">t</span> <span class="w">re</span><span class="pc">g_</span><span class="c">val;</span>
+
+	<span class="w">r</span><span class="pc">eg_</span><span class="c">val</span> <span class="c">=</span> <span class="w">read_index</span><span class="c">(</span><span class="w">0x34</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">r</span><span class="pc">eg</span><span class="c">_val</span> <span class="pc">|=</span> <span class="w">0x1</span><span class="pc">0</span><span class="c">;</span>
+	<span class="pc">r</span><span class="c">eg_val</span> <span class="w">&amp;</span><span class="pc">=</span> <span class="w">0xFFFFFFDF</span><span class="c">;</span>
+	<span class="w">w</span><span class="pc">rite_</span><span class="c">index(</span><span class="w">0x34</span><span class="c">,</span> <span class="pc">r</span><span class="c">eg_val);</span>
+
+	<span class="pc">reg</span><span class="c">_val</span> <span class="pc">=</span> <span class="pc">read_</span><span class="c">index(</span><span class="w">0x34</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">b</span><span class="pc">its</span> <span class="pc">=</span> <span class="w">0</span><span class="c">;</span>
+	<span class="pc">if</span> <span class="c">(</span><span class="pc">r</span><span class="c">eg_val</span> <span class="c">&amp;</span> <span class="w">8</span><span class="c">)</span>
+		<span class="w">b</span><span class="pc">its</span> <span class="c">|=</span> <span class="w">2</span><span class="c">;</span>
+	<span class="w">e</span><span class="c">lse</span>
+		<span class="w">b</span><span class="pc">its</span> <span class="w">&amp;</span><span class="pc">=</span> <span class="w">0xFD</span><span class="c">;</span>
+
+	<span class="c">reg_val</span> <span class="w">=</span> <span class="w">rea</span><span class="pc">d_</span><span class="c">index</span><span class="pc">(</span><span class="w">0x31</span><span class="pc">)</span><span class="c">;</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(reg_val</span> <span class="c">&amp;</span> <span class="w">0x1000</span><span class="pc">000</span><span class="c">)</span>
+		<span class="w">bi</span><span class="pc">ts</span> <span class="c">|=</span> <span class="pc">1</span><span class="c">;</span>
+	<span class="c">else</span>
+		<span class="w">b</span><span class="pc">its</span> <span class="w">&amp;</span><span class="pc">=</span> <span class="w">0xF</span><span class="pc">E</span><span class="c">;</span>
+
+	<span class="w">r</span><span class="pc">et</span><span class="c">urn</span> <span class="w">b</span><span class="pc">its</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="c">int</span> <span class="w">rea</span><span class="c">d_index(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">har</span> <span class="w">in</span><span class="pc">d</span><span class="c">ex</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">har</span> <span class="pc">_</span><span class="c">_iomem</span> <span class="c">*</span><span class="w">a</span><span class="c">ddr;</span>
+	
+	<span class="w">a</span><span class="pc">d</span><span class="c">dr</span> <span class="c">=</span> <span class="w">pci_addr_lin</span> <span class="w">+</span><span class="pc"> ((</span><span class="w">i</span><span class="pc">n</span><span class="c">dex</span> <span class="pc">&amp;</span> <span class="w">0xF</span><span class="pc">F</span><span class="w">) </span><span class="pc">&lt;</span><span class="c">&lt;</span> <span class="w">2</span><span class="pc">)</span><span class="c">;</span>
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">rea</span><span class="pc">dl</span><span class="c">(</span><span class="w">a</span><span class="c">ddr</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">write_index</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">har</span> <span class="w">i</span><span class="pc">n</span><span class="c">dex,</span> <span class="c">unsigned</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">reg</span><span class="pc">_</span><span class="c">val)</span>
+<span class="c">{</span>
+	<span class="c">unsigned</span> <span class="pc">c</span><span class="c">har</span> <span class="w">_</span><span class="c">_iomem</span> <span class="c">*</span><span class="pc">a</span><span class="c">ddr;</span>
+
+	<span class="w">a</span><span class="c">ddr</span> <span class="c">=</span> <span class="pc">p</span><span class="c">ci_addr_lin</span> <span class="w">+</span><span class="pc"> ((</span><span class="w">i</span><span class="c">ndex</span> <span class="pc">&amp;</span> <span class="w">0</span><span class="pc">xFF) </span><span class="c">&lt;&lt;</span> <span class="w">2</span><span class="c">);</span>
+	<span class="w">w</span><span class="c">ritel(</span><span class="w">r</span><span class="pc">eg_</span><span class="c">val,</span> <span class="c">addr);</span>
+<span class="c">}</span>
+
+<span class="w">M</span><span class="c">ODULE_AUTHOR</span><span class="pc">("</span><span class="w">Froenchenko</span> <span class="w">Leonid</span><span class="pc">"</span><span class="c">);</span>
+<span class="pc">M</span><span class="c">ODULE_DESCRIPTION("</span><span class="w">IR</span> <span class="w">remote</span> <span class="pc">d</span><span class="c">river</span> <span class="pc">f</span><span class="c">or</span> <span class="w">bt829</span> <span class="w">based</span> <span class="w">TV</span> <span class="w">cards</span><span class="c">");</span>
+<span class="w">M</span><span class="pc">ODULE_L</span><span class="c">ICENSE("GPL");</span>
+
+<span class="w">m</span><span class="pc">odule_p</span><span class="c">aram(</span><span class="w">d</span><span class="c">ebug,</span> <span class="w">b</span><span class="pc">o</span><span class="c">ol,</span> <span class="pc">S</span><span class="c">_IRUGO</span> <span class="pc">|</span> <span class="pc">S</span><span class="c">_IWUSR</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">MODULE_PARM_DESC(</span><span class="pc">d</span><span class="c">ebug, "</span><span class="w">Debug</span> <span class="w">e</span><span class="pc">n</span><span class="c">abled</span> <span class="w">o</span><span class="pc">r</span> <span class="w">n</span><span class="c">ot</span><span class="pc">"</span><span class="c">);</span>
+
+</pre>
+</body>
+</html>
+

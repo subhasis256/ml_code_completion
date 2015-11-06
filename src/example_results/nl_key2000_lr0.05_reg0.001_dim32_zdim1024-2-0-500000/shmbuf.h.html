@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+<span class="w">#ifndef</span> <span class="w">_PARISC_SHMBUF_H</span>
+<span class="w">#define</span> <span class="w">_PARISC_SHMBUF_H</span>
+
+<span class="w">#include</span> <span class="w">&lt;asm/bitsperlong.h&gt;</span>
+
+
+
+<span class="w">struct</span> <span class="w">shmid64_ds</span> <span class="w">{</span>
+	<span class="w">struct</span> <span class="w">ipc64_perm</span>	<span class="w">shm_perm;</span>	
+<span class="w">#if</span> <span class="w">__BITS_PER_LONG</span> <span class="w">!=</span> <span class="w">64</span>
+	<span class="w">unsigned</span> <span class="w">int</span>		<span class="w">__pad1;</span>
+<span class="w">#endif</span>
+	<span class="w">__kernel_time_t</span>		<span class="w">shm_atime;</span>	
+<span class="w">#if</span> <span class="w">__BITS_PER_LONG</span> <span class="w">!=</span> <span class="c">64</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="pc">i</span><span class="c">nt</span>		<span class="w">__pad2</span><span class="c">;</span>
+<span class="c">#endif</span>
+	<span class="w">_</span><span class="pc">_k</span><span class="c">ernel_time_t</span>		<span class="w">shm_dtime</span><span class="c">;</span>	
+<span class="c">#if</span> <span class="pc">_</span><span class="c">_BITS_PER_LONG</span> <span class="c">!=</span> <span class="c">64</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="pc">i</span><span class="c">nt</span>		<span class="w">__pad3</span><span class="c">;</span>
+<span class="c">#endif</span>
+	<span class="w">_</span><span class="c">_kernel_time_t</span>		<span class="w">shm_ctime</span><span class="c">;</span>	
+<span class="c">#if</span> <span class="pc">_</span><span class="c">_BITS_PER_LONG</span> <span class="pc">!</span><span class="c">=</span> <span class="c">64</span>
+	<span class="c">unsigned</span> <span class="pc">i</span><span class="c">nt</span>		<span class="w">__pad4</span><span class="c">;</span>
+<span class="c">#endif</span>
+	<span class="w">si</span><span class="c">ze_t</span>			<span class="w">shm_segsz</span><span class="c">;</span>	
+	<span class="w">__kernel_pid_t</span>		<span class="w">shm_cpid</span><span class="c">;</span>	
+	<span class="c">__kernel_pid_t</span>		<span class="w">shm_lpid</span><span class="c">;</span>	
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="c">int</span>		<span class="w">shm_nattch</span><span class="c">;</span>	
+	<span class="c">unsigned</span> <span class="c">int</span>		<span class="w">__unused1</span><span class="c">;</span>
+	<span class="c">unsigned</span> <span class="c">int</span>		<span class="w">__unused2</span><span class="c">;</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="pc">s</span><span class="c">truct</span> <span class="w">shminfo64</span> <span class="c">{</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="pc">l</span><span class="c">ong</span>	<span class="w">shmmax</span><span class="c">;</span>
+	<span class="c">unsigned</span> <span class="c">long</span>	<span class="w">shmmin</span><span class="c">;</span>
+	<span class="c">unsigned</span> <span class="c">long</span>	<span class="w">shmmni</span><span class="c">;</span>
+	<span class="c">unsigned</span> <span class="c">long</span>	<span class="w">shmseg</span><span class="c">;</span>
+	<span class="c">unsigned</span> <span class="c">long</span>	<span class="w">shmall</span><span class="c">;</span>
+	<span class="c">unsigned</span> <span class="c">long</span>	<span class="pc">_</span><span class="c">_unused1;</span>
+	<span class="c">unsigned</span> <span class="c">long</span>	<span class="pc">_</span><span class="c">_unused2;</span>
+	<span class="c">unsigned</span> <span class="c">long</span>	<span class="w">__unused3</span><span class="c">;</span>
+	<span class="c">unsigned</span> <span class="c">long</span>	<span class="w">__unused4</span><span class="c">;</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="pc">#e</span><span class="c">ndif</span> 
+
+</pre>
+</body>
+</html>
+

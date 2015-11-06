@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+<span class="w">#ifndef</span> <span class="w">__EXOFS_COM_H__</span>
+<span class="w">#define</span> <span class="w">__EXOFS_COM_H__</span>
+
+<span class="w">#include</span> <span class="w">&lt;linux/types.h&gt;</span>
+
+<span class="w">#include</span> <span class="w">&lt;scsi/osd_attributes.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;scsi/osd_initiator.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;scsi/osd_sec.</span><span class="c">h&gt;</span>
+
+
+<span class="c">#</span><span class="pc">d</span><span class="c">efine</span> <span class="w">EXOFS_MIN_PID</span>   <span class="w">0x10</span><span class="pc">000</span>	
+<span class="c">#define</span> <span class="w">EXOFS_OBJ_OFF</span>	<span class="w">0x10</span><span class="pc">000</span>	
+<span class="c">#define</span> <span class="w">EXOFS_SUPER_ID</span>	<span class="w">0x1</span><span class="pc">0000</span>	
+<span class="c">#define</span> <span class="w">EXOFS_DEVTABLE_ID</span> <span class="w">0x10001</span> 
+<span class="c">#define</span> <span class="w">EXOFS_ROOT_ID</span>	<span class="w">0x10002</span>	
+
+
+
+<span class="c">#</span> <span class="c">define</span> <span class="w">EXOFS_APAGE_FS_DATA</span>	<span class="c">(</span><span class="w">OSD_APAGE_APP_DEFINED_FIRST</span> <span class="w">+</span> <span class="w">3</span><span class="c">)</span>
+<span class="c">#</span> <span class="c">define</span> <span class="w">EXOFS_ATTR_INODE_DATA</span>	<span class="pc">1</span>
+<span class="c">#</span> <span class="c">define</span> <span class="w">EXOFS_ATTR_INODE_FILE_LAYOUT</span>	<span class="c">2</span>
+<span class="c">#</span> <span class="c">define</span> <span class="w">EXOFS_ATTR_INODE_DIR_LAYOUT</span>	<span class="c">3</span>
+
+<span class="c">#</span> <span class="c">define</span> <span class="w">EXOFS_APAGE_SB_DATA</span>	<span class="w">(0xF0000000U</span> <span class="c">+</span> <span class="pc">3</span><span class="c">)</span>
+<span class="c">#</span> <span class="c">define</span> <span class="w">EXOFS_ATTR_SB_STATS</span>	<span class="w">1</span>
+
+
+<span class="pc">e</span><span class="c">num</span> <span class="c">{</span>
+	<span class="w">EXOFS_MAX_INO_ID</span> <span class="pc">= </span><span class="c">(</span><span class="w">si</span><span class="pc">zeo</span><span class="c">f(</span><span class="w">ino_t) </span><span class="pc">*</span> <span class="w">8</span> <span class="w">=</span><span class="c">=</span> <span class="w">6</span><span class="pc">4</span><span class="w">) </span><span class="pc">?</span> <span class="w">ULLONG_MAX</span> <span class="c">:</span>
+					<span class="w">(1U</span><span class="pc">LL</span> <span class="pc">&lt;&lt; </span><span class="c">(</span><span class="w">s</span><span class="c">izeof(</span><span class="w">i</span><span class="c">no_t</span><span class="pc">) </span><span class="c">*</span> <span class="w">8ULL</span> <span class="w">-</span> <span class="w">1U</span><span class="c">LL</span><span class="w">))</span><span class="pc">,</span>
+	<span class="w">EXOFS_MAX_ID</span>	 <span class="w">=</span><span class="c"> (</span><span class="pc">E</span><span class="c">XOFS_MAX_INO_ID</span> <span class="c">-</span> <span class="c">1</span> <span class="w">-</span> <span class="w">EXOFS_OBJ_OFF),</span>
+<span class="c">};</span>
+
+
+<span class="c">#define</span> <span class="w">EXOFS_BLKSHIFT</span>	<span class="w">1</span><span class="pc">2</span>
+<span class="c">#define</span> <span class="w">EXOFS_BLKSIZE</span>	<span class="c">(</span><span class="w">1</span><span class="pc">UL</span> <span class="c">&lt;&lt;</span> <span class="c">EXOFS_BLKSHIFT)</span>
+
+
+<span class="c">#define</span> <span class="w">EXOFS_SUPER_MAGIC</span>	<span class="w">0x5DF5</span>
+
+
+<span class="pc">e</span><span class="c">num</span> <span class="c">{</span><span class="w">EXOFS_FSCB_VER</span> <span class="c">=</span> <span class="c">1,</span> <span class="w">EXOFS_DT_VER</span> <span class="c">=</span> <span class="pc">1}</span><span class="c">;</span>
+<span class="pc">s</span><span class="c">truct</span> <span class="w">exofs_fscb</span> <span class="c">{</span>
+	<span class="w">__l</span><span class="pc">e6</span><span class="c">4</span>  <span class="w">s_nextid</span><span class="c">;</span>	
+	<span class="w">_</span><span class="pc">_le6</span><span class="c">4</span>  <span class="w">s_numfiles</span><span class="c">;</span>	
+	<span class="c">__le32</span>	<span class="w">s_version</span><span class="c">;</span>	
+	<span class="pc">__le1</span><span class="c">6</span>  <span class="w">s_magic</span><span class="c">;</span>	
+	<span class="pc">_</span><span class="c">_le16</span>  <span class="w">s_newfs</span><span class="c">;</span>	
+
+	
+	<span class="w">_</span><span class="pc">_le6</span><span class="c">4</span>	<span class="w">s_dev_table_oid</span><span class="c">;</span>   
+	<span class="w">_</span><span class="pc">_le6</span><span class="c">4</span>	<span class="w">s_dev_table_count</span><span class="c">;</span> 
+<span class="pc">}</span> <span class="c">__packed;</span>
+
+
+<span class="c">struct</span> <span class="w">exofs_sb_stats</span> <span class="c">{</span>
+	<span class="pc">__le6</span><span class="c">4</span>  <span class="w">s_</span><span class="pc">ne</span><span class="c">xtid;</span>	
+	<span class="pc">__le6</span><span class="c">4</span>  <span class="w">s</span><span class="pc">_nu</span><span class="c">mfiles;</span>	
+<span class="pc">}</span> <span class="c">__packed;</span>
+
+
+<span class="c">struct</span> <span class="w">exofs_dt_data_map</span> <span class="c">{</span>
+	<span class="c">__le32</span>	<span class="w">cb_num_comps</span><span class="c">;</span>
+	<span class="pc">__le6</span><span class="c">4</span>	<span class="w">cb_stripe_unit</span><span class="c">;</span>
+	<span class="pc">_</span><span class="c">_le32</span>	<span class="w">cb_group_width</span><span class="c">;</span>
+	<span class="c">__le32</span>	<span class="w">cb_group_depth</span><span class="c">;</span>
+	<span class="c">__le32</span>	<span class="w">cb_mirror_cnt</span><span class="c">;</span>
+	<span class="c">__le32</span>	<span class="w">cb_raid_algorithm</span><span class="c">;</span>
+<span class="pc">}</span> <span class="c">__packed;</span>
+
+
+<span class="c">struct</span> <span class="w">exofs_dt_device_info</span> <span class="c">{</span>
+	<span class="c">__le32</span>	<span class="w">systemid_len</span><span class="c">;</span>
+	<span class="w">u</span><span class="c">8</span>	<span class="w">systemid</span><span class="pc">[</span><span class="w">OSD_SYSTEMID_LEN</span><span class="c">];</span>
+	<span class="w">_</span><span class="pc">_le6</span><span class="c">4</span>	<span class="w">long_name_offset</span><span class="c">;</span>	
+	<span class="c">__le32</span>	<span class="w">osdname_len</span><span class="c">;</span>		
+	<span class="w">u</span><span class="c">8</span>	<span class="w">osdname</span><span class="pc">[</span><span class="w">44</span><span class="c">];</span>		
+<span class="pc">}</span> <span class="c">__packed;</span>
+
+
+<span class="c">struct</span> <span class="w">exofs_device_table</span> <span class="c">{</span>
+	<span class="c">__le32</span>				<span class="w">dt_version</span><span class="c">;</span>	
+	<span class="w">s</span><span class="c">truct</span> <span class="w">exofs_dt_data_map</span>	<span class="w">dt_data_map</span><span class="c">;</span>	
+
+	
+	<span class="w">_</span><span class="pc">_le6</span><span class="c">4</span>				<span class="w">__Resurved</span><span class="pc">[4</span><span class="c">];</span>
+
+	<span class="w">_</span><span class="pc">_le6</span><span class="c">4</span>				<span class="w">dt_num_devices</span><span class="c">;</span>	
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">exofs_dt_device_info</span>	<span class="w">dt_dev_table</span><span class="pc">[]</span><span class="c">;</span>	
+<span class="pc">}</span> <span class="c">__packed;</span>
+
+
+<span class="pc">#</span><span class="c">define</span> <span class="w">EXOFS_IDATA</span>		<span class="w">5</span>
+
+
+<span class="pc">s</span><span class="c">truct</span> <span class="w">exofs_fcb</span> <span class="c">{</span>
+	<span class="w">__l</span><span class="pc">e6</span><span class="c">4</span>  <span class="w">i_size</span><span class="c">;</span>			
+	<span class="pc">__le1</span><span class="c">6</span>  <span class="w">i_</span><span class="pc">m</span><span class="c">ode;</span>         	
+	<span class="c">__le16</span>  <span class="w">i_links_count</span><span class="c">;</span>  	
+	<span class="pc">__le3</span><span class="c">2</span>  <span class="w">i_uid</span><span class="c">;</span>          	
+	<span class="c">__le32</span>  <span class="w">i_gid</span><span class="c">;</span>          	
+	<span class="c">__le32</span>  <span class="w">i_atime</span><span class="c">;</span>        	
+	<span class="c">__le32</span>  <span class="w">i_ctime</span><span class="c">;</span>        	
+	<span class="c">__le32</span>  <span class="w">i_mtime</span><span class="c">;</span>        	
+	<span class="c">__le32</span>  <span class="w">i_flags</span><span class="c">;</span>        	
+	<span class="c">__le32</span>  <span class="w">i_generation</span><span class="c">;</span>   	
+	<span class="c">__le32</span>  <span class="w">i_data</span><span class="pc">[</span><span class="w">E</span><span class="pc">X</span><span class="c">OFS_IDATA];</span>	
+<span class="pc">};</span>
+
+<span class="c">#define</span> <span class="w">EXOFS_INO_ATTR_SIZE</span>	<span class="w">s</span><span class="pc">i</span><span class="c">zeof(struct</span> <span class="w">exofs_fcb</span><span class="c">)</span>
+
+
+<span class="w">s</span><span class="pc">ta</span><span class="c">tic</span> <span class="pc">c</span><span class="c">onst</span> <span class="c">struct</span> <span class="w">__weak</span> <span class="w">osd_attr</span> <span class="w">g_attr_inode_data</span> <span class="w">=</span> <span class="w">ATTR_DEF</span><span class="c">(</span>
+	<span class="w">EXOFS_APAGE_FS_DATA</span><span class="pc">,</span>
+	<span class="w">EXOFS_ATTR_INODE_DATA</span><span class="c">,</span>
+	<span class="w">E</span><span class="c">XOFS_INO_ATTR_SIZE</span><span class="pc">);</span>
+
+
+<span class="c">#define</span> <span class="w">EXOFS_NAME_LEN</span>	<span class="w">25</span><span class="pc">5</span>
+
+
+<span class="c">struct</span> <span class="w">exofs_dir_entry</span> <span class="c">{</span>
+	<span class="w">__l</span><span class="pc">e6</span><span class="c">4</span>		<span class="w">inode_no</span><span class="c">;</span>		
+	<span class="pc">__le1</span><span class="c">6</span>		<span class="w">rec_len</span><span class="c">;</span>		
+	<span class="c">u8</span>		<span class="w">name_len</span><span class="c">;</span>		
+	<span class="c">u8</span>		<span class="w">file_type</span><span class="c">;</span>		
+	<span class="w">c</span><span class="c">har</span>		<span class="pc">n</span><span class="c">ame[</span><span class="w">E</span><span class="pc">XOFS_N</span><span class="c">AME_LEN];</span>	
+<span class="c">};</span>
+
+<span class="pc">e</span><span class="c">num</span> <span class="c">{</span>
+	<span class="w">EXOFS_FT_UNKNOWN</span><span class="pc">,</span>
+	<span class="w">EXOFS_FT_REG_FILE</span><span class="c">,</span>
+	<span class="w">EXOFS_FT_DIR</span><span class="c">,</span>
+	<span class="w">EXOFS_FT_CHRDEV</span><span class="c">,</span>
+	<span class="w">EXOFS_FT_BLKDEV</span><span class="c">,</span>
+	<span class="w">EXOFS_FT_FIFO</span><span class="c">,</span>
+	<span class="w">EXOFS_FT_SOCK</span><span class="c">,</span>
+	<span class="w">EXOFS_FT_SYMLINK</span><span class="c">,</span>
+	<span class="w">EXOFS_FT_MAX</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="pc">#</span><span class="c">define</span> <span class="w">EXOFS_DIR_PAD</span>			<span class="w">4</span>
+<span class="c">#define</span> <span class="w">EXOFS_DIR_ROUND</span>			<span class="c">(EXOFS_DIR_PAD</span> <span class="pc">-</span> <span class="c">1)</span>
+<span class="c">#define</span> <span class="w">EXOFS_DIR_REC_LEN</span><span class="c">(</span><span class="w">name_len)</span><span class="pc"> \</span>
+	<span class="pc">(((</span><span class="c">name_len</span><span class="w">) </span><span class="pc">+</span> <span class="w">o</span><span class="pc">ffseto</span><span class="c">f(struct</span> <span class="w">exofs_dir_entry</span><span class="c">,</span> <span class="w">na</span><span class="pc">me</span><span class="w">)  + \</span>
+	  <span class="w">EXOFS_D</span><span class="pc">IR_RO</span><span class="c">UND</span><span class="w">) &amp;</span><span class="pc"> ~E</span><span class="c">XOFS_DIR_ROUND</span><span class="pc">)</span>
+
+
+
+<span class="w">e</span><span class="pc">n</span><span class="c">um</span> <span class="w">exofs_inode_layout_gen_functions</span> <span class="c">{</span>
+	<span class="w">LAYOUT_MOVING_WINDOW</span> <span class="c">=</span> <span class="c">0,</span>
+	<span class="w">LAYOUT_IMPLICT</span> <span class="c">=</span> <span class="c">1,</span>
+<span class="c">};</span>
+
+<span class="c">struct</span> <span class="w">exofs_on_disk_inode_layout</span> <span class="c">{</span>
+	<span class="w">__l</span><span class="pc">e1</span><span class="c">6</span> <span class="w">gen_func</span><span class="c">;</span> 
+	<span class="pc">_</span><span class="c">_le16</span> <span class="w">p</span><span class="pc">a</span><span class="c">d;</span>
+	<span class="w">u</span><span class="pc">n</span><span class="c">ion</span> <span class="c">{</span>
+		
+		<span class="c">struct</span> <span class="w">exofs_layout_sliding_window</span> <span class="w">{</span>
+			<span class="c">__le32</span> <span class="w">num_devices</span><span class="c">;</span> 
+		<span class="pc">}</span> <span class="w">sliding_window</span> <span class="w">_</span><span class="pc">_p</span><span class="c">acked;</span>
+
+		
+		<span class="c">struct</span> <span class="w">exofs_layout_implict_list</span> <span class="c">{</span>
+			<span class="pc">s</span><span class="c">truct</span> <span class="w">exofs_dt_data_map</span> <span class="w">data_map</span><span class="c">;</span>
+			
+			<span class="pc">_</span><span class="c">_le32</span> <span class="w">dev_indexes[</span><span class="pc">];</span>
+		<span class="c">}</span> <span class="w">implict</span> <span class="w">_</span><span class="pc">_p</span><span class="c">acked;</span>
+	<span class="pc">}</span><span class="c">;</span>
+<span class="w">}</span> <span class="c">__packed</span><span class="pc">;</span>
+
+<span class="pc">sta</span><span class="c">tic</span> <span class="c">inline</span> <span class="w">s</span><span class="pc">i</span><span class="c">ze_t</span> <span class="w">exofs_on_disk_inode_layout_size</span><span class="c">(</span><span class="w">un</span><span class="pc">s</span><span class="c">igned</span> <span class="w">max_devs</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="c">return</span> <span class="w">s</span><span class="c">izeof(struct</span> <span class="w">exofs_on_disk_inode_layout</span><span class="c">) +</span>
+		<span class="pc">m</span><span class="c">ax_devs</span> <span class="w">*</span> <span class="c">sizeof(</span><span class="pc">_</span><span class="c">_le32);</span>
+<span class="c">}</span>
+
+<span class="pc">#</span><span class="c">endif</span> 
+
+</pre>
+</body>
+</html>
+

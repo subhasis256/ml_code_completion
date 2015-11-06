@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+<span class="w">#ifndef</span> <span class="w">_ASM_C6X_STRING_H</span>
+<span class="w">#define</span> <span class="w">_ASM_C6X_STRING_H</span>
+
+<span class="w">#include</span> <span class="w">&lt;asm/page.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/linkage.h&gt;</span>
+
+<span class="w">asmlinkage</span> <span class="w">extern</span> <span class="w">void</span> <span class="w">*memcpy(void</span> <span class="w">*to,</span> <span class="w">const</span> <span class="w">void</span> <span class="w">*from,</span> <span class="w">size_t</span> <span class="w">n</span><span class="c">);</span>
+
+<span class="pc">#d</span><span class="c">efine</span> <span class="w">__HAVE_ARCH_MEMCPY</span>
+
+<span class="w">#</span><span class="pc">e</span><span class="c">ndif</span> 
+
+</pre>
+</body>
+</html>
+

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+<span class="w">#include</span> <span class="w">&lt;linux/errno.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/init.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/ioport.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/platform_device.h&gt;</span>
+
+<span class="w">static</span> <span class="w">struct</span> <span class="w">resource</span> <span class="w">cobalt_lcd_resource</span> <span class="w">_</span><span class="pc">_initd</span><span class="c">ata</span> <span class="pc">=</span><span class="c"> {</span>
+	<span class="c">.</span><span class="w">s</span><span class="c">tart</span>	<span class="c">=</span> <span class="w">0x1f000000</span><span class="c">,</span>
+	<span class="c">.</span><span class="w">e</span><span class="c">nd</span>	<span class="c">=</span> <span class="w">0x1f00001f</span><span class="c">,</span>
+	<span class="c">.flags</span>	<span class="c">=</span> <span class="w">I</span><span class="pc">ORESOURCE_M</span><span class="c">EM,</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="c">static</span> <span class="w">_</span><span class="c">_init</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">cobalt_lcd_add</span><span class="c">(</span><span class="pc">v</span><span class="c">oid)</span>
+<span class="c">{</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="pc">pl</span><span class="c">atform_device</span> <span class="c">*pdev;</span>
+	<span class="pc">i</span><span class="c">nt</span> <span class="w">r</span><span class="pc">etv</span><span class="c">al;</span>
+
+	<span class="w">p</span><span class="pc">d</span><span class="c">ev</span> <span class="c">=</span> <span class="w">platform_device_alloc</span><span class="pc">("</span><span class="w">cobalt</span><span class="pc">-</span><span class="w">lc</span><span class="c">d</span><span class="w">", -1</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">if</span> <span class="pc">(!p</span><span class="c">dev)</span>
+		<span class="c">return</span> <span class="c">-</span><span class="pc">ENOM</span><span class="c">EM;</span>
+
+	<span class="w">re</span><span class="pc">tv</span><span class="c">al</span> <span class="c">=</span> <span class="w">platform_device_add_resources</span><span class="c">(pdev</span><span class="pc">, &amp;</span><span class="w">cobalt_lcd_resource</span><span class="c">,</span> <span class="pc">1</span><span class="c">);</span>
+	<span class="c">if</span> <span class="c">(</span><span class="pc">retv</span><span class="c">al</span><span class="pc">)</span>
+		<span class="pc">g</span><span class="c">oto</span> <span class="w">err_free_device</span><span class="c">;</span>
+
+	<span class="pc">retv</span><span class="c">al</span> <span class="c">=</span> <span class="w">platform_device_add</span><span class="c">(</span><span class="pc">p</span><span class="c">dev</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">if</span> <span class="c">(retval)</span>
+		<span class="c">goto</span> <span class="c">err_free_device;</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+
+<span class="w">e</span><span class="pc">rr_</span><span class="c">free_device:</span>
+	<span class="w">platform_device_put</span><span class="c">(pdev);</span>
+
+	<span class="c">return</span> <span class="c">retval;</span>
+<span class="c">}</span>
+<span class="w">device_initcall</span><span class="pc">(</span><span class="w">cobalt_lcd_add</span><span class="c">);</span>
+
+</pre>
+</body>
+</html>
+

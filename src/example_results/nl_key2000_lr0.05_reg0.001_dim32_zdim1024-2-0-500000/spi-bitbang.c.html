@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+<span class="w">#include</span> <span class="w">&lt;linux/spinlock.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/workqueue.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/interrupt.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux/module.h&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;linux</span><span class="c">/</span><span class="pc">d</span><span class="c">elay.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">e</span><span class="c">rrno.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="pc">p</span><span class="c">latform_device.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/slab.h&gt;</span>
+
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="w">s</span><span class="pc">pi</span><span class="c">/spi.h&gt;</span>
+<span class="c">#include</span> <span class="c">&lt;linux/</span><span class="pc">s</span><span class="c">pi/</span><span class="w">spi_bitbang</span><span class="c">.h&gt;</span>
+
+
+
+
+
+
+<span class="w">s</span><span class="pc">tr</span><span class="c">uct</span> <span class="w">spi_bitbang_cs</span> <span class="c">{</span>
+	<span class="pc">u</span><span class="c">nsigned</span>	<span class="w">nsecs</span><span class="c">;</span>	
+	<span class="pc">u3</span><span class="c">2</span>		<span class="w">(</span><span class="c">*</span><span class="w">txrx_word</span><span class="c">)(struct</span> <span class="w">spi_device</span> <span class="c">*spi,</span> <span class="pc">u</span><span class="c">nsigned</span> <span class="w">n</span><span class="c">secs</span><span class="pc">,</span>
+					<span class="w">u</span><span class="pc">3</span><span class="c">2</span> <span class="w">w</span><span class="c">ord,</span> <span class="w">u</span><span class="pc">8</span> <span class="w">b</span><span class="c">its</span><span class="pc">)</span><span class="c">;</span>
+	<span class="w">u</span><span class="pc">n</span><span class="c">signed</span>	<span class="pc">(</span><span class="c">*</span><span class="w">txrx_bufs</span><span class="c">)(struct</span> <span class="c">spi_device</span> <span class="pc">*,</span>
+					<span class="w">u</span><span class="pc">3</span><span class="c">2</span> <span class="w">(</span><span class="c">*txrx_word)(</span>
+						<span class="c">struct</span> <span class="c">spi_device</span> <span class="pc">*</span><span class="w">s</span><span class="pc">pi</span><span class="c">,</span>
+						<span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="w">n</span><span class="c">secs</span><span class="pc">,</span>
+						<span class="w">u</span><span class="pc">3</span><span class="c">2</span> <span class="w">w</span><span class="pc">o</span><span class="c">rd</span><span class="pc">,</span> <span class="pc">u8</span> <span class="w">b</span><span class="pc">i</span><span class="c">ts</span><span class="pc">),</span>
+					<span class="w">un</span><span class="pc">s</span><span class="c">igned</span><span class="w">,</span> <span class="w">s</span><span class="pc">t</span><span class="c">ruct</span> <span class="w">spi_transfer</span> <span class="pc">*)</span><span class="c">;</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="pc">sta</span><span class="c">tic</span> <span class="w">u</span><span class="c">nsigned</span> <span class="w">bitbang_txrx_8</span><span class="c">(</span>
+	<span class="c">struct</span> <span class="c">spi_device</span>	<span class="c">*</span><span class="w">sp</span><span class="pc">i</span><span class="c">,</span>
+	<span class="w">u</span><span class="pc">3</span><span class="c">2</span>			<span class="w">(</span><span class="c">*</span><span class="w">t</span><span class="pc">xrx_w</span><span class="c">ord)(struct</span> <span class="c">spi_device</span> <span class="c">*</span><span class="w">s</span><span class="pc">p</span><span class="c">i,</span>
+					<span class="pc">un</span><span class="c">signed</span> <span class="w">n</span><span class="c">secs</span><span class="pc">,</span>
+					<span class="w">u</span><span class="pc">3</span><span class="c">2</span> <span class="w">w</span><span class="pc">o</span><span class="c">rd,</span> <span class="pc">u8</span> <span class="w">b</span><span class="pc">its</span><span class="w">)</span><span class="pc">,</span>
+	<span class="w">u</span><span class="pc">n</span><span class="c">signed</span>		<span class="w">ns</span><span class="pc">,</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="c">spi_transfer</span>	<span class="c">*</span><span class="w">t</span>
+<span class="w">)</span><span class="pc"> </span><span class="c">{</span>
+	<span class="pc">un</span><span class="c">signed</span>		<span class="w">bi</span><span class="pc">ts</span> <span class="pc">=</span> <span class="w">t</span><span class="c">-&gt;</span><span class="w">bits_per_word</span><span class="c">;</span>
+	<span class="pc">u</span><span class="c">nsigned</span>		<span class="w">c</span><span class="pc">o</span><span class="c">unt</span> <span class="c">=</span> <span class="w">t</span><span class="c">-&gt;</span><span class="w">l</span><span class="c">en;</span>
+	<span class="w">co</span><span class="pc">n</span><span class="c">st</span> <span class="pc">u8</span>		<span class="c">*</span><span class="w">tx</span> <span class="pc">=</span> <span class="w">t</span><span class="c">-&gt;</span><span class="w">tx_buf</span><span class="pc">;</span>
+	<span class="w">u</span><span class="pc">8</span>			<span class="c">*</span><span class="w">r</span><span class="pc">x</span> <span class="pc">=</span> <span class="pc">t</span><span class="c">-&gt;</span><span class="w">rx_buf</span><span class="c">;</span>
+
+	<span class="w">w</span><span class="c">hile</span> <span class="c">(</span><span class="w">li</span><span class="pc">k</span><span class="c">ely(</span><span class="w">co</span><span class="c">unt</span> <span class="c">&gt;</span> <span class="pc">0)) </span><span class="c">{</span>
+		<span class="w">u</span><span class="pc">8</span>		<span class="w">w</span><span class="c">ord</span> <span class="c">=</span> <span class="c">0;</span>
+
+		<span class="c">if</span> <span class="c">(</span><span class="w">tx)</span>
+			<span class="w">w</span><span class="c">ord</span> <span class="w">=</span><span class="pc"> *</span><span class="w">tx+</span><span class="pc">+</span><span class="c">;</span>
+		<span class="w">w</span><span class="pc">o</span><span class="c">rd</span> <span class="c">=</span> <span class="w">txrx_word</span><span class="c">(</span><span class="w">spi</span><span class="c">,</span> <span class="w">ns</span><span class="pc">,</span> <span class="pc">w</span><span class="c">ord</span><span class="pc">,</span> <span class="w">bi</span><span class="pc">ts</span><span class="c">);</span>
+		<span class="c">if</span> <span class="c">(</span><span class="w">rx)</span>
+			<span class="pc">*</span><span class="w">rx</span><span class="pc">+</span><span class="c">+ =</span> <span class="pc">w</span><span class="c">ord;</span>
+		<span class="w">c</span><span class="pc">o</span><span class="c">unt</span> <span class="pc">-</span><span class="c">=</span> <span class="pc">1</span><span class="c">;</span>
+	<span class="c">}</span>
+	<span class="c">return</span> <span class="w">t</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">l</span><span class="c">en</span> <span class="pc">-</span> <span class="w">c</span><span class="c">ount;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">u</span><span class="c">nsigned</span> <span class="w">bitbang_txrx_16</span><span class="c">(</span>
+	<span class="c">struct</span> <span class="w">spi_device</span>	<span class="c">*</span><span class="w">sp</span><span class="pc">i</span><span class="c">,</span>
+	<span class="w">u</span><span class="pc">3</span><span class="c">2</span>			<span class="w">(</span><span class="c">*</span><span class="w">txrx_word</span><span class="c">)(</span><span class="pc">s</span><span class="c">truct</span> <span class="c">spi_device</span> <span class="c">*</span><span class="w">sp</span><span class="pc">i</span><span class="c">,</span>
+					<span class="c">unsigned</span> <span class="w">nsecs</span><span class="c">,</span>
+					<span class="w">u</span><span class="pc">3</span><span class="c">2</span> <span class="w">w</span><span class="c">ord,</span> <span class="pc">u8</span> <span class="w">bi</span><span class="pc">ts</span><span class="w">)</span><span class="pc">,</span>
+	<span class="w">u</span><span class="pc">n</span><span class="c">signed</span>		<span class="w">ns</span><span class="pc">,</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">spi_transfer</span>	<span class="c">*</span><span class="w">t</span>
+<span class="w">)</span><span class="pc"> </span><span class="c">{</span>
+	<span class="pc">u</span><span class="c">nsigned</span>		<span class="w">bi</span><span class="pc">ts</span> <span class="pc">=</span> <span class="w">t</span><span class="c">-&gt;</span><span class="w">bits_per_word</span><span class="c">;</span>
+	<span class="pc">u</span><span class="c">nsigned</span>		<span class="w">c</span><span class="pc">o</span><span class="c">unt</span> <span class="c">=</span> <span class="w">t</span><span class="c">-&gt;</span><span class="w">l</span><span class="c">en;</span>
+	<span class="w">co</span><span class="pc">n</span><span class="c">st</span> <span class="w">u</span><span class="pc">1</span><span class="c">6</span>		<span class="c">*</span><span class="w">tx</span> <span class="pc">=</span> <span class="w">t</span><span class="c">-&gt;</span><span class="w">tx_buf</span><span class="pc">;</span>
+	<span class="w">u</span><span class="pc">1</span><span class="c">6</span>			<span class="c">*</span><span class="w">r</span><span class="pc">x</span> <span class="pc">=</span> <span class="pc">t</span><span class="c">-&gt;</span><span class="w">rx_buf</span><span class="c">;</span>
+
+	<span class="w">w</span><span class="c">hile</span> <span class="c">(</span><span class="w">l</span><span class="pc">ik</span><span class="c">ely(</span><span class="w">co</span><span class="c">unt</span> <span class="c">&gt;</span> <span class="pc">1)) </span><span class="c">{</span>
+		<span class="w">u</span><span class="pc">1</span><span class="c">6</span>		<span class="w">w</span><span class="c">ord</span> <span class="c">=</span> <span class="c">0;</span>
+
+		<span class="c">if</span> <span class="c">(</span><span class="w">tx)</span>
+			<span class="w">w</span><span class="c">ord</span> <span class="w">=</span><span class="pc"> *</span><span class="w">tx+</span><span class="pc">+</span><span class="c">;</span>
+		<span class="w">w</span><span class="pc">o</span><span class="c">rd</span> <span class="c">=</span> <span class="w">txrx_word</span><span class="c">(</span><span class="w">spi</span><span class="c">,</span> <span class="w">ns</span><span class="pc">,</span> <span class="pc">w</span><span class="c">ord</span><span class="pc">,</span> <span class="w">bi</span><span class="pc">ts</span><span class="c">);</span>
+		<span class="c">if</span> <span class="c">(</span><span class="w">rx)</span>
+			<span class="pc">*</span><span class="w">rx</span><span class="pc">+</span><span class="c">+ =</span> <span class="pc">w</span><span class="c">ord;</span>
+		<span class="w">c</span><span class="pc">o</span><span class="c">unt</span> <span class="pc">-</span><span class="c">=</span> <span class="w">2</span><span class="c">;</span>
+	<span class="pc">}</span>
+	<span class="c">return</span> <span class="w">t</span><span class="pc">-&gt;</span><span class="w">l</span><span class="c">en</span> <span class="pc">-</span> <span class="w">c</span><span class="pc">o</span><span class="c">unt;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">u</span><span class="c">nsigned</span> <span class="w">bitbang_txrx_32</span><span class="c">(</span>
+	<span class="c">struct</span> <span class="w">spi_device</span>	<span class="c">*</span><span class="w">sp</span><span class="pc">i</span><span class="c">,</span>
+	<span class="w">u</span><span class="pc">3</span><span class="c">2</span>			<span class="w">(</span><span class="c">*</span><span class="w">txrx_word</span><span class="c">)(</span><span class="pc">s</span><span class="c">truct</span> <span class="c">spi_device</span> <span class="c">*</span><span class="w">sp</span><span class="pc">i</span><span class="c">,</span>
+					<span class="c">unsigned</span> <span class="w">nsecs</span><span class="c">,</span>
+					<span class="w">u</span><span class="pc">3</span><span class="c">2</span> <span class="w">w</span><span class="c">ord,</span> <span class="pc">u8</span> <span class="w">bi</span><span class="pc">ts</span><span class="w">)</span><span class="pc">,</span>
+	<span class="w">u</span><span class="pc">n</span><span class="c">signed</span>		<span class="w">ns</span><span class="pc">,</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">spi_transfer</span>	<span class="c">*</span><span class="w">t</span>
+<span class="w">)</span><span class="pc"> </span><span class="c">{</span>
+	<span class="pc">u</span><span class="c">nsigned</span>		<span class="w">bi</span><span class="pc">ts</span> <span class="pc">=</span> <span class="w">t</span><span class="c">-&gt;</span><span class="w">bits_per_word</span><span class="c">;</span>
+	<span class="pc">u</span><span class="c">nsigned</span>		<span class="w">c</span><span class="pc">o</span><span class="c">unt</span> <span class="c">=</span> <span class="w">t</span><span class="c">-&gt;</span><span class="w">l</span><span class="c">en;</span>
+	<span class="w">co</span><span class="pc">n</span><span class="c">st</span> <span class="pc">u3</span><span class="c">2</span>		<span class="c">*</span><span class="w">tx</span> <span class="pc">=</span> <span class="pc">t</span><span class="c">-&gt;</span><span class="w">tx_buf</span><span class="pc">;</span>
+	<span class="pc">u3</span><span class="c">2</span>			<span class="c">*</span><span class="w">r</span><span class="pc">x</span> <span class="pc">=</span> <span class="c">t-&gt;</span><span class="w">rx_buf</span><span class="c">;</span>
+
+	<span class="w">w</span><span class="c">hile</span> <span class="c">(</span><span class="w">l</span><span class="pc">ik</span><span class="c">ely(</span><span class="w">co</span><span class="pc">u</span><span class="c">nt</span> <span class="c">&gt;</span> <span class="w">3</span><span class="pc">)) </span><span class="c">{</span>
+		<span class="pc">u</span><span class="c">32</span>		<span class="w">w</span><span class="c">ord</span> <span class="c">=</span> <span class="c">0;</span>
+
+		<span class="c">if</span> <span class="c">(</span><span class="w">tx)</span>
+			<span class="w">w</span><span class="c">ord</span> <span class="w">=</span><span class="pc"> *</span><span class="w">tx+</span><span class="pc">+</span><span class="c">;</span>
+		<span class="w">w</span><span class="pc">o</span><span class="c">rd</span> <span class="c">=</span> <span class="w">txrx_word</span><span class="c">(</span><span class="w">spi</span><span class="c">,</span> <span class="w">ns</span><span class="pc">,</span> <span class="pc">w</span><span class="c">ord</span><span class="pc">,</span> <span class="w">bi</span><span class="pc">ts</span><span class="c">);</span>
+		<span class="c">if</span> <span class="c">(</span><span class="w">rx)</span>
+			<span class="pc">*</span><span class="w">rx</span><span class="pc">+</span><span class="c">+ =</span> <span class="pc">w</span><span class="c">ord;</span>
+		<span class="w">c</span><span class="pc">o</span><span class="c">unt</span> <span class="pc">-</span><span class="c">=</span> <span class="pc">4</span><span class="c">;</span>
+	<span class="pc">}</span>
+	<span class="c">return</span> <span class="w">t</span><span class="pc">-&gt;l</span><span class="c">en</span> <span class="pc">-</span> <span class="w">c</span><span class="pc">o</span><span class="c">unt;</span>
+<span class="c">}</span>
+
+<span class="pc">i</span><span class="c">nt</span> <span class="w">spi_bitbang_setup_transfer</span><span class="c">(struct</span> <span class="w">spi_device</span> <span class="c">*</span><span class="w">sp</span><span class="pc">i</span><span class="c">,</span> <span class="c">struct</span> <span class="w">spi_transfer</span> <span class="c">*</span><span class="w">t</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">spi_bitbang_cs</span>	<span class="c">*</span><span class="w">cs</span> <span class="c">=</span> <span class="w">spi</span><span class="c">-&gt;</span><span class="w">controller_state</span><span class="c">;</span>
+	<span class="w">u</span><span class="pc">8</span>			<span class="w">bits_per_word</span><span class="pc">;</span>
+	<span class="w">u</span><span class="pc">3</span><span class="c">2</span>			<span class="w">hz</span><span class="c">;</span>
+
+	<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">t)</span><span class="pc"> </span><span class="c">{</span>
+		<span class="w">b</span><span class="c">its_per_word</span> <span class="c">=</span> <span class="w">t</span><span class="c">-&gt;bits_per_word;</span>
+		<span class="pc">h</span><span class="c">z</span> <span class="pc">=</span> <span class="pc">t</span><span class="c">-&gt;</span><span class="w">speed_hz</span><span class="c">;</span>
+	<span class="pc">}</span> <span class="pc">e</span><span class="c">lse</span> <span class="c">{</span>
+		<span class="c">bits_per_word</span> <span class="c">=</span> <span class="pc">0</span><span class="c">;</span>
+		<span class="pc">h</span><span class="c">z</span> <span class="c">=</span> <span class="pc">0</span><span class="c">;</span>
+	<span class="c">}</span>
+
+	
+	<span class="pc">i</span><span class="c">f</span> <span class="pc">(!</span><span class="c">bits_per_word</span><span class="pc">)</span>
+		<span class="pc">b</span><span class="c">its_per_word</span> <span class="c">=</span> <span class="w">spi</span><span class="pc">-</span><span class="c">&gt;bits_per_word;</span>
+	<span class="c">if</span> <span class="c">(bits_per_word</span> <span class="w">&lt;</span><span class="pc">=</span> <span class="w">8</span><span class="c">)</span>
+		<span class="w">c</span><span class="pc">s</span><span class="c">-&gt;</span><span class="w">txrx_bufs</span> <span class="c">=</span> <span class="w">bitbang_txrx_8</span><span class="c">;</span>
+	<span class="c">else</span> <span class="c">if</span> <span class="c">(bits_per_word</span> <span class="w">&lt;</span><span class="pc">=</span> <span class="w">1</span><span class="pc">6</span><span class="c">)</span>
+		<span class="w">cs</span><span class="c">-&gt;txrx_bufs</span> <span class="c">=</span> <span class="w">bitbang_txrx_16</span><span class="c">;</span>
+	<span class="c">else</span> <span class="c">if</span> <span class="c">(bits_per_word</span> <span class="w">&lt;</span><span class="pc">=</span> <span class="w">3</span><span class="pc">2</span><span class="c">)</span>
+		<span class="w">c</span><span class="c">s-&gt;txrx_bufs</span> <span class="c">=</span> <span class="w">bitbang_txrx_32</span><span class="c">;</span>
+	<span class="c">else</span>
+		<span class="w">r</span><span class="c">eturn</span> <span class="pc">-</span><span class="c">EINVAL;</span>
+
+	
+	<span class="pc">i</span><span class="c">f</span> <span class="pc">(!</span><span class="w">hz</span><span class="pc">)</span>
+		<span class="w">h</span><span class="c">z</span> <span class="c">=</span> <span class="w">spi</span><span class="c">-&gt;</span><span class="w">max_speed_hz</span><span class="c">;</span>
+	<span class="c">if</span> <span class="c">(hz</span><span class="pc">) </span><span class="c">{</span>
+		<span class="w">c</span><span class="pc">s</span><span class="c">-&gt;</span><span class="w">nsecs</span> <span class="pc">= </span><span class="c">(</span><span class="w">1000000000/</span><span class="pc">2</span><span class="w">)</span><span class="pc"> /</span> <span class="w">h</span><span class="c">z;</span>
+		<span class="c">if</span> <span class="c">(</span><span class="pc">c</span><span class="c">s-&gt;</span><span class="pc">n</span><span class="c">secs</span> <span class="w">&gt; (MAX_UDELAY_MS</span> <span class="w">*</span> <span class="w">1</span><span class="c">000</span> <span class="pc">*</span> <span class="pc">1</span><span class="c">000</span><span class="w">)</span><span class="pc">)</span>
+			<span class="c">return</span> <span class="c">-EINVAL;</span>
+	<span class="c">}</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+<span class="w">E</span><span class="c">XPORT_SYMBOL_GPL(</span><span class="w">spi_bitbang_setup_transfer</span><span class="c">);</span>
+
+
+<span class="c">int</span> <span class="w">spi_bitbang_setup</span><span class="c">(struct</span> <span class="w">spi_device</span> <span class="c">*</span><span class="w">spi</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">spi_bitbang_cs</span>	<span class="c">*</span><span class="w">cs</span> <span class="c">=</span> <span class="w">spi</span><span class="c">-&gt;</span><span class="w">controller_state</span><span class="c">;</span>
+	<span class="c">struct</span> <span class="w">spi_bitbang</span>	<span class="c">*</span><span class="w">bitbang</span><span class="c">;</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="pc">l</span><span class="c">ong</span>		<span class="c">flags;</span>
+
+	<span class="w">b</span><span class="pc">i</span><span class="c">tbang</span> <span class="c">=</span> <span class="w">spi_master_get_devdata</span><span class="c">(</span><span class="w">sp</span><span class="pc">i-</span><span class="c">&gt;</span><span class="w">m</span><span class="pc">a</span><span class="c">ster</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="c">if</span> <span class="pc">(!</span><span class="w">cs</span><span class="pc">)</span><span class="c"> {</span>
+		<span class="w">cs</span> <span class="pc">=</span> <span class="pc">k</span><span class="c">zalloc(sizeof(*</span><span class="w">cs</span><span class="pc">)</span><span class="c">,</span> <span class="c">GFP_KERNEL);</span>
+		<span class="c">if</span> <span class="c">(!</span><span class="pc">cs</span><span class="c">)</span>
+			<span class="c">return</span> <span class="c">-ENOMEM;</span>
+		<span class="w">spi</span><span class="c">-&gt;</span><span class="w">controller_state</span> <span class="c">=</span> <span class="w">c</span><span class="pc">s;</span>
+	<span class="w">}</span>
+
+	
+	<span class="w">c</span><span class="pc">s</span><span class="c">-&gt;</span><span class="w">txrx_word</span> <span class="c">=</span> <span class="w">bitbang-</span><span class="c">&gt;txrx_word</span><span class="pc">[</span><span class="w">spi</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">m</span><span class="c">ode</span> <span class="w">&amp; </span><span class="pc">(</span><span class="w">SPI_CPOL</span><span class="c">|</span><span class="w">SPI_CPHA)]</span><span class="c">;</span>
+	<span class="c">if</span> <span class="pc">(!</span><span class="w">c</span><span class="pc">s</span><span class="c">-&gt;txrx_word</span><span class="pc">)</span>
+		<span class="c">return</span> <span class="c">-EINVAL;</span>
+
+	<span class="c">if</span> <span class="c">(</span><span class="w">b</span><span class="pc">i</span><span class="c">tbang-&gt;</span><span class="w">setup_transfer</span><span class="pc">) </span><span class="c">{</span>
+		<span class="w">i</span><span class="pc">n</span><span class="c">t</span> <span class="w">r</span><span class="pc">etv</span><span class="c">al</span> <span class="c">=</span> <span class="pc">b</span><span class="c">itbang-&gt;setup_transfer</span><span class="w">(sp</span><span class="pc">i</span><span class="c">,</span> <span class="w">N</span><span class="c">ULL);</span>
+		<span class="c">if</span> <span class="c">(</span><span class="pc">retv</span><span class="c">al</span> <span class="pc">&lt;</span> <span class="c">0</span><span class="pc">)</span>
+			<span class="pc">r</span><span class="c">eturn</span> <span class="pc">retv</span><span class="c">al;</span>
+	<span class="pc">}</span>
+
+	<span class="w">d</span><span class="c">ev_dbg(&amp;</span><span class="w">sp</span><span class="c">i-&gt;dev</span><span class="pc">, "%</span><span class="c">s</span><span class="w">,</span><span class="pc"> %</span><span class="w">u</span> <span class="w">nsec/bi</span><span class="pc">t\</span><span class="c">n",</span> <span class="c">__func__,</span> <span class="w">2</span> <span class="pc">*</span> <span class="w">cs</span><span class="c">-&gt;</span><span class="w">nsecs</span><span class="c">);</span>
+
+	
+
+	
+	<span class="w">sp</span><span class="pc">in_l</span><span class="c">ock_irqsave(&amp;</span><span class="w">bitbang</span><span class="c">-&gt;lock,</span> <span class="c">flags);</span>
+	<span class="pc">i</span><span class="c">f</span> <span class="pc">(!</span><span class="c">bitbang</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">b</span><span class="pc">u</span><span class="c">sy) {</span>
+		<span class="pc">b</span><span class="c">itbang</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">chipselect</span><span class="pc">(</span><span class="w">sp</span><span class="pc">i</span><span class="c">,</span> <span class="w">BITBANG_CS_INACTIVE</span><span class="pc">)</span><span class="c">;</span>
+		<span class="w">ndelay</span><span class="c">(</span><span class="w">c</span><span class="pc">s</span><span class="c">-&gt;nsecs</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">}</span>
+	<span class="w">s</span><span class="pc">p</span><span class="c">in_unlock_irqrestore(&amp;bitbang-&gt;lock,</span> <span class="c">flags);</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+<span class="w">E</span><span class="c">XPORT_SYMBOL_GPL(</span><span class="w">spi_bitbang_setup</span><span class="c">);</span>
+
+
+<span class="pc">v</span><span class="c">oid</span> <span class="w">spi_bitbang_cleanup</span><span class="c">(struct</span> <span class="w">spi_device</span> <span class="c">*</span><span class="w">sp</span><span class="pc">i</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="w">k</span><span class="c">free(</span><span class="w">spi</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">controller_state</span><span class="c">);</span>
+<span class="c">}</span>
+<span class="pc">E</span><span class="c">XPORT_SYMBOL_GPL(spi_bitbang_cleanup);</span>
+
+<span class="pc">s</span><span class="c">tatic</span> <span class="c">int</span> <span class="w">spi_bitbang_bufs</span><span class="c">(struct</span> <span class="pc">s</span><span class="c">pi_device</span> <span class="c">*</span><span class="w">s</span><span class="pc">pi</span><span class="c">,</span> <span class="c">struct</span> <span class="w">spi_transfer</span> <span class="c">*</span><span class="w">t</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">spi_bitbang_cs</span>	<span class="c">*</span><span class="w">cs</span> <span class="c">=</span> <span class="w">spi</span><span class="c">-&gt;</span><span class="pc">co</span><span class="c">ntroller_state;</span>
+	<span class="pc">u</span><span class="c">nsigned</span>		<span class="w">nsecs</span> <span class="c">=</span> <span class="w">cs</span><span class="c">-&gt;nsecs;</span>
+
+	<span class="w">r</span><span class="c">eturn</span> <span class="w">c</span><span class="pc">s</span><span class="c">-&gt;</span><span class="w">txrx_bufs</span><span class="pc">(</span><span class="w">spi</span><span class="c">,</span> <span class="w">c</span><span class="pc">s</span><span class="c">-&gt;</span><span class="w">txrx_word</span><span class="c">,</span> <span class="pc">n</span><span class="c">secs</span><span class="pc">,</span> <span class="w">t</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">}</span>
+
+
+
+
+
+<span class="c">static</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">spi_bitbang_prepare_hardware</span><span class="c">(struct</span> <span class="w">spi_master</span> <span class="c">*</span><span class="w">s</span><span class="pc">p</span><span class="c">i</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">spi_bitbang</span>	<span class="c">*</span><span class="w">bitbang</span><span class="pc">;</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="pc">l</span><span class="c">ong</span>		<span class="c">flags;</span>
+
+	<span class="w">b</span><span class="c">itbang</span> <span class="pc">=</span> <span class="w">spi_master_get_devdata</span><span class="c">(</span><span class="w">s</span><span class="pc">pi</span><span class="c">);</span>
+
+	<span class="w">s</span><span class="pc">pin</span><span class="c">_lock_irqsave(&amp;bitbang-&gt;lock,</span> <span class="c">flags);</span>
+	<span class="pc">b</span><span class="c">itbang</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">b</span><span class="pc">u</span><span class="c">sy</span> <span class="c">=</span> <span class="w">1</span><span class="c">;</span>
+	<span class="pc">s</span><span class="c">pin_unlock_irqrestore(&amp;bitbang-&gt;lock,</span> <span class="c">flags);</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="pc">int</span> <span class="w">spi_bitbang_transfer_one</span><span class="c">(struct</span> <span class="w">spi_master</span> <span class="c">*</span><span class="w">m</span><span class="pc">a</span><span class="c">ster,</span>
+				    <span class="c">struct</span> <span class="w">spi_message</span> <span class="c">*</span><span class="w">m</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">spi_bitbang</span>	<span class="c">*bitbang</span><span class="pc">;</span>
+	<span class="pc">u</span><span class="c">nsigned</span>		<span class="w">nsecs</span><span class="c">;</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">spi_transfer</span>	<span class="c">*</span><span class="w">t</span> <span class="pc">=</span> <span class="pc">N</span><span class="c">ULL;</span>
+	<span class="pc">u</span><span class="c">nsigned</span>		<span class="w">cs_change</span><span class="pc">;</span>
+	<span class="c">int</span>			<span class="w">s</span><span class="pc">t</span><span class="c">atus;</span>
+	<span class="pc">in</span><span class="c">t</span>			<span class="w">do_setup</span> <span class="w">=</span><span class="pc"> </span><span class="c">-1;</span>
+	<span class="pc">s</span><span class="c">truct</span> <span class="w">spi_device</span>	<span class="c">*</span><span class="w">sp</span><span class="pc">i</span> <span class="pc">=</span> <span class="w">m</span><span class="c">-&gt;</span><span class="w">sp</span><span class="pc">i</span><span class="c">;</span>
+
+	<span class="w">b</span><span class="c">itbang</span> <span class="pc">=</span> <span class="w">spi_master_get_devdata</span><span class="c">(</span><span class="w">ma</span><span class="c">ster</span><span class="pc">)</span><span class="c">;</span>
+
+	
+	<span class="w">n</span><span class="c">secs</span> <span class="c">=</span> <span class="w">1</span><span class="pc">00</span><span class="c">;</span>
+
+	<span class="pc">c</span><span class="c">s_change</span> <span class="pc">=</span> <span class="pc">1</span><span class="c">;</span>
+	<span class="w">st</span><span class="pc">atu</span><span class="c">s</span> <span class="c">=</span> <span class="c">0;</span>
+
+	<span class="w">l</span><span class="pc">i</span><span class="c">st_for_each_entry(</span><span class="w">t</span><span class="c">, &amp;</span><span class="w">m</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">transfers</span><span class="c">,</span> <span class="w">transfer_list</span><span class="c">) {</span>
+
+		
+		<span class="c">if</span> <span class="c">(t-&gt;</span><span class="w">speed_hz</span> <span class="w">|</span><span class="c">|</span> <span class="w">t</span><span class="c">-&gt;</span><span class="w">bits_per_word</span><span class="pc">)</span>
+			<span class="w">do_setup</span> <span class="pc">=</span> <span class="pc">1</span><span class="c">;</span>
+
+		
+		<span class="c">if</span> <span class="c">(</span><span class="w">d</span><span class="c">o_setup</span> <span class="w">!</span><span class="c">=</span> <span class="c">0) {</span>
+			<span class="c">if</span> <span class="c">(</span><span class="w">bitbang</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">setup_transfer</span><span class="pc">)</span><span class="c"> {</span>
+				<span class="w">s</span><span class="pc">ta</span><span class="c">tus</span> <span class="c">=</span> <span class="c">bitbang-&gt;setup_transfer</span><span class="w">(spi</span><span class="c">,</span> <span class="w">t</span><span class="c">);</span>
+				<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">s</span><span class="pc">t</span><span class="c">atus</span> <span class="pc">&lt;</span> <span class="c">0</span><span class="pc">)</span>
+					<span class="pc">b</span><span class="c">reak;</span>
+			<span class="c">}</span>
+			<span class="c">if</span> <span class="c">(</span><span class="pc">d</span><span class="c">o_setup</span> <span class="w">=</span><span class="pc">= </span><span class="c">-1</span><span class="pc">)</span>
+				<span class="w">d</span><span class="pc">o</span><span class="c">_setup</span> <span class="c">=</span> <span class="pc">0</span><span class="c">;</span>
+		<span class="pc">}</span>
+
+		
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">cs_change</span><span class="pc">) </span><span class="c">{</span>
+			<span class="w">b</span><span class="c">itbang</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">chipselect(sp</span><span class="pc">i</span><span class="c">,</span> <span class="w">BITBANG_CS_ACTIVE</span><span class="pc">)</span><span class="c">;</span>
+			<span class="w">ndelay</span><span class="c">(</span><span class="w">nsecs</span><span class="pc">)</span><span class="c">;</span>
+		<span class="pc">}</span>
+		<span class="w">c</span><span class="c">s_change</span> <span class="c">=</span> <span class="w">t</span><span class="c">-&gt;</span><span class="w">c</span><span class="pc">s</span><span class="c">_change;</span>
+		<span class="c">if</span> <span class="pc">(!</span><span class="w">t</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">tx_buf</span> <span class="w">&amp;</span><span class="pc">&amp; </span><span class="c">!</span><span class="w">t</span><span class="c">-&gt;</span><span class="w">rx_buf</span> <span class="pc">&amp;</span><span class="c">&amp;</span> <span class="w">t</span><span class="c">-&gt;</span><span class="w">l</span><span class="c">en) {</span>
+			<span class="w">st</span><span class="pc">a</span><span class="c">tus</span> <span class="pc">= </span><span class="c">-EINVAL;</span>
+			<span class="pc">b</span><span class="c">reak;</span>
+		<span class="c">}</span>
+
+		
+		<span class="c">if</span> <span class="c">(</span><span class="pc">t</span><span class="c">-&gt;</span><span class="pc">l</span><span class="c">en</span><span class="pc">)</span><span class="c"> {</span>
+			
+			<span class="pc">i</span><span class="c">f</span> <span class="pc">(!</span><span class="w">m</span><span class="c">-&gt;</span><span class="w">is_dma_mapped</span><span class="pc">)</span>
+				<span class="pc">t</span><span class="c">-&gt;</span><span class="w">rx_dma</span> <span class="c">=</span> <span class="c">t-&gt;</span><span class="w">tx_dma</span> <span class="w">=</span> <span class="pc">0</span><span class="c">;</span>
+			<span class="w">st</span><span class="pc">atu</span><span class="c">s</span> <span class="c">=</span> <span class="w">bitbang</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">txrx_bufs</span><span class="pc">(</span><span class="w">spi</span><span class="c">,</span> <span class="pc">t)</span><span class="c">;</span>
+		<span class="pc">}</span>
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">s</span><span class="c">tatus</span> <span class="pc">&gt;</span> <span class="c">0</span><span class="pc">)</span>
+			<span class="w">m</span><span class="c">-&gt;</span><span class="w">actual_length</span> <span class="w">+</span><span class="pc">=</span> <span class="w">s</span><span class="pc">t</span><span class="c">atus;</span>
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="pc">s</span><span class="c">tatus</span> <span class="w">!</span><span class="c">=</span> <span class="pc">t</span><span class="c">-&gt;</span><span class="w">l</span><span class="pc">en</span><span class="c">) {</span>
+			
+			<span class="c">if</span> <span class="c">(status</span> <span class="w">&gt;</span><span class="pc">=</span> <span class="c">0)</span>
+				<span class="w">s</span><span class="c">tatus</span> <span class="pc">= </span><span class="c">-</span><span class="w">EREMOTEIO</span><span class="c">;</span>
+			<span class="pc">b</span><span class="c">reak;</span>
+		<span class="c">}</span>
+		<span class="pc">s</span><span class="c">tatus</span> <span class="c">=</span> <span class="pc">0</span><span class="c">;</span>
+
+		
+		<span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">t</span><span class="c">-&gt;</span><span class="w">delay_usecs</span><span class="pc">)</span>
+			<span class="w">u</span><span class="pc">d</span><span class="c">elay(</span><span class="w">t</span><span class="pc">-</span><span class="c">&gt;delay_usecs);</span>
+
+		<span class="w">i</span><span class="c">f</span> <span class="c">(</span><span class="w">cs_change</span> <span class="w">&amp;</span><span class="pc">&amp;</span>
+		    <span class="w">!list_is_last</span><span class="pc">(&amp;t</span><span class="c">-&gt;</span><span class="w">transfer_list</span><span class="pc">, </span><span class="c">&amp;</span><span class="w">m</span><span class="c">-&gt;</span><span class="w">transfers</span><span class="pc">))</span><span class="c"> {</span>
+			
+			<span class="w">ndelay</span><span class="pc">(</span><span class="w">nsecs</span><span class="c">);</span>
+			<span class="w">bitbang-</span><span class="c">&gt;</span><span class="w">chipselect</span><span class="pc">(</span><span class="w">spi</span><span class="pc">,</span> <span class="w">BITBANG_CS_INACTIVE</span><span class="pc">)</span><span class="c">;</span>
+			<span class="w">n</span><span class="pc">d</span><span class="c">elay(</span><span class="pc">n</span><span class="c">secs);</span>
+		<span class="c">}</span>
+	<span class="pc">}</span>
+
+	<span class="w">m</span><span class="c">-&gt;</span><span class="w">s</span><span class="pc">tatu</span><span class="c">s</span> <span class="c">=</span> <span class="w">s</span><span class="pc">t</span><span class="c">atus;</span>
+
+	
+	<span class="pc">i</span><span class="c">f</span> <span class="pc">(!(s</span><span class="c">tatus</span> <span class="pc">==</span> <span class="c">0</span> <span class="w">&amp;</span><span class="c">&amp;</span> <span class="w">cs_change)</span><span class="pc">)</span><span class="c"> {</span>
+		<span class="w">n</span><span class="c">delay(nsecs</span><span class="pc">)</span><span class="c">;</span>
+		<span class="c">bitbang</span><span class="pc">-</span><span class="c">&gt;chipselect</span><span class="pc">(</span><span class="w">sp</span><span class="pc">i</span><span class="c">,</span> <span class="c">BITBANG_CS_INACTIVE);</span>
+		<span class="c">ndelay(nsecs</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">}</span>
+
+	<span class="w">spi_finalize_current_message</span><span class="c">(</span><span class="w">mas</span><span class="pc">t</span><span class="c">er);</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="w">s</span><span class="c">tatus;</span>
+<span class="c">}</span>
+
+<span class="c">static</span> <span class="c">int</span> <span class="w">spi_bitbang_unprepare_hardware</span><span class="c">(struct</span> <span class="w">spi_master</span> <span class="c">*</span><span class="w">s</span><span class="pc">p</span><span class="c">i</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">spi_bitbang</span>	<span class="c">*</span><span class="pc">b</span><span class="c">itbang</span><span class="pc">;</span>
+	<span class="pc">u</span><span class="c">nsigned</span> <span class="pc">l</span><span class="c">ong</span>		<span class="c">flags;</span>
+
+	<span class="w">b</span><span class="pc">i</span><span class="c">tbang</span> <span class="pc">=</span> <span class="w">spi_master_get_devdata</span><span class="c">(</span><span class="w">s</span><span class="c">pi);</span>
+
+	<span class="w">sp</span><span class="pc">in</span><span class="c">_lock_irqsave(&amp;bitbang-&gt;lock,</span> <span class="c">flags);</span>
+	<span class="pc">b</span><span class="c">itbang</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">b</span><span class="pc">u</span><span class="c">sy</span> <span class="c">=</span> <span class="pc">0</span><span class="c">;</span>
+	<span class="pc">s</span><span class="c">pin_unlock_irqrestore(&amp;bitbang-&gt;lock,</span> <span class="c">flags);</span>
+
+	<span class="pc">r</span><span class="c">eturn</span> <span class="c">0;</span>
+<span class="c">}</span>
+
+
+
+
+<span class="pc">i</span><span class="c">nt</span> <span class="w">spi_bitbang_start</span><span class="c">(struct</span> <span class="w">spi_bitbang</span> <span class="c">*bitbang</span><span class="pc">)</span>
+<span class="c">{</span>
+	<span class="c">struct</span> <span class="w">spi_master</span> <span class="c">*</span><span class="w">m</span><span class="pc">a</span><span class="c">ster</span> <span class="c">=</span> <span class="c">bitbang-&gt;</span><span class="w">m</span><span class="pc">a</span><span class="c">ster;</span>
+	<span class="pc">in</span><span class="c">t</span> <span class="c">ret;</span>
+
+	<span class="c">if</span> <span class="pc">(!</span><span class="w">m</span><span class="pc">as</span><span class="c">ter</span> <span class="pc">|</span><span class="c">| !bitbang-&gt;</span><span class="w">chipselect</span><span class="c">)</span>
+		<span class="c">return</span> <span class="c">-EINVAL;</span>
+
+	<span class="w">spin</span><span class="pc">_lock_in</span><span class="c">it(&amp;bitbang-&gt;lock);</span>
+
+	<span class="c">if</span> <span class="pc">(!</span><span class="w">m</span><span class="c">aster-&gt;</span><span class="w">mode_bits</span><span class="c">)</span>
+		<span class="w">m</span><span class="pc">ast</span><span class="c">er-&gt;mode_bits</span> <span class="c">=</span> <span class="w">SPI_CPOL</span> <span class="pc">|</span> <span class="w">SPI_CPHA</span> <span class="pc">|</span> <span class="c">bitbang-&gt;</span><span class="w">f</span><span class="pc">l</span><span class="c">ags;</span>
+
+	<span class="c">if</span> <span class="c">(</span><span class="w">ma</span><span class="pc">s</span><span class="c">ter-&gt;</span><span class="w">transfer</span> <span class="w">|</span><span class="c">|</span> <span class="w">m</span><span class="pc">a</span><span class="c">ster-&gt;</span><span class="w">transfer_one_message</span><span class="c">)</span>
+		<span class="c">return</span> <span class="c">-EINVAL;</span>
+
+	<span class="w">ma</span><span class="c">ster-&gt;</span><span class="w">prepare_transfer_hardware</span> <span class="c">=</span> <span class="w">spi_bitbang_prepare_hardware</span><span class="pc">;</span>
+	<span class="w">m</span><span class="c">aster-&gt;</span><span class="w">unprepare_transfer_hardware</span> <span class="c">=</span> <span class="w">spi_bitbang_unprepare_hardware</span><span class="c">;</span>
+	<span class="w">m</span><span class="pc">a</span><span class="c">ster-&gt;</span><span class="pc">t</span><span class="c">ransfer_one_message</span> <span class="c">=</span> <span class="w">spi_bitbang_transfer_one</span><span class="c">;</span>
+
+	<span class="c">if</span> <span class="pc">(!b</span><span class="c">itbang-&gt;</span><span class="w">txrx_bufs</span><span class="pc">) </span><span class="c">{</span>
+		<span class="w">b</span><span class="c">itbang-&gt;</span><span class="w">use_dma</span> <span class="c">=</span> <span class="c">0;</span>
+		<span class="w">b</span><span class="c">itbang-&gt;txrx_bufs</span> <span class="c">=</span> <span class="w">spi_bitbang_bufs</span><span class="c">;</span>
+		<span class="pc">i</span><span class="c">f</span> <span class="pc">(!</span><span class="w">m</span><span class="pc">as</span><span class="c">ter-&gt;</span><span class="w">se</span><span class="c">tup</span><span class="pc">) </span><span class="c">{</span>
+			<span class="c">if</span> <span class="pc">(!</span><span class="c">bitbang-&gt;</span><span class="w">setup_transfer</span><span class="c">)</span>
+				<span class="pc">bi</span><span class="c">tbang-&gt;setup_transfer</span> <span class="c">=</span>
+					 <span class="w">spi_bitbang_setup_transfer</span><span class="c">;</span>
+			<span class="w">ma</span><span class="c">ster-&gt;</span><span class="w">se</span><span class="pc">tup</span> <span class="c">=</span> <span class="w">spi_bitbang_setup</span><span class="c">;</span>
+			<span class="w">ma</span><span class="pc">s</span><span class="c">ter-&gt;</span><span class="w">cle</span><span class="c">anup</span> <span class="c">=</span> <span class="w">spi_bitbang_cleanup</span><span class="c">;</span>
+		<span class="c">}</span>
+	<span class="pc">}</span>
+
+	
+	<span class="w">r</span><span class="pc">et</span> <span class="c">=</span> <span class="w">spi_register_master</span><span class="c">(</span><span class="w">spi_master_get</span><span class="pc">(</span><span class="w">m</span><span class="pc">a</span><span class="c">ster</span><span class="w">)</span><span class="pc">)</span><span class="c">;</span>
+	<span class="c">if</span> <span class="c">(ret)</span>
+		<span class="w">spi_master_put</span><span class="c">(</span><span class="w">m</span><span class="pc">a</span><span class="c">ster</span><span class="pc">)</span><span class="c">;</span>
+
+	<span class="pc">retu</span><span class="c">rn</span> <span class="pc">0</span><span class="c">;</span>
+<span class="c">}</span>
+<span class="pc">E</span><span class="c">XPORT_SYMBOL_GPL(</span><span class="w">spi_bitbang_start</span><span class="c">);</span>
+
+
+<span class="pc">v</span><span class="c">oid</span> <span class="w">spi_bitbang_stop</span><span class="c">(struct</span> <span class="w">spi_bitbang</span> <span class="c">*</span><span class="w">bitbang</span><span class="c">)</span>
+<span class="c">{</span>
+	<span class="w">spi_unregister_master</span><span class="c">(bitbang</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">m</span><span class="pc">a</span><span class="c">ster);</span>
+<span class="c">}</span>
+<span class="pc">E</span><span class="c">XPORT_SYMBOL_GPL(spi_bitbang_stop);</span>
+
+<span class="w">M</span><span class="pc">ODULE_L</span><span class="c">ICENSE("GPL");</span>
+
+
+</pre>
+</body>
+</html>
+
