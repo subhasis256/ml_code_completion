@@ -10,7 +10,7 @@ Such code completion has several problems:
 \begin{enumerate}
   \item Grammar based code completion requires writing down an exchaustive set
     of rules. This is tedious and repetitive when done for every new language.
-  \item Predictions do not consider the context of code. For instance, driver
+  \item Predictions do not consider the category of code. For instance, driver
     codes and math libraries may exhibit different patterns.
   \item Predictions do not consider context such as header file, class
     definition, function definition, tabs and spaces, opening and closing
@@ -21,9 +21,10 @@ Such code completion has several problems:
 
 This report explores a learning based approach to code completion. Instead of
 writing grammar based rules, we use machine learning to learn structure and
-patterns in code. We can then not only train different predictors for different
+patterns in code. We can then not only automate code predictors for different
 languages, but also specialize them for different kinds of projects such as
-drivers and libraries.
+drivers and libraries. We can also consider the enclosing context and rank
+predictions.
 Section~\ref{sec:model} describes our model for the problem of code completion.
 It also gives a brief overview of a word vector based approach to modeling
 tokens in code, and techniques we use to work with a limited volcabulary of
