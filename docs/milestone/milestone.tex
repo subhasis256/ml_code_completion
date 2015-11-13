@@ -11,13 +11,15 @@
 \usepackage{listings, textcomp}
 \usepackage[T1]{fontenc}
 
-\usepackage{hyperref}
+\usepackage{amsmath}
 \usepackage{booktabs}
 \usepackage{graphicx}
 \usepackage{enumitem}
-\usepackage{amsmath}
-
-\usepackage[TABBOTCAP]{subfigure}
+\usepackage[hidelinks]{hyperref}
+\hypersetup{breaklinks=true}
+\Urlmuskip=0mu plus 2mu
+\usepackage{subcaption}
+\usepackage{xcolor}
 
 \newcommand{\remark}[1]{{\color{red}[#1]}}
 
@@ -27,7 +29,8 @@
 
 \title{\bf Contextual Code Completion Using Machine Learning}
 \author{Subhasis Das, Chinmayee Shah\\
-        \{subhasis,~chshah\}@stanford.edu}
+        \{subhasis,~chshah\}@stanford.edu\\
+        Mentor: Junjie Qin}
 
 \date{}
 \maketitle

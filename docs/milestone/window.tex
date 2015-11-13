@@ -1,7 +1,43 @@
 \section{Window Selection}
 \label{sec:window}
 
-\begin{itemize}
-  \item correlation
-  \item select alternate words?
-\end{itemize}
+\noindent
+To study the influence of tokens in an incomplete piece of code on the next
+(target) token, we computed the correlation between the input tokens and the
+target token.
+Figure~\ref{fig:correlation} shows the result (magnitude of correlation) for
+two sets of data, codes that we train on and codes that we test on, for Linux
+source code.
+We compute the correlation between every token and preceeding tokens, whenever
+there are at least 100 tokens before the target token.
+
+\begin{figure}[h]
+  \centering
+  \begin{subfigure}{0.4\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{figs/correlation_train.png}
+    \caption{Training data}
+    \label{fig:correlation-train}
+  \end{subfigure}
+  \begin{subfigure}{0.4\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{figs/correlation_test.png}
+    \caption{Test data}
+    \label{fig:correlation-test}
+  \end{subfigure}
+  \caption{Absolute value of correlation between input tokens and target token,
+    as a function of position of a token from the target, for Linux source.}
+  \label{fig:correlation}
+\end{figure}
+
+\noindent
+As we expected, the absolute value of correlation between input tokens and
+target token gradually decreases as the distance between them increases.
+However, interestingly, when an input token is 3 tokens or more away from the
+target token, tokens that are even number of tokens away (tokens 4, 6, 8 ...
+from the end) have a larger magnitude of correlation with the target token.
+We think this is because special characters and words such as variable and
+function names typically alternate in code. If other projects and languages
+also exhibit a similar trend, we would like to see if we can improve
+predictions by considering larger windows of preceeding tokens, but after
+removing tokens that are odd number of tokens away from the target token.
