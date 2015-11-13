@@ -1,7 +1,41 @@
-\section{Model}
+\section{Setup and Model}
 \label{sec:model}
 
+\noindent
+One of our objectives of learning based code prediction is to do away with the
+tedious process of building grammar based rules for different languages.
+We treat codes in the training set in a language agonostic way. The first step
+is to build a dictionary of tokens or words that can occur in the code, that we
+can take as input to predict the next token. We build this dictionary by
+reading all code, and treating each consecutive set of alphanumeric characters
+and (\_), or each conseuctive set of special characters --- characters other
+than alphanumeric and (\_), separated by new line or space, as one token.
+Given a sequence of tokens, we then want to predict the next token.
+
+The dictionary of tokens constructed as above is not complete, since new code
+may contain new tokens that are not present in the training data. Moreover,
+many of the tokens in the training data may be specific to a few files, and may
+never occur again. We prune the dictionary of tokens constructed from training
+data by keeping only the $K$ most frequent tokens. Not surprisingly, many of
+these frequent tokens are key words, or words that tend to occur often in a
+particular project. We call these frequently occuring tokens key tokens.
+Some of the frequently occuring words in linux kernel are:
+\texttt{}, \texttt{}, \texttt{}, \texttt{}.
+Given a sequence of tokens --- an incomplete piece of code, we then construct a
+sequence of identifiers by replacing
+key tokens by a unique key token identifier between $1$ and $K$ that identifies
+the key token.
+We replace the remaining tokens by positional identifiers --- if the $i^{th}$
+token in the sequence is not a key token, we replace it by identifier $K+i$. Our
+prediction would then be either a key token identifier or a positional token
+identifier.
+
+Using a finite dictionary and positional tokens as described above gives rise
+to cases where the next token after a sequence of tokens is neither a key token
+nor a positional token. For now, we ignore these cases, since many of these
+cases are actually new tokens that we would not have been able to predict even
+with a more complete dictionary.
+
 \begin{itemize}
-  \item window model
   \item word to vector
 \end{itemize}
