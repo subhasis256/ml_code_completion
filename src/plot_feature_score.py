@@ -13,6 +13,8 @@ def plotFeatureScore(score, fname):
     winSize = len(score)
     fig, ax = plt.subplots()
     plt.plot(range(winSize, 0, -1), score)
+    plt.xlabel("Position of input token from the end (target)")
+    plt.ylabel("Abs. correlation with target token")
     plt.savefig(fname)
 
 class WindowTokenFeatureStrength(WindowModel):
