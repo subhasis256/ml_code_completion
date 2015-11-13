@@ -19,22 +19,23 @@ Such code completion has several problems:
     of the top recommendations may not be useful.
 \end{enumerate}
 
+\noindent
 This report explores a learning based approach to code completion. Instead of
 writing grammar based rules, we use machine learning to learn structure and
 patterns in code. We can then not only automate code predictors for different
 languages, but also specialize them for different kinds of projects such as
 drivers and libraries. We can also consider the enclosing context and rank
 predictions.
-Section~\ref{sec:model} describes our model for the problem of code completion.
-It also gives a brief overview of a word vector based approach to modeling
-tokens in code, and techniques we use to work with a limited volcabulary of
-words.
-Section~\ref{sec:memoryless} presents memoryless techniques for predicting
-based on only a small window of preceeding tokens. While these techniques use
-less contextual information, we can still train them for different languages
-and projects.
-Section~\ref{sec:window} presents results about the influence of different
-tokens on the output.
-Section~\ref{sec:conclusions} presents conclusions about the techniques that we
-have explored so far, and proposes stateful techniques for using more immediate
-context such as file based context to improve predictions.
+%Section~\ref{sec:model} describes our model for the problem of code completion.
+%It also gives a brief overview of a word vector based approach to modeling
+%tokens in code, and techniques we use to work with a limited volcabulary of
+%words.
+%Section~\ref{sec:memoryless} presents memoryless techniques for predicting
+%based on only a small window of preceeding tokens. While these techniques use
+%less contextual information, we can still train them for different languages
+%and projects.
+%Section~\ref{sec:window} presents results about the influence of different
+%tokens on the output.
+%Section~\ref{sec:conclusions} presents conclusions about the techniques that we
+%have explored so far, and proposes stateful techniques for using more immediate
+%context such as file based context to improve predictions.
