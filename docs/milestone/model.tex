@@ -8,8 +8,8 @@ We treat codes in the training set in a language agonostic way. The first step
 is to build a dictionary of tokens or words that can occur in the code, that we
 can take as input to predict the next token. We build this dictionary by
 reading all code, and treating each consecutive set of alphanumeric characters
-and (\_), or each conseuctive set of special characters --- characters other
-than alphanumeric and (\_), separated by new line or space, as one token.
+and (\_), or each conseuctive set of special characters other
+than alphanumeric, (\_), space and newline as one token.
 Thus, for example, the code {\tt int my\_var = 0x10;} will be tokenized into five
 tokens: {\tt int}, {\tt my\_var}, {\tt =}, {\tt 0x10} and {\tt ;}. Given a sequence of
 tokens, we then want to predict the next token.

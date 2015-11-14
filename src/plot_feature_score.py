@@ -1,10 +1,16 @@
 #!/usr/bin/env python
+import cPickle as pkl
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import os
 import re
 import utils
 from windowModel import WindowModel
+
+label_size = 10
+mpl.rcParams['xtick.labelsize'] = label_size 
+mpl.rcParams['ytick.labelsize'] = label_size 
     
 """
 Plot each token's score in predicting/ contributing to next token.
@@ -69,31 +75,45 @@ class WindowTokenFeatureStrength(WindowModel):
         return score
 
 if __name__ == '__main__':
-    keywordfile = '../key_words/c'
-    keywords = []
-    with open(keywordfile) as fp:
-        for line in fp:
-            kw = re.sub(' [0-9]*$', '', line.strip())
-            keywords.append(kw)
-    # NOTE: edit the following line to change the files input to compute
-    # feature score
-    trainfiles = utils.matchingFiles(['../data/linux'], ['c', 'h'])[0:20000]
-    trainFilesAndWords = []
-    for i,name in enumerate(trainfiles):
-        if i % 1000 == 0:
-            print 'Finished reading %d files' % i
-        trainFilesAndWords.append((name,utils.tokenize(name)))
-    featureStrength = WindowTokenFeatureStrength(keywords)
-    corr = featureStrength.computeCorrelation(trainFilesAndWords, 'example_results/tmp_train')
-    plotFeatureScore(corr, 'example_results/correlation_train')
-    testfiles = utils.matchingFiles(['../data/linux'], ['c', 'h'])[20000:]
-    print("Finished computing correlation on train data")
-    testFilesAndWords = []
-    for i,name in enumerate(testfiles):
-        if i % 1000 == 0:
-            print 'Finished reading %d files' % i
-        testFilesAndWords.append((name,utils.tokenize(name)))
-    featureStrength = WindowTokenFeatureStrength(keywords)
-    corr = featureStrength.computeCorrelation(testFilesAndWords, 'example_results/tmp_test')
-    plotFeatureScore(corr, 'example_results/correlation_test')
-    print("Finished computing correlation on test data")
+    # keywordfile = '../key_words/c'
+    # keywords = []
+    # with open(keywordfile) as fp:
+    #     for line in fp:
+    #         kw = re.sub(' [0-9]*$', '', line.strip())
+    #         keywords.append(kw)
+    # # NOTE: edit the following line to change the files input to compute
+    # # feature score
+    # trainfiles = utils.matchingFiles(['../data/linux'], ['c', 'h'])[0:20000]
+    # trainFilesAndWords = []
+    # for i,name in enumerate(trainfiles):
+    #     if i % 1000 == 0:
+    #         print 'Finished reading %d files' % i
+    #     trainFilesAndWords.append((name,utils.tokenize(name)))
+    # featureStrength = WindowTokenFeatureStrength(keywords)
+    # corr_train = featureStrength.computeCorrelation(trainFilesAndWords, 'example_results/tmp_train')
+    # testfiles = utils.matchingFiles(['../data/linux'], ['c', 'h'])[20000:]
+    # print("Finished computing correlation on train data")
+    # testFilesAndWords = []
+    # for i,name in enumerate(testfiles):
+    #     if i % 1000 == 0:
+    #         print 'Finished reading %d files' % i
+    #     testFilesAndWords.append((name,utils.tokenize(name)))
+    # featureStrength = WindowTokenFeatureStrength(keywords)
+    # corr_test = featureStrength.computeCorrelation(testFilesAndWords, 'example_results/tmp_test')
+    # print("Finished computing correlation on test data")
+
+    # pkl.dump(corr_train, open('example_results/tmp_train/correlation', 'w'))
+    # pkl.dump(corr_test, open('example_results/tmp_test/correlation', 'w'))
+
+    corr_train = pkl.load(open('example_results/tmp_train/correlation'))
+    corr_test  = pkl.load(open('example_results/tmp_test/correlation'))
+
+    winSize = len(corr_train)
+    fig, ax = plt.subplots()
+    train, = plt.plot(range(winSize, 0, -1), corr_train, color='k', label='train')
+    test, = plt.plot(range(winSize, 0, -1), corr_test, color='#888888',
+                     linestyle='--', label='test')
+    plt.legend(['train', 'test'], loc='upper right')
+    plt.xlabel("Position of input token from the end (target)", fontsize=12)
+    plt.ylabel("Abs. correlation with target token", fontsize=12)
+    plt.savefig("example_results/correlation.pdf")
