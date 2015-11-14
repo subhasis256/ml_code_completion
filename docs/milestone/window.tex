@@ -1,38 +1,25 @@
 \section{Window Selection}
 \label{sec:window}
 
-\noindent
-To study the influence of tokens in an incomplete piece of code on the next
-(target) token, we computed the correlation between the input tokens and the
-target token.
-Figure~\ref{fig:correlation} shows the result (scaled absolute correlation) for
-two sets of data, codes that we train on and codes that we test on, for Linux
-source code.
-We compute the correlation between every token and preceeding tokens, whenever
-there are at least 100 tokens before the target.
-The value of a key token is between 1 and $K$, and the value of a positional
-token between $K+1$ and $K+W$.
-
 \begin{figure}[h]
   \centering
-  \begin{subfigure}{0.4\textwidth}
-    \centering
-    \includegraphics[width=\linewidth]{figs/correlation_train.png}
-    \caption{Training data}
-    \label{fig:correlation-train}
-  \end{subfigure}
-  \begin{subfigure}{0.4\textwidth}
-    \centering
-    \includegraphics[width=\linewidth]{figs/correlation_test.png}
-    \caption{Test data}
-    \label{fig:correlation-test}
-  \end{subfigure}
+  \includegraphics[width=\linewidth]{figs/correlation.pdf}
   \caption{Absolute value of correlation between input tokens and target token,
     as a function of position of a token from the target, for Linux source.}
   \label{fig:correlation}
 \end{figure}
 
 \noindent
+To study the influence of tokens in an incomplete piece of code on the next
+(target) token, we computed the correlation between the input tokens and the
+target token.
+Figure~\ref{fig:correlation} shows the result (scaled absolute correlation) for
+codes that we train on and codes that we test on, for Linux
+source code.
+We compute the correlation between every token and preceeding tokens, whenever
+there are at least 100 tokens before the target.
+The value of a key token is between 1 and $K$, and the value of a positional
+token between $K+1$ and $K+W$.
 As we expected, the absolute value of correlation between input tokens and
 target token gradually decreases as the distance between them increases.
 However, interestingly, when an input token is 3 tokens or more away from the
