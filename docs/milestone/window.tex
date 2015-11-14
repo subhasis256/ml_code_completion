@@ -19,7 +19,7 @@ source code.
 We compute the correlation between every token and preceeding tokens, whenever
 there are at least 100 tokens before the target.
 The value of a key token is between 1 and $K$, and the value of a positional
-token between $K+1$ and $K+W$.
+token between $K+1$ and $K+W$, with $W=100$ here.
 As we expected, the absolute value of correlation between input tokens and
 target token gradually decreases as the distance between them increases.
 However, interestingly, when an input token is 3 tokens or more away from the

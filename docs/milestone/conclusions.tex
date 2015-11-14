@@ -3,8 +3,7 @@
 
 \noindent
 Among the methods we tried so far, chaining two matrix-vector models with a
-ReLU (rectifier linear unit) nonlinearity performs the best, giving
-a training accuracy of \remark{XX}\% and test accuracy of \remark{YY}\%.
+relu nonlinearity performs the best.
 This is also the most general of all models we tried, so
 the higher accuracy is not suprising. Given the results for correlation between
 input and target tokens, we would like to experiment with larger windows
@@ -35,4 +34,5 @@ window sizes $W$, assign a confidence to the prediction from each algorithm and
 window size, and pick the prediction with the highest score.
 The intuition here is that some tokens might be predicted well by
 looking at a large window of preceeding tokens, while some other tokens might
-be predicted well by looking at only a few preceeding tokens.
+be predicted well by looking at a few preceeding tokens (such as {\tt for}
+statements).
