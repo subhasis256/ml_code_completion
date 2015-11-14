@@ -5,11 +5,11 @@
 \noindent
 One of our objectives of learning based code prediction is to do away with the
 tedious process of building grammar based rules for different languages.
-We treat codes in the training set in a language agonostic way. The first step
+We treat codes in the training set in a language agnostic way. The first step
 is to build a dictionary of tokens or words that can occur in the code, that we
 can take as input to predict the next token. We build this dictionary by
 reading all code, and treating each consecutive set of alphanumeric characters
-and (\_), or each conseuctive set of special characters other
+and (\_), or each consecutive set of special characters other
 than alphanumeric, (\_), space and newline as one token.
 Thus, for example, the code {\tt int my\_var = 0x10;} will be tokenized into five
 tokens: {\tt int}, {\tt my\_var}, {\tt =}, {\tt 0x10} and {\tt ;}. Given a sequence of
@@ -26,15 +26,15 @@ a) {\it Key tokens}: A subset of $K$ most frequent tokens are categorized as
 these frequent tokens are keywords for the language the project is written in,
 or words that tend to occur often in that
 particular project.
-For example, some of the frequent tokens in linux kernel are:
+For example, some of the frequent tokens in Linux kernel are:
 \texttt{struct}, \texttt{;}, and \texttt{dev}, out of which the first and second
 are keywords in C, and the third is a token frequently used to denote device
 objects in Linux. Note that while several language keywords do end up being part
 of the set of key tokens, we {\it do not} manually curate the list of key tokens
 to ensure that they contain only language specific keywords.
 
-b) {\it Positional Tokens}: While key tokens occurences constitute a major
-fraction of all token occurences ($\approx$ 60\% with 2000 key tokens),
+b) {\it Positional Tokens}: While key tokens occurrences constitute a major
+fraction of all token occurrences ($\approx$ 60\% with 2000 key tokens),
 the remainder of tokens are rarely
 seen (such as names of variables, macros etc.). However, we would like our
 learning algorithm to autocomplete new variable names, once they occur in a
