@@ -18,7 +18,7 @@ target token.
 Figure~\ref{fig:correlation} shows the result (scaled absolute correlation) for
 codes that we train on and codes that we test on, for Linux
 source code.
-We compute the correlation between every token and preceeding tokens, whenever
+We compute the correlation between every token and preceding tokens, whenever
 there are at least 100 tokens before the target.
 The value of a key token is between 1 and $K$, and the value of a positional
 token between $K+1$ and $K+W$, with $W=100$ here.
@@ -30,5 +30,5 @@ from the end) have a larger magnitude of correlation with the target token.
 We think this is because special characters (operators) and words such as variable and
 function names typically alternate. If other projects and languages
 also exhibit a similar trend, we would like to see if we can improve
-predictions by considering larger windows of preceeding tokens, but after
+predictions by considering larger windows of preceding tokens, but after
 removing tokens that are odd number of tokens away from the target token.
