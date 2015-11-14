@@ -11,8 +11,8 @@ input and target tokens, we would like to experiment with larger windows
 where we exclude odd tokens.
 
 The word vector algorithms we tried so far do not capture file specific
-patterns. Non-key tokens that are local to the file are ignored. File-specific
-patterns are ignored. We want to try out a recurrent neural network (RNN)
+patterns. Non-key tokens that are local to the file, and outside the window are
+ignored. We want to try out a recurrent neural network (RNN)
 approach~\cite{rnn} or a long short-term memory (LSTM) approach~\cite{lstm,
 rnnlstm} to
 capture file specific patterns. Another approach that we are considering is to
@@ -26,13 +26,13 @@ is to capture local context by expressing tokens as a function of the enclosing
 context. This approach resembles RNNs in some ways, and requires a forward and
 a backward pass to update file-speficic vectors and cost function.
 File-specific vectors can be thought of as the hidden state in RNNs, but
-instead of using the hidden state from just the previous stage, we now use the
+instead of using hidden state from just the previous stage, we now use
 hidden state from previous $W$ stages.
 
 Finally, time permitting,
 we would like to pick the two best algorithms, train them on different
 window sizes $W$, assign a confidence to the prediction from each algorithm and
-window size, pick the prediction with the highest score and see how that
-performs. The intuition here is that some tokens might be predicted well by
+window size, and pick the prediction with the highest score.
+The intuition here is that some tokens might be predicted well by
 looking at a large window of preceeding tokens, while some other tokens might
 be predicted well by looking at only a few preceeding tokens.
