@@ -25,22 +25,24 @@ a) {\it Key tokens}: A subset of $K$ most frequent tokens are categorized as
 these frequent tokens are keywords for the language the project is written in,
 or words that tend to occur often in that
 particular project.
-For example, some of the in linux kernel are:
+For example, some of the frequent tokens in linux kernel are:
 \texttt{struct}, \texttt{;}, and \texttt{dev}, out of which the first and second
 are keywords in C, and the third is a token frequently used to denote device
 objects in Linux. Note that while several language keywords do end up being part
 of the set of key tokens, we {\it do not} manually curate the list of key tokens
 to ensure that they contain only language specific keywords.
 
-b) {\it Positional Tokens}: While key tokens constitute a major fraction of all
-tokens ($\approx$ 60\% with 2000 key tokens), the remainder of tokens are rarely
-seen (such as names of variables, macros etc.). Moreover, we will also like our
-learning algorithm to be able to autocomplete completely new variable names. For
+b) {\it Positional Tokens}: While key tokens occurences constitute a major
+fraction of all token occurences ($\approx$ 60\% with 2000 key tokens),
+the remainder of tokens are rarely
+seen (such as names of variables, macros etc.). However, we would like our
+learning algorithm to autocomplete new variable names, once they occur in a
+file. For
 example, given many examples of the form {\tt for (int TOKEN = 0; TOKEN < n;
 TOKEN++)} (all with different values of {\tt TOKEN}), our algorithm should be
 able to autocomplete {\tt for (int myIterName = 0;} with {\tt myIterName}. This
 capability can not be achieved by merely trying to autocomplete between a set of
-pre-defined key tokens. Thus, we also define {\it positional tokens} as follows.
+pre-defined key tokens. Hence, we also define {\it positional tokens} as follows.
 
 Given a sequence of tokens --- an incomplete piece of code, we replace each
 token which is not a key token by a string of the form {\tt
@@ -54,7 +56,7 @@ we construct the new sequence {\tt[for, int, POS\_TOK\_2, =, 0, ;, POS\_TOK\_2,
 but has appeared in the window, it is also replaced by the corresponding
 positional token string. If the target has not appeared before in the window, it
 is assumed to be a special token {\tt UNKNOWN}. However, as we describe in
-Section~\ref{sec:memoryless}, we actually ignore such windows since in many such
+Section~\ref{sec:memoryless}, we ignore such windows since in many such
 cases the token is actually a hereto unseen token.
 
 Such an encoding is advantageous since now the set of prediction targets to
@@ -66,22 +68,3 @@ unknown token), i.e., a {\it constant}. This immediately opens up the
 possibility of applying simple models such as softmax based linear/non-linear
 classifiers on this data. In Section~\ref{sec:memoryless} we describe some such
 models.
-
-%Given a sequence of tokens --- an incomplete piece of code, we then construct a
-%sequence of identifiers by replacing
-%key tokens by a unique key token identifier between $1$ and $K$ that identifies
-%the key token.
-%We replace the remaining tokens by positional identifiers --- if the $i^{th}$
-%token in the sequence is not a key token, we replace it by identifier $K+i$. Our
-%prediction would then be either a key token identifier or a positional token
-%identifier.
-%
-%Using a finite dictionary and positional tokens as described above gives rise
-%to cases where the next token after a sequence of tokens is neither a key token
-%nor a positional token. For now, we ignore these cases, since many of these
-%cases are actually new tokens that we would not have been able to predict even
-%with a more complete dictionary.
-
-%\begin{itemize}
-%  \item word to vector
-%\end{itemize}
