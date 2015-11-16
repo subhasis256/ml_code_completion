@@ -5,6 +5,37 @@ import fnmatch as fn
 import os
 import cgi
 
+def CUncomment(content):
+    return re.sub(r'/\*.*?\*/', '', content,
+                  flags=re.MULTILINE|re.DOTALL)
+
+def CPPUncomment(content):
+    pass1 = CUncomment(content)
+    pass2 = re.sub(r'//.*', '', pass1)
+    return pass2
+
+def PyUncomment(content):
+    """ we want to get rid of comments and docstrings """
+    pass1 = re.sub(r'#.*', '', content)
+    pass2 = re.sub(r'""".*?"""', '', pass1,
+                   flags=re.MULTILINE|re.DOTALL)
+    return pass2
+
+def uncomment(fileName, content):
+    if fileName.endswith('.c'):
+        return CUncomment(content)
+    elif (fileName.endswith('.cpp')
+          or fileName.endswith('.cc') 
+          or fileName.endswith('.cxx')
+          or fileName.endswith('.h')
+          or fileName.endswith('.hh')
+          or fileName.endswith('.hxx')
+          or fileName.endswith('.hpp')):
+        return CPPUncomment(content)
+    elif fileName.endswith('.py'):
+        return PyUncomment(content)
+    return content
+
 def matchingFiles(data_dirs, suffixes):
     globs = map(lambda x : '*.' + x, suffixes)
     matches = []  # list of files to read
@@ -18,9 +49,7 @@ def matchingFiles(data_dirs, suffixes):
 def tokenize(fileName, retcontent=False):
     allTokens = []
     with open(fileName) as data:
-        content = re.sub(r'/\*.*?\*/', '', data.read(),
-                         flags=re.MULTILINE|re.DOTALL)
-
+        content = uncomment(fileName, data.read())
         for line in content.split('\n'):
             allTokens += [token.strip()
                           for token in re.split(r'(\W+)', line)

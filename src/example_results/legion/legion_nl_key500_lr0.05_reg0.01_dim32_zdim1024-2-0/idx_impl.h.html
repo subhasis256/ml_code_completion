@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+
+
+<span class="w">#ifndef</span> <span class="w">REALM_IDX_IMPL_H</span>
+<span class="w">#define</span> <span class="w">REALM_IDX_IMPL_H</span>
+
+<span class="w">#include</span> <span class="w">"indexspace.h"</span>
+<span class="w">#include</span> <span class="w">"id.h"</span>
+
+<span class="w">#include</span> <span class="w">"activemsg.h"</span>
+
+<span class="w">#include</span> <span class="w">"rsrv_impl.h"</span>
+
+<span class="w">namespace</span> <span class="w">Realm</span> <span class="w">{</span>
+
+    <span class="w">struct</span> <span class="w">ElementMaskImpl</span> <span class="w">{</span>
+      
+      <span class="pc">t</span><span class="c">ypedef</span> <span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="w">l</span><span class="c">ong</span> <span class="pc">l</span><span class="c">ong</span> <span class="w">uint64</span><span class="c">;</span>
+      <span class="w">u</span><span class="pc">int64_</span><span class="c">t</span> <span class="w">dummy</span><span class="c">;</span>
+      <span class="w">u</span><span class="pc">i</span><span class="c">nt64_t</span> <span class="w">b</span><span class="pc">its</span><span class="w">[</span><span class="c">0];</span>
+
+      <span class="w">s</span><span class="pc">ta</span><span class="c">tic</span> <span class="w">s</span><span class="pc">i</span><span class="c">ze_t</span> <span class="w">bytes_needed</span><span class="c">(</span><span class="w">o</span><span class="pc">f</span><span class="c">f_t</span> <span class="w">o</span><span class="c">ffset</span><span class="pc">,</span> <span class="w">o</span><span class="c">ff_t</span> <span class="w">c</span><span class="pc">o</span><span class="c">unt)</span>
+      <span class="c">{</span>
+	<span class="w">s</span><span class="pc">i</span><span class="c">ze_t</span> <span class="w">need</span> <span class="c">=</span> <span class="w">s</span><span class="pc">izeo</span><span class="c">f(</span><span class="w">E</span><span class="pc">l</span><span class="c">ementMaskImpl</span><span class="w">) + (((c</span><span class="pc">ou</span><span class="c">nt</span> <span class="w">+</span> <span class="w">63) &gt;&gt;</span> <span class="w">6) &lt;&lt;</span> <span class="w">3</span><span class="c">);</span>
+	<span class="c">return</span> <span class="pc">n</span><span class="c">eed;</span>
+      <span class="c">}</span>
+	
+    <span class="w">}</span><span class="pc">;</span>
+
+    <span class="w">c</span><span class="c">lass</span> <span class="w">I</span><span class="pc">ndexSpaceI</span><span class="c">mpl</span> <span class="c">{</span>
+    <span class="c">public:</span>
+      <span class="w">I</span><span class="pc">ndexSpaceI</span><span class="c">mpl(void);</span>
+      <span class="pc">~</span><span class="w">I</span><span class="pc">ndexSpaceI</span><span class="c">mpl(void);</span>
+
+      <span class="c">void</span> <span class="w">init</span><span class="c">(</span><span class="w">I</span><span class="pc">ndexS</span><span class="c">pace</span> <span class="w">_me</span><span class="c">,</span> <span class="w">u</span><span class="c">nsigned</span> <span class="w">_init_owner</span><span class="c">);</span>
+
+      <span class="pc">v</span><span class="c">oid</span> <span class="w">i</span><span class="c">nit(</span><span class="w">I</span><span class="c">ndexSpace</span> <span class="w">_</span><span class="c">me,</span> <span class="w">I</span><span class="pc">ndexSpace</span> <span class="w">_parent</span><span class="c">,</span>
+		<span class="c">size_t</span> <span class="w">_num_elmts</span><span class="c">,</span>
+		<span class="pc">c</span><span class="c">onst</span> <span class="pc">E</span><span class="c">lementMask</span> <span class="pc">*</span><span class="w">_initial_valid_mask</span> <span class="pc">=</span> <span class="c">0,</span> <span class="w">b</span><span class="c">ool</span> <span class="w">_frozen</span> <span class="c">=</span> <span class="pc">f</span><span class="c">alse);</span>
+
+      <span class="w">s</span><span class="pc">t</span><span class="c">atic</span> <span class="pc">c</span><span class="c">onst</span> <span class="w">I</span><span class="pc">D:</span><span class="c">:</span><span class="w">ID_Types</span> <span class="w">ID_TYPE</span> <span class="pc">=</span> <span class="pc">I</span><span class="c">D::</span><span class="w">ID_INDEXSPACE</span><span class="c">;</span>
+
+      <span class="pc">b</span><span class="c">ool</span> <span class="w">is_parent_of</span><span class="c">(</span><span class="w">I</span><span class="pc">n</span><span class="c">dexSpace</span> <span class="w">o</span><span class="pc">t</span><span class="c">her</span><span class="pc">);</span>
+
+      <span class="w">s</span><span class="c">ize_t</span> <span class="w">instance_size</span><span class="c">(</span><span class="pc">c</span><span class="c">onst</span> <span class="w">ReductionOpUntyped</span> <span class="pc">*r</span><span class="c">edop</span> <span class="pc">=</span> <span class="c">0</span><span class="pc">,</span>
+			   <span class="w">o</span><span class="c">ff_t</span> <span class="w">list_size</span> <span class="w">= -</span><span class="pc">1</span><span class="c">);</span>
+
+      <span class="w">o</span><span class="c">ff_t</span> <span class="w">instance_adjust</span><span class="pc">(</span><span class="w">c</span><span class="c">onst</span> <span class="w">R</span><span class="pc">e</span><span class="c">ductionOpUntyped</span> <span class="c">*</span><span class="w">r</span><span class="c">edop</span> <span class="c">=</span> <span class="c">0);</span>
+
+      <span class="w">E</span><span class="pc">v</span><span class="c">ent</span> <span class="w">request_valid_mask</span><span class="c">(</span><span class="pc">v</span><span class="c">oid);</span>
+
+      <span class="w">I</span><span class="pc">n</span><span class="c">dexSpace</span> <span class="w">m</span><span class="c">e</span><span class="pc">;</span>
+      <span class="w">ReservationImpl</span> <span class="w">l</span><span class="c">ock;</span>
+      <span class="w">I</span><span class="pc">ndexSpaceI</span><span class="c">mpl</span> <span class="c">*</span><span class="w">next_free</span><span class="pc">;</span>
+
+      <span class="w">s</span><span class="pc">tr</span><span class="c">uct</span> <span class="w">StaticData</span> <span class="c">{</span>
+	<span class="w">I</span><span class="pc">n</span><span class="c">dexSpace</span> <span class="w">pa</span><span class="c">rent;</span>
+	<span class="w">b</span><span class="c">ool</span> <span class="w">frozen</span><span class="c">;</span>
+	<span class="pc">s</span><span class="c">ize_t</span> <span class="w">num_elmts</span><span class="c">;</span>
+        <span class="c">size_t</span> <span class="w">first_elmt,</span> <span class="w">last_elmt</span><span class="pc">;</span>
+        
+        
+	<span class="w">b</span><span class="pc">o</span><span class="c">ol</span> <span class="w">valid</span><span class="c">;</span>
+      <span class="pc">}</span><span class="c">;</span>
+      <span class="c">struct</span> <span class="w">CoherentData</span> <span class="pc">:</span> <span class="c">public</span> <span class="w">S</span><span class="pc">t</span><span class="c">aticData</span> <span class="c">{</span>
+	<span class="w">u</span><span class="c">nsigned</span> <span class="w">valid_mask_owners</span><span class="c">;</span>
+	<span class="w">i</span><span class="pc">nt</span> <span class="w">avail_mask_owner</span><span class="c">;</span>
+      <span class="pc">}</span><span class="c">;</span>
+
+      <span class="w">C</span><span class="c">oherentData</span> <span class="w">locked_data</span><span class="c">;</span>
+      <span class="w">GASNetHSL</span> <span class="w">valid_mask_mutex</span><span class="c">;</span>
+      <span class="w">E</span><span class="pc">l</span><span class="c">ementMask</span> <span class="c">*</span><span class="w">valid_mask</span><span class="c">;</span>
+      <span class="w">i</span><span class="c">nt</span> <span class="w">valid_mask_count</span><span class="c">;</span>
+      <span class="w">b</span><span class="c">ool</span> <span class="w">valid_mask_complete</span><span class="c">;</span>
+      <span class="w">E</span><span class="c">vent</span> <span class="w">valid_mask_event</span><span class="c">;</span>
+      <span class="w">GenEventImpl</span> <span class="w">*valid_mask_event_impl</span><span class="c">;</span>
+      <span class="w">i</span><span class="c">nt</span> <span class="w">valid_mask_first</span><span class="pc">,</span> <span class="w">valid_mask_last</span><span class="pc">;</span>
+      <span class="w">b</span><span class="pc">o</span><span class="c">ol</span> <span class="w">valid_mask_contig</span><span class="c">;</span>
+      <span class="w">E</span><span class="pc">l</span><span class="c">ementMask</span> <span class="c">*</span><span class="w">avail_mask</span><span class="c">;</span>
+    <span class="pc">}</span><span class="c">;</span>
+
+    <span class="pc">c</span><span class="c">lass</span> <span class="w">IndexSpaceAllocatorImpl</span> <span class="pc">{</span>
+    <span class="c">public:</span>
+      <span class="c">IndexSpaceAllocatorImpl(</span><span class="w">I</span><span class="pc">ndexSpaceI</span><span class="c">mpl</span> <span class="c">*</span><span class="w">_is_impl</span><span class="pc">);</span>
+
+      <span class="pc">~</span><span class="c">IndexSpaceAllocatorImpl(void);</span>
+
+      <span class="w">u</span><span class="c">nsigned</span> <span class="w">alloc_elements</span><span class="c">(</span><span class="w">u</span><span class="c">nsigned</span> <span class="w">c</span><span class="pc">o</span><span class="c">unt</span> <span class="w">=</span> <span class="pc">1)</span><span class="c">;</span>
+
+      <span class="w">v</span><span class="pc">o</span><span class="c">id</span> <span class="w">reserve_elements</span><span class="c">(</span><span class="w">u</span><span class="c">nsigned</span> <span class="w">p</span><span class="pc">t</span><span class="c">r</span><span class="pc">,</span> <span class="pc">u</span><span class="c">nsigned</span> <span class="w">c</span><span class="pc">o</span><span class="c">unt</span> <span class="pc">=</span> <span class="c">1);</span>
+
+      <span class="pc">v</span><span class="c">oid</span> <span class="w">free_elements</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="w">p</span><span class="pc">t</span><span class="c">r,</span> <span class="c">unsigned</span> <span class="w">c</span><span class="pc">o</span><span class="c">unt</span> <span class="pc">=</span> <span class="pc">1</span><span class="c">);</span>
+
+      <span class="w">I</span><span class="pc">ndexSpaceI</span><span class="c">mpl</span> <span class="w">*is_impl</span><span class="pc">;</span>
+    <span class="w">}</span><span class="pc">;</span>
+
+    
+
+    <span class="w">s</span><span class="c">truct</span> <span class="w">ValidMaskRequestMessage</span> <span class="c">{</span>
+      <span class="w">s</span><span class="pc">tr</span><span class="c">uct</span> <span class="pc">R</span><span class="c">equestArgs</span> <span class="c">{</span>
+	<span class="w">I</span><span class="pc">n</span><span class="c">dexSpace</span> <span class="w">i</span><span class="pc">s</span><span class="c">;</span>
+	<span class="w">in</span><span class="pc">t</span> <span class="w">sender</span><span class="c">;</span>
+      <span class="pc">}</span><span class="c">;</span>
+
+      <span class="pc">s</span><span class="c">tatic</span> <span class="c">void</span> <span class="w">handle_request</span><span class="c">(RequestArgs</span> <span class="c">args);</span>
+      
+      <span class="c">typedef</span> <span class="w">ActiveMessageShortNoReply</span><span class="c">&lt;</span><span class="w">VALID_MASK_REQ_MSGID</span><span class="c">,</span>
+ 				        <span class="c">RequestArgs,</span>
+				        <span class="c">handle_request&gt;</span> <span class="w">Message</span><span class="c">;</span>
+
+      <span class="c">static</span> <span class="c">void</span> <span class="w">send_request</span><span class="c">(</span><span class="w">gasnet_node_t</span> <span class="c">target,</span> <span class="w">I</span><span class="pc">n</span><span class="c">dexSpace</span> <span class="w">i</span><span class="pc">s)</span><span class="c">;</span>
+    <span class="c">};</span>
+
+    <span class="pc">s</span><span class="c">truct</span> <span class="w">ValidMaskDataMessage</span> <span class="c">{</span>
+      <span class="c">struct</span> <span class="c">RequestArgs</span> <span class="pc">:</span> <span class="c">public</span> <span class="w">BaseMedium</span> <span class="c">{</span>
+	<span class="w">I</span><span class="pc">n</span><span class="c">dexSpace</span> <span class="w">is</span><span class="c">;</span>
+	<span class="c">unsigned</span> <span class="w">block_id</span><span class="c">;</span>
+      <span class="c">};</span>
+
+      <span class="c">static</span> <span class="c">void</span> <span class="c">handle_request(RequestArgs</span> <span class="c">args,</span> <span class="c">const</span> <span class="c">void</span> <span class="c">*data,</span> <span class="c">size_t</span> <span class="c">datalen);</span>
+
+      <span class="c">typedef</span> <span class="w">ActiveMessageMediumNoReply</span><span class="c">&lt;</span><span class="w">VALID_MASK_DATA_MSGID</span><span class="c">,</span>
+				         <span class="c">RequestArgs,</span>
+				         <span class="c">handle_request&gt;</span> <span class="w">Message</span><span class="c">;</span>
+      
+      <span class="c">static</span> <span class="c">void</span> <span class="w">send_request</span><span class="c">(</span><span class="w">gasnet_node_t</span> <span class="c">target,</span> <span class="w">I</span><span class="pc">n</span><span class="c">dexSpace</span> <span class="w">i</span><span class="pc">s</span><span class="c">,</span> <span class="c">unsigned</span> <span class="c">block_id,</span>
+			       <span class="c">const</span> <span class="c">void</span> <span class="c">*data,</span> <span class="c">size_t</span> <span class="c">datalen,</span> <span class="c">int</span> <span class="w">payload_mode</span><span class="c">);</span>
+    <span class="pc">}</span><span class="c">;</span>
+
+<span class="pc">}</span><span class="c">;</span> 
+
+<span class="pc">#e</span><span class="c">ndif</span> 
+
+</pre>
+</body>
+</html>
+

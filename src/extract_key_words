@@ -7,52 +7,70 @@
 
 import key_word_extractor as ke
 import os
+import argparse
+
+def listparse(arg):
+    return arg.split(',')
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-p', '--project',
+                    help='project name')
+parser.add_argument('-l', '--langs',
+                    type=listparse,
+                    help='languages to use as a comma separated list')
+parser.add_argument('-n', '--num',
+                    type=int,
+                    default=2000,
+                    help='how many keywords to extract')
+
+args = parser.parse_args()
 
 # root data directory
-root_dir=os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-root_data_dir=os.path.join(root_dir, 'data')
-key_word_dir=os.path.join(root_dir, 'key_words')
+root_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+root_data_dir = os.path.join(root_dir, 'data', args.project)
+key_word_dir = os.path.join(root_dir, 'key_words')
+
+if not os.path.exists(root_data_dir):
+    raise ValueError('Project data directory %s doesn\'t exist' % root_data_dir)
+
 if not os.path.exists(key_word_dir):
   os.makedirs(key_word_dir)
+
+key_word_file = os.path.join(key_word_dir, args.project)
+
 # number of keywords to extract
-max_key_words=2000
-percentile_key_words=95
+max_key_words=args.num
+#percentile_key_words=95
 
 # list of languages, corresponding file suffixes, a flag indicating whether
 # to parse or skip, a list of data directories to read
-suffixes  = 'suffixes'
-parse     = 'parse'
-data_dirs = 'data_dirs'
-outfile   = 'outfile'
-languages = {
-    'h'      : { suffixes  : ['h'],
-                 parse     : False,
-                 data_dirs : [ root_data_dir ],
-                 outfile   : os.path.join(key_word_dir, "h")
-               },
-    'c'      : { suffixes  : ['h', 'c', 'cc', 'cpp'],
-                 parse     : True,
-                 data_dirs : [ root_data_dir ],
-                 outfile   : os.path.join(key_word_dir, "c")
-               },
-    'python' : { suffixes  : ['py'],
-                 parse     : False,
-                 data_dirs : [ root_data_dir ],
-                 outfile   : os.path.join(key_word_dir, "python")
-               }
-    }
+#suffixes  = 'suffixes'
+#parse     = 'parse'
+#data_dirs = 'data_dirs'
+#outfile   = 'outfile'
+#languages = {
+#    'h'      : { suffixes  : ['h'],
+#                 parse     : False,
+#                 data_dirs : [ root_data_dir ],
+#                 outfile   : os.path.join(key_word_dir, "h")
+#               },
+#    'c'      : { suffixes  : ['h', 'c', 'cc', 'cpp'],
+#                 parse     : True,
+#                 data_dirs : [ root_data_dir ],
+#                 outfile   : os.path.join(key_word_dir, "c")
+#               },
+#    'python' : { suffixes  : ['py'],
+#                 parse     : False,
+#                 data_dirs : [ root_data_dir ],
+#                 outfile   : os.path.join(key_word_dir, "python")
+#               }
+#    }
 
 # Extract key words and save them
-for lang, val in languages.items():
-  val = languages[lang]
-  if not val[parse]:
-    print("Skipping language %s" % lang)
-    continue
-  print("Extracting key words for language %s ..." % lang)
-  words = ke.FrequentWords(data_dirs=val[data_dirs], suffixes=val[suffixes],
-                           max_key_words=max_key_words,
-                           percentile_key_words=percentile_key_words)
-  with open(val[outfile], 'w') as out:
-    for key_word, count in words:
-      out.write("%s %d\n" % (key_word, count))
-  print("Completed extracting key words for language %s" % lang)
+print("Extracting key words for project %s ..." % args.project)
+words = ke.FrequentWords(data_dirs=[root_data_dir], suffixes=args.langs,
+                         max_key_words=max_key_words)
+with open(key_word_file, 'w') as out:
+  for key_word, count in words:
+    out.write("%s %d\n" % (key_word, count))
+print("Completed extracting key words for project %s" % args.project)

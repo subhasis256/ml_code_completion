@@ -11,10 +11,20 @@ if __name__ == '__main__':
 
     import argparse
 
+    def listparse(arg):
+        return arg.split(',')
+
     parser = argparse.ArgumentParser()
     parser.add_argument('command',
                         choices=['train', 'test', 'predict'],
                         help='train/test/predict')
+    parser.add_argument('-p', '--project',
+                        default='linux',
+                        help='project name, should be a subdir in data')
+    parser.add_argument('-l', '--langs',
+                        type=listparse,
+                        default=['c', 'h'],
+                        help='languages to use as a comma separated list')
     parser.add_argument('--restore',
                         help='file from which to restore parameters for testing or resuming training')
     parser.add_argument('--ckpt',
@@ -32,9 +42,6 @@ if __name__ == '__main__':
                         type=int,
                         default=512,
                         help='intermediate vector dimensions')
-    parser.add_argument('--keywords',
-                        default='../key_words/c',
-                        help='file containing key words and their frequencies')
     parser.add_argument('--lr',
                         type=float,
                         default=0.05,
@@ -49,15 +56,20 @@ if __name__ == '__main__':
                         help='batch size')
     args = parser.parse_args()
 
-    files = utils.matchingFiles(['../data/linux'], ['c', 'h'])
+    data_dir = os.path.join('../data', args.project)
+    files = utils.matchingFiles([data_dir], args.langs)
     filesAndTokens = []
 
+    # choose the first half of files based on a deterministic random range
+    robj = random.Random(12345)
+    robj.shuffle(files)
+
     if args.command == 'train':
-        fileSubset = files[:20000]
+        fileSubset = files[:len(files)/2]
     elif args.command == 'test':
-        fileSubset = random.sample(files[20000:], 2000)
+        fileSubset = files[len(files)/2:]
     else:
-        fileSubset = files[20000:]
+        fileSubset = files[len(files)/2:]
 
     if args.command == 'train' or args.command == 'test':
         for i,name in enumerate(fileSubset):
@@ -68,7 +80,8 @@ if __name__ == '__main__':
         print sum([len(tokens) for name,tokens in filesAndTokens])
 
     keywords = []
-    with open(args.keywords) as fp:
+    keywords_file = os.path.join('../key_words', args.project)
+    with open(keywords_file) as fp:
         for line in fp:
             kw = re.sub(' [0-9]*$', '', line.strip())
             keywords.append(kw)

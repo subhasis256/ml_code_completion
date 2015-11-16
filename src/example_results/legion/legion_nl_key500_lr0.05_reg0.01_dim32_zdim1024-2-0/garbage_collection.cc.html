@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+
+<span class="w">#include</span> <span class="w">"legion.h"</span>
+<span class="w">#include</span> <span class="w">"runtime.h"</span>
+<span class="w">#include</span> <span class="w">"legion_ops.h"</span>
+<span class="w">#include</span> <span class="w">"legion_tasks.h"</span>
+<span class="w">#include</span> <span class="w">"region_tree.h"</span>
+<span class="w">#include</span> <span class="w">"garbage_collection.</span><span class="c">h"</span>
+
+<span class="c">namespace</span> <span class="pc">L</span><span class="c">egionRuntime</span> <span class="c">{</span>
+  <span class="c">namespace</span> <span class="w">HighLevel</span> <span class="c">{</span>
+
+    
+    
+    
+
+    
+    <span class="w">CollectableState:</span><span class="pc">:</span><span class="w">C</span><span class="c">ollectableState(</span><span class="w">v</span><span class="c">oid</span><span class="pc">)</span>
+      <span class="pc">:</span> <span class="w">current_state</span><span class="c">(</span><span class="w">INACTIVE_STATE</span><span class="pc">)</span>
+    
+    <span class="c">{</span>
+    <span class="w">}</span>
+
+    
+    <span class="w">C</span><span class="c">ollectableState</span><span class="w">:</span><span class="pc">:~</span><span class="w">C</span><span class="c">ollectableState(void)</span>
+    
+    <span class="pc">{</span>
+<span class="w">#</span><span class="c">ifdef</span> <span class="c">DEBUG_HIGH_LEVEL</span>
+      <span class="c">assert(</span><span class="w">c</span><span class="c">urrent_state</span> <span class="pc">=</span><span class="c">=</span> <span class="w">I</span><span class="c">NACTIVE_STATE);</span>
+<span class="pc">#</span><span class="c">endif</span>
+    <span class="w">}</span>
+
+    
+    <span class="w">b</span><span class="c">ool</span> <span class="w">C</span><span class="pc">oll</span><span class="c">ectableState</span><span class="pc">:</span><span class="c">:</span><span class="w">update_state</span><span class="c">(</span><span class="w">b</span><span class="c">ool</span> <span class="w">has_gc_refs</span><span class="c">,</span>
+                                        <span class="pc">b</span><span class="c">ool</span> <span class="w">has_remote_refs</span><span class="pc">,</span>
+                                        <span class="pc">b</span><span class="c">ool</span> <span class="w">has_valid_refs</span><span class="pc">,</span>
+                                        <span class="c">bool</span> <span class="w">has_resource_refs</span><span class="pc">,</span>
+                                        <span class="c">bool</span> <span class="pc">&amp;</span><span class="w">need_activate</span><span class="pc">,</span>
+                                        <span class="pc">b</span><span class="c">ool</span> <span class="c">&amp;</span><span class="w">need_validate</span><span class="pc">,</span>
+                                        <span class="c">bool</span> <span class="c">&amp;</span><span class="w">need_invalidate</span><span class="c">,</span>
+                                        <span class="c">bool</span> <span class="c">&amp;</span><span class="w">need_deactivate</span><span class="c">,</span>
+                                        <span class="c">bool</span> <span class="c">&amp;</span><span class="w">do_delete</span><span class="pc">)</span>
+    
+    <span class="c">{</span>
+      <span class="w">s</span><span class="pc">w</span><span class="c">itch</span> <span class="c">(</span><span class="w">current_state)</span>
+      <span class="c">{</span>
+        <span class="w">c</span><span class="pc">a</span><span class="c">se</span> <span class="w">INACTIVE_STATE</span><span class="c">:</span>
+          <span class="w">{</span>
+            
+            <span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">has_gc_refs</span> <span class="w">||</span> <span class="w">h</span><span class="pc">as_v</span><span class="c">alid_refs</span> <span class="w">|</span><span class="c">|</span> <span class="w">has_remote_refs)</span>
+            <span class="c">{</span>
+              
+              <span class="w">cu</span><span class="c">rrent_state</span> <span class="c">=</span> <span class="w">PENDING_ACTIVE_STATE</span><span class="c">;</span>
+              <span class="w">need_activate</span> <span class="c">=</span> <span class="w">t</span><span class="pc">r</span><span class="c">ue;</span>
+            <span class="c">}</span>
+            <span class="c">else</span>
+              <span class="w">n</span><span class="pc">eed_a</span><span class="c">ctivate</span> <span class="c">=</span> <span class="pc">f</span><span class="c">alse;</span>
+            <span class="w">need_validate</span> <span class="c">=</span> <span class="pc">f</span><span class="c">alse;</span>
+            <span class="w">need_invalidate</span> <span class="c">=</span> <span class="pc">f</span><span class="c">alse;</span>
+            <span class="w">need_deactivate</span> <span class="c">=</span> <span class="c">false;</span>
+            <span class="w">b</span><span class="c">reak;</span>
+          <span class="c">}</span>
+        <span class="w">c</span><span class="pc">a</span><span class="c">se</span> <span class="w">ACTIVE_INVALID_STATE</span><span class="c">:</span>
+          <span class="c">{</span>
+            
+            <span class="w">i</span><span class="c">f</span> <span class="c">(</span><span class="w">h</span><span class="pc">as</span><span class="c">_valid_refs</span> <span class="w">|</span><span class="pc">|</span> <span class="w">h</span><span class="c">as_remote_refs)</span>
+            <span class="c">{</span>
+              
+              <span class="w">c</span><span class="pc">u</span><span class="c">rrent_state</span> <span class="c">=</span> <span class="w">PENDING_VALID_STATE</span><span class="c">;</span>
+              <span class="w">n</span><span class="c">eed_validate</span> <span class="c">=</span> <span class="w">t</span><span class="c">rue;</span>
+              <span class="w">n</span><span class="pc">eed_d</span><span class="c">eactivate</span> <span class="c">=</span> <span class="pc">f</span><span class="c">alse;</span>
+            <span class="c">}</span>
+            
+            <span class="c">else</span> <span class="pc">i</span><span class="c">f</span> <span class="pc">(!</span><span class="w">has_gc_refs</span><span class="c">)</span>
+            <span class="c">{</span>
+              <span class="w">c</span><span class="pc">u</span><span class="c">rrent_state</span> <span class="pc">=</span> <span class="w">PENDING_INACTIVE_STATE</span><span class="pc">;</span>
+              <span class="w">n</span><span class="pc">eed_v</span><span class="c">alidate</span> <span class="c">=</span> <span class="pc">f</span><span class="c">alse;</span>
+              <span class="w">n</span><span class="c">eed_deactivate</span> <span class="c">=</span> <span class="w">t</span><span class="c">rue;</span>
+            <span class="c">}</span>
+            <span class="pc">e</span><span class="c">lse</span>
+            <span class="c">{</span>
+              <span class="w">n</span><span class="pc">eed_v</span><span class="c">alidate</span> <span class="pc">=</span> <span class="w">f</span><span class="c">alse;</span>
+              <span class="w">n</span><span class="pc">eed_d</span><span class="c">eactivate</span> <span class="c">=</span> <span class="pc">f</span><span class="c">alse;</span>
+            <span class="c">}</span>
+            <span class="w">need_activate</span> <span class="c">=</span> <span class="c">false;</span>
+            <span class="w">need_invalidate</span> <span class="c">=</span> <span class="w">f</span><span class="c">alse;</span>
+            <span class="w">b</span><span class="pc">r</span><span class="c">eak;</span>
+          <span class="pc">}</span>
+        <span class="pc">c</span><span class="c">ase</span> <span class="w">VALID_STATE</span><span class="c">:</span>
+          <span class="c">{</span>
+            
+            <span class="w">i</span><span class="c">f</span> <span class="pc">(!</span><span class="w">has_valid_refs</span> <span class="w">&amp;&amp; !has_remote_refs</span><span class="c">)</span>
+            <span class="c">{</span>
+              <span class="w">current_state</span> <span class="pc">=</span> <span class="w">PENDING_INVALID_STATE</span><span class="c">;</span>
+              <span class="w">n</span><span class="pc">eed_i</span><span class="c">nvalidate</span> <span class="c">=</span> <span class="w">t</span><span class="c">rue;</span>
+            <span class="c">}</span>
+            <span class="c">else</span>
+              <span class="pc">n</span><span class="c">eed_invalidate</span> <span class="c">=</span> <span class="pc">f</span><span class="c">alse;</span>
+            <span class="w">n</span><span class="pc">eed_a</span><span class="c">ctivate</span> <span class="c">=</span> <span class="pc">f</span><span class="c">alse;</span>
+            <span class="w">need_validate</span> <span class="c">=</span> <span class="pc">f</span><span class="c">alse;</span>
+            <span class="w">need_deactivate</span> <span class="c">=</span> <span class="c">false;</span>
+            <span class="pc">b</span><span class="c">reak;</span>
+          <span class="pc">}</span>
+        <span class="w">c</span><span class="c">ase</span> <span class="w">PENDING_ACTIVE_STATE</span><span class="c">:</span>
+          <span class="c">{</span>
+            
+            <span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="pc">n</span><span class="c">eed_activate)</span>
+            <span class="c">{</span>
+              
+              <span class="c">if</span> <span class="c">(</span><span class="w">has_valid_refs</span> <span class="w">||</span> <span class="w">has_remote_refs</span><span class="c">)</span>
+              <span class="c">{</span>
+                
+                <span class="w">current_state</span> <span class="pc">=</span> <span class="w">PENDING_VALID_STATE</span><span class="pc">;</span>
+                <span class="w">n</span><span class="c">eed_validate</span> <span class="c">=</span> <span class="pc">t</span><span class="c">rue;</span>
+                <span class="pc">n</span><span class="c">eed_deactivate</span> <span class="c">=</span> <span class="pc">f</span><span class="c">alse;</span>
+              <span class="c">}</span>
+              <span class="c">else</span> <span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">has_gc_refs</span><span class="c">)</span>
+              <span class="c">{</span>
+                <span class="w">c</span><span class="pc">u</span><span class="c">rrent_state</span> <span class="w">=</span> <span class="w">ACTIVE_INVALID_STATE</span><span class="c">;</span> 
+                <span class="w">n</span><span class="pc">eed_v</span><span class="c">alidate</span> <span class="c">=</span> <span class="pc">f</span><span class="c">alse;</span>
+                <span class="w">n</span><span class="pc">eed_d</span><span class="c">eactivate</span> <span class="c">=</span> <span class="pc">f</span><span class="c">alse;</span>
+              <span class="c">}</span>
+              <span class="pc">e</span><span class="c">lse</span>
+              <span class="c">{</span>
+                
+                <span class="w">c</span><span class="c">urrent_state</span> <span class="pc">=</span> <span class="w">PENDING_INACTIVE_STATE</span><span class="c">;</span>
+                <span class="w">n</span><span class="pc">eed_d</span><span class="c">eactivate</span> <span class="c">=</span> <span class="w">t</span><span class="pc">r</span><span class="c">ue;</span>
+                <span class="w">n</span><span class="pc">eed_v</span><span class="c">alidate</span> <span class="c">=</span> <span class="w">f</span><span class="c">alse;</span>
+              <span class="c">}</span>
+            <span class="pc">}</span>
+            <span class="w">e</span><span class="c">lse</span>
+            <span class="c">{</span>
+              
+              
+              <span class="w">n</span><span class="pc">eed_v</span><span class="c">alidate</span> <span class="c">=</span> <span class="c">false;</span>
+              <span class="w">n</span><span class="pc">eed_d</span><span class="c">eactivate</span> <span class="pc">=</span> <span class="c">false;</span>
+            <span class="c">}</span>
+            <span class="w">need_activate</span> <span class="c">=</span> <span class="pc">f</span><span class="c">alse;</span>
+            <span class="w">need_invalidate</span> <span class="c">=</span> <span class="pc">f</span><span class="c">alse;</span>
+            <span class="w">b</span><span class="pc">r</span><span class="c">eak;</span>
+          <span class="pc">}</span>
+        <span class="pc">c</span><span class="c">ase</span> <span class="w">P</span><span class="c">ENDING_INACTIVE_STATE</span><span class="pc">:</span>
+          <span class="c">{</span>
+            
+            <span class="w">i</span><span class="pc">f</span> <span class="c">(</span><span class="w">n</span><span class="pc">eed_d</span><span class="c">eactivate</span><span class="pc">)</span>
+            <span class="c">{</span>
+              
+              <span class="c">if</span> <span class="pc">(!</span><span class="w">has_gc_refs</span> <span class="w">&amp;&amp; !has_valid_refs</span> <span class="w">&amp;</span><span class="pc">&amp;</span><span class="c"> !</span><span class="w">has_remote_refs</span><span class="pc">)</span>
+              <span class="c">{</span>
+                <span class="w">current_state</span> <span class="c">=</span> <span class="w">INACTIVE_STATE</span><span class="c">;</span>
+                <span class="w">n</span><span class="pc">eed_a</span><span class="c">ctivate</span> <span class="c">=</span> <span class="w">f</span><span class="c">alse;</span>
+              <span class="c">}</span>
+              <span class="c">else</span>
+              <span class="c">{</span>
+                <span class="w">c</span><span class="pc">u</span><span class="c">rrent_state</span> <span class="c">=</span> <span class="w">PENDING_ACTIVE_STATE</span><span class="c">;</span>
+                <span class="w">n</span><span class="pc">eed_a</span><span class="c">ctivate</span> <span class="pc">=</span> <span class="pc">t</span><span class="c">rue;</span>
+              <span class="pc">}</span>
+            <span class="pc">}</span>
+            <span class="c">else</span>
+            <span class="c">{</span>
+              
+              
+              <span class="w">n</span><span class="pc">eed_a</span><span class="c">ctivate</span> <span class="c">=</span> <span class="c">false;</span>
+            <span class="c">}</span>
+            <span class="w">need_validate</span> <span class="pc">=</span> <span class="pc">f</span><span class="c">alse;</span>
+            <span class="w">need_invalidate</span> <span class="c">=</span> <span class="pc">f</span><span class="c">alse;</span>
+            <span class="w">need_deactivate</span> <span class="c">=</span> <span class="pc">f</span><span class="c">alse;</span>
+            <span class="pc">b</span><span class="c">reak;</span>
+          <span class="pc">}</span>
+        <span class="w">c</span><span class="c">ase</span> <span class="w">PENDING_VALID_STATE</span><span class="pc">:</span>
+          <span class="c">{</span>
+            
+            <span class="pc">i</span><span class="c">f</span> <span class="c">(need_validate)</span>
+            <span class="c">{</span>
+              
+              <span class="c">if</span> <span class="c">(</span><span class="w">has_valid_refs</span> <span class="w">||</span> <span class="w">has_remote_refs</span><span class="c">)</span>
+              <span class="c">{</span>
+                <span class="w">current_state</span> <span class="c">=</span> <span class="w">VALID_STATE</span><span class="c">;</span>
+                <span class="w">n</span><span class="c">eed_invalidate</span> <span class="c">=</span> <span class="pc">f</span><span class="c">alse;</span>
+              <span class="c">}</span>
+              <span class="c">else</span>
+              <span class="c">{</span>
+                <span class="w">c</span><span class="pc">u</span><span class="c">rrent_state</span> <span class="pc">=</span> <span class="w">PENDING_INVALID_STATE</span><span class="c">;</span>
+                <span class="w">n</span><span class="pc">eed_i</span><span class="c">nvalidate</span> <span class="c">=</span> <span class="w">f</span><span class="c">alse;</span>
+              <span class="c">}</span>
+            <span class="pc">}</span>
+            <span class="pc">e</span><span class="c">lse</span>
+            <span class="c">{</span>
+              
+              
+              <span class="w">n</span><span class="c">eed_invalidate</span> <span class="c">=</span> <span class="c">false;</span>
+            <span class="c">}</span>
+            <span class="w">need_activate</span> <span class="pc">=</span> <span class="pc">f</span><span class="c">alse;</span>
+            <span class="w">need_validate</span> <span class="c">=</span> <span class="pc">f</span><span class="c">alse;</span>
+            <span class="w">need_deactivate</span> <span class="c">=</span> <span class="pc">f</span><span class="c">alse;</span>
+            <span class="pc">b</span><span class="c">reak;</span>
+          <span class="pc">}</span>
+        <span class="w">c</span><span class="c">ase</span> <span class="w">P</span><span class="c">ENDING_INVALID_STATE</span><span class="pc">:</span>
+          <span class="c">{</span>
+            
+            <span class="w">i</span><span class="c">f</span> <span class="c">(</span><span class="pc">need_i</span><span class="c">nvalidate)</span>
+            <span class="c">{</span>
+              
+              <span class="c">if</span> <span class="c">(</span><span class="w">has_valid_refs</span> <span class="w">||</span> <span class="w">has_remote_refs</span><span class="c">)</span>
+              <span class="c">{</span>
+                
+                <span class="w">current_state</span> <span class="c">=</span> <span class="w">PENDING_VALID_STATE</span><span class="c">;</span>
+                <span class="w">n</span><span class="c">eed_validate</span> <span class="c">=</span> <span class="pc">t</span><span class="c">rue;</span>
+                <span class="pc">n</span><span class="c">eed_deactivate</span> <span class="c">=</span> <span class="pc">f</span><span class="c">alse;</span>
+              <span class="c">}</span>
+              <span class="c">else</span> <span class="pc">i</span><span class="c">f</span> <span class="pc">(!</span><span class="w">has_gc_refs</span><span class="c">)</span>
+              <span class="c">{</span>
+                
+                <span class="w">c</span><span class="pc">u</span><span class="c">rrent_state</span> <span class="w">=</span> <span class="w">PENDING_INACTIVE_STATE</span><span class="c">;</span>
+                <span class="w">n</span><span class="pc">eed_v</span><span class="c">alidate</span> <span class="c">=</span> <span class="pc">f</span><span class="c">alse;</span>
+                <span class="w">n</span><span class="pc">eed_d</span><span class="c">eactivate</span> <span class="c">=</span> <span class="w">t</span><span class="c">rue;</span>
+              <span class="c">}</span>
+              <span class="pc">e</span><span class="c">lse</span>
+              <span class="c">{</span>
+                
+                <span class="w">c</span><span class="c">urrent_state</span> <span class="pc">=</span> <span class="w">ACTIVE_INVALID_STATE</span><span class="c">;</span>
+                <span class="w">n</span><span class="c">eed_validate</span> <span class="c">=</span> <span class="w">f</span><span class="c">alse;</span>
+                <span class="w">n</span><span class="c">eed_deactivate</span> <span class="c">=</span> <span class="w">f</span><span class="pc">a</span><span class="c">lse;</span>
+              <span class="c">}</span>
+            <span class="w">}</span>
+            <span class="w">e</span><span class="c">lse</span>
+            <span class="c">{</span>
+              
+              
+              <span class="w">n</span><span class="pc">eed_v</span><span class="c">alidate</span> <span class="c">=</span> <span class="c">false;</span>
+              <span class="w">n</span><span class="pc">eed_d</span><span class="c">eactivate</span> <span class="c">=</span> <span class="c">false;</span>
+            <span class="c">}</span>
+            <span class="w">need_activate</span> <span class="pc">=</span> <span class="pc">f</span><span class="c">alse;</span>
+            <span class="w">need_invalidate</span> <span class="c">=</span> <span class="pc">f</span><span class="c">alse;</span>
+            <span class="w">b</span><span class="pc">r</span><span class="c">eak;</span>
+          <span class="pc">}</span>
+        <span class="pc">d</span><span class="c">efault:</span>
+          <span class="c">assert(</span><span class="pc">f</span><span class="c">alse);</span> 
+      <span class="c">}</span>
+      <span class="w">do_delete</span> <span class="pc">=</span> <span class="w">can_delete</span><span class="c">(</span><span class="w">has_gc_refs</span><span class="pc">,</span> <span class="w">has_remote_refs</span><span class="c">,</span>
+                             <span class="w">has_valid_refs</span><span class="c">,</span> <span class="w">has_resource_refs</span><span class="pc">)</span><span class="c">;</span>
+      <span class="pc">r</span><span class="c">eturn</span> <span class="w">!(n</span><span class="c">eed_activate</span> <span class="w">||</span> <span class="w">need_validate</span> <span class="w">|</span><span class="c">|</span> 
+               <span class="w">n</span><span class="c">eed_invalidate</span> <span class="w">|</span><span class="c">|</span> <span class="w">need_deactivate)</span><span class="c">;</span>
+    <span class="c">}</span>
+
+    
+    <span class="pc">b</span><span class="c">ool</span> <span class="w">CollectableState</span><span class="pc">:</span><span class="c">:</span><span class="pc">c</span><span class="c">an_delete(</span><span class="w">b</span><span class="c">ool</span> <span class="w">h</span><span class="pc">as_g</span><span class="c">c_refs,</span>
+                                      <span class="c">bool</span> <span class="c">has_remote_refs</span><span class="pc">,</span>
+                                      <span class="pc">b</span><span class="c">ool</span> <span class="pc">has_v</span><span class="c">alid_refs</span><span class="pc">,</span>
+                                      <span class="c">bool</span> <span class="w">h</span><span class="pc">as_r</span><span class="c">esource_refs)</span>
+    
+    <span class="c">{</span>
+      <span class="pc">r</span><span class="c">eturn</span> <span class="c">(</span><span class="w">current_state</span> <span class="w">=</span><span class="pc">=</span> <span class="w">INACTIVE_STATE) </span><span class="pc">&amp;</span><span class="c">&amp;</span>
+             <span class="w">(</span><span class="pc">!</span><span class="w">h</span><span class="pc">as_g</span><span class="c">c_refs</span><span class="w">) &amp;&amp; (!h</span><span class="pc">as_rem</span><span class="c">ote_refs</span><span class="w">) </span><span class="pc">&amp;&amp;</span>
+             <span class="w">(</span><span class="pc">!h</span><span class="c">as_valid_refs</span><span class="w">) &amp;</span><span class="pc">&amp; </span><span class="c">(!has_resource_refs</span><span class="pc">)</span><span class="c">;</span>
+    <span class="w">}</span>
+
+    
+    
+    
+
+    
+    <span class="w">DistributedCollectable:</span><span class="pc">:</span><span class="c">DistributedCollectable(</span><span class="w">R</span><span class="c">untime</span> <span class="c">*</span><span class="pc">r</span><span class="c">t,</span>
+                                                   <span class="w">D</span><span class="pc">istributedI</span><span class="c">D</span> <span class="w">i</span><span class="pc">d</span><span class="c">,</span>
+                                                   <span class="w">A</span><span class="c">ddressSpaceID</span> <span class="w">own_space</span><span class="pc">,</span>
+                                                   <span class="w">A</span><span class="c">ddressSpaceID</span> <span class="w">loc_space</span><span class="pc">)</span>
+      <span class="pc">:</span> <span class="w">CollectableState()</span><span class="pc">,</span> <span class="w">r</span><span class="pc">u</span><span class="c">ntime</span><span class="w">(r</span><span class="c">t</span><span class="w">)</span><span class="pc">,</span> <span class="w">d</span><span class="pc">i</span><span class="c">d(</span><span class="w">id</span><span class="pc">),</span> <span class="w">owner_space</span><span class="c">(</span><span class="w">o</span><span class="c">wn_space),</span> 
+        <span class="w">local_space</span><span class="c">(</span><span class="w">l</span><span class="c">oc_space),</span> <span class="w">o</span><span class="pc">wner</span><span class="c">(</span><span class="w">o</span><span class="pc">wne</span><span class="c">r_space</span> <span class="w">=</span><span class="c">=</span> <span class="w">l</span><span class="pc">oca</span><span class="c">l_space</span><span class="pc">),</span> 
+        <span class="w">gc_lock</span><span class="c">(</span><span class="w">R</span><span class="pc">es</span><span class="c">ervation</span><span class="w">:</span><span class="c">:</span><span class="w">create_reservation()),</span> <span class="w">gc_references</span><span class="c">(0</span><span class="pc">),</span> 
+        <span class="w">valid_references</span><span class="c">(0</span><span class="pc">),</span> <span class="w">resource_references</span><span class="c">(0),</span> <span class="w">held_remote_references</span><span class="c">(0</span><span class="pc">)</span>
+    
+    <span class="c">{</span>
+      <span class="w">r</span><span class="pc">u</span><span class="c">ntime</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">register_distributed_collectable</span><span class="c">(</span><span class="w">di</span><span class="pc">d</span><span class="c">,</span> <span class="w">t</span><span class="c">his);</span>
+      
+      
+      
+      <span class="w">i</span><span class="c">f</span> <span class="pc">(!</span><span class="w">o</span><span class="pc">wner</span><span class="c">)</span>
+      <span class="c">{</span>
+        <span class="w">r</span><span class="pc">es</span><span class="c">ource_references</span> <span class="pc">=</span> <span class="w">1</span><span class="c">;</span>
+        
+        
+        <span class="w">destruction_event</span> <span class="pc">=</span> <span class="w">U</span><span class="c">serEvent</span><span class="pc">:</span><span class="c">:</span><span class="w">create_user_event</span><span class="pc">()</span><span class="c">;</span>
+        
+        <span class="w">remote_spaces.i</span><span class="pc">ns</span><span class="c">ert(</span><span class="w">owner_space</span><span class="pc">);</span>
+      <span class="pc">}</span>
+      <span class="pc">e</span><span class="c">lse</span>
+        <span class="w">d</span><span class="c">estruction_event</span> <span class="pc">=</span> <span class="w">U</span><span class="c">serEvent</span><span class="pc">:</span><span class="c">:</span><span class="w">NO_USER_EVENT;</span> 
+    <span class="c">}</span>
+
+    
+    <span class="w">DistributedCollectable:</span><span class="pc">:~</span><span class="c">DistributedCollectable(void)</span>
+    
+    <span class="c">{</span>
+<span class="w">#</span><span class="c">ifdef</span> <span class="c">DEBUG_HIGH_LEVEL</span>
+      <span class="c">assert(</span><span class="w">gc_references</span> <span class="pc">=</span><span class="c">=</span> <span class="c">0);</span>
+      <span class="pc">a</span><span class="c">ssert(</span><span class="w">valid_references</span> <span class="pc">=</span><span class="c">=</span> <span class="c">0);</span>
+      <span class="w">a</span><span class="c">ssert(</span><span class="w">remote_references</span><span class="c">.</span><span class="pc">em</span><span class="c">pty());</span>
+      <span class="w">a</span><span class="c">ssert(</span><span class="w">resource_references</span> <span class="w">=</span><span class="c">=</span> <span class="pc">0</span><span class="c">);</span>
+<span class="w">#</span><span class="c">endif</span>
+      <span class="w">r</span><span class="pc">u</span><span class="c">ntime-&gt;</span><span class="w">unregister_distributed_collectable</span><span class="c">(</span><span class="w">di</span><span class="pc">d</span><span class="c">);</span>
+      <span class="w">gc_lock</span><span class="c">.</span><span class="w">destroy_reservation</span><span class="pc">()</span><span class="c">;</span>
+      <span class="w">g</span><span class="pc">c_l</span><span class="c">ock</span> <span class="pc">=</span> <span class="w">R</span><span class="pc">es</span><span class="c">ervation</span><span class="w">:</span><span class="c">:</span><span class="w">NO_RESERVATION</span><span class="pc">;</span>
+      
+      <span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">o</span><span class="pc">w</span><span class="c">ner)</span>
+      <span class="c">{</span>
+        <span class="pc">f</span><span class="c">or</span> <span class="c">(std::set&lt;</span><span class="w">A</span><span class="pc">d</span><span class="c">dressSpaceID&gt;::const_iterator</span> <span class="c">it</span> <span class="c">=</span> 
+              <span class="w">remote_spaces</span><span class="c">.begin();</span> <span class="c">it</span> <span class="c">!=</span> <span class="c">remote_spaces.end();</span> <span class="c">it++)</span>
+        <span class="c">{</span>
+          
+          <span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">owner_space</span> <span class="w">== (*</span><span class="pc">i</span><span class="c">t</span><span class="pc">)</span><span class="c">)</span>
+            <span class="pc">c</span><span class="c">ontinue;</span>
+          <span class="w">S</span><span class="pc">er</span><span class="c">ializer</span> <span class="w">rez</span><span class="pc">;</span>
+          <span class="w">{</span>
+            <span class="w">RezCheck</span> <span class="w">z</span><span class="c">(</span><span class="w">r</span><span class="pc">ez</span><span class="c">);</span>
+            <span class="w">r</span><span class="pc">ez</span><span class="c">.</span><span class="w">s</span><span class="c">erialize(</span><span class="w">di</span><span class="pc">d)</span><span class="c">;</span>
+          <span class="c">}</span>
+          <span class="w">r</span><span class="pc">u</span><span class="c">ntime-&gt;</span><span class="w">send_remove_distributed_resource(</span><span class="pc">*</span><span class="c">it</span><span class="pc">,</span> <span class="w">r</span><span class="pc">ez</span><span class="c">);</span>
+        <span class="pc">}</span>
+        <span class="w">r</span><span class="pc">em</span><span class="c">ote_spaces</span><span class="pc">.</span><span class="c">clear();</span>
+        
+        
+        
+        
+        
+        <span class="w">E</span><span class="pc">vent</span> <span class="w">recycle_event</span> <span class="pc">=</span> <span class="pc">E</span><span class="c">vent::</span><span class="w">merge_events</span><span class="c">(</span><span class="w">recycle_events</span><span class="c">);</span>
+        <span class="w">r</span><span class="pc">u</span><span class="c">ntime-&gt;</span><span class="w">recycle_distributed_id</span><span class="c">(</span><span class="w">di</span><span class="c">d</span><span class="pc">,</span> <span class="c">recycle_event</span><span class="pc">)</span><span class="c">;</span>
+<span class="w">#</span><span class="pc">i</span><span class="c">fdef</span> <span class="c">DEBUG_HIGH_LEVEL</span>
+        <span class="c">assert</span><span class="pc">(!</span><span class="w">destruction_event</span><span class="c">.</span><span class="w">e</span><span class="pc">x</span><span class="c">ists());</span>
+<span class="c">#endif</span>
+      <span class="w">}</span>
+      <span class="pc">e</span><span class="c">lse</span>
+      <span class="c">{</span>
+<span class="pc">#</span><span class="c">ifdef</span> <span class="c">DEBUG_HIGH_LEVEL</span>
+        <span class="c">assert(</span><span class="w">d</span><span class="c">estruction_event</span><span class="pc">.</span><span class="c">exists());</span>
+<span class="c">#endif</span>
+        
+        <span class="w">d</span><span class="c">estruction_event</span><span class="pc">.</span><span class="w">t</span><span class="pc">r</span><span class="c">igger</span><span class="pc">()</span><span class="c">;</span>
+      <span class="pc">}</span>
+    <span class="w">}</span>
+
+    
+    <span class="pc">v</span><span class="c">oid</span> <span class="w">DistributedCollectable</span><span class="c">::</span><span class="w">add_gc_reference</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="w">c</span><span class="pc">n</span><span class="c">t</span> <span class="c">)</span>
+    
+    <span class="c">{</span>
+      <span class="pc">b</span><span class="c">ool</span> <span class="w">need_activate</span> <span class="c">=</span> <span class="c">false;</span>
+      <span class="w">b</span><span class="c">ool</span> <span class="w">need_validate</span> <span class="pc">=</span> <span class="c">false;</span>
+      <span class="w">b</span><span class="c">ool</span> <span class="w">need_invalidate</span> <span class="pc">=</span> <span class="c">false;</span>
+      <span class="c">bool</span> <span class="w">need_deactivate</span> <span class="c">=</span> <span class="c">false;</span>
+      <span class="c">bool</span> <span class="pc">r</span><span class="c">esult</span> <span class="c">=</span> <span class="c">false;</span>
+      <span class="pc">b</span><span class="c">ool</span> <span class="w">done</span> <span class="c">=</span> <span class="c">false;</span>
+      <span class="pc">b</span><span class="c">ool</span> <span class="w">fir</span><span class="c">st</span> <span class="c">=</span> <span class="w">t</span><span class="c">rue;</span>
+      <span class="w">w</span><span class="c">hile</span> <span class="pc">(!d</span><span class="c">one</span><span class="w">)</span>
+      <span class="c">{</span>
+        <span class="c">if</span> <span class="c">(</span><span class="w">need_activate</span><span class="pc">)</span>
+          <span class="w">notify_activate()</span><span class="pc">;</span>
+        <span class="c">if</span> <span class="c">(</span><span class="w">need_validate</span><span class="c">)</span>
+          <span class="w">notify_valid()</span><span class="pc">;</span>
+        <span class="pc">i</span><span class="c">f</span> <span class="pc">(</span><span class="w">need_invalidate</span><span class="c">)</span>
+          <span class="w">notify_invalid()</span><span class="pc">;</span>
+        <span class="c">if</span> <span class="c">(</span><span class="w">need_deactivate</span><span class="c">)</span>
+          <span class="w">garbage_collect()</span><span class="pc">;</span>
+        <span class="w">A</span><span class="c">utoLock</span> <span class="w">gc</span><span class="c">(</span><span class="w">gc_lock</span><span class="c">);</span>
+        <span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">fi</span><span class="pc">r</span><span class="c">st</span><span class="pc">)</span>
+        <span class="pc">{</span>
+          <span class="w">gc_references</span> <span class="w">+</span><span class="pc">=</span> <span class="w">cn</span><span class="c">t;</span>
+          <span class="w">fi</span><span class="pc">r</span><span class="c">st</span> <span class="c">=</span> <span class="pc">f</span><span class="c">alse;</span>
+        <span class="c">}</span>
+        <span class="w">done</span> <span class="w">=</span> <span class="w">update_state((g</span><span class="pc">c_r</span><span class="c">eferences</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">),</span>
+                            <span class="w">(ow</span><span class="c">ner</span> <span class="w">&amp;&amp; !remote_references.e</span><span class="c">mpty</span><span class="w">()),</span>
+                            <span class="w">(valid_references</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">),</span>
+                            <span class="w">(resource_references</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">),</span>
+                            <span class="w">need_activate,</span> <span class="w">need_validate</span><span class="pc">,</span>
+                            <span class="w">need_invalidate</span><span class="c">,</span> <span class="w">need_deactivate</span><span class="c">,</span> <span class="w">res</span><span class="pc">u</span><span class="c">lt);</span>
+        <span class="w">i</span><span class="c">f</span> <span class="c">(</span><span class="w">n</span><span class="pc">eed_d</span><span class="c">eactivate</span> <span class="w">&amp;&amp; (held_remote_references</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">))</span>
+          <span class="w">return_held_references()</span><span class="pc">;</span>  
+      <span class="pc">}</span>
+      <span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">res</span><span class="pc">u</span><span class="c">lt</span><span class="pc">)</span>
+      <span class="c">{</span>
+        
+        
+        <span class="w">a</span><span class="c">ssert(</span><span class="pc">f</span><span class="c">alse);</span>
+        <span class="w">d</span><span class="c">elete</span> <span class="w">t</span><span class="c">his;</span>
+      <span class="c">}</span>
+    <span class="pc">}</span>
+
+    
+    <span class="pc">b</span><span class="c">ool</span> <span class="w">DistributedCollectable</span><span class="c">::</span><span class="w">remove_gc_reference</span><span class="c">(</span><span class="w">u</span><span class="c">nsigned</span> <span class="w">c</span><span class="pc">n</span><span class="c">t</span> <span class="c">)</span>
+    
+    <span class="c">{</span>
+      <span class="w">b</span><span class="c">ool</span> <span class="w">need_activate</span> <span class="c">=</span> <span class="c">false;</span>
+      <span class="pc">b</span><span class="c">ool</span> <span class="w">need_validate</span> <span class="pc">=</span> <span class="c">false;</span>
+      <span class="pc">b</span><span class="c">ool</span> <span class="w">need_invalidate</span> <span class="pc">=</span> <span class="c">false;</span>
+      <span class="c">bool</span> <span class="w">need_deactivate</span> <span class="c">=</span> <span class="c">false;</span>
+      <span class="pc">b</span><span class="c">ool</span> <span class="pc">r</span><span class="c">esult</span> <span class="pc">=</span> <span class="c">false;</span>
+      <span class="c">bool</span> <span class="w">done</span> <span class="c">=</span> <span class="c">false;</span>
+      <span class="c">bool</span> <span class="w">fir</span><span class="c">st</span> <span class="c">=</span> <span class="w">t</span><span class="c">rue;</span>
+      <span class="w">w</span><span class="c">hile</span> <span class="pc">(!d</span><span class="c">one</span><span class="w">)</span>
+      <span class="c">{</span>
+        <span class="c">if</span> <span class="c">(</span><span class="w">need_activate</span><span class="pc">)</span>
+          <span class="w">notify_activate()</span><span class="pc">;</span>
+        <span class="c">if</span> <span class="c">(</span><span class="w">need_validate</span><span class="c">)</span>
+          <span class="w">notify_valid()</span><span class="pc">;</span>
+        <span class="pc">i</span><span class="c">f</span> <span class="pc">(</span><span class="w">need_invalidate</span><span class="c">)</span>
+          <span class="w">notify_invalid()</span><span class="pc">;</span>
+        <span class="c">if</span> <span class="c">(</span><span class="w">need_deactivate</span><span class="c">)</span>
+          <span class="w">garbage_collect()</span><span class="pc">;</span>
+        <span class="w">A</span><span class="c">utoLock</span> <span class="w">gc</span><span class="c">(</span><span class="w">gc_lock</span><span class="c">);</span>
+        <span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">fi</span><span class="pc">r</span><span class="c">st</span><span class="pc">)</span>
+        <span class="pc">{</span>
+<span class="w">#</span><span class="c">ifdef</span> <span class="c">DEBUG_HIGH_LEVEL</span>
+          <span class="c">assert(</span><span class="w">gc_references</span> <span class="w">&gt;</span><span class="c">=</span> <span class="w">cn</span><span class="c">t);</span>
+<span class="c">#endif</span>
+          <span class="w">g</span><span class="c">c_references</span> <span class="w">-</span><span class="pc">=</span> <span class="w">c</span><span class="pc">n</span><span class="c">t;</span>
+          <span class="w">fi</span><span class="pc">r</span><span class="c">st</span> <span class="pc">=</span> <span class="w">f</span><span class="c">alse;</span>
+        <span class="c">}</span>
+        <span class="w">done</span> <span class="pc">=</span> <span class="w">update_state((g</span><span class="pc">c_r</span><span class="c">eferences</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">),</span>
+                            <span class="w">(o</span><span class="pc">w</span><span class="c">ner</span> <span class="w">&amp;&amp; !remote_references</span><span class="pc">.</span><span class="w">e</span><span class="c">mpty</span><span class="w">()),</span>
+                            <span class="w">(valid_references</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">),</span>
+                            <span class="w">(resource_references</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">),</span>
+                            <span class="w">need_activate,</span> <span class="w">need_validate</span><span class="c">,</span>
+                            <span class="w">need_invalidate</span><span class="c">,</span> <span class="w">need_deactivate</span><span class="c">,</span> <span class="w">res</span><span class="pc">u</span><span class="c">lt);</span>
+        <span class="w">i</span><span class="c">f</span> <span class="c">(</span><span class="w">n</span><span class="pc">eed_d</span><span class="c">eactivate</span> <span class="w">&amp;&amp; (held_remote_references</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">))</span>
+          <span class="w">return_held_references()</span><span class="pc">;</span>  
+      <span class="pc">}</span>
+      <span class="w">r</span><span class="pc">eturn</span> <span class="w">r</span><span class="pc">esu</span><span class="c">lt;</span>
+    <span class="c">}</span>
+
+    
+    <span class="pc">v</span><span class="c">oid</span> <span class="w">DistributedCollectable</span><span class="pc">:</span><span class="c">:</span><span class="w">add_valid_reference</span><span class="c">(</span><span class="w">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">nt</span> <span class="pc">)</span>
+    
+    <span class="pc">{</span>
+      <span class="w">b</span><span class="pc">o</span><span class="c">ol</span> <span class="w">n</span><span class="pc">eed_a</span><span class="c">ctivate</span> <span class="c">=</span> <span class="w">f</span><span class="c">alse;</span>
+      <span class="w">b</span><span class="c">ool</span> <span class="w">n</span><span class="pc">eed_v</span><span class="c">alidate</span> <span class="c">=</span> <span class="c">false;</span>
+      <span class="c">bool</span> <span class="w">need_invalidate</span> <span class="c">=</span> <span class="c">false;</span>
+      <span class="pc">b</span><span class="c">ool</span> <span class="w">n</span><span class="c">eed_deactivate</span> <span class="c">=</span> <span class="c">false;</span>
+      <span class="c">bool</span> <span class="pc">r</span><span class="c">esult</span> <span class="pc">=</span> <span class="c">false;</span>
+      <span class="pc">b</span><span class="c">ool</span> <span class="w">done</span> <span class="c">=</span> <span class="c">false;</span>
+      <span class="pc">b</span><span class="c">ool</span> <span class="w">fir</span><span class="c">st</span> <span class="c">=</span> <span class="w">t</span><span class="c">rue;</span>
+      <span class="w">w</span><span class="c">hile</span> <span class="pc">(!d</span><span class="c">one</span><span class="w">)</span>
+      <span class="c">{</span>
+        <span class="c">if</span> <span class="c">(</span><span class="w">need_activate</span><span class="pc">)</span>
+          <span class="w">notify_activate()</span><span class="pc">;</span>
+        <span class="c">if</span> <span class="c">(</span><span class="w">need_validate</span><span class="c">)</span>
+          <span class="w">notify_valid()</span><span class="pc">;</span>
+        <span class="pc">i</span><span class="c">f</span> <span class="pc">(</span><span class="w">need_invalidate</span><span class="c">)</span>
+          <span class="w">notify_invalid()</span><span class="pc">;</span>
+        <span class="c">if</span> <span class="c">(</span><span class="w">need_deactivate</span><span class="c">)</span>
+          <span class="w">garbage_collect()</span><span class="pc">;</span>
+        <span class="w">A</span><span class="c">utoLock</span> <span class="w">gc</span><span class="c">(</span><span class="w">gc_lock</span><span class="c">);</span>
+        <span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">fi</span><span class="pc">r</span><span class="c">st</span><span class="pc">)</span>
+        <span class="pc">{</span>
+          <span class="w">valid_references</span> <span class="w">+</span><span class="pc">=</span> <span class="w">cn</span><span class="c">t;</span>
+          <span class="w">fi</span><span class="pc">r</span><span class="c">st</span> <span class="c">=</span> <span class="pc">f</span><span class="c">alse;</span>
+        <span class="c">}</span>
+        <span class="w">done</span> <span class="w">=</span> <span class="w">update_state((gc_references</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">),</span>
+                            <span class="w">(ow</span><span class="c">ner</span> <span class="w">&amp;&amp; !remote_references.e</span><span class="c">mpty</span><span class="w">()),</span>
+                            <span class="w">(v</span><span class="pc">ali</span><span class="c">d_references</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">),</span>
+                            <span class="w">(resource_references</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">)</span><span class="pc">,</span>
+                            <span class="w">need_activate,</span> <span class="w">need_validate</span><span class="pc">,</span> 
+                            <span class="w">need_invalidate</span><span class="c">,</span> <span class="w">need_deactivate</span><span class="c">,</span> <span class="w">res</span><span class="pc">u</span><span class="c">lt);</span>
+        <span class="w">i</span><span class="c">f</span> <span class="c">(</span><span class="w">n</span><span class="pc">eed_d</span><span class="c">eactivate</span> <span class="w">&amp;&amp; (held_remote_references</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">))</span>
+          <span class="w">return_held_references()</span><span class="pc">;</span>
+      <span class="pc">}</span>
+      <span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">res</span><span class="pc">u</span><span class="c">lt</span><span class="pc">)</span>
+      <span class="c">{</span>
+        
+        <span class="w">a</span><span class="c">ssert(</span><span class="pc">f</span><span class="c">alse);</span>
+        <span class="w">d</span><span class="c">elete</span> <span class="w">t</span><span class="c">his;</span>
+      <span class="c">}</span>
+    <span class="pc">}</span>
+
+    
+    <span class="pc">b</span><span class="c">ool</span> <span class="w">DistributedCollectable</span><span class="c">::</span><span class="w">remove_valid_reference</span><span class="c">(</span><span class="w">u</span><span class="c">nsigned</span> <span class="w">c</span><span class="pc">n</span><span class="c">t</span> <span class="c">)</span>
+    
+    <span class="c">{</span>
+      <span class="w">b</span><span class="c">ool</span> <span class="w">need_activate</span> <span class="c">=</span> <span class="c">false;</span>
+      <span class="pc">b</span><span class="c">ool</span> <span class="w">need_validate</span> <span class="pc">=</span> <span class="c">false;</span>
+      <span class="pc">b</span><span class="c">ool</span> <span class="w">need_invalidate</span> <span class="pc">=</span> <span class="c">false;</span>
+      <span class="c">bool</span> <span class="w">need_deactivate</span> <span class="c">=</span> <span class="c">false;</span>
+      <span class="pc">b</span><span class="c">ool</span> <span class="pc">r</span><span class="c">esult</span> <span class="pc">=</span> <span class="c">false;</span>
+      <span class="c">bool</span> <span class="w">done</span> <span class="c">=</span> <span class="c">false;</span>
+      <span class="c">bool</span> <span class="w">fir</span><span class="c">st</span> <span class="c">=</span> <span class="w">t</span><span class="c">rue;</span>
+      <span class="w">w</span><span class="c">hile</span> <span class="pc">(!d</span><span class="c">one</span><span class="w">)</span>
+      <span class="c">{</span>
+        <span class="c">if</span> <span class="c">(</span><span class="w">need_activate</span><span class="pc">)</span>
+          <span class="w">notify_activate()</span><span class="pc">;</span>
+        <span class="c">if</span> <span class="c">(</span><span class="w">need_validate</span><span class="c">)</span>
+          <span class="w">notify_valid()</span><span class="pc">;</span>
+        <span class="pc">i</span><span class="c">f</span> <span class="pc">(</span><span class="w">need_invalidate</span><span class="c">)</span>
+          <span class="w">notify_invalid()</span><span class="pc">;</span>
+        <span class="c">if</span> <span class="c">(</span><span class="w">need_deactivate</span><span class="c">)</span>
+          <span class="w">garbage_collect()</span><span class="pc">;</span>
+        <span class="w">A</span><span class="c">utoLock</span> <span class="w">gc</span><span class="c">(</span><span class="w">gc_lock</span><span class="c">);</span>
+        <span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">fi</span><span class="pc">r</span><span class="c">st</span><span class="pc">)</span>
+        <span class="pc">{</span>
+<span class="w">#</span><span class="c">ifdef</span> <span class="c">DEBUG_HIGH_LEVEL</span>
+          <span class="c">assert(</span><span class="w">valid_references</span> <span class="w">&gt;</span><span class="c">=</span> <span class="w">cn</span><span class="c">t);</span>
+<span class="c">#endif</span>
+          <span class="w">v</span><span class="c">alid_references</span> <span class="w">-</span><span class="pc">=</span> <span class="w">c</span><span class="pc">n</span><span class="c">t;</span>
+          <span class="w">fi</span><span class="pc">r</span><span class="c">st</span> <span class="pc">=</span> <span class="w">f</span><span class="c">alse;</span>
+        <span class="c">}</span>
+        <span class="w">done</span> <span class="pc">=</span> <span class="w">update_state((gc_references</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">),</span>
+                            <span class="w">(o</span><span class="pc">w</span><span class="c">ner</span> <span class="w">&amp;&amp; !remote_references</span><span class="pc">.</span><span class="w">e</span><span class="c">mpty</span><span class="w">()),</span>
+                            <span class="w">(v</span><span class="pc">ali</span><span class="c">d_references</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">),</span>
+                            <span class="w">(resource_references</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">),</span>
+                            <span class="w">need_activate,</span> <span class="w">need_validate</span><span class="c">,</span>
+                            <span class="w">need_invalidate</span><span class="c">,</span> <span class="w">need_deactivate</span><span class="c">,</span> <span class="w">res</span><span class="pc">u</span><span class="c">lt);</span>
+        <span class="w">i</span><span class="c">f</span> <span class="c">(</span><span class="w">n</span><span class="pc">eed_d</span><span class="c">eactivate</span> <span class="w">&amp;&amp; (held_remote_references</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">))</span>
+          <span class="w">return_held_references()</span><span class="pc">;</span>
+      <span class="pc">}</span>
+      <span class="w">r</span><span class="pc">eturn</span> <span class="w">r</span><span class="pc">esu</span><span class="c">lt;</span>
+    <span class="c">}</span>
+
+    
+    <span class="pc">v</span><span class="c">oid</span> <span class="w">DistributedCollectable</span><span class="pc">:</span><span class="c">:</span><span class="w">add_resource_reference</span><span class="c">(</span><span class="w">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">nt</span> <span class="pc">)</span>
+    
+    <span class="pc">{</span>
+      <span class="w">A</span><span class="c">utoLock</span> <span class="w">gc</span><span class="c">(</span><span class="w">gc_lock</span><span class="pc">)</span><span class="c">;</span>
+      <span class="w">resource_references</span> <span class="w">+</span><span class="c">=</span> <span class="w">c</span><span class="pc">n</span><span class="c">t;</span>
+    <span class="c">}</span>
+
+    
+    <span class="w">b</span><span class="c">ool</span> <span class="w">D</span><span class="c">istributedCollectable::</span><span class="w">remove_resource_reference</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">nt</span> <span class="c">)</span>
+    
+    <span class="c">{</span>
+      <span class="w">A</span><span class="c">utoLock</span> <span class="w">g</span><span class="pc">c</span><span class="c">(</span><span class="w">g</span><span class="pc">c_</span><span class="c">lock);</span>
+<span class="w">#</span><span class="c">ifdef</span> <span class="c">DEBUG_HIGH_LEVEL</span>
+      <span class="c">assert(</span><span class="w">r</span><span class="pc">es</span><span class="c">ource_references</span> <span class="w">&gt;</span><span class="pc">=</span> <span class="w">c</span><span class="c">nt);</span>
+<span class="c">#endif</span>
+      <span class="w">r</span><span class="pc">es</span><span class="c">ource_references</span> <span class="w">-</span><span class="pc">=</span> <span class="w">c</span><span class="c">nt</span><span class="pc">;</span>
+      <span class="pc">r</span><span class="c">eturn</span> <span class="w">can_delete((gc_references</span> <span class="w">&gt;</span> <span class="pc">0</span><span class="w">),</span>
+                        <span class="w">(o</span><span class="pc">w</span><span class="c">ner</span> <span class="w">&amp;&amp; !remote_references.</span><span class="pc">e</span><span class="c">mpty</span><span class="w">()),</span>
+                        <span class="c">(</span><span class="w">valid_references</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">),</span>
+                        <span class="w">(r</span><span class="c">esource_references</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">))</span><span class="c">;</span>
+    <span class="c">}</span>
+
+    
+    <span class="pc">b</span><span class="c">ool</span> <span class="w">DistributedCollectable</span><span class="pc">:</span><span class="c">:</span><span class="w">add_remote_reference</span><span class="c">(</span><span class="w">A</span><span class="c">ddressSpaceID</span> <span class="w">sid</span><span class="c">,</span>
+                                                      <span class="w">u</span><span class="c">nsigned</span> <span class="c">cnt</span> <span class="c">)</span>
+    
+    <span class="c">{</span>
+<span class="w">#</span><span class="c">ifdef</span> <span class="c">DEBUG_HIGH_LEVEL</span>
+      <span class="c">assert(</span><span class="w">o</span><span class="pc">w</span><span class="c">ner);</span>
+<span class="c">#endif</span>
+      <span class="w">b</span><span class="pc">o</span><span class="c">ol</span> <span class="w">need_activate</span> <span class="c">=</span> <span class="c">false;</span>
+      <span class="w">b</span><span class="pc">o</span><span class="c">ol</span> <span class="w">need_validate</span> <span class="pc">=</span> <span class="c">false;</span>
+      <span class="w">b</span><span class="c">ool</span> <span class="w">need_invalidate</span> <span class="pc">=</span> <span class="c">false;</span>
+      <span class="c">bool</span> <span class="w">need_deactivate</span> <span class="pc">=</span> <span class="c">false;</span>
+      <span class="c">bool</span> <span class="c">result</span> <span class="c">=</span> <span class="c">false;</span>
+      <span class="pc">b</span><span class="c">ool</span> <span class="w">done</span> <span class="c">=</span> <span class="c">false;</span>
+      <span class="pc">b</span><span class="c">ool</span> <span class="w">fir</span><span class="c">st</span> <span class="c">=</span> <span class="pc">t</span><span class="c">rue;</span>
+      <span class="w">w</span><span class="c">hile</span> <span class="pc">(!</span><span class="w">d</span><span class="c">one</span><span class="w">)</span>
+      <span class="c">{</span>
+        <span class="c">if</span> <span class="c">(</span><span class="w">need_activate</span><span class="pc">)</span>
+          <span class="w">notify_activate()</span><span class="pc">;</span>
+        <span class="c">if</span> <span class="c">(</span><span class="w">need_validate</span><span class="c">)</span>
+          <span class="w">notify_valid()</span><span class="pc">;</span>
+        <span class="pc">i</span><span class="c">f</span> <span class="pc">(</span><span class="w">need_invalidate</span><span class="c">)</span>
+          <span class="w">notify_invalid()</span><span class="pc">;</span>
+        <span class="c">if</span> <span class="c">(</span><span class="w">need_deactivate</span><span class="c">)</span>
+          <span class="w">garbage_collect()</span><span class="pc">;</span>
+        <span class="w">A</span><span class="c">utoLock</span> <span class="w">gc</span><span class="c">(</span><span class="w">gc_lock</span><span class="c">);</span>
+        <span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">fi</span><span class="pc">r</span><span class="c">st</span><span class="pc">)</span>
+        <span class="pc">{</span>
+          <span class="w">s</span><span class="c">td::map&lt;</span><span class="w">A</span><span class="pc">d</span><span class="c">dressSpaceID,</span><span class="w">i</span><span class="pc">n</span><span class="c">t</span><span class="pc">&gt;:</span><span class="c">:iterator</span> <span class="pc">f</span><span class="c">inder</span> <span class="c">=</span> 
+            <span class="w">remote_references</span><span class="c">.find(</span><span class="w">sid</span><span class="c">);</span>
+          <span class="c">if</span> <span class="c">(</span><span class="pc">f</span><span class="c">inder</span> <span class="pc">=</span><span class="c">=</span> <span class="c">remote_references.end())</span>
+            <span class="pc">rem</span><span class="c">ote_references</span><span class="w">[s</span><span class="pc">id</span><span class="c">] =</span> <span class="w">in</span><span class="pc">t</span><span class="w">(cn</span><span class="c">t);</span>
+          <span class="pc">e</span><span class="c">lse</span>
+          <span class="pc">{</span>
+            <span class="w">f</span><span class="pc">i</span><span class="c">nder-&gt;second</span> <span class="w">+</span><span class="c">=</span> <span class="w">cn</span><span class="c">t;</span>
+            <span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">f</span><span class="c">inder-&gt;second</span> <span class="pc">=</span><span class="c">=</span> <span class="pc">0)</span>
+              <span class="w">r</span><span class="pc">em</span><span class="c">ote_references</span><span class="pc">.</span><span class="w">e</span><span class="pc">r</span><span class="c">ase(</span><span class="w">f</span><span class="c">inder);</span>
+          <span class="c">}</span> 
+          <span class="w">fi</span><span class="pc">r</span><span class="c">st</span> <span class="pc">=</span> <span class="pc">f</span><span class="c">alse;</span>
+        <span class="c">}</span>
+        <span class="w">done</span> <span class="w">=</span> <span class="w">update_state((gc_references</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">),</span>
+                            <span class="w">(!re</span><span class="pc">m</span><span class="c">ote_references</span><span class="w">.e</span><span class="pc">m</span><span class="c">pty</span><span class="w">()),</span>
+                            <span class="pc">(</span><span class="w">valid_references</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">),</span>
+                            <span class="w">(resource_references</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">)</span><span class="pc">,</span>
+                            <span class="w">need_activate,</span> <span class="w">need_validate</span><span class="pc">,</span>
+                            <span class="w">need_invalidate</span><span class="pc">,</span> <span class="w">need_deactivate</span><span class="c">,</span> <span class="w">res</span><span class="pc">u</span><span class="c">lt</span><span class="pc">)</span><span class="c">;</span>
+      <span class="c">}</span>
+      <span class="w">r</span><span class="c">eturn</span> <span class="w">r</span><span class="pc">es</span><span class="c">ult;</span>
+    <span class="c">}</span>
+
+    
+    <span class="c">bool</span> <span class="w">DistributedCollectable</span><span class="pc">:</span><span class="c">:</span><span class="w">remove_remote_reference</span><span class="c">(</span><span class="w">A</span><span class="c">ddressSpaceID</span> <span class="w">sid</span><span class="c">,</span>
+                                                         <span class="w">E</span><span class="c">vent</span> <span class="w">dest_event</span><span class="c">,</span>
+                                                         <span class="c">unsigned</span> <span class="c">cnt</span> <span class="c">)</span>
+    
+    <span class="c">{</span>
+<span class="c">#ifdef</span> <span class="c">DEBUG_HIGH_LEVEL</span>
+      <span class="c">assert(</span><span class="w">o</span><span class="pc">w</span><span class="c">ner</span><span class="pc">)</span><span class="c">;</span>
+<span class="pc">#</span><span class="c">endif</span>
+      <span class="w">b</span><span class="c">ool</span> <span class="pc">n</span><span class="c">eed_activate</span> <span class="c">=</span> <span class="c">false;</span>
+      <span class="w">b</span><span class="c">ool</span> <span class="w">need_validate</span> <span class="pc">=</span> <span class="c">false;</span>
+      <span class="w">b</span><span class="c">ool</span> <span class="w">need_invalidate</span> <span class="pc">=</span> <span class="c">false;</span>
+      <span class="c">bool</span> <span class="w">need_deactivate</span> <span class="pc">=</span> <span class="c">false;</span>
+      <span class="c">bool</span> <span class="c">result</span> <span class="c">=</span> <span class="c">false;</span>
+      <span class="pc">b</span><span class="c">ool</span> <span class="w">done</span> <span class="c">=</span> <span class="c">false;</span>
+      <span class="pc">b</span><span class="c">ool</span> <span class="w">fir</span><span class="c">st</span> <span class="c">=</span> <span class="pc">t</span><span class="c">rue;</span>
+      <span class="w">w</span><span class="c">hile</span> <span class="pc">(!</span><span class="w">d</span><span class="c">one</span><span class="w">)</span>
+      <span class="c">{</span>
+        <span class="c">if</span> <span class="c">(</span><span class="w">need_activate</span><span class="pc">)</span>
+          <span class="w">notify_activate()</span><span class="pc">;</span>
+        <span class="c">if</span> <span class="c">(</span><span class="w">need_validate</span><span class="c">)</span>
+          <span class="w">notify_valid()</span><span class="pc">;</span>
+        <span class="pc">i</span><span class="c">f</span> <span class="pc">(</span><span class="w">need_invalidate</span><span class="c">)</span>
+          <span class="w">notify_invalid()</span><span class="pc">;</span>
+        <span class="c">if</span> <span class="c">(</span><span class="w">need_deactivate</span><span class="c">)</span>
+          <span class="w">garbage_collect()</span><span class="pc">;</span>
+        <span class="w">A</span><span class="c">utoLock</span> <span class="w">gc</span><span class="c">(</span><span class="w">gc_lock</span><span class="c">);</span>
+        <span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">fi</span><span class="pc">r</span><span class="c">st</span><span class="pc">)</span>
+        <span class="pc">{</span>
+          
+          <span class="w">recycle_events.</span><span class="pc">ins</span><span class="c">ert(</span><span class="w">dest_event</span><span class="c">);</span>
+          <span class="w">s</span><span class="c">td::</span><span class="pc">m</span><span class="c">ap&lt;</span><span class="w">A</span><span class="pc">d</span><span class="c">dressSpaceID,</span><span class="w">i</span><span class="pc">n</span><span class="c">t</span><span class="pc">&gt;:</span><span class="c">:iterator</span> <span class="w">f</span><span class="c">inder</span> <span class="c">=</span> 
+            <span class="w">remote_references</span><span class="c">.find(</span><span class="w">sid</span><span class="c">);</span>
+          <span class="c">if</span> <span class="c">(</span><span class="pc">f</span><span class="c">inder</span> <span class="pc">=</span><span class="c">=</span> <span class="c">remote_references.end())</span>
+            <span class="w">r</span><span class="pc">em</span><span class="c">ote_references</span><span class="w">[s</span><span class="pc">id</span><span class="w">] = -(in</span><span class="pc">t(</span><span class="w">cn</span><span class="c">t</span><span class="w">)</span><span class="pc">)</span><span class="c">;</span>
+          <span class="pc">e</span><span class="c">lse</span>
+          <span class="c">{</span>
+            <span class="w">fi</span><span class="c">nder-&gt;second</span> <span class="w">-</span><span class="pc">=</span> <span class="w">cn</span><span class="c">t;</span>
+            <span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">f</span><span class="c">inder-&gt;second</span> <span class="pc">=</span><span class="c">=</span> <span class="pc">0)</span>
+              <span class="w">r</span><span class="pc">em</span><span class="c">ote_references</span><span class="pc">.</span><span class="w">e</span><span class="pc">r</span><span class="c">ase(</span><span class="w">f</span><span class="c">inder);</span>
+          <span class="c">}</span>
+          <span class="w">fi</span><span class="pc">r</span><span class="c">st</span> <span class="pc">=</span> <span class="pc">f</span><span class="c">alse;</span>
+        <span class="c">}</span>
+        <span class="w">done</span> <span class="w">=</span> <span class="w">update_state((gc_references</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">),</span>
+                            <span class="w">(!re</span><span class="pc">m</span><span class="c">ote_references</span><span class="w">.e</span><span class="pc">m</span><span class="c">pty</span><span class="w">()),</span>
+                            <span class="pc">(</span><span class="w">valid_references</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">),</span>
+                            <span class="w">(resource_references</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">)</span><span class="pc">,</span>
+                            <span class="w">need_activate,</span> <span class="w">need_validate</span><span class="pc">,</span>
+                            <span class="w">need_invalidate</span><span class="pc">,</span> <span class="w">need_deactivate</span><span class="c">,</span> <span class="w">res</span><span class="pc">u</span><span class="c">lt</span><span class="pc">)</span><span class="c">;</span>
+      <span class="c">}</span>
+      <span class="w">r</span><span class="c">eturn</span> <span class="w">r</span><span class="pc">es</span><span class="c">ult;</span>
+    <span class="c">}</span>
+
+    
+    <span class="pc">v</span><span class="c">oid</span> <span class="w">DistributedCollectable</span><span class="pc">:</span><span class="c">:</span><span class="w">add_held_remote_reference</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="pc">cn</span><span class="c">t</span> <span class="c">)</span>
+    
+    <span class="c">{</span>
+<span class="pc">#</span><span class="c">ifdef</span> <span class="c">DEBUG_HIGH_LEVEL</span>
+      <span class="c">assert</span><span class="pc">(!</span><span class="w">o</span><span class="pc">w</span><span class="c">ner);</span>
+<span class="pc">#</span><span class="c">endif</span>
+      <span class="w">A</span><span class="c">utoLock</span> <span class="w">gc</span><span class="c">(</span><span class="w">gc_lock</span><span class="pc">)</span><span class="c">;</span>
+      <span class="w">held_remote_references+</span><span class="pc">+</span><span class="c">;</span>
+    <span class="w">}</span>
+
+    
+    <span class="pc">b</span><span class="c">ool</span> <span class="w">D</span><span class="c">istributedCollectable::</span><span class="w">send_remote_reference</span><span class="c">(</span><span class="w">A</span><span class="c">ddressSpaceID</span> <span class="w">sid</span><span class="c">,</span>
+                                                       <span class="pc">u</span><span class="c">nsigned</span> <span class="c">cnt</span> <span class="pc">)</span>
+    
+    <span class="c">{</span>
+      
+      
+      <span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="pc">s</span><span class="c">id</span> <span class="w">=</span><span class="c">=</span> <span class="w">owner_space</span><span class="c">)</span>
+        <span class="c">return</span> <span class="pc">f</span><span class="c">alse;</span>
+      <span class="pc">e</span><span class="c">lse</span> <span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">o</span><span class="pc">wner</span><span class="c">)</span>
+        <span class="w">add_remote_reference</span><span class="c">(</span><span class="pc">sid,</span> <span class="w">c</span><span class="pc">n</span><span class="c">t);</span>
+      <span class="pc">e</span><span class="c">lse</span>
+      <span class="pc">{</span>
+        <span class="w">S</span><span class="pc">er</span><span class="c">ializer</span> <span class="w">rez</span><span class="c">;</span>
+        <span class="w">{</span>
+          <span class="w">RezCheck</span> <span class="w">z</span><span class="c">(</span><span class="w">rez</span><span class="c">);</span>
+          <span class="w">r</span><span class="pc">ez.</span><span class="w">s</span><span class="c">erialize(</span><span class="w">d</span><span class="pc">id</span><span class="c">);</span>
+          
+          
+          <span class="w">r</span><span class="pc">ez</span><span class="c">.</span><span class="w">s</span><span class="c">erialize(</span><span class="w">s</span><span class="c">id);</span>
+          <span class="w">r</span><span class="pc">ez.</span><span class="w">s</span><span class="pc">e</span><span class="c">rialize(</span><span class="w">c</span><span class="pc">n</span><span class="c">t);</span>
+        <span class="c">}</span>
+        <span class="w">r</span><span class="pc">u</span><span class="c">ntime-&gt;</span><span class="w">send_add_distributed_remote</span><span class="c">(</span><span class="w">owner_space</span><span class="pc">,</span> <span class="pc">r</span><span class="c">ez);</span>
+      <span class="pc">}</span>
+      
+      <span class="w">update_remote_spaces</span><span class="pc">(</span><span class="w">s</span><span class="pc">id</span><span class="c">);</span>
+      <span class="w">r</span><span class="c">eturn</span> <span class="pc">t</span><span class="c">rue;</span>
+    <span class="c">}</span>
+
+    
+    <span class="pc">v</span><span class="c">oid</span> <span class="w">DistributedCollectable</span><span class="pc">:</span><span class="c">:</span><span class="w">u</span><span class="c">pdate_remote_spaces(</span><span class="w">A</span><span class="c">ddressSpaceID</span> <span class="w">si</span><span class="pc">d)</span>
+    
+    <span class="c">{</span>
+      <span class="w">A</span><span class="c">utoLock</span> <span class="w">gc</span><span class="c">(</span><span class="w">gc_lock</span><span class="c">);</span>
+      <span class="w">i</span><span class="pc">f</span> <span class="c">(</span><span class="w">remote_spaces.</span><span class="pc">f</span><span class="c">ind(</span><span class="w">s</span><span class="pc">id</span><span class="w">) </span><span class="pc">=</span><span class="c">=</span> <span class="pc">r</span><span class="c">emote_spaces.</span><span class="pc">e</span><span class="c">nd())</span>
+      <span class="c">{</span>
+        <span class="w">notify_new_remote</span><span class="pc">(s</span><span class="c">id</span><span class="pc">)</span><span class="c">;</span>
+        <span class="w">r</span><span class="pc">em</span><span class="c">ote_spaces.insert(</span><span class="w">s</span><span class="pc">id</span><span class="c">);</span>
+      <span class="c">}</span>
+    <span class="pc">}</span>
+
+    
+    <span class="pc">v</span><span class="c">oid</span> <span class="pc">D</span><span class="c">istributedCollectable::</span><span class="w">return_held_references</span><span class="c">(void)</span>
+    
+    <span class="c">{</span>
+<span class="pc">#</span><span class="c">ifdef</span> <span class="c">DEBUG_HIGH_LEVEL</span>
+      <span class="c">assert</span><span class="pc">(!</span><span class="w">o</span><span class="pc">w</span><span class="c">ner);</span>
+<span class="pc">#</span><span class="c">endif</span>
+      <span class="w">S</span><span class="pc">e</span><span class="c">rializer</span> <span class="w">rez</span><span class="pc">;</span>
+      <span class="w">{</span>
+        <span class="w">RezCheck</span> <span class="w">z</span><span class="c">(</span><span class="w">rez</span><span class="c">);</span>
+        <span class="w">r</span><span class="pc">ez</span><span class="c">.</span><span class="w">s</span><span class="pc">e</span><span class="c">rialize(</span><span class="w">d</span><span class="pc">i</span><span class="c">d);</span>
+        
+        <span class="pc">rez</span><span class="c">.</span><span class="pc">s</span><span class="c">erialize(</span><span class="w">destruction_event</span><span class="c">);</span>
+        <span class="pc">rez</span><span class="c">.</span><span class="pc">s</span><span class="c">erialize(</span><span class="w">held_remote_references</span><span class="c">);</span>
+      <span class="pc">}</span>
+      <span class="w">r</span><span class="pc">u</span><span class="c">ntime-&gt;</span><span class="w">send_remove_distributed_remote</span><span class="c">(</span><span class="w">owner_space</span><span class="c">,</span> <span class="w">r</span><span class="c">ez);</span>
+      
+      <span class="w">h</span><span class="c">eld_remote_references</span> <span class="pc">=</span> <span class="w">0</span><span class="c">;</span>
+    <span class="c">}</span>
+ 
+    
+     <span class="pc">v</span><span class="c">oid</span> <span class="w">DistributedCollectable</span><span class="pc">:</span><span class="c">:</span><span class="w">process_remove_resource_reference</span><span class="c">(</span>
+                                    <span class="w">R</span><span class="pc">u</span><span class="c">ntime</span> <span class="c">*</span><span class="pc">r</span><span class="c">t,</span> <span class="w">D</span><span class="pc">e</span><span class="c">serializer</span> <span class="c">&amp;derez</span><span class="pc">)</span>
+    
+    <span class="c">{</span>
+      <span class="w">DerezCheck</span> <span class="w">z</span><span class="c">(</span><span class="w">d</span><span class="pc">e</span><span class="c">rez);</span>
+      <span class="w">D</span><span class="pc">istributedI</span><span class="c">D</span> <span class="w">di</span><span class="pc">d</span><span class="c">;</span>
+      <span class="pc">d</span><span class="c">erez.</span><span class="w">d</span><span class="c">eserialize(</span><span class="w">d</span><span class="pc">i</span><span class="c">d);</span>
+      
+      <span class="w">D</span><span class="pc">i</span><span class="c">stributedCollectable</span> <span class="pc">*</span><span class="w">t</span><span class="c">arget</span> <span class="pc">=</span> <span class="w">r</span><span class="pc">t-</span><span class="c">&gt;</span><span class="w">find_distributed_collectable</span><span class="c">(</span><span class="w">di</span><span class="c">d);</span>
+      <span class="w">i</span><span class="pc">f</span> <span class="c">(</span><span class="w">t</span><span class="c">arget</span><span class="w">-</span><span class="c">&gt;</span><span class="w">remove_nested_resource_ref(d</span><span class="pc">i</span><span class="c">d</span><span class="w">))</span>
+        <span class="w">d</span><span class="c">elete</span> <span class="w">t</span><span class="c">arget;</span>
+    <span class="c">}</span>
+
+    
+     <span class="pc">v</span><span class="c">oid</span> <span class="c">DistributedCollectable</span><span class="pc">:</span><span class="c">:</span><span class="w">process_remove_remote_reference</span><span class="c">(</span>
+              <span class="w">R</span><span class="c">untime</span> <span class="c">*rt,</span> <span class="w">A</span><span class="c">ddressSpaceID</span> <span class="pc">s</span><span class="c">ource,</span> <span class="w">D</span><span class="pc">e</span><span class="c">serializer</span> <span class="pc">&amp;d</span><span class="c">erez</span><span class="pc">)</span>
+    
+    <span class="c">{</span>
+      <span class="w">DerezCheck</span> <span class="w">z</span><span class="c">(</span><span class="w">d</span><span class="pc">e</span><span class="c">rez</span><span class="pc">)</span><span class="c">;</span>
+      <span class="w">D</span><span class="pc">istributedI</span><span class="c">D</span> <span class="w">d</span><span class="c">id;</span>
+      <span class="pc">d</span><span class="c">erez.</span><span class="pc">d</span><span class="c">eserialize(</span><span class="w">d</span><span class="pc">i</span><span class="c">d);</span>
+      <span class="w">E</span><span class="c">vent</span> <span class="w">destruction_event</span><span class="pc">;</span>
+      <span class="w">d</span><span class="c">erez.deserialize(destruction_event);</span>
+      <span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="w">c</span><span class="pc">n</span><span class="c">t</span><span class="pc">;</span>
+      <span class="pc">d</span><span class="c">erez.deserialize(</span><span class="pc">c</span><span class="c">nt);</span>
+
+      <span class="w">DistributedCollectable</span> <span class="c">*</span><span class="w">t</span><span class="c">arget</span> <span class="pc">=</span> <span class="w">r</span><span class="pc">t</span><span class="c">-&gt;</span><span class="w">find_distributed_collectable</span><span class="c">(</span><span class="w">d</span><span class="pc">i</span><span class="c">d);</span>
+      <span class="w">i</span><span class="pc">f</span> <span class="c">(</span><span class="w">t</span><span class="c">arget</span><span class="w">-</span><span class="c">&gt;</span><span class="w">remove_nested_remote_ref(s</span><span class="c">ource,</span> <span class="w">d</span><span class="c">estruction_event</span><span class="pc">,</span> <span class="w">d</span><span class="pc">i</span><span class="c">d,</span> <span class="pc">c</span><span class="c">nt</span><span class="w">)</span><span class="pc">)</span>
+        <span class="w">de</span><span class="pc">l</span><span class="c">ete</span> <span class="w">t</span><span class="pc">a</span><span class="c">rget;</span>
+    <span class="c">}</span>
+
+    
+     <span class="c">void</span> <span class="pc">D</span><span class="c">istributedCollectable</span><span class="pc">:</span><span class="c">:</span><span class="w">process_add_remote_reference</span><span class="c">(</span>
+                                    <span class="w">R</span><span class="c">untime</span> <span class="c">*rt,</span> <span class="w">D</span><span class="pc">e</span><span class="c">serializer</span> <span class="c">&amp;derez</span><span class="pc">)</span>
+    
+    <span class="c">{</span>
+      <span class="w">DerezCheck</span> <span class="w">z</span><span class="c">(</span><span class="w">d</span><span class="pc">er</span><span class="c">ez</span><span class="pc">)</span><span class="c">;</span>
+      <span class="w">D</span><span class="pc">istributedI</span><span class="c">D</span> <span class="w">di</span><span class="c">d;</span>
+      <span class="w">d</span><span class="pc">er</span><span class="c">ez.</span><span class="pc">d</span><span class="c">eserialize(</span><span class="w">d</span><span class="pc">i</span><span class="c">d);</span>
+      <span class="w">A</span><span class="pc">d</span><span class="c">dressSpaceID</span> <span class="w">s</span><span class="c">ource;</span>
+      <span class="pc">d</span><span class="c">erez.deserialize(</span><span class="w">s</span><span class="pc">o</span><span class="c">urce);</span>
+      <span class="w">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">nt</span><span class="pc">;</span>
+      <span class="pc">d</span><span class="c">erez.deserialize(</span><span class="pc">c</span><span class="c">nt);</span>
+
+      <span class="w">DistributedCollectable</span> <span class="pc">*</span><span class="w">t</span><span class="c">arget</span> <span class="w">=</span> <span class="w">r</span><span class="pc">t</span><span class="c">-&gt;</span><span class="w">find_distributed_collectable</span><span class="c">(</span><span class="w">d</span><span class="pc">i</span><span class="c">d);</span>
+      <span class="w">i</span><span class="pc">f</span> <span class="c">(</span><span class="w">t</span><span class="c">arget</span><span class="w">-</span><span class="c">&gt;</span><span class="w">add_remote_reference(</span><span class="pc">s</span><span class="c">ource,</span> <span class="c">cnt</span><span class="pc">))</span>
+        <span class="w">de</span><span class="pc">l</span><span class="c">ete</span> <span class="w">t</span><span class="pc">a</span><span class="c">rget;</span>
+    <span class="c">}</span>
+
+    
+    
+    
+
+    
+    <span class="w">HierarchicalCollectable:</span><span class="pc">:</span><span class="c">HierarchicalCollectable(</span><span class="w">R</span><span class="pc">u</span><span class="c">ntime</span> <span class="c">*</span><span class="pc">r</span><span class="c">t</span><span class="pc">,</span> 
+                                                     <span class="w">D</span><span class="c">istributedID</span> <span class="w">d</span><span class="c">,</span>
+                                                     <span class="w">A</span><span class="c">ddressSpaceID</span> <span class="w">own_addr</span><span class="c">,</span> 
+                                                     <span class="w">D</span><span class="c">istributedID</span> <span class="w">own_did</span><span class="pc">)</span>
+      <span class="pc">:</span> <span class="w">CollectableState(),</span> <span class="w">r</span><span class="pc">u</span><span class="c">ntime</span><span class="w">(r</span><span class="c">t</span><span class="w">),</span> <span class="w">d</span><span class="pc">i</span><span class="c">d</span><span class="pc">(</span><span class="w">d</span><span class="pc">)</span><span class="c">,</span> 
+        <span class="w">gc_lock</span><span class="c">(</span><span class="w">R</span><span class="pc">e</span><span class="c">servation</span><span class="pc">:</span><span class="c">:</span><span class="w">create_reservation()),</span> 
+        <span class="w">gc_references</span><span class="pc">(</span><span class="w">0</span><span class="pc">),</span> <span class="w">valid_references</span><span class="c">(0),</span> <span class="w">remote_references</span><span class="c">(0),</span> 
+        <span class="w">resource_references</span><span class="c">(0),</span> <span class="w">owner_addr</span><span class="c">(</span><span class="w">o</span><span class="pc">wn_a</span><span class="c">ddr),</span> 
+        <span class="w">owner_did</span><span class="c">(</span><span class="w">own_did</span><span class="c">),</span> <span class="w">held_remote_references</span><span class="c">(0),</span> <span class="w">free_distributed_id</span><span class="c">(</span><span class="w">t</span><span class="pc">r</span><span class="c">ue</span><span class="pc">)</span>
+    
+    <span class="c">{</span>
+      <span class="w">r</span><span class="pc">u</span><span class="c">ntime-&gt;</span><span class="w">register_hierarchical_collectable</span><span class="c">(</span><span class="w">di</span><span class="pc">d</span><span class="c">,</span> <span class="w">t</span><span class="pc">h</span><span class="c">is);</span>
+      
+      
+      <span class="w">i</span><span class="c">f</span> <span class="c">(</span><span class="pc">owner_d</span><span class="c">id</span> <span class="pc">!</span><span class="c">=</span> <span class="w">di</span><span class="pc">d</span><span class="c">)</span>
+      <span class="pc">{</span>
+        <span class="w">add_nested_resource_ref</span><span class="c">(</span><span class="pc">owner_d</span><span class="c">id</span><span class="pc">)</span><span class="c">;</span>
+<span class="w">#</span><span class="pc">i</span><span class="c">fdef</span> <span class="c">DEBUG_HIGH_LEVEL</span>
+        <span class="pc">a</span><span class="c">ssert(</span><span class="w">owner_addr</span> <span class="pc">!</span><span class="c">=</span> <span class="w">r</span><span class="pc">u</span><span class="c">ntime-&gt;</span><span class="w">address_space)</span><span class="c">;</span>
+<span class="c">#endif</span>
+      <span class="pc">}</span>
+    <span class="c">}</span>
+
+    
+    <span class="w">HierarchicalCollectable:</span><span class="pc">:~</span><span class="c">HierarchicalCollectable(void)</span>
+    
+    <span class="c">{</span>
+<span class="pc">#</span><span class="c">ifdef</span> <span class="c">DEBUG_HIGH_LEVEL</span>
+      <span class="c">assert(</span><span class="w">gc_references</span> <span class="pc">=</span><span class="c">=</span> <span class="c">0);</span>
+      <span class="w">a</span><span class="c">ssert(</span><span class="w">valid_references</span> <span class="pc">=</span><span class="c">=</span> <span class="c">0);</span>
+      <span class="w">a</span><span class="c">ssert(</span><span class="w">remote_references</span> <span class="w">=</span><span class="c">=</span> <span class="c">0);</span>
+      <span class="w">a</span><span class="c">ssert(</span><span class="w">resource_references</span> <span class="pc">=</span><span class="c">=</span> <span class="c">0);</span>
+<span class="w">#</span><span class="pc">e</span><span class="c">ndif</span>
+      <span class="w">gc_lock</span><span class="pc">.</span><span class="w">destroy_reservation(</span><span class="pc">);</span>
+      <span class="w">g</span><span class="pc">c_l</span><span class="c">ock</span> <span class="pc">=</span> <span class="w">Re</span><span class="pc">s</span><span class="c">ervation</span><span class="w">:</span><span class="c">:</span><span class="w">NO_RESERVATION</span><span class="pc">;</span>
+      
+      <span class="pc">i</span><span class="c">f</span> <span class="pc">(!</span><span class="w">subscribers</span><span class="pc">.em</span><span class="c">pty())</span>
+      <span class="c">{</span>
+        <span class="pc">f</span><span class="c">or</span> <span class="c">(</span><span class="pc">st</span><span class="c">d::</span><span class="pc">m</span><span class="c">ap&lt;</span><span class="w">A</span><span class="pc">d</span><span class="c">dressSpaceID,</span><span class="w">D</span><span class="pc">i</span><span class="c">stributedID&gt;::const_iterator</span> <span class="c">it</span> <span class="c">=</span> 
+              <span class="pc">s</span><span class="c">ubscribers.begin();</span> <span class="c">it</span> <span class="c">!=</span> <span class="c">subscribers.end();</span> <span class="c">it++)</span>
+        <span class="c">{</span>
+          <span class="w">S</span><span class="pc">er</span><span class="c">ializer</span> <span class="w">rez</span><span class="pc">;</span>
+          <span class="w">{</span>
+            <span class="w">RezCheck</span> <span class="w">z</span><span class="pc">(</span><span class="w">r</span><span class="pc">ez</span><span class="c">);</span>
+            <span class="w">r</span><span class="pc">ez</span><span class="c">.</span><span class="w">s</span><span class="pc">e</span><span class="c">rialize(</span><span class="w">i</span><span class="pc">t-</span><span class="c">&gt;</span><span class="pc">s</span><span class="c">econd</span><span class="pc">)</span><span class="c">;</span>
+            <span class="w">r</span><span class="pc">ez</span><span class="c">.</span><span class="pc">s</span><span class="c">erialize(</span><span class="w">di</span><span class="pc">d</span><span class="c">);</span>
+          <span class="c">}</span>
+          <span class="w">r</span><span class="pc">u</span><span class="c">ntime-&gt;</span><span class="w">send_remove_hierarchical_resource</span><span class="c">(</span><span class="w">i</span><span class="pc">t</span><span class="c">-&gt;first</span><span class="pc">,</span> <span class="w">re</span><span class="pc">z)</span><span class="c">;</span>
+        <span class="c">}</span>
+      <span class="pc">}</span>
+      
+      <span class="w">r</span><span class="pc">u</span><span class="c">ntime-&gt;</span><span class="w">unregister_hierarchical_collectable</span><span class="c">(</span><span class="w">di</span><span class="c">d);</span>
+      <span class="w">i</span><span class="pc">f</span> <span class="c">(</span><span class="w">free_distributed_id</span><span class="c">)</span>
+        <span class="w">r</span><span class="pc">u</span><span class="c">ntime-&gt;</span><span class="pc">fr</span><span class="c">ee_distributed_id(</span><span class="w">di</span><span class="c">d</span><span class="pc">)</span><span class="c">;</span>
+    <span class="c">}</span>
+
+    
+    <span class="pc">v</span><span class="c">oid</span> <span class="w">HierarchicalCollectable</span><span class="pc">:</span><span class="c">:</span><span class="w">add_gc_reference</span><span class="c">(</span><span class="w">u</span><span class="pc">ns</span><span class="c">igned</span> <span class="w">c</span><span class="pc">n</span><span class="c">t</span> <span class="c">)</span>
+    
+    <span class="c">{</span>
+      <span class="w">b</span><span class="pc">o</span><span class="c">ol</span> <span class="w">need_activate</span> <span class="c">=</span> <span class="c">false;</span>
+      <span class="pc">b</span><span class="c">ool</span> <span class="w">need_validate</span> <span class="pc">=</span> <span class="c">false;</span>
+      <span class="c">bool</span> <span class="w">need_invalidate</span> <span class="pc">=</span> <span class="c">false;</span>
+      <span class="c">bool</span> <span class="w">need_deactivate</span> <span class="c">=</span> <span class="c">false;</span>
+      <span class="c">bool</span> <span class="c">result</span> <span class="c">=</span> <span class="c">false;</span>
+      <span class="pc">b</span><span class="c">ool</span> <span class="w">done</span> <span class="c">=</span> <span class="c">false;</span>
+      <span class="pc">b</span><span class="c">ool</span> <span class="w">fir</span><span class="c">st</span> <span class="c">=</span> <span class="w">t</span><span class="c">rue;</span>
+      <span class="w">w</span><span class="c">hile</span> <span class="pc">(!d</span><span class="c">one</span><span class="w">)</span>
+      <span class="c">{</span>
+        <span class="c">if</span> <span class="c">(</span><span class="w">need_activate</span><span class="pc">)</span>
+          <span class="w">notify_activate()</span><span class="pc">;</span>
+        <span class="c">if</span> <span class="c">(</span><span class="w">need_validate</span><span class="c">)</span>
+          <span class="w">notify_valid()</span><span class="pc">;</span>
+        <span class="pc">i</span><span class="c">f</span> <span class="pc">(</span><span class="w">need_invalidate</span><span class="c">)</span>
+          <span class="w">notify_invalid()</span><span class="pc">;</span>
+        <span class="c">if</span> <span class="c">(</span><span class="w">need_deactivate</span><span class="c">)</span>
+          <span class="w">garbage_collect()</span><span class="pc">;</span>
+        <span class="w">A</span><span class="c">utoLock</span> <span class="w">gc</span><span class="c">(</span><span class="w">gc_lock</span><span class="c">);</span>
+        <span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">fi</span><span class="pc">r</span><span class="c">st</span><span class="pc">)</span>
+        <span class="pc">{</span>
+          <span class="w">gc_references</span> <span class="w">+</span><span class="pc">=</span> <span class="w">cn</span><span class="c">t;</span>
+          <span class="w">fi</span><span class="pc">r</span><span class="c">st</span> <span class="c">=</span> <span class="pc">f</span><span class="c">alse;</span>
+        <span class="c">}</span>
+        <span class="w">done</span> <span class="w">=</span> <span class="w">update_state((g</span><span class="pc">c_r</span><span class="c">eferences</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">),</span>
+                            <span class="w">(remote_references</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">),</span>
+                            <span class="w">(valid_references</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">),</span>
+                            <span class="w">(resource_references</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">)</span><span class="pc">,</span>
+                            <span class="w">need_activate,</span> <span class="w">need_validate</span><span class="c">,</span>
+                            <span class="w">need_invalidate</span><span class="c">,</span> <span class="w">need_deactivate</span><span class="c">,</span> <span class="w">re</span><span class="pc">su</span><span class="c">lt</span><span class="pc">)</span><span class="c">;</span>
+        <span class="w">i</span><span class="c">f</span> <span class="c">(</span><span class="w">n</span><span class="pc">eed_d</span><span class="c">eactivate</span> <span class="w">&amp;&amp; (held_remote_references</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">))</span>
+          <span class="w">return_held_references()</span><span class="pc">;</span>  
+      <span class="pc">}</span>
+      <span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">res</span><span class="pc">u</span><span class="c">lt</span><span class="pc">)</span>
+      <span class="c">{</span>
+        
+        
+        <span class="w">a</span><span class="c">ssert(</span><span class="pc">f</span><span class="c">alse);</span>
+        <span class="w">d</span><span class="c">elete</span> <span class="w">t</span><span class="c">his;</span>
+      <span class="c">}</span>
+    <span class="pc">}</span>
+    
+    
+    <span class="pc">b</span><span class="c">ool</span> <span class="w">HierarchicalCollectable</span><span class="c">::</span><span class="w">remove_gc_reference</span><span class="c">(</span><span class="w">u</span><span class="c">nsigned</span> <span class="w">c</span><span class="pc">n</span><span class="c">t</span> <span class="c">)</span>
+    
+    <span class="c">{</span>
+      <span class="w">b</span><span class="c">ool</span> <span class="w">need_activate</span> <span class="c">=</span> <span class="c">false;</span>
+      <span class="pc">b</span><span class="c">ool</span> <span class="w">need_validate</span> <span class="pc">=</span> <span class="c">false;</span>
+      <span class="pc">b</span><span class="c">ool</span> <span class="w">need_invalidate</span> <span class="pc">=</span> <span class="c">false;</span>
+      <span class="c">bool</span> <span class="w">need_deactivate</span> <span class="c">=</span> <span class="c">false;</span>
+      <span class="pc">b</span><span class="c">ool</span> <span class="pc">r</span><span class="c">esult</span> <span class="pc">=</span> <span class="c">false;</span>
+      <span class="c">bool</span> <span class="w">done</span> <span class="c">=</span> <span class="c">false;</span>
+      <span class="c">bool</span> <span class="w">fir</span><span class="c">st</span> <span class="c">=</span> <span class="w">t</span><span class="c">rue;</span>
+      <span class="w">w</span><span class="c">hile</span> <span class="pc">(!d</span><span class="c">one</span><span class="w">)</span>
+      <span class="c">{</span>
+        <span class="c">if</span> <span class="c">(</span><span class="w">need_activate</span><span class="pc">)</span>
+          <span class="w">notify_activate()</span><span class="pc">;</span>
+        <span class="c">if</span> <span class="c">(</span><span class="w">need_validate</span><span class="c">)</span>
+          <span class="w">notify_valid()</span><span class="pc">;</span>
+        <span class="pc">i</span><span class="c">f</span> <span class="pc">(</span><span class="w">need_invalidate</span><span class="c">)</span>
+          <span class="w">notify_invalid()</span><span class="pc">;</span>
+        <span class="c">if</span> <span class="c">(</span><span class="w">need_deactivate</span><span class="c">)</span>
+          <span class="w">garbage_collect()</span><span class="pc">;</span>
+        <span class="w">A</span><span class="c">utoLock</span> <span class="w">gc</span><span class="c">(</span><span class="w">gc_lock</span><span class="c">);</span>
+        <span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">fi</span><span class="pc">r</span><span class="c">st</span><span class="pc">)</span>
+        <span class="pc">{</span>
+<span class="w">#</span><span class="c">ifdef</span> <span class="c">DEBUG_HIGH_LEVEL</span>
+          <span class="c">assert(</span><span class="w">gc_references</span> <span class="w">&gt;</span><span class="c">=</span> <span class="w">cn</span><span class="c">t);</span>
+<span class="c">#endif</span>
+          <span class="w">g</span><span class="c">c_references</span> <span class="w">-</span><span class="pc">=</span> <span class="w">c</span><span class="pc">n</span><span class="c">t;</span>
+          <span class="w">fi</span><span class="pc">r</span><span class="c">st</span> <span class="pc">=</span> <span class="w">f</span><span class="c">alse;</span>
+        <span class="c">}</span>
+        <span class="w">done</span> <span class="pc">=</span> <span class="w">update_state((g</span><span class="pc">c_r</span><span class="c">eferences</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">),</span>
+                            <span class="w">(remote_references</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">),</span>
+                            <span class="w">(valid_references</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">),</span>
+                            <span class="w">(resource_references</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">),</span>
+                            <span class="w">need_activate,</span> <span class="w">need_validate</span><span class="pc">,</span>
+                            <span class="w">need_invalidate</span><span class="c">,</span> <span class="w">need_deactivate</span><span class="c">,</span> <span class="w">res</span><span class="pc">u</span><span class="c">lt</span><span class="pc">)</span><span class="c">;</span>
+        <span class="w">i</span><span class="c">f</span> <span class="c">(</span><span class="w">n</span><span class="pc">eed_d</span><span class="c">eactivate</span> <span class="w">&amp;&amp; (held_remote_references</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">))</span>
+          <span class="w">return_held_references()</span><span class="pc">;</span>  
+      <span class="pc">}</span>
+      <span class="w">r</span><span class="pc">eturn</span> <span class="w">r</span><span class="pc">esu</span><span class="c">lt;</span>
+    <span class="c">}</span>
+
+    
+    <span class="pc">v</span><span class="c">oid</span> <span class="w">HierarchicalCollectable</span><span class="pc">:</span><span class="c">:</span><span class="w">add_valid_reference</span><span class="c">(</span><span class="w">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">nt</span> <span class="pc">)</span>
+    
+    <span class="pc">{</span>
+      <span class="w">b</span><span class="pc">o</span><span class="c">ol</span> <span class="w">n</span><span class="pc">eed_a</span><span class="c">ctivate</span> <span class="c">=</span> <span class="w">f</span><span class="c">alse;</span>
+      <span class="w">b</span><span class="c">ool</span> <span class="w">n</span><span class="pc">eed_v</span><span class="c">alidate</span> <span class="c">=</span> <span class="c">false;</span>
+      <span class="c">bool</span> <span class="w">need_invalidate</span> <span class="c">=</span> <span class="c">false;</span>
+      <span class="pc">b</span><span class="c">ool</span> <span class="w">n</span><span class="c">eed_deactivate</span> <span class="c">=</span> <span class="c">false;</span>
+      <span class="c">bool</span> <span class="pc">r</span><span class="c">esult</span> <span class="pc">=</span> <span class="c">false;</span>
+      <span class="pc">b</span><span class="c">ool</span> <span class="w">done</span> <span class="c">=</span> <span class="c">false;</span>
+      <span class="pc">b</span><span class="c">ool</span> <span class="w">fir</span><span class="c">st</span> <span class="c">=</span> <span class="w">t</span><span class="c">rue;</span>
+      <span class="w">w</span><span class="c">hile</span> <span class="pc">(!d</span><span class="c">one</span><span class="w">)</span>
+      <span class="c">{</span>
+        <span class="c">if</span> <span class="c">(</span><span class="w">need_activate</span><span class="pc">)</span>
+          <span class="w">notify_activate()</span><span class="pc">;</span>
+        <span class="c">if</span> <span class="c">(</span><span class="w">need_validate</span><span class="c">)</span>
+          <span class="w">notify_valid()</span><span class="pc">;</span>
+        <span class="pc">i</span><span class="c">f</span> <span class="pc">(</span><span class="w">need_invalidate</span><span class="c">)</span>
+          <span class="w">notify_invalid()</span><span class="pc">;</span>
+        <span class="c">if</span> <span class="c">(</span><span class="w">need_deactivate</span><span class="c">)</span>
+          <span class="w">garbage_collect()</span><span class="pc">;</span>
+        <span class="w">A</span><span class="c">utoLock</span> <span class="w">gc</span><span class="c">(</span><span class="w">gc_lock</span><span class="c">);</span>
+        <span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">fi</span><span class="pc">r</span><span class="c">st</span><span class="pc">)</span>
+        <span class="pc">{</span>
+          <span class="w">valid_references</span> <span class="w">+</span><span class="pc">=</span> <span class="w">cn</span><span class="c">t;</span>
+          <span class="w">fi</span><span class="pc">r</span><span class="c">st</span> <span class="c">=</span> <span class="pc">f</span><span class="c">alse;</span>
+        <span class="c">}</span>
+        <span class="w">done</span> <span class="w">=</span> <span class="w">update_state((gc_references</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">),</span>
+                            <span class="w">(remote_references</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">),</span>
+                            <span class="w">(v</span><span class="pc">a</span><span class="c">lid_references</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">),</span>
+                            <span class="w">(resource_references</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">)</span><span class="pc">,</span>
+                            <span class="w">need_activate,</span> <span class="w">need_validate</span><span class="c">,</span> 
+                            <span class="w">need_invalidate</span><span class="c">,</span> <span class="w">need_deactivate</span><span class="c">,</span> <span class="w">r</span><span class="pc">esu</span><span class="c">lt</span><span class="pc">)</span><span class="c">;</span>
+        <span class="w">i</span><span class="c">f</span> <span class="c">(</span><span class="w">n</span><span class="pc">eed_d</span><span class="c">eactivate</span> <span class="w">&amp;&amp; (held_remote_references</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">))</span>
+          <span class="w">return_held_references()</span><span class="pc">;</span>
+      <span class="pc">}</span>
+      <span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">res</span><span class="pc">u</span><span class="c">lt</span><span class="pc">)</span>
+      <span class="c">{</span>
+        
+        <span class="w">a</span><span class="c">ssert(</span><span class="pc">f</span><span class="c">alse);</span>
+        <span class="w">d</span><span class="c">elete</span> <span class="w">t</span><span class="c">his;</span>
+      <span class="c">}</span>
+    <span class="pc">}</span>
+
+    
+    <span class="pc">b</span><span class="c">ool</span> <span class="w">HierarchicalCollectable</span><span class="c">::</span><span class="w">remove_valid_reference</span><span class="c">(</span><span class="w">u</span><span class="c">nsigned</span> <span class="w">c</span><span class="pc">n</span><span class="c">t</span> <span class="c">)</span>
+    
+    <span class="c">{</span>
+      <span class="w">b</span><span class="c">ool</span> <span class="w">need_activate</span> <span class="c">=</span> <span class="c">false;</span>
+      <span class="pc">b</span><span class="c">ool</span> <span class="w">need_validate</span> <span class="pc">=</span> <span class="c">false;</span>
+      <span class="pc">b</span><span class="c">ool</span> <span class="w">need_invalidate</span> <span class="pc">=</span> <span class="c">false;</span>
+      <span class="c">bool</span> <span class="w">need_deactivate</span> <span class="c">=</span> <span class="c">false;</span>
+      <span class="pc">b</span><span class="c">ool</span> <span class="pc">r</span><span class="c">esult</span> <span class="pc">=</span> <span class="c">false;</span>
+      <span class="c">bool</span> <span class="w">done</span> <span class="c">=</span> <span class="c">false;</span>
+      <span class="c">bool</span> <span class="w">fir</span><span class="c">st</span> <span class="c">=</span> <span class="w">t</span><span class="c">rue;</span>
+      <span class="w">w</span><span class="c">hile</span> <span class="pc">(!d</span><span class="c">one</span><span class="w">)</span>
+      <span class="c">{</span>
+        <span class="c">if</span> <span class="c">(</span><span class="w">need_activate</span><span class="pc">)</span>
+          <span class="w">notify_activate()</span><span class="pc">;</span>
+        <span class="c">if</span> <span class="c">(</span><span class="w">need_validate</span><span class="c">)</span>
+          <span class="w">notify_valid()</span><span class="pc">;</span>
+        <span class="pc">i</span><span class="c">f</span> <span class="pc">(</span><span class="w">need_invalidate</span><span class="c">)</span>
+          <span class="w">notify_invalid()</span><span class="pc">;</span>
+        <span class="c">if</span> <span class="c">(</span><span class="w">need_deactivate</span><span class="c">)</span>
+          <span class="w">garbage_collect()</span><span class="pc">;</span>
+        <span class="w">A</span><span class="c">utoLock</span> <span class="w">gc</span><span class="c">(</span><span class="w">gc_lock</span><span class="c">);</span>
+        <span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">fi</span><span class="pc">r</span><span class="c">st</span><span class="pc">)</span>
+        <span class="pc">{</span>
+<span class="w">#</span><span class="c">ifdef</span> <span class="c">DEBUG_HIGH_LEVEL</span>
+          <span class="c">assert(</span><span class="w">valid_references</span> <span class="w">&gt;</span><span class="c">=</span> <span class="w">cn</span><span class="c">t);</span>
+<span class="c">#endif</span>
+          <span class="w">v</span><span class="c">alid_references</span> <span class="w">-</span><span class="pc">=</span> <span class="w">c</span><span class="pc">n</span><span class="c">t;</span>
+          <span class="w">fi</span><span class="pc">r</span><span class="c">st</span> <span class="pc">=</span> <span class="w">f</span><span class="c">alse;</span>
+        <span class="c">}</span>
+        <span class="w">done</span> <span class="pc">=</span> <span class="w">update_state((gc_references</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">),</span>
+                            <span class="w">(remote_references</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">),</span>
+                            <span class="w">(v</span><span class="pc">a</span><span class="c">lid_references</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">),</span>
+                            <span class="w">(resource_references</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">),</span>
+                            <span class="w">need_activate,</span> <span class="w">need_validate</span><span class="pc">,</span>
+                            <span class="w">need_invalidate</span><span class="c">,</span> <span class="w">need_deactivate</span><span class="c">,</span> <span class="w">r</span><span class="pc">esu</span><span class="c">lt</span><span class="pc">)</span><span class="c">;</span>
+        <span class="w">i</span><span class="c">f</span> <span class="c">(</span><span class="w">n</span><span class="pc">eed_d</span><span class="c">eactivate</span> <span class="w">&amp;&amp; (held_remote_references</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">))</span>
+          <span class="w">return_held_references()</span><span class="pc">;</span>
+      <span class="pc">}</span>
+      <span class="w">r</span><span class="pc">eturn</span> <span class="w">r</span><span class="pc">esu</span><span class="c">lt;</span>
+    <span class="c">}</span>
+
+    
+    <span class="pc">v</span><span class="c">oid</span> <span class="w">HierarchicalCollectable</span><span class="pc">:</span><span class="c">:</span><span class="w">add_resource_reference</span><span class="c">(</span><span class="w">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">nt</span> <span class="pc">)</span>
+    
+    <span class="pc">{</span>
+      <span class="w">A</span><span class="c">utoLock</span> <span class="w">gc</span><span class="c">(</span><span class="w">gc_lock</span><span class="pc">)</span><span class="c">;</span>
+      <span class="w">resource_references</span> <span class="w">+</span><span class="c">=</span> <span class="w">c</span><span class="pc">n</span><span class="c">t;</span>
+    <span class="c">}</span>
+
+    
+    <span class="w">b</span><span class="c">ool</span> <span class="w">H</span><span class="pc">ie</span><span class="c">rarchicalCollectable::</span><span class="w">remove_resource_reference</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">nt</span> <span class="c">)</span>
+    
+    <span class="c">{</span>
+      <span class="w">A</span><span class="c">utoLock</span> <span class="w">g</span><span class="pc">c</span><span class="c">(</span><span class="w">g</span><span class="pc">c_</span><span class="c">lock);</span>
+<span class="w">#</span><span class="c">ifdef</span> <span class="c">DEBUG_HIGH_LEVEL</span>
+      <span class="c">assert(</span><span class="w">r</span><span class="pc">es</span><span class="c">ource_references</span> <span class="w">&gt;</span><span class="pc">=</span> <span class="w">c</span><span class="c">nt);</span>
+<span class="c">#endif</span>
+      <span class="w">r</span><span class="pc">es</span><span class="c">ource_references</span> <span class="w">-</span><span class="pc">=</span> <span class="w">c</span><span class="c">nt</span><span class="pc">;</span>
+      <span class="pc">r</span><span class="c">eturn</span> <span class="w">can_delete((gc_references</span> <span class="w">&gt;</span> <span class="pc">0</span><span class="w">),</span>
+                        <span class="w">(remote_references</span> <span class="w">&gt;</span> <span class="w">0),</span>
+                        <span class="w">(valid_references</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">),</span>
+                        <span class="w">(</span><span class="pc">r</span><span class="c">esource_references</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">))</span><span class="pc">;</span>
+    <span class="w">}</span>
+
+    
+    <span class="c">void</span> <span class="w">HierarchicalCollectable</span><span class="pc">:</span><span class="c">:</span><span class="w">add_remote_reference</span><span class="c">(</span><span class="w">u</span><span class="c">nsigned</span> <span class="w">c</span><span class="pc">n</span><span class="c">t</span> <span class="c">)</span>
+    
+    <span class="pc">{</span>
+      <span class="w">b</span><span class="pc">o</span><span class="c">ol</span> <span class="w">need_activate</span> <span class="c">=</span> <span class="pc">f</span><span class="c">alse;</span>
+      <span class="w">b</span><span class="c">ool</span> <span class="w">need_validate</span> <span class="c">=</span> <span class="c">false;</span>
+      <span class="w">b</span><span class="c">ool</span> <span class="w">need_invalidate</span> <span class="pc">=</span> <span class="c">false;</span>
+      <span class="pc">b</span><span class="c">ool</span> <span class="w">need_deactivate</span> <span class="pc">=</span> <span class="c">false;</span>
+      <span class="pc">b</span><span class="c">ool</span> <span class="pc">r</span><span class="c">esult</span> <span class="c">=</span> <span class="c">false;</span>
+      <span class="pc">b</span><span class="c">ool</span> <span class="w">done</span> <span class="c">=</span> <span class="c">false;</span>
+      <span class="pc">b</span><span class="c">ool</span> <span class="w">fir</span><span class="c">st</span> <span class="c">=</span> <span class="w">t</span><span class="c">rue;</span>
+      <span class="w">w</span><span class="c">hile</span> <span class="pc">(!d</span><span class="c">one</span><span class="w">)</span>
+      <span class="c">{</span>
+        <span class="c">if</span> <span class="c">(</span><span class="w">need_activate</span><span class="pc">)</span>
+          <span class="w">notify_activate()</span><span class="pc">;</span>
+        <span class="c">if</span> <span class="c">(</span><span class="w">need_validate</span><span class="c">)</span>
+          <span class="w">notify_valid()</span><span class="pc">;</span>
+        <span class="pc">i</span><span class="c">f</span> <span class="pc">(</span><span class="w">need_invalidate</span><span class="c">)</span>
+          <span class="w">notify_invalid()</span><span class="pc">;</span>
+        <span class="c">if</span> <span class="c">(</span><span class="w">need_deactivate</span><span class="c">)</span>
+          <span class="w">garbage_collect()</span><span class="pc">;</span>
+        <span class="w">A</span><span class="c">utoLock</span> <span class="w">gc</span><span class="c">(</span><span class="w">gc_lock</span><span class="c">);</span>
+        <span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">fi</span><span class="pc">r</span><span class="c">st</span><span class="pc">)</span>
+        <span class="pc">{</span>
+          <span class="w">remote_references</span> <span class="w">+</span><span class="pc">=</span> <span class="w">cn</span><span class="c">t;</span>
+          <span class="w">fi</span><span class="pc">r</span><span class="c">st</span> <span class="c">=</span> <span class="pc">f</span><span class="c">alse;</span>
+        <span class="c">}</span>
+        <span class="w">done</span> <span class="w">=</span> <span class="w">update_state((gc_references</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">),</span>
+                            <span class="w">(r</span><span class="c">emote_references</span> <span class="w">&gt;</span> <span class="pc">0</span><span class="w">),</span>
+                            <span class="w">(valid_references</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">),</span>
+                            <span class="w">(resource_references</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">),</span>
+                            <span class="w">need_activate,</span> <span class="w">need_validate</span><span class="c">,</span>
+                            <span class="w">need_invalidate</span><span class="c">,</span> <span class="w">need_deactivate</span><span class="c">,</span> <span class="w">re</span><span class="pc">su</span><span class="c">lt</span><span class="pc">)</span><span class="c">;</span>
+        <span class="w">i</span><span class="c">f</span> <span class="c">(</span><span class="w">n</span><span class="pc">eed_d</span><span class="c">eactivate</span> <span class="w">&amp;&amp; (held_remote_references</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">))</span>
+          <span class="w">return_held_references()</span><span class="pc">;</span>
+      <span class="pc">}</span>
+      <span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">res</span><span class="pc">u</span><span class="c">lt</span><span class="pc">)</span>
+      <span class="c">{</span>
+        
+        <span class="w">a</span><span class="c">ssert(</span><span class="pc">f</span><span class="c">alse);</span>
+        <span class="w">d</span><span class="c">elete</span> <span class="w">t</span><span class="c">his;</span>
+      <span class="c">}</span>
+    <span class="pc">}</span>
+
+    
+    <span class="pc">b</span><span class="c">ool</span> <span class="w">HierarchicalCollectable</span><span class="c">::</span><span class="w">remove_remote_reference</span><span class="c">(</span><span class="w">u</span><span class="c">nsigned</span> <span class="w">c</span><span class="pc">n</span><span class="c">t</span> <span class="c">)</span>
+    
+    <span class="c">{</span>
+      <span class="w">b</span><span class="c">ool</span> <span class="w">need_activate</span> <span class="c">=</span> <span class="c">false;</span>
+      <span class="pc">b</span><span class="c">ool</span> <span class="w">need_validate</span> <span class="pc">=</span> <span class="c">false;</span>
+      <span class="pc">b</span><span class="c">ool</span> <span class="w">need_invalidate</span> <span class="pc">=</span> <span class="c">false;</span>
+      <span class="c">bool</span> <span class="w">need_deactivate</span> <span class="c">=</span> <span class="c">false;</span>
+      <span class="pc">b</span><span class="c">ool</span> <span class="pc">r</span><span class="c">esult</span> <span class="pc">=</span> <span class="c">false;</span>
+      <span class="c">bool</span> <span class="w">done</span> <span class="c">=</span> <span class="c">false;</span>
+      <span class="c">bool</span> <span class="w">fir</span><span class="c">st</span> <span class="c">=</span> <span class="w">t</span><span class="c">rue;</span>
+      <span class="w">w</span><span class="c">hile</span> <span class="pc">(!d</span><span class="c">one</span><span class="w">)</span>
+      <span class="c">{</span>
+        <span class="c">if</span> <span class="c">(</span><span class="w">need_activate</span><span class="pc">)</span>
+          <span class="w">notify_activate()</span><span class="pc">;</span>
+        <span class="c">if</span> <span class="c">(</span><span class="w">need_validate</span><span class="c">)</span>
+          <span class="w">notify_valid()</span><span class="pc">;</span>
+        <span class="pc">i</span><span class="c">f</span> <span class="pc">(</span><span class="w">need_invalidate</span><span class="c">)</span>
+          <span class="w">notify_invalid()</span><span class="pc">;</span>
+        <span class="c">if</span> <span class="c">(</span><span class="w">need_deactivate</span><span class="c">)</span>
+          <span class="w">garbage_collect()</span><span class="pc">;</span>
+        <span class="w">A</span><span class="c">utoLock</span> <span class="w">gc</span><span class="c">(</span><span class="w">gc_lock</span><span class="c">);</span>
+        <span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">fi</span><span class="pc">r</span><span class="c">st</span><span class="pc">)</span>
+        <span class="pc">{</span>
+<span class="w">#</span><span class="c">ifdef</span> <span class="c">DEBUG_HIGH_LEVEL</span>
+          <span class="c">assert(</span><span class="w">remote_references</span> <span class="w">&gt;</span><span class="c">=</span> <span class="w">cn</span><span class="c">t);</span>
+<span class="c">#endif</span>
+          <span class="w">r</span><span class="pc">em</span><span class="c">ote_references</span> <span class="w">-</span><span class="pc">=</span> <span class="w">c</span><span class="pc">n</span><span class="c">t;</span>
+          <span class="w">fi</span><span class="pc">r</span><span class="c">st</span> <span class="pc">=</span> <span class="w">f</span><span class="c">alse;</span>
+        <span class="c">}</span>
+        <span class="w">done</span> <span class="pc">=</span> <span class="w">update_state((gc_references</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">),</span>
+                            <span class="w">(r</span><span class="pc">em</span><span class="c">ote_references</span> <span class="w">&gt;</span> <span class="pc">0</span><span class="w">),</span>
+                            <span class="w">(valid_references</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">),</span>
+                            <span class="w">(resource_references</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">),</span>
+                            <span class="w">need_activate,</span> <span class="w">need_validate</span><span class="pc">,</span>
+                            <span class="w">need_invalidate</span><span class="c">,</span> <span class="w">need_deactivate</span><span class="c">,</span> <span class="w">res</span><span class="pc">u</span><span class="c">lt</span><span class="pc">)</span><span class="c">;</span>
+        <span class="w">i</span><span class="c">f</span> <span class="c">(</span><span class="w">n</span><span class="pc">eed_d</span><span class="c">eactivate</span> <span class="w">&amp;&amp; (held_remote_references</span> <span class="w">&gt;</span> <span class="c">0</span><span class="w">))</span>
+          <span class="w">return_held_references()</span><span class="pc">;</span>
+      <span class="pc">}</span>
+      <span class="w">r</span><span class="pc">eturn</span> <span class="w">r</span><span class="pc">esu</span><span class="c">lt;</span>
+    <span class="c">}</span>
+
+    
+    <span class="pc">v</span><span class="c">oid</span> <span class="w">HierarchicalCollectable</span><span class="pc">:</span><span class="c">:</span><span class="w">add_subscriber</span><span class="c">(</span><span class="w">A</span><span class="c">ddressSpaceID</span> <span class="pc">t</span><span class="c">arget,</span> 
+                                                <span class="w">D</span><span class="c">istributedID</span> <span class="w">subscriber</span><span class="pc">)</span>
+    
+    <span class="c">{</span>
+      <span class="w">A</span><span class="c">utoLock</span> <span class="w">gc</span><span class="c">(</span><span class="w">gc_lock</span><span class="c">);</span>
+<span class="w">#</span><span class="c">ifdef</span> <span class="c">DEBUG_HIGH_LEVEL</span>
+      <span class="c">assert(</span><span class="w">t</span><span class="c">arget</span> <span class="w">!</span><span class="c">=</span> <span class="w">ru</span><span class="c">ntime</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">address_space);</span>
+<span class="pc">#</span><span class="c">endif</span>
+      
+      
+      
+      <span class="w">subscribers[ta</span><span class="pc">r</span><span class="c">get</span><span class="pc">] </span><span class="c">=</span> <span class="pc">s</span><span class="c">ubscriber;</span>
+    <span class="c">}</span>
+
+    
+    <span class="c">void</span> <span class="pc">H</span><span class="c">ierarchicalCollectable::</span><span class="w">add_held_remote_reference</span><span class="c">(</span><span class="pc">u</span><span class="c">nsigned</span> <span class="pc">c</span><span class="c">nt</span> <span class="c">)</span>
+    
+    <span class="c">{</span>
+      <span class="w">A</span><span class="c">utoLock</span> <span class="w">g</span><span class="pc">c</span><span class="w">(</span><span class="pc">g</span><span class="c">c_lock</span><span class="pc">)</span><span class="c">;</span>
+      <span class="w">held_remote_references+</span><span class="pc">+</span><span class="c">;</span>
+    <span class="c">}</span>
+
+    
+    <span class="w">D</span><span class="pc">i</span><span class="c">stributedID</span> <span class="pc">H</span><span class="c">ierarchicalCollectable::</span><span class="w">find_distributed_id</span><span class="c">(</span>
+                                                        <span class="w">A</span><span class="c">ddressSpaceID</span> <span class="w">i</span><span class="pc">d)</span> <span class="pc">c</span><span class="c">onst</span>
+    
+    <span class="c">{</span>
+      <span class="w">A</span><span class="c">utoLock</span> <span class="pc">g</span><span class="c">c(</span><span class="w">g</span><span class="pc">c</span><span class="c">_lock</span><span class="pc">,</span><span class="w">1</span><span class="c">,</span><span class="w">f</span><span class="pc">a</span><span class="c">lse);</span>
+      <span class="w">st</span><span class="pc">d</span><span class="c">::</span><span class="pc">m</span><span class="c">ap&lt;</span><span class="w">A</span><span class="c">ddressSpaceID,</span><span class="w">D</span><span class="c">istributedID&gt;::</span><span class="pc">c</span><span class="c">onst_iterator</span> <span class="pc">f</span><span class="c">inder</span> <span class="c">=</span> 
+        <span class="w">subscribers</span><span class="c">.find(</span><span class="w">i</span><span class="pc">d</span><span class="c">);</span>
+<span class="pc">#</span><span class="c">ifdef</span> <span class="c">DEBUG_HIGH_LEVEL</span>
+      <span class="c">assert(</span><span class="pc">fi</span><span class="c">nder</span> <span class="pc">!</span><span class="c">=</span> <span class="w">s</span><span class="c">ubscribers.</span><span class="pc">e</span><span class="c">nd());</span>
+<span class="pc">#</span><span class="c">endif</span>
+      <span class="c">return</span> <span class="w">f</span><span class="pc">i</span><span class="c">nder-&gt;second;</span>
+    <span class="c">}</span>
+
+    
+    <span class="c">void</span> <span class="w">HierarchicalCollectable</span><span class="c">::</span><span class="w">set_no_free_did</span><span class="c">(</span><span class="pc">v</span><span class="c">oid)</span>
+    
+    <span class="c">{</span>
+      <span class="w">free_distributed_id</span> <span class="w">=</span> <span class="c">false;</span>
+    <span class="c">}</span>
+
+    
+    <span class="c">void</span> <span class="w">H</span><span class="c">ierarchicalCollectable::</span><span class="w">return_held_references</span><span class="c">(void)</span>
+    
+    <span class="c">{</span>
+<span class="pc">#</span><span class="c">ifdef</span> <span class="c">DEBUG_HIGH_LEVEL</span>
+      <span class="c">assert(</span><span class="w">di</span><span class="pc">d</span> <span class="pc">!</span><span class="c">=</span> <span class="w">owner_did</span><span class="c">);</span>
+<span class="c">#endif</span>
+      <span class="w">S</span><span class="pc">er</span><span class="c">ializer</span> <span class="w">rez</span><span class="pc">;</span>
+      <span class="w">{</span>
+        <span class="w">RezCheck</span> <span class="w">z</span><span class="pc">(</span><span class="w">re</span><span class="pc">z</span><span class="c">);</span>
+        <span class="w">r</span><span class="pc">ez.</span><span class="w">s</span><span class="c">erialize(</span><span class="w">o</span><span class="c">wner_did);</span>
+        <span class="w">r</span><span class="pc">ez</span><span class="c">.</span><span class="w">s</span><span class="pc">e</span><span class="c">rialize(</span><span class="w">di</span><span class="pc">d</span><span class="c">);</span>
+        <span class="w">r</span><span class="pc">ez</span><span class="c">.</span><span class="pc">s</span><span class="c">erialize(</span><span class="w">held_remote_references</span><span class="c">);</span>
+      <span class="pc">}</span>
+      <span class="w">r</span><span class="c">untime-&gt;</span><span class="w">send_remove_hierarchical_remote</span><span class="c">(</span><span class="w">owner_addr</span><span class="c">,</span> <span class="w">r</span><span class="c">ez);</span>
+      
+      <span class="w">h</span><span class="c">eld_remote_references</span> <span class="pc">=</span> <span class="w">0</span><span class="c">;</span>
+    <span class="c">}</span>
+
+    
+     <span class="pc">v</span><span class="c">oid</span> <span class="w">HierarchicalCollectable</span><span class="pc">:</span><span class="c">:</span><span class="w">process_remove_resource_reference</span><span class="c">(</span>
+                                    <span class="w">R</span><span class="pc">u</span><span class="c">ntime</span> <span class="c">*</span><span class="pc">r</span><span class="c">t,</span> <span class="w">D</span><span class="pc">e</span><span class="c">serializer</span> <span class="c">&amp;derez</span><span class="pc">)</span>
+    
+    <span class="c">{</span>
+      <span class="w">DerezCheck</span> <span class="w">z</span><span class="c">(</span><span class="w">d</span><span class="c">erez);</span>
+      <span class="w">D</span><span class="pc">i</span><span class="c">stributedID</span> <span class="w">di</span><span class="pc">d</span><span class="c">;</span>
+      <span class="pc">d</span><span class="c">erez.</span><span class="w">d</span><span class="c">eserialize(</span><span class="w">d</span><span class="pc">i</span><span class="c">d);</span>
+      <span class="w">Di</span><span class="c">stributedID</span> <span class="w">owner_did</span><span class="pc">;</span>
+      <span class="pc">d</span><span class="c">erez.deserialize(owner_did);</span>
+      <span class="w">H</span><span class="c">ierarchicalCollectable</span> <span class="pc">*</span><span class="w">t</span><span class="pc">a</span><span class="c">rget</span> <span class="pc">=</span> <span class="w">r</span><span class="c">t-&gt;</span><span class="w">find_hierarchical_collectable</span><span class="c">(</span><span class="w">d</span><span class="pc">i</span><span class="c">d);</span>
+      <span class="w">i</span><span class="c">f</span> <span class="c">(</span><span class="w">t</span><span class="c">arget</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">remove_nested_resource_ref(</span><span class="c">owner_did</span><span class="w">))</span>
+        <span class="w">d</span><span class="c">elete</span> <span class="w">t</span><span class="pc">a</span><span class="c">rget;</span>
+    <span class="c">}</span>
+
+    
+     <span class="pc">v</span><span class="c">oid</span> <span class="pc">H</span><span class="c">ierarchicalCollectable</span><span class="pc">:</span><span class="c">:</span><span class="w">process_remove_remote_reference</span><span class="c">(</span>
+                                     <span class="w">R</span><span class="c">untime</span> <span class="c">*rt,</span> <span class="w">D</span><span class="c">eserializer</span> <span class="c">&amp;</span><span class="pc">d</span><span class="c">erez</span><span class="pc">)</span>
+    
+    <span class="c">{</span>
+      <span class="w">DerezCheck</span> <span class="w">z</span><span class="c">(</span><span class="w">d</span><span class="pc">e</span><span class="c">rez</span><span class="pc">)</span><span class="c">;</span>
+      <span class="w">D</span><span class="pc">i</span><span class="c">stributedID</span> <span class="w">di</span><span class="c">d;</span>
+      <span class="pc">d</span><span class="c">erez.</span><span class="pc">d</span><span class="c">eserialize(</span><span class="w">di</span><span class="c">d);</span>
+      <span class="w">Di</span><span class="c">stributedID</span> <span class="w">o</span><span class="c">wner_did</span><span class="pc">;</span>
+      <span class="w">d</span><span class="c">erez.</span><span class="pc">d</span><span class="c">eserialize(owner_did);</span>
+      <span class="w">u</span><span class="pc">n</span><span class="c">signed</span> <span class="w">num_remote_references</span><span class="pc">;</span>
+      <span class="pc">d</span><span class="c">erez.deserialize(num_remote_references);</span>
+      <span class="w">HierarchicalCollectable</span> <span class="pc">*</span><span class="w">t</span><span class="c">arget</span> <span class="pc">=</span> <span class="w">r</span><span class="c">t</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">find_hierarchical_collectable</span><span class="c">(</span><span class="w">di</span><span class="c">d);</span>
+      <span class="pc">i</span><span class="c">f</span> <span class="c">(</span><span class="w">t</span><span class="c">arget</span><span class="w">-</span><span class="c">&gt;</span><span class="w">remove_nested_remote_ref(</span><span class="c">owner_did,</span> <span class="w">n</span><span class="c">um_remote_references</span><span class="pc">))</span>
+        <span class="w">d</span><span class="pc">e</span><span class="c">lete</span> <span class="w">t</span><span class="pc">a</span><span class="c">rget;</span>
+    <span class="c">}</span>
+
+  <span class="w">}</span><span class="pc">;</span> 
+<span class="w">}</span><span class="pc">;</span> 
+
+
+
+
+</pre>
+</body>
+</html>
+

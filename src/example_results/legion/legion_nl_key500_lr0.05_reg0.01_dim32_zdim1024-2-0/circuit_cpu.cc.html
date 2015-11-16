@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+
+<span class="w">#include</span> <span class="w">"circuit.h"</span>
+
+<span class="w">using</span> <span class="w">namespace</span> <span class="w">LegionRuntime::Accessor;</span>
+
+<span class="w">const</span> <span class="w">float</span> <span class="w">AccumulateCharge::identity</span> <span class="w">=</span> <span class="w">0.0f;</span>
+
+<span class="w">template</span> <span class="w">&lt;&gt;</span>
+<span class="w">void</span> <span class="w">AccumulateCharge::apply&lt;true&gt;(LHS</span> <span class="w">&amp;lhs,</span> <span class="w">RHS</span> <span class="w">rhs)</span> 
+<span class="w">{</span>
+  <span class="pc">l</span><span class="c">hs</span><span class="w">.charge</span> <span class="w">+</span><span class="pc">=</span> <span class="w">r</span><span class="pc">h</span><span class="c">s</span><span class="pc">;</span>
+<span class="w">}</span>
+
+<span class="pc">t</span><span class="c">emplate</span> <span class="w">&lt;</span><span class="pc">&gt;</span>
+<span class="w">v</span><span class="c">oid</span> <span class="pc">A</span><span class="c">ccumulateCharge::</span><span class="pc">a</span><span class="c">pply</span><span class="pc">&lt;</span><span class="w">f</span><span class="c">alse&gt;(</span><span class="pc">L</span><span class="c">HS</span> <span class="w">&amp;</span><span class="pc">l</span><span class="c">hs</span><span class="pc">,</span> <span class="w">R</span><span class="c">HS</span> <span class="w">r</span><span class="pc">h</span><span class="c">s)</span> 
+<span class="c">{</span>
+  
+  
+  <span class="pc">in</span><span class="c">t</span> <span class="c">*</span><span class="w">t</span><span class="pc">a</span><span class="c">rget</span> <span class="c">= (int</span> <span class="w">*)&amp;(l</span><span class="pc">h</span><span class="c">s</span><span class="w">.</span><span class="pc">c</span><span class="c">harge</span><span class="pc">)</span><span class="c">;</span>
+  <span class="w">union</span> <span class="w">{</span> <span class="pc">in</span><span class="c">t</span> <span class="w">as_int</span><span class="pc">;</span> <span class="w">f</span><span class="pc">l</span><span class="c">oat</span> <span class="w">as_float;</span><span class="pc"> </span><span class="c">}</span> <span class="w">oldval,</span> <span class="w">newval</span><span class="pc">;</span>
+  <span class="w">do</span> <span class="w">{</span>
+    <span class="pc">o</span><span class="c">ldval.</span><span class="w">a</span><span class="pc">s_i</span><span class="c">nt</span> <span class="w">= *t</span><span class="pc">a</span><span class="c">rget</span><span class="pc">;</span>
+    <span class="w">n</span><span class="pc">e</span><span class="c">wval.</span><span class="w">a</span><span class="c">s_float</span> <span class="c">=</span> <span class="c">oldval</span><span class="pc">.a</span><span class="c">s_float</span> <span class="c">+</span> <span class="w">rh</span><span class="c">s</span><span class="pc">;</span>
+  <span class="c">}</span> <span class="w">w</span><span class="c">hile</span><span class="pc">(!</span><span class="w">__sync_bool_compare_and_swap</span><span class="pc">(</span><span class="w">t</span><span class="c">arget,</span> <span class="c">oldval.as_int,</span> <span class="c">newval.</span><span class="pc">a</span><span class="c">s_int));</span>
+<span class="c">}</span>
+
+<span class="w">t</span><span class="c">emplate</span> <span class="w">&lt;&gt;</span>
+<span class="w">v</span><span class="c">oid</span> <span class="w">AccumulateCharge</span><span class="c">::</span><span class="w">fold</span><span class="pc">&lt;</span><span class="w">t</span><span class="pc">r</span><span class="c">ue&gt;(</span><span class="w">RHS</span> <span class="w">&amp;rhs1</span><span class="pc">,</span> <span class="w">R</span><span class="c">HS</span> <span class="w">rhs2</span><span class="pc">)</span> 
+<span class="c">{</span>
+  <span class="pc">rh</span><span class="c">s1</span> <span class="w">+</span><span class="pc">=</span> <span class="w">r</span><span class="pc">hs2</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="w">t</span><span class="c">emplate</span> <span class="w">&lt;</span><span class="pc">&gt;</span>
+<span class="w">v</span><span class="c">oid</span> <span class="w">A</span><span class="c">ccumulateCharge</span><span class="pc">:</span><span class="c">:fold&lt;</span><span class="pc">f</span><span class="c">alse&gt;(</span><span class="pc">R</span><span class="c">HS</span> <span class="w">&amp;</span><span class="c">rhs1,</span> <span class="pc">R</span><span class="c">HS</span> <span class="w">r</span><span class="c">hs2)</span> 
+<span class="c">{</span>
+  
+  
+  <span class="pc">i</span><span class="c">nt</span> <span class="c">*</span><span class="w">t</span><span class="pc">a</span><span class="c">rget</span> <span class="c">= (int</span> <span class="w">*)&amp;</span><span class="pc">r</span><span class="c">hs1</span><span class="pc">;</span>
+  <span class="w">union</span> <span class="pc">{</span> <span class="pc">i</span><span class="c">nt</span> <span class="w">as_int</span><span class="pc">;</span> <span class="w">f</span><span class="c">loat</span> <span class="w">as_float;</span><span class="pc"> </span><span class="c">}</span> <span class="w">oldval,</span> <span class="w">newval</span><span class="c">;</span>
+  <span class="w">do</span> <span class="c">{</span>
+    <span class="pc">o</span><span class="c">ldval.</span><span class="w">a</span><span class="c">s_int</span> <span class="w">= *</span><span class="c">target</span><span class="pc">;</span>
+    <span class="w">n</span><span class="c">ewval.</span><span class="w">a</span><span class="pc">s_f</span><span class="c">loat</span> <span class="c">=</span> <span class="c">oldval</span><span class="pc">.</span><span class="c">as_float</span> <span class="c">+</span> <span class="w">r</span><span class="pc">hs2</span><span class="c">;</span>
+  <span class="c">}</span> <span class="w">w</span><span class="c">hile</span><span class="pc">(!</span><span class="w">__sync_bool_compare_and_swap</span><span class="c">(</span><span class="w">t</span><span class="pc">a</span><span class="c">rget,</span> <span class="c">oldval.as_int,</span> <span class="c">newval.</span><span class="w">a</span><span class="c">s_int</span><span class="pc">))</span><span class="c">;</span>
+<span class="c">}</span>
+
+
+
+<span class="w">t</span><span class="c">emplate&lt;typename</span> <span class="w">A</span><span class="c">T&gt;</span>
+<span class="pc">s</span><span class="c">tatic</span> <span class="c">inline</span> <span class="w">CircuitNode</span> <span class="w">g</span><span class="pc">et_n</span><span class="c">ode(</span><span class="w">c</span><span class="pc">o</span><span class="c">nst</span> <span class="w">R</span><span class="pc">egionA</span><span class="c">ccessor&lt;</span><span class="w">A</span><span class="pc">T</span><span class="c">,</span><span class="pc">C</span><span class="c">ircuitNode</span><span class="pc">&gt;</span><span class="c"> &amp;</span><span class="w">priv</span><span class="c">,</span>
+                                   <span class="pc">c</span><span class="c">onst</span> <span class="pc">RegionA</span><span class="c">ccessor&lt;</span><span class="pc">A</span><span class="c">T,</span><span class="w">C</span><span class="c">ircuitNode</span><span class="pc">&gt; </span><span class="c">&amp;</span><span class="w">shr</span><span class="c">,</span>
+                                   <span class="c">const</span> <span class="c">RegionAccessor&lt;AT,</span><span class="w">C</span><span class="c">ircuitNode</span><span class="pc">&gt;</span><span class="c"> &amp;</span><span class="w">ghost</span><span class="c">,</span>
+                                   <span class="w">PointerLocation</span> <span class="w">loc</span><span class="c">,</span> <span class="w">p</span><span class="c">tr_t</span> <span class="c">ptr)</span> 
+<span class="c">{</span>
+  <span class="pc">s</span><span class="c">witch</span> <span class="c">(loc</span><span class="pc">)</span>
+  <span class="c">{</span>
+    <span class="c">case</span> <span class="w">PRIVATE_PTR</span><span class="c">:</span>
+      <span class="w">r</span><span class="c">eturn</span> <span class="pc">p</span><span class="c">riv</span><span class="pc">.</span><span class="c">read(</span><span class="w">p</span><span class="pc">t</span><span class="c">r);</span>
+    <span class="w">c</span><span class="pc">a</span><span class="c">se</span> <span class="w">SHARED_PTR:</span>
+      <span class="c">return</span> <span class="pc">s</span><span class="c">hr</span><span class="pc">.r</span><span class="c">ead(</span><span class="w">p</span><span class="pc">t</span><span class="c">r);</span>
+    <span class="w">c</span><span class="pc">a</span><span class="c">se</span> <span class="w">GHOST_PTR</span><span class="pc">:</span>
+      <span class="pc">r</span><span class="c">eturn</span> <span class="w">g</span><span class="c">host</span><span class="pc">.</span><span class="w">r</span><span class="c">ead(</span><span class="w">p</span><span class="pc">t</span><span class="c">r);</span>
+    <span class="w">d</span><span class="pc">e</span><span class="c">fault:</span>
+      <span class="w">a</span><span class="pc">s</span><span class="c">sert(</span><span class="pc">f</span><span class="c">alse);</span>
+  <span class="c">}</span>
+  <span class="pc">r</span><span class="c">eturn</span> <span class="w">CircuitNode(</span><span class="pc">)</span><span class="c">;</span>
+<span class="c">}</span>
+
+<span class="pc">t</span><span class="c">emplate&lt;typename</span> <span class="w">REDOP</span><span class="pc">,</span> <span class="c">typename</span> <span class="w">AT1</span><span class="c">,</span> <span class="pc">t</span><span class="c">ypename</span> <span class="w">AT2</span><span class="c">&gt;</span>
+<span class="pc">s</span><span class="c">tatic</span> <span class="pc">i</span><span class="c">nline</span> <span class="c">void</span> <span class="w">reduce_node</span><span class="c">(const</span> <span class="w">R</span><span class="pc">egionA</span><span class="c">ccessor&lt;</span><span class="w">A</span><span class="pc">T1</span><span class="c">,</span><span class="w">C</span><span class="c">ircuitNode</span><span class="w">&gt;</span><span class="pc"> </span><span class="c">&amp;</span><span class="w">priv</span><span class="c">,</span>
+                               <span class="c">const</span> <span class="pc">Reg</span><span class="c">ionAccessor&lt;</span><span class="w">A</span><span class="pc">T2</span><span class="c">,</span><span class="w">C</span><span class="c">ircuitNode</span><span class="pc">&gt; </span><span class="c">&amp;</span><span class="w">shr</span><span class="c">,</span>
+                               <span class="pc">c</span><span class="c">onst</span> <span class="pc">R</span><span class="c">egionAccessor&lt;</span><span class="w">A</span><span class="pc">T2</span><span class="c">,</span><span class="w">C</span><span class="pc">i</span><span class="c">rcuitNode</span><span class="pc">&gt;</span><span class="c"> &amp;</span><span class="w">ghost</span><span class="c">,</span>
+                               <span class="w">PointerLocation</span> <span class="w">loc</span><span class="c">,</span> <span class="w">p</span><span class="c">tr_t</span> <span class="c">ptr</span><span class="pc">,</span> <span class="w">t</span><span class="c">ypename</span> <span class="w">REDOP:</span><span class="c">:</span><span class="w">RHS</span> <span class="w">v</span><span class="c">alue)</span>
+<span class="c">{</span>
+  <span class="w">s</span><span class="pc">w</span><span class="c">itch</span> <span class="c">(</span><span class="w">l</span><span class="c">oc</span><span class="w">)</span>
+  <span class="c">{</span>
+    <span class="pc">c</span><span class="c">ase</span> <span class="w">PRIVATE_PTR</span><span class="c">:</span>
+      <span class="w">priv.</span><span class="pc">t</span><span class="c">emplate</span> <span class="w">reduce</span><span class="pc">&lt;</span><span class="w">R</span><span class="pc">E</span><span class="c">DOP</span><span class="pc">&gt;</span><span class="c">(</span><span class="w">p</span><span class="pc">t</span><span class="c">r,</span> <span class="w">v</span><span class="c">alue);</span>
+      <span class="pc">b</span><span class="c">reak;</span>
+    <span class="w">c</span><span class="c">ase</span> <span class="w">SHARED_PTR</span><span class="c">:</span>
+      <span class="w">shr</span><span class="c">.</span><span class="w">t</span><span class="c">emplate</span> <span class="pc">r</span><span class="c">educe</span><span class="w">(p</span><span class="c">tr,</span> <span class="w">v</span><span class="c">alue);</span>
+      <span class="pc">b</span><span class="c">reak;</span>
+    <span class="pc">c</span><span class="c">ase</span> <span class="w">GHOST_PTR</span><span class="c">:</span>
+      <span class="w">ghost.</span><span class="c">template</span> <span class="pc">r</span><span class="c">educe</span><span class="w">(p</span><span class="pc">t</span><span class="c">r,</span> <span class="pc">v</span><span class="c">alue);</span>
+      <span class="pc">b</span><span class="c">reak;</span>
+    <span class="w">d</span><span class="c">efault</span><span class="pc">:</span>
+      <span class="w">a</span><span class="c">ssert(</span><span class="pc">f</span><span class="c">alse);</span>
+  <span class="c">}</span>
+<span class="c">}</span>
+
+<span class="pc">t</span><span class="c">emplate&lt;typename</span> <span class="w">A</span><span class="c">T&gt;</span>
+<span class="c">static</span> <span class="pc">i</span><span class="c">nline</span> <span class="c">void</span> <span class="w">update_region_voltages</span><span class="c">(</span><span class="w">CircuitPiece</span> <span class="w">*p</span><span class="c">,</span> 
+                                          <span class="c">const</span> <span class="w">R</span><span class="pc">egionA</span><span class="c">ccessor&lt;</span><span class="pc">A</span><span class="c">T,</span><span class="w">CircuitNode</span><span class="c">&gt; &amp;</span><span class="w">nodes</span><span class="pc">,</span>
+                                          <span class="w">IndexIterator</span> <span class="pc">&amp;</span><span class="w">it</span><span class="pc">r)</span>
+<span class="c">{</span>
+  <span class="w">w</span><span class="c">hile</span> <span class="c">(</span><span class="w">it</span><span class="pc">r.</span><span class="w">has_next</span><span class="pc">()</span><span class="c">)</span>
+  <span class="pc">{</span>
+    <span class="w">p</span><span class="pc">t</span><span class="c">r_t</span> <span class="w">node_ptr</span> <span class="c">=</span> <span class="w">i</span><span class="pc">t</span><span class="c">r.</span><span class="w">n</span><span class="pc">e</span><span class="c">xt</span><span class="pc">()</span><span class="c">;</span>
+    <span class="w">C</span><span class="c">ircuitNode</span> <span class="w">n</span><span class="pc">ode</span> <span class="pc">=</span> <span class="pc">n</span><span class="c">odes</span><span class="pc">.</span><span class="w">r</span><span class="c">ead(</span><span class="w">n</span><span class="pc">ode_</span><span class="c">ptr);</span>
+
+    
+    <span class="w">n</span><span class="pc">ode</span><span class="c">.</span><span class="w">voltage</span> <span class="w">+</span><span class="pc">=</span> <span class="w">n</span><span class="pc">ode</span><span class="c">.</span><span class="w">charge</span> <span class="w">/</span> <span class="w">n</span><span class="pc">ode</span><span class="c">.</span><span class="w">capacitance;</span>
+    <span class="w">n</span><span class="pc">ode</span><span class="c">.</span><span class="w">v</span><span class="c">oltage</span> <span class="w">*= (1</span><span class="c">.</span><span class="w">f</span> <span class="w">-</span> <span class="w">n</span><span class="pc">ode.</span><span class="w">leakage)</span><span class="c">;</span>
+    <span class="w">n</span><span class="pc">ode</span><span class="c">.</span><span class="w">c</span><span class="pc">h</span><span class="c">arge</span> <span class="w">=</span> <span class="w">0</span><span class="pc">.</span><span class="w">f</span><span class="c">;</span>
+
+    <span class="w">n</span><span class="pc">odes</span><span class="c">.</span><span class="w">w</span><span class="c">rite(</span><span class="w">n</span><span class="c">ode_ptr</span><span class="pc">,</span> <span class="w">n</span><span class="pc">ode</span><span class="c">);</span>
+  <span class="c">}</span>
+<span class="pc">}</span>
+
+
+
+<span class="c">void</span> <span class="w">calc_new_currents_cpu</span><span class="pc">(</span><span class="w">CircuitPiece</span> <span class="c">*</span><span class="w">p</span><span class="c">,</span>
+                           <span class="w">c</span><span class="c">onst</span> <span class="pc">s</span><span class="c">td::</span><span class="pc">v</span><span class="c">ector&lt;</span><span class="w">P</span><span class="c">hysicalRegion&gt; &amp;regions</span><span class="pc">)</span>
+<span class="c">{</span>
+<span class="w">#</span><span class="pc">ifn</span><span class="c">def</span> <span class="w">DISABLE_MATH</span>
+  <span class="w">R</span><span class="c">egionAccessor&lt;AccessorType::Generic,</span> <span class="w">CircuitWire</span><span class="c">&gt;</span> <span class="w">pvt_wires</span> <span class="c">=</span> <span class="pc">r</span><span class="c">egions[0].</span><span class="w">get_accessor(</span><span class="pc">).t</span><span class="c">ypeify&lt;</span><span class="pc">C</span><span class="c">ircuitWire&gt;();</span>
+  <span class="c">RegionAccessor&lt;AccessorType::Generic,</span> <span class="w">CircuitNode</span><span class="c">&gt;</span> <span class="w">pvt_nodes</span> <span class="c">=</span> <span class="c">regions</span><span class="pc">[1</span><span class="c">].</span><span class="w">g</span><span class="pc">et_a</span><span class="c">ccessor</span><span class="pc">()</span><span class="c">.typeify&lt;</span><span class="pc">C</span><span class="c">ircuitNode&gt;();</span>
+  <span class="c">RegionAccessor&lt;AccessorType::Generic,</span> <span class="w">C</span><span class="pc">ircuitN</span><span class="c">ode&gt;</span> <span class="w">shr_nodes</span> <span class="c">=</span> <span class="c">regions</span><span class="pc">[2</span><span class="c">].</span><span class="w">g</span><span class="pc">et_a</span><span class="c">ccessor</span><span class="pc">()</span><span class="c">.typeify&lt;</span><span class="w">C</span><span class="pc">ircuitN</span><span class="c">ode&gt;();</span>
+  <span class="c">RegionAccessor&lt;AccessorType::Generic,</span> <span class="pc">C</span><span class="c">ircuitNode&gt;</span> <span class="w">ghost_nodes</span> <span class="c">=</span> <span class="c">regions</span><span class="pc">[3</span><span class="c">].</span><span class="w">g</span><span class="pc">et_a</span><span class="c">ccessor</span><span class="pc">()</span><span class="c">.typeify&lt;</span><span class="pc">C</span><span class="c">ircuitNode&gt;();</span>
+  <span class="w">L</span><span class="c">egionRuntime::</span><span class="w">HighLevel</span><span class="pc">:</span><span class="c">:</span><span class="w">IndexIterator</span> <span class="w">i</span><span class="pc">tr</span><span class="c">(</span><span class="w">p</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">pvt_wires)</span><span class="pc">;</span>
+  <span class="w">w</span><span class="c">hile</span> <span class="c">(</span><span class="w">i</span><span class="pc">t</span><span class="c">r.</span><span class="w">has_next</span><span class="pc">()</span><span class="c">)</span>
+  <span class="c">{</span>
+    <span class="w">p</span><span class="c">tr_t</span> <span class="w">wire_ptr</span> <span class="c">=</span> <span class="w">i</span><span class="c">tr.</span><span class="w">n</span><span class="c">ext</span><span class="pc">(</span><span class="c">);</span>
+    <span class="w">CircuitWire</span> <span class="w">wire</span> <span class="c">=</span> <span class="w">p</span><span class="pc">v</span><span class="c">t_wires.</span><span class="pc">r</span><span class="c">ead(</span><span class="w">w</span><span class="c">ire_ptr);</span>
+    <span class="w">C</span><span class="pc">ircuitN</span><span class="c">ode</span> <span class="w">in_node</span>  <span class="c">=</span> <span class="w">get</span><span class="pc">_n</span><span class="c">ode(</span><span class="w">pvt_nodes</span><span class="pc">,</span> <span class="w">shr_nodes</span><span class="pc">,</span> <span class="w">ghost_nodes</span><span class="c">,</span> <span class="w">w</span><span class="pc">ire</span><span class="w">.in_loc</span><span class="c">,</span> <span class="pc">wire.</span><span class="w">in_ptr</span><span class="c">);</span>
+    <span class="w">C</span><span class="pc">ircuitN</span><span class="c">ode</span> <span class="w">out_node</span> <span class="c">=</span> <span class="w">g</span><span class="pc">et_n</span><span class="c">ode(</span><span class="w">p</span><span class="pc">vt_n</span><span class="c">odes</span><span class="pc">,</span> <span class="w">s</span><span class="c">hr_nodes,</span> <span class="pc">g</span><span class="c">host_nodes,</span> <span class="pc">w</span><span class="c">ire</span><span class="pc">.</span><span class="w">out_loc</span><span class="c">,</span> <span class="pc">w</span><span class="c">ire</span><span class="pc">.</span><span class="w">out_ptr</span><span class="pc">)</span><span class="c">;</span>
+
+    
+    <span class="w">f</span><span class="pc">l</span><span class="c">oat</span> <span class="w">dt</span> <span class="c">=</span> <span class="w">p</span><span class="pc">-</span><span class="c">&gt;</span><span class="w">d</span><span class="c">t</span><span class="pc">;</span>
+    <span class="w">co</span><span class="pc">ns</span><span class="c">t</span> <span class="w">i</span><span class="pc">nt</span> <span class="w">steps</span> <span class="c">=</span> <span class="w">p</span><span class="pc">-&gt;s</span><span class="c">teps;</span>
+    <span class="w">f</span><span class="pc">l</span><span class="c">oat</span> <span class="w">new_v[W</span><span class="c">IRE_SEGMENTS</span><span class="pc">+</span><span class="c">1];</span>
+    <span class="w">f</span><span class="pc">l</span><span class="c">oat</span> <span class="w">new_i[W</span><span class="c">IRE_SEGMENTS];</span>
+    <span class="c">for</span> <span class="c">(int</span> <span class="c">i</span> <span class="c">=</span> <span class="c">0;</span> <span class="c">i</span> <span class="c">&lt;</span> <span class="c">WIRE_SEGMENTS;</span> <span class="c">i++)</span>
+      <span class="w">n</span><span class="c">ew_i[i] =</span> <span class="w">wire</span><span class="pc">.</span><span class="w">cu</span><span class="c">rrent</span><span class="pc">[</span><span class="c">i</span><span class="pc">];</span>
+    <span class="pc">f</span><span class="c">or</span> <span class="c">(</span><span class="pc">in</span><span class="c">t</span> <span class="c">i</span> <span class="c">=</span> <span class="c">0;</span> <span class="c">i</span> <span class="c">&lt;</span> <span class="c">WIRE_SEGMENTS</span><span class="pc">-1;</span> <span class="c">i++)</span>
+      <span class="w">new_v</span><span class="c">[i] =</span> <span class="w">w</span><span class="c">ire</span><span class="pc">.</span><span class="w">voltage</span><span class="c">[i];</span>
+    <span class="w">n</span><span class="c">ew_v[</span><span class="w">W</span><span class="c">IRE_SEGMENTS</span><span class="pc">] </span><span class="c">=</span> <span class="w">out_node</span><span class="pc">.</span><span class="w">v</span><span class="c">oltage</span><span class="w">;</span>
+
+    <span class="c">for</span> <span class="c">(int</span> <span class="pc">j</span> <span class="c">=</span> <span class="c">0;</span> <span class="pc">j</span> <span class="c">&lt;</span> <span class="w">steps</span><span class="c">;</span> <span class="pc">j</span><span class="c">++)</span>
+    <span class="c">{</span>
+      
+      
+      
+      <span class="c">for</span> <span class="c">(int</span> <span class="c">i</span> <span class="c">=</span> <span class="c">0;</span> <span class="c">i</span> <span class="c">&lt;</span> <span class="c">WIRE_SEGMENTS;</span> <span class="c">i++)</span>
+      <span class="c">{</span>
+        <span class="w">new_i</span><span class="c">[i</span><span class="w">] = ((</span><span class="pc">n</span><span class="c">ew_v[i+1</span><span class="w">] -</span> <span class="pc">n</span><span class="c">ew_v[i</span><span class="w">]) -</span> 
+                    <span class="w">(wire.inductance*(n</span><span class="pc">ew_i[</span><span class="c">i</span><span class="w">] </span><span class="pc">-</span> <span class="w">w</span><span class="c">ire</span><span class="pc">.</span><span class="w">cu</span><span class="c">rrent[i</span><span class="w">])/dt)) /</span> <span class="w">w</span><span class="c">ire.</span><span class="w">resistance;</span>
+      <span class="c">}</span>
+      
+      <span class="w">f</span><span class="c">or</span> <span class="c">(</span><span class="pc">i</span><span class="c">nt</span> <span class="c">i</span> <span class="c">=</span> <span class="c">0;</span> <span class="c">i</span> <span class="c">&lt;</span> <span class="pc">W</span><span class="c">IRE_SEGMENTS</span><span class="pc">-</span><span class="c">1;</span> <span class="c">i++)</span>
+      <span class="c">{</span>
+        <span class="w">new_v</span><span class="c">[i</span><span class="pc">+</span><span class="c">1] =</span> <span class="pc">w</span><span class="c">ire</span><span class="pc">.</span><span class="w">voltage</span><span class="c">[i</span><span class="w">] +</span> <span class="w">d</span><span class="c">t</span><span class="w">*(new_i</span><span class="c">[i</span><span class="w">] -</span> <span class="w">n</span><span class="pc">ew_i</span><span class="c">[i</span><span class="pc">+</span><span class="c">1</span><span class="w">]) /</span> <span class="w">w</span><span class="c">ire.</span><span class="w">capacitance;</span>
+      <span class="pc">}</span>
+    <span class="pc">}</span>
+
+    
+    <span class="w">f</span><span class="c">or</span> <span class="c">(</span><span class="pc">i</span><span class="c">nt</span> <span class="c">i</span> <span class="c">=</span> <span class="c">0;</span> <span class="c">i</span> <span class="c">&lt;</span> <span class="c">WIRE_SEGMENTS;</span> <span class="c">i++)</span>
+      <span class="w">w</span><span class="c">ire</span><span class="w">.cu</span><span class="pc">rre</span><span class="c">nt[i] =</span> <span class="w">n</span><span class="pc">e</span><span class="c">w_i[i];</span>
+    <span class="w">f</span><span class="c">or</span> <span class="c">(</span><span class="pc">in</span><span class="c">t</span> <span class="c">i</span> <span class="c">=</span> <span class="c">0;</span> <span class="c">i</span> <span class="c">&lt;</span> <span class="pc">W</span><span class="c">IRE_SEGMENTS</span><span class="pc">-</span><span class="c">1;</span> <span class="c">i++)</span>
+      <span class="w">w</span><span class="pc">i</span><span class="c">re</span><span class="pc">.</span><span class="w">voltage</span><span class="c">[i</span><span class="pc">] </span><span class="c">=</span> <span class="w">new_v</span><span class="c">[i</span><span class="pc">+</span><span class="c">1</span><span class="pc">]</span><span class="c">;</span>
+
+    <span class="w">pvt_wires</span><span class="pc">.wr</span><span class="c">ite(</span><span class="w">wire_ptr,</span> <span class="pc">w</span><span class="c">ire);</span>
+  <span class="c">}</span>
+<span class="w">#</span><span class="pc">e</span><span class="c">ndif</span>
+<span class="pc">}</span>
+
+<span class="c">void</span> <span class="w">distribute_charge_cpu</span><span class="c">(</span><span class="w">CircuitPiece</span> <span class="pc">*</span><span class="w">p</span><span class="c">,</span>
+                           <span class="pc">c</span><span class="c">onst</span> <span class="c">std::vector&lt;</span><span class="pc">P</span><span class="c">hysicalRegion&gt; &amp;regions</span><span class="pc">)</span>
+<span class="c">{</span>
+<span class="w">#</span><span class="pc">ifn</span><span class="c">def</span> <span class="w">DISABLE_MATH</span>
+  <span class="w">R</span><span class="c">egionAccessor&lt;AccessorType::Generic,</span> <span class="w">CircuitWire</span><span class="c">&gt;</span> <span class="pc">p</span><span class="c">vt_wires</span> <span class="c">=</span> <span class="pc">r</span><span class="c">egions[0</span><span class="pc">].</span><span class="w">get_accessor(</span><span class="pc">).t</span><span class="c">ypeify&lt;</span><span class="pc">C</span><span class="c">ircuitWire&gt;();</span>
+  <span class="c">RegionAccessor&lt;AccessorType::Generic,</span> <span class="w">CircuitNode</span><span class="c">&gt;</span> <span class="w">pvt_nodes</span> <span class="c">=</span> <span class="c">regions</span><span class="pc">[1</span><span class="c">].</span><span class="w">g</span><span class="pc">et_a</span><span class="c">ccessor</span><span class="pc">()</span><span class="c">.typeify&lt;</span><span class="pc">C</span><span class="c">ircuitNode&gt;();</span>
+  <span class="c">RegionAccessor&lt;AccessorType::Generic,</span> <span class="w">C</span><span class="pc">ircuitN</span><span class="c">ode&gt;</span> <span class="w">shr_temp</span> <span class="c">=</span> <span class="c">regions</span><span class="pc">[2</span><span class="c">].</span><span class="w">g</span><span class="pc">et_a</span><span class="c">ccessor</span><span class="pc">()</span><span class="c">.typeify&lt;</span><span class="w">C</span><span class="pc">ircuitN</span><span class="c">ode&gt;();</span>
+  <span class="c">RegionAccessor&lt;AccessorType::Generic,</span> <span class="pc">C</span><span class="c">ircuitNode&gt;</span> <span class="w">ghost_temp</span> <span class="c">=</span> <span class="c">regions</span><span class="pc">[3</span><span class="c">].</span><span class="w">g</span><span class="pc">et_a</span><span class="c">ccessor</span><span class="pc">()</span><span class="c">.typeify&lt;</span><span class="pc">C</span><span class="c">ircuitNode&gt;();</span>
+  
+  <span class="w">a</span><span class="c">ssert(shr_temp.</span><span class="w">can_convert</span><span class="c">&lt;AccessorType::</span><span class="w">ReductionFold</span><span class="c">&lt;</span><span class="w">AccumulateCharge&gt; &gt;());</span>
+  <span class="w">a</span><span class="pc">s</span><span class="c">sert(ghost_temp.</span><span class="w">c</span><span class="c">an_convert</span><span class="pc">&lt;</span><span class="w">A</span><span class="c">ccessorType::ReductionFold&lt;AccumulateCharge</span><span class="w">&gt; </span><span class="pc">&gt;</span><span class="c">());</span>
+  
+  <span class="w">R</span><span class="c">egionAccessor&lt;AccessorType::</span><span class="pc">R</span><span class="c">eductionFold&lt;AccumulateCharge</span><span class="w">&gt;,</span> <span class="w">C</span><span class="c">ircuitNode</span><span class="w">&gt;</span> <span class="w">shr_nodes</span> <span class="c">=</span>
+            <span class="c">shr_temp.</span><span class="w">convert</span><span class="c">&lt;AccessorType::</span><span class="pc">R</span><span class="c">eductionFold&lt;</span><span class="pc">A</span><span class="c">ccumulateCharge</span><span class="w">&gt; &gt;();</span>
+  <span class="pc">Reg</span><span class="c">ionAccessor&lt;AccessorType::ReductionFold&lt;</span><span class="w">A</span><span class="pc">ccu</span><span class="c">mulateCharge</span><span class="w">&gt;,</span> <span class="w">C</span><span class="c">ircuitNode</span><span class="pc">&gt;</span> <span class="w">ghost_nodes</span> <span class="pc">=</span> 
+            <span class="w">ghost_temp</span><span class="pc">.</span><span class="w">c</span><span class="c">onvert&lt;AccessorType::</span><span class="pc">R</span><span class="c">eductionFold&lt;</span><span class="w">A</span><span class="c">ccumulateCharge</span><span class="w">&gt;</span><span class="pc"> </span><span class="c">&gt;();</span> 
+  <span class="pc">L</span><span class="c">egionRuntime::</span><span class="w">HighLevel</span><span class="pc">:</span><span class="c">:</span><span class="w">IndexIterator</span> <span class="w">i</span><span class="pc">tr</span><span class="c">(</span><span class="pc">p</span><span class="w">-</span><span class="c">&gt;</span><span class="w">pvt_wires)</span><span class="pc">;</span>
+  <span class="w">w</span><span class="c">hile</span> <span class="c">(</span><span class="w">i</span><span class="pc">tr</span><span class="c">.</span><span class="w">has_next</span><span class="pc">()</span><span class="c">)</span>
+  <span class="pc">{</span>
+    <span class="w">p</span><span class="pc">t</span><span class="c">r_t</span> <span class="w">wire_ptr</span> <span class="c">=</span> <span class="w">i</span><span class="c">tr.</span><span class="w">n</span><span class="c">ext</span><span class="pc">()</span><span class="c">;</span>
+    <span class="w">CircuitWire</span> <span class="w">wire</span> <span class="c">=</span> <span class="w">p</span><span class="pc">v</span><span class="c">t_wires</span><span class="pc">.</span><span class="c">read(</span><span class="w">w</span><span class="c">ire_ptr);</span>
+
+    <span class="w">con</span><span class="pc">st</span> <span class="w">f</span><span class="pc">l</span><span class="c">oat</span> <span class="w">dt</span> <span class="c">=</span> <span class="w">p</span><span class="pc">-</span><span class="c">&gt;</span><span class="pc">d</span><span class="c">t</span><span class="pc">;</span> 
+
+    <span class="w">reduce_node</span><span class="pc">&lt;</span><span class="w">AccumulateCharge&gt;</span><span class="c">(</span><span class="w">pvt_nodes</span><span class="pc">,</span><span class="w">shr_nodes</span><span class="c">,</span><span class="w">ghost_nodes</span><span class="c">,wire</span><span class="pc">.</span><span class="w">in_loc</span><span class="c">,</span><span class="pc">w</span><span class="c">ire.</span><span class="w">in_ptr,-</span><span class="c">dt</span> <span class="w">*</span> <span class="pc">w</span><span class="c">ire</span><span class="w">.cu</span><span class="c">rrent</span><span class="w">[</span><span class="c">0]);</span>
+    <span class="w">r</span><span class="c">educe_node</span><span class="pc">&lt;A</span><span class="c">ccumulateCharge</span><span class="pc">&gt;</span><span class="c">(</span><span class="pc">p</span><span class="c">vt_nodes</span><span class="pc">,</span><span class="c">shr_nodes</span><span class="pc">,</span><span class="c">ghost_nodes,wire</span><span class="pc">.</span><span class="w">out_loc</span><span class="c">,</span><span class="pc">w</span><span class="c">ire</span><span class="pc">.</span><span class="w">out_ptr</span><span class="c">,dt</span><span class="w">*</span> <span class="c">wire</span><span class="w">.cu</span><span class="pc">rre</span><span class="c">nt</span><span class="w">[W</span><span class="c">IRE_SEGMENTS</span><span class="pc">-</span><span class="c">1</span><span class="w">]</span><span class="pc">)</span><span class="c">;</span>
+  <span class="pc">}</span>
+<span class="pc">#</span><span class="c">endif</span>
+<span class="c">}</span>
+
+<span class="c">void</span> <span class="w">update_voltages_cpu</span><span class="c">(</span><span class="w">CircuitPiece</span> <span class="pc">*</span><span class="w">p</span><span class="c">,</span>
+                         <span class="w">c</span><span class="c">onst</span> <span class="c">std::vector&lt;</span><span class="pc">P</span><span class="c">hysicalRegion&gt; &amp;regions</span><span class="pc">)</span>
+<span class="c">{</span>
+<span class="w">#</span><span class="pc">ifn</span><span class="c">def</span> <span class="w">DISABLE_MATh</span>
+  <span class="w">R</span><span class="c">egionAccessor&lt;AccessorType::Generic,</span> <span class="w">CircuitNode</span><span class="c">&gt;</span> <span class="w">pvt_nodes</span> <span class="c">=</span> <span class="pc">r</span><span class="c">egions[0</span><span class="pc">].</span><span class="w">get_accessor(</span><span class="pc">).t</span><span class="c">ypeify&lt;</span><span class="pc">C</span><span class="c">ircuitNode&gt;();</span>
+  <span class="w">IndexIterator</span> <span class="w">pvt_itr</span><span class="c">(</span><span class="w">p-</span><span class="c">&gt;</span><span class="w">p</span><span class="pc">vt_n</span><span class="c">odes</span><span class="pc">)</span><span class="c">;</span>
+  <span class="w">update_region_voltages</span><span class="pc">(</span><span class="w">p</span><span class="pc">,</span> <span class="pc">pv</span><span class="c">t_nodes,</span> <span class="c">pvt_itr);</span>
+  <span class="w">R</span><span class="pc">egionA</span><span class="c">ccessor&lt;AccessorType::Generic,</span> <span class="w">C</span><span class="c">ircuitNode&gt;</span> <span class="w">shr_nodes</span> <span class="c">=</span> <span class="pc">r</span><span class="c">egions[</span><span class="pc">1</span><span class="c">].</span><span class="w">g</span><span class="pc">et_a</span><span class="c">ccessor</span><span class="w">(</span><span class="pc">)</span><span class="c">.</span><span class="pc">t</span><span class="c">ypeify&lt;</span><span class="w">C</span><span class="c">ircuitNode</span><span class="pc">&gt;()</span><span class="c">;</span>
+  <span class="w">I</span><span class="pc">ndexI</span><span class="c">terator</span> <span class="w">shr_itr</span><span class="c">(</span><span class="w">p-</span><span class="c">&gt;</span><span class="w">s</span><span class="pc">hr_n</span><span class="c">odes);</span>
+  <span class="w">u</span><span class="c">pdate_region_voltages</span><span class="pc">(</span><span class="w">p</span><span class="pc">,</span> <span class="pc">sh</span><span class="c">r_nodes</span><span class="pc">,</span> <span class="pc">shr_i</span><span class="c">tr);</span>
+<span class="pc">#</span><span class="c">endif</span>
+<span class="pc">}</span>
+
+
+</pre>
+</body>
+</html>
+

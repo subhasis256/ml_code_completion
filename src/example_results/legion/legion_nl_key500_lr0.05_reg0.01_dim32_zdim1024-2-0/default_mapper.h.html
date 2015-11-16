@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+
+<span class="w">#ifndef</span> <span class="w">__DEFAULT_MAPPER_H__</span>
+<span class="w">#define</span> <span class="w">__DEFAULT_MAPPER_H__</span>
+
+<span class="w">#include</span> <span class="w">"legion.h"</span>
+<span class="w">#include</span> <span class="w">"mapping_utilities.h"</span>
+
+<span class="w">#include</span> <span class="w">&lt;cstdlib&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;cassert&gt;</span>
+<span class="w">#include</span> <span class="w">&lt;algorithm&gt;</span>
+
+<span class="w">namespace</span> <span class="w">LegionRuntime</span> <span class="w">{</span>
+  <span class="w">namespace</span> <span class="w">HighLevel</span> <span class="c">{</span>
+
+    
+    <span class="c">class</span> <span class="w">DefaultMapper</span> <span class="c">:</span> <span class="c">public</span> <span class="w">M</span><span class="pc">a</span><span class="c">pper</span> <span class="c">{</span>
+    <span class="c">public:</span>
+      <span class="c">DefaultMapper(Machine</span> <span class="c">machine,</span> <span class="c">HighLevelRuntime</span> <span class="c">*rt,</span> <span class="c">Processor</span> <span class="c">local);</span>
+      <span class="pc">D</span><span class="c">efaultMapper(const</span> <span class="c">DefaultMapper</span> <span class="c">&amp;rhs);</span>
+      <span class="c">virtual</span> <span class="c">~DefaultMapper(void);</span>
+    <span class="c">public:</span>
+      <span class="c">DefaultMapper&amp;</span> <span class="c">operator=(const</span> <span class="c">DefaultMapper</span> <span class="c">&amp;rhs);</span>
+    <span class="c">public:</span>
+      <span class="c">virtual</span> <span class="c">void</span> <span class="w">select_task_options</span><span class="c">(Task</span> <span class="c">*task);</span>
+      <span class="c">virtual</span> <span class="c">void</span> <span class="w">select_tasks_to_schedule</span><span class="c">(</span>
+                      <span class="c">const</span> <span class="c">std::list&lt;Task*&gt; &amp;</span><span class="w">ready_tasks</span><span class="c">);</span>
+      <span class="c">virtual</span> <span class="c">void</span> <span class="w">target_task_steal</span><span class="c">(</span>
+                            <span class="c">const</span> <span class="c">std::set&lt;Processor&gt; &amp;</span><span class="w">blacklist</span><span class="c">,</span>
+                            <span class="c">std::set&lt;Processor&gt; &amp;</span><span class="w">targets</span><span class="c">);</span>
+      <span class="c">virtual</span> <span class="c">void</span> <span class="w">permit_task_steal</span><span class="c">(</span><span class="pc">P</span><span class="c">rocessor</span> <span class="w">thief</span><span class="c">,</span> 
+                                <span class="w">c</span><span class="c">onst</span> <span class="c">std::vector&lt;</span><span class="w">c</span><span class="c">onst</span> <span class="pc">T</span><span class="c">ask</span><span class="pc">*</span><span class="c">&gt; &amp;</span><span class="w">tasks</span><span class="c">,</span>
+                                <span class="pc">st</span><span class="c">d::set&lt;</span><span class="pc">c</span><span class="c">onst</span> <span class="c">Task*&gt; &amp;</span><span class="w">to_steal</span><span class="pc">)</span><span class="c">;</span>
+      <span class="c">virtual</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">slice_domain</span><span class="c">(const</span> <span class="c">Task</span> <span class="c">*task,</span> <span class="pc">c</span><span class="c">onst</span> <span class="c">Domain</span> <span class="c">&amp;domain,</span>
+                                <span class="c">std::vector&lt;</span><span class="w">DomainSplit</span><span class="c">&gt; &amp;</span><span class="w">slices</span><span class="pc">);</span>
+      <span class="c">virtual</span> <span class="c">bool</span> <span class="w">pre_map_task</span><span class="c">(Task</span> <span class="c">*task);</span>
+      <span class="c">virtual</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">select_task_variant</span><span class="c">(</span><span class="pc">T</span><span class="c">ask</span> <span class="c">*task);</span>
+      <span class="c">virtual</span> <span class="pc">b</span><span class="c">ool</span> <span class="w">map_task</span><span class="c">(</span><span class="pc">T</span><span class="c">ask</span> <span class="c">*task);</span>
+      <span class="c">virtual</span> <span class="c">bool</span> <span class="w">map_copy</span><span class="c">(</span><span class="w">Copy</span> <span class="c">*copy);</span>
+      <span class="c">virtual</span> <span class="c">bool</span> <span class="w">map_inline</span><span class="c">(</span><span class="w">Inline</span> <span class="c">*</span><span class="w">inline_operation</span><span class="c">);</span>
+      <span class="c">virtual</span> <span class="pc">b</span><span class="c">ool</span> <span class="w">map_must_epoch</span><span class="c">(const</span> <span class="pc">s</span><span class="c">td::vector&lt;</span><span class="pc">T</span><span class="c">ask*&gt; &amp;</span><span class="w">tasks</span><span class="pc">,</span>
+                            <span class="pc">c</span><span class="c">onst</span> <span class="c">std::vector&lt;</span><span class="w">MappingConstraint</span><span class="c">&gt; &amp;</span><span class="w">constraints</span><span class="c">,</span>
+                            <span class="w">M</span><span class="pc">ap</span><span class="c">pingTagID</span> <span class="w">t</span><span class="pc">ag)</span><span class="c">;</span>
+      <span class="c">virtual</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">notify_mapping_result</span><span class="c">(const</span> <span class="w">Mappable</span> <span class="pc">*</span><span class="w">mappable</span><span class="pc">)</span><span class="c">;</span>
+      <span class="c">virtual</span> <span class="pc">v</span><span class="c">oid</span> <span class="w">notify_mapping_failed</span><span class="c">(const</span> <span class="pc">M</span><span class="c">appable</span> <span class="c">*mappable</span><span class="pc">)</span><span class="c">;</span>
+      <span class="pc">v</span><span class="c">irtual</span> <span class="pc">b</span><span class="c">ool</span> <span class="w">rank_copy_targets</span><span class="c">(const</span> <span class="pc">M</span><span class="c">appable</span> <span class="c">*mappable</span><span class="pc">,</span>
+                                     <span class="pc">L</span><span class="c">ogicalRegion</span> <span class="w">rebuild_region</span><span class="c">,</span>
+                                     <span class="c">const</span> <span class="c">std::set&lt;Memory&gt; &amp;</span><span class="w">current_instances</span><span class="c">,</span>
+                                     <span class="c">bool</span> <span class="w">complete</span><span class="c">,</span>
+                                     <span class="c">size_t</span> <span class="w">max_blocking_factor</span><span class="c">,</span>
+                                     <span class="c">std::set&lt;Memory&gt; &amp;</span><span class="w">to_reuse</span><span class="c">,</span>
+                                     <span class="c">std::vector&lt;Memory&gt; &amp;</span><span class="w">to_create</span><span class="c">,</span>
+                                     <span class="c">bool</span> <span class="c">&amp;</span><span class="w">create_one</span><span class="c">,</span>
+                                     <span class="c">size_t</span> <span class="c">&amp;</span><span class="w">blocking_factor</span><span class="c">);</span>
+      <span class="pc">v</span><span class="c">irtual</span> <span class="c">void</span> <span class="w">rank_copy_sources</span><span class="c">(const</span> <span class="w">Mappable</span> <span class="c">*</span><span class="w">mappable</span><span class="c">,</span>
+                      <span class="c">const</span> <span class="c">std::set&lt;Memory&gt; &amp;</span><span class="w">current_instances</span><span class="c">,</span>
+                      <span class="c">Memory</span> <span class="w">dst_mem</span><span class="c">,</span> 
+                      <span class="c">std::vector&lt;Memory&gt; &amp;</span><span class="w">chosen_order</span><span class="pc">)</span><span class="c">;</span>
+      <span class="c">virtual</span> <span class="c">void</span> <span class="w">notify_profiling_info</span><span class="c">(const</span> <span class="c">Task</span> <span class="c">*task);</span>
+      <span class="c">virtual</span> <span class="c">bool</span> <span class="w">speculate_on_predicate</span><span class="c">(const</span> <span class="c">Mappable</span> <span class="c">*mappable,</span>
+                                          <span class="c">bool</span> <span class="c">&amp;</span><span class="w">spec_value</span><span class="c">);</span>
+      <span class="pc">vi</span><span class="c">rtual</span> <span class="c">void</span> <span class="w">configure_context</span><span class="c">(</span><span class="pc">T</span><span class="c">ask</span> <span class="c">*task);</span>
+      <span class="c">virtual</span> <span class="w">int</span> <span class="w">get_tunable_value</span><span class="c">(const</span> <span class="c">Task</span> <span class="c">*task,</span> 
+                                    <span class="w">TunableID</span> <span class="w">t</span><span class="pc">i</span><span class="c">d</span><span class="pc">,</span>
+                                    <span class="c">MappingTagID</span> <span class="c">tag</span><span class="pc">)</span><span class="c">;</span>
+      <span class="c">virtual</span> <span class="c">void</span> <span class="w">handle_message</span><span class="c">(</span><span class="w">P</span><span class="c">rocessor</span> <span class="w">s</span><span class="pc">o</span><span class="c">urce,</span>
+                                  <span class="c">const</span> <span class="w">v</span><span class="c">oid</span> <span class="c">*</span><span class="w">message</span><span class="c">,</span>
+                                  <span class="c">size_t</span> <span class="w">length</span><span class="c">);</span>
+      <span class="pc">v</span><span class="c">irtual</span> <span class="c">void</span> <span class="w">handle_mapper_task_result</span><span class="c">(</span><span class="w">MapperEvent</span> <span class="w">e</span><span class="c">vent,</span>
+                                             <span class="pc">c</span><span class="c">onst</span> <span class="pc">v</span><span class="c">oid</span> <span class="c">*</span><span class="w">r</span><span class="pc">es</span><span class="c">ult,</span>
+                                             <span class="c">size_t</span> <span class="w">result_size</span><span class="pc">);</span>
+    <span class="c">public:</span>
+      
+      
+      
+      <span class="pc">s</span><span class="c">tatic</span> <span class="w">P</span><span class="pc">roc</span><span class="c">essor</span> <span class="w">select_random_processor</span><span class="c">(</span>
+                              <span class="pc">c</span><span class="c">onst</span> <span class="c">std::set&lt;</span><span class="pc">P</span><span class="c">rocessor&gt; &amp;</span><span class="w">options</span><span class="c">,</span> 
+                              <span class="w">P</span><span class="c">rocessor::</span><span class="pc">K</span><span class="c">ind</span> <span class="w">filter</span><span class="c">,</span> <span class="w">M</span><span class="pc">ac</span><span class="c">hine</span> <span class="w">m</span><span class="c">achine</span><span class="pc">)</span><span class="c">;</span>
+      
+      <span class="pc">s</span><span class="c">tatic</span> <span class="c">void</span> <span class="w">decompose_index_space</span><span class="c">(</span><span class="pc">c</span><span class="c">onst</span> <span class="w">D</span><span class="c">omain</span> <span class="c">&amp;</span><span class="pc">d</span><span class="c">omain,</span> 
+                              <span class="pc">c</span><span class="c">onst</span> <span class="c">std::vector&lt;</span><span class="pc">Pr</span><span class="c">ocessor&gt; &amp;</span><span class="w">targets</span><span class="c">,</span>
+                              <span class="w">u</span><span class="c">nsigned</span> <span class="w">splitting_factor</span><span class="c">,</span> 
+                              <span class="c">std::vector&lt;</span><span class="w">M</span><span class="pc">ap</span><span class="c">per::</span><span class="w">DomainSplit</span><span class="pc">&gt;</span><span class="c"> &amp;</span><span class="w">slice</span><span class="pc">)</span><span class="c">;</span>
+    <span class="w">p</span><span class="pc">ro</span><span class="c">tected:</span>
+      <span class="w">c</span><span class="c">onst</span> <span class="w">P</span><span class="pc">roc</span><span class="c">essor</span> <span class="w">lo</span><span class="pc">cal_</span><span class="c">proc;</span>
+      <span class="c">const</span> <span class="w">P</span><span class="pc">roc</span><span class="c">essor</span><span class="pc">:</span><span class="c">:Kind</span> <span class="w">local_kind</span><span class="c">;</span>
+      <span class="c">const</span> <span class="w">M</span><span class="pc">a</span><span class="c">chine</span> <span class="w">m</span><span class="c">achine</span><span class="pc">;</span>
+      
+      
+      <span class="w">u</span><span class="c">nsigned</span> <span class="w">max_steals_per_theft</span><span class="pc">;</span>
+      
+      
+      <span class="pc">u</span><span class="c">nsigned</span> <span class="w">max_steal_count</span><span class="c">;</span>
+      
+      
+      
+      
+      <span class="pc">u</span><span class="c">nsigned</span> <span class="w">s</span><span class="pc">p</span><span class="c">litting_factor;</span>
+      
+      
+      <span class="pc">b</span><span class="c">ool</span> <span class="w">breadth_first_traversal</span><span class="c">;</span>
+      
+      
+      <span class="c">bool</span> <span class="w">war_enabled</span><span class="c">;</span>
+      
+      <span class="c">bool</span> <span class="w">stealing_enabled</span><span class="c">;</span>
+      
+      <span class="pc">u</span><span class="c">nsigned</span> <span class="w">max_schedule_count</span><span class="c">;</span>
+      
+      <span class="pc">u</span><span class="c">nsigned</span> <span class="w">max_failed_mappings</span><span class="c">;</span>
+      <span class="w">s</span><span class="pc">t</span><span class="c">d::map&lt;</span><span class="w">U</span><span class="pc">n</span><span class="c">iqueID,</span><span class="pc">u</span><span class="c">nsigned&gt;</span> <span class="w">failed_mappings</span><span class="c">;</span>
+      
+      <span class="w">MappingUtilities:</span><span class="c">:</span><span class="w">MachineQueryInterface</span> <span class="w">machine_interface</span><span class="c">;</span>
+      <span class="w">M</span><span class="pc">ap</span><span class="c">pingUtilities::</span><span class="w">MappingMemoizer</span> <span class="w">memoizer</span><span class="c">;</span>
+      <span class="w">Ma</span><span class="pc">ppingU</span><span class="c">tilities::</span><span class="w">MappingProfiler</span> <span class="w">profiler</span><span class="c">;</span>
+    <span class="c">};</span>
+
+  <span class="c">};</span>
+<span class="pc">}</span><span class="c">;</span>
+
+<span class="c">#</span><span class="w">e</span><span class="c">ndif</span> 
+
+
+
+
+</pre>
+</body>
+</html>
+

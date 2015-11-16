@@ -8,7 +8,7 @@ import os
 import re
 from utils import matchingFiles, tokenize
 
-def FrequentWords(data_dirs, suffixes, max_key_words, percentile_key_words):
+def FrequentWords(data_dirs, suffixes, max_key_words):
   """
   Returns a dictionary of min(max_key_words, percentile_key_words), giving key
   word with its count.
@@ -30,6 +30,6 @@ def FrequentWords(data_dirs, suffixes, max_key_words, percentile_key_words):
     if (files_done % 5000 == 0):
       print("Completed parsing %d files ..." % files_done)
 
-  num_key_words = min(max_key_words,
-                      math.ceil(percentile_key_words * len(token_count)))
-  return token_count.most_common(num_key_words)
+#  num_key_words = min(max_key_words,
+#                      math.ceil(percentile_key_words * len(token_count)))
+  return token_count.most_common(max_key_words)
