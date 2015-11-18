@@ -89,23 +89,20 @@ if __name__ == '__main__':
 
 #    model = PositionDependentVectorModel(keywords, winSize=args.win,
 #                                         wdim=args.dim, stepsize=args.lr,
-#                                         reg=args.reg,
-#                                         batchsize=args.batch)
+#                                         reg=args.reg)
 #    model = ConstantAttentionVectorModel(keywords, winSize=args.win,
 #                                         wdim=args.dim, stepsize=args.lr,
-#                                         reg=args.reg,
-#                                         batchsize=args.batch)
+#                                         reg=args.reg)
     model = NonLinearVectorModel(keywords, winSize=args.win,
                                  wdim=args.dim, zdim=args.zdim,
                                  stepsize=args.lr,
-                                 reg=args.reg,
-                                 batchsize=args.batch)
+                                 reg=args.reg)
     if args.restore is not None:
         model.restoreFrom(args.restore)
         print 'Restored model from %s' % args.restore
 
     if args.command == 'test':
-        model.test(filesAndTokens)
+        model.test(filesAndTokens, batchsize=args.batch)
 
     elif args.command == 'predict':
         for _ in range(100):
@@ -129,4 +126,4 @@ if __name__ == '__main__':
                 print >> fp, utils.HTMLFooter()
 
     else:
-        model.train(filesAndTokens, ckpt_prefix=args.ckpt)
+        model.train(filesAndTokens, ckpt_prefix=args.ckpt, batchsize=args.batch)

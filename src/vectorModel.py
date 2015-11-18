@@ -3,10 +3,10 @@ from windowModel import WindowModel
 from utils import softmaxLossAndGrads, relu, drelu
 
 class PositionDependentVectorModel(WindowModel):
-    def __init__(self, keywords, winSize=100, stepsize=0.05, reg=0.01, batchsize=32,
+    def __init__(self, keywords, winSize=100, stepsize=0.05, reg=0.01,
                  wdim=32):
         super(PositionDependentVectorModel, self).__init__(keywords, winSize,
-                                                           stepsize, reg, batchsize)
+                                                           stepsize, reg)
         # dimension of each wordvector
         self.wdim = wdim
         # initialize random parameters for weights
@@ -39,10 +39,10 @@ class PositionDependentVectorModel(WindowModel):
         return preds, probs, loss, grads
 
 class NonLinearVectorModel(WindowModel):
-    def __init__(self, keywords, winSize=100, stepsize=0.05, reg=0.01, batchsize=32,
+    def __init__(self, keywords, winSize=100, stepsize=0.05, reg=0.01,
                  wdim=32, zdim=512):
         super(NonLinearVectorModel, self).__init__(keywords, winSize,
-                                                   stepsize, reg, batchsize)
+                                                   stepsize, reg)
         # dimension of each wordvector
         self.wdim = wdim
         self.zdim = zdim
@@ -86,10 +86,10 @@ class NonLinearVectorModel(WindowModel):
 
 
 class ConstantAttentionVectorModel(WindowModel):
-    def __init__(self, keywords, winSize=100, stepsize=0.05, reg=0.01, batchsize=32,
+    def __init__(self, keywords, winSize=100, stepsize=0.05, reg=0.01,
                  wdim=32):
         super(ConstantAttentionVectorModel, self).__init__(keywords, winSize,
-                                                           stepsize, reg, batchsize)
+                                                           stepsize, reg)
         # dimension of each wordvector
         self.wdim = wdim
         # initialize random parameters for weights
