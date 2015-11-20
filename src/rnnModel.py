@@ -5,7 +5,7 @@ import random
 import numpy as np
 import updates
 import cPickle as pkl
-from utils import colorPrint
+from utils import colorPrint, WeightedRandomSampler
 import sys
 import collections
 import time
@@ -113,19 +113,36 @@ class GenericRNNModel(Model):
         # filter out files with < winSize+1 tokens
         filtTokenIDs = [tokID for _,tokID in filesAndTokenIDs
                         if len(tokID) >= self.winSize+1]
-        # generate a list of all possible window beginning indices
-        listOfBeginIdxs = [[(fid,tid) for tid in range(len(toks)-self.winSize)]
-                           for fid,toks in enumerate(filtTokenIDs)]
-        beginIdxs = reduce(lambda x,y:x+y, listOfBeginIdxs, [])
-        if randomize:
-            random.shuffle(beginIdxs)
+        # generate a weighting array for weighting file IDs
+        weights = [len(toks)-self.winSize for toks in filtTokenIDs]
+        sampler = WeightedRandomSampler(weights)
+        numWins = sum(weights)
 
-        for i in range(0,len(beginIdxs),batchsize):
-            idxs = beginIdxs[i:i+batchsize]
-            Xs = [filtTokenIDs[fid][idx:idx+self.winSize] for fid,idx in idxs]
-            ys = [filtTokenIDs[fid][idx+self.winSize] for fid,idx in idxs]
+#        # generate a list of all possible window beginning indices
+#        numIdxs = sum([len(toks)-self.winSize for toks in filtTokenIDs])
+#        beginIdxs = [(None,None) for _ in range(numIdxs)]
+##        listOfBeginIdxs = [[(fid,tid) for tid in range(len(toks)-self.winSize)]
+##                           for fid,toks in enumerate(filtTokenIDs)]
+#        i = 0
+#        for fid,toks in enumerate(filtTokenIDs):
+#            for tid in range(len(toks)-self.winSize):
+#                beginIdxs[i] = (fid,tid)
+#                i += 1
+#
+##        beginIdxs = reduce(lambda x,y:x+y, listOfBeginIdxs, [])
+#        if randomize:
+#            random.shuffle(beginIdxs)
+
+        for i in range(0,numWins,batchsize):
+            idxs = [sampler.generate() for _ in range(batchsize)]
+            widxs = [np.random.randint(len(filtTokenIDs[idx])-self.winSize)
+                     for idx in idxs]
+            Xs = [filtTokenIDs[idx][widx:widx+self.winSize]
+                  for widx,idx in zip(widxs,idxs)]
+            ys = [filtTokenIDs[idx][widx+self.winSize]
+                  for widx,idx in zip(widxs,idxs)]
             Xys = [self.makeWindow(x,y,True) for x,y in zip(Xs,ys)]
-            Xys = [(x,y) for x,y in Xys 
+            Xys = [(x,y) for x,y in Xys
                    if y != len(self.keywordList) + self.winSize]
             Xs = [x for x,y in Xys]
             ys = [y for x,y in Xys]

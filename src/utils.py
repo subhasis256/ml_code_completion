@@ -4,6 +4,7 @@ import re
 import fnmatch as fn
 import os
 import cgi
+import random
 
 def CUncomment(content):
     return re.sub(r'/\*.*?\*/', '', content,
@@ -165,3 +166,53 @@ def relu(x):
 
 def drelu(dy, y):
     return dy*(y > 0)
+
+class WeightedRandomSampler:
+    def __init__(self, weights):
+        """
+        weights should be integer array
+        """
+        N = len(weights)
+        S = sum(weights)
+        self.H = S // N
+        # normalize the weights array so that its sum is exactly H*N
+        self.weights = [w for w in weights]
+        residue = S - self.H*N
+        for j in range(residue):
+            self.weights[j] -= 1
+        # ok now let us generate the alias array
+        overfull = [i for i,w in enumerate(self.weights)
+                    if w > self.H]
+        underfull = [i for i,w in enumerate(self.weights)
+                     if w < self.H]
+        self.K = [-1 for _ in range(N)]
+        self.U = [self.H for _ in range(N)]
+
+        while len(underfull) > 0:
+            # get one from overfull and one from underfull
+            ov = overfull.pop()
+            un = underfull.pop()
+            # set the alias entry for un
+            self.K[un] = ov
+            self.U[un] = self.weights[un]
+            # compute correct value for overfull
+            self.weights[ov] = self.weights[ov] + self.weights[un] - self.H
+            # make un exact
+            self.weights[un] = self.H
+            if self.weights[ov] > self.H:
+                overfull.append(ov)
+            elif self.weights[ov] < self.H:
+                underfull.append(ov)
+
+    def generate(self):
+        idx = np.random.randint(len(self.weights))
+        r = np.random.randint(self.H+1)
+        if r <= self.U[idx]:
+            return idx
+        else:
+            return self.K[idx]
+
+if __name__ == '__main__':
+    sampler = WeightedRandomSampler([10,3,5,4,7,9,2])
+    for _ in range(20):
+        print sampler.generate()
