@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+
+
+
+
+<span class="w">from</span> <span class="w">__future__</span> <span class="w">import</span> <span class="w">division,</span> <span class="w">absolute_import</span>
+
+<span class="w">import</span> <span class="w">os</span>
+<span class="w">import</span> <span class="w">sys</span>
+<span class="w">import</span> <span class="w">errno</span>
+<span class="w">import</span> <span class="w">base64</span>
+
+<span class="w">from</span> <span class="w">hashlib</span> <span class="w">import</span> <span class="w">sha1</span>
+<span class="w">from</span> <span class="w">warnings</span> <span class="w">import</span> <span class="w">warn</span>
+
+<span class="w">from</span> <span class="w">os.path</span> <span class="w">import</span> <span class="w">isabs,</span> <span class="w">exists,</span> <span class="w">normpath,</span> <span class="w">abspath,</span> <span class="w">splitext</span>
+<span class="w">from</span> <span class="w">os.path</span> <span class="pc">i</span><span class="c">mport</span> <span class="w">b</span><span class="c">asename</span><span class="w">,</span> <span class="w">di</span><span class="pc">rn</span><span class="c">ame,</span> <span class="w">j</span><span class="c">oin</span> <span class="w">a</span><span class="c">s</span> <span class="w">joinpath</span>
+<span class="c">from</span> <span class="w">o</span><span class="c">s</span> <span class="pc">i</span><span class="c">mport</span> <span class="w">listdir</span><span class="pc">,</span> <span class="w">utime</span><span class="pc">,</span> <span class="w">st</span><span class="pc">at</span>
+
+<span class="c">from</span> <span class="w">st</span><span class="pc">at</span> <span class="pc">i</span><span class="c">mport</span> <span class="w">S_ISREG</span><span class="pc">,</span> <span class="w">S_ISDIR</span><span class="pc">,</span> <span class="w">S_IMODE</span><span class="c">,</span> <span class="w">S_ISBLK</span><span class="c">,</span> <span class="w">S_ISSOCK</span>
+<span class="pc">f</span><span class="c">rom</span> <span class="w">sta</span><span class="pc">t</span> <span class="c">import</span> <span class="w">S_IRUSR</span><span class="pc">,</span> <span class="w">S_IWUSR</span><span class="c">,</span> <span class="w">S_IXUSR</span>
+<span class="pc">f</span><span class="c">rom</span> <span class="w">sta</span><span class="pc">t</span> <span class="c">import</span> <span class="w">S_IRGRP</span><span class="pc">,</span> <span class="w">S_IWGRP</span><span class="pc">,</span> <span class="w">S_IXGRP</span>
+<span class="pc">f</span><span class="c">rom</span> <span class="w">sta</span><span class="pc">t</span> <span class="c">import</span> <span class="w">S_IROTH</span><span class="pc">,</span> <span class="w">S_IWOTH</span><span class="c">,</span> <span class="w">S_IXOTH</span>
+
+<span class="pc">f</span><span class="c">rom</span> <span class="pc">z</span><span class="c">ope.</span><span class="w">i</span><span class="pc">nterf</span><span class="c">ace</span> <span class="c">import</span> <span class="w">I</span><span class="pc">n</span><span class="c">terface</span><span class="pc">,</span> <span class="w">A</span><span class="pc">t</span><span class="c">tribute</span><span class="pc">,</span> <span class="w">im</span><span class="pc">pl</span><span class="c">ementer</span>
+
+
+
+
+
+<span class="c">from</span> <span class="c">twisted.python</span><span class="pc">.c</span><span class="c">ompat</span> <span class="c">import</span> <span class="w">comparable</span><span class="pc">,</span> <span class="w">cmp</span><span class="pc">,</span> <span class="w">u</span><span class="pc">nic</span><span class="c">ode</span>
+<span class="pc">f</span><span class="c">rom</span> <span class="c">twisted.python.</span><span class="w">deprecate</span> <span class="c">import</span> <span class="w">d</span><span class="pc">eprecated</span>
+<span class="c">from</span> <span class="c">twisted.python</span><span class="pc">.</span><span class="w">r</span><span class="pc">u</span><span class="c">ntime</span> <span class="c">import</span> <span class="c">platform</span>
+<span class="pc">f</span><span class="c">rom</span> <span class="c">twisted.python.</span><span class="w">versions</span> <span class="c">import</span> <span class="w">V</span><span class="c">ersion</span>
+
+<span class="c">from</span> <span class="c">twisted.</span><span class="pc">p</span><span class="c">ython.</span><span class="w">win32</span> <span class="c">import</span> <span class="w">ERROR_FILE_NOT_FOUND</span><span class="pc">,</span> <span class="w">ERROR_PATH_NOT_FOUND</span>
+<span class="c">from</span> <span class="c">twisted.</span><span class="pc">p</span><span class="c">ython.win32</span> <span class="c">import</span> <span class="w">ERROR_INVALID_NAME</span><span class="pc">,</span> <span class="w">ERROR_DIRECTORY</span><span class="pc">,</span> <span class="w">O_BINARY</span>
+<span class="c">from</span> <span class="c">twisted.</span><span class="pc">p</span><span class="c">ython.</span><span class="w">w</span><span class="pc">i</span><span class="c">n32</span> <span class="c">import</span> <span class="w">WindowsError</span>
+
+<span class="c">from</span> <span class="c">twisted.</span><span class="pc">p</span><span class="c">ython.</span><span class="w">u</span><span class="c">til</span> <span class="c">import</span> <span class="w">FancyEqMixin</span>
+
+<span class="w">_CREATE_FLAGS</span> <span class="w">= </span><span class="pc">(</span><span class="w">o</span><span class="c">s.</span><span class="w">O_EXCL</span> <span class="w">|</span>
+                 <span class="pc">o</span><span class="c">s.</span><span class="w">O_CREAT</span> <span class="w">|</span>
+                 <span class="c">os.</span><span class="w">O_RDWR</span> <span class="w">|</span>
+                 <span class="w">O</span><span class="pc">_B</span><span class="c">INARY</span><span class="pc">)</span>
+
+
+
+<span class="c">def</span> <span class="w">_stub_islink</span><span class="c">(</span><span class="w">p</span><span class="c">ath):</span>
+    
+    <span class="pc">r</span><span class="c">eturn</span> <span class="w">F</span><span class="pc">al</span><span class="c">se</span>
+
+
+<span class="w">islink</span> <span class="c">=</span> <span class="w">g</span><span class="c">etattr(</span><span class="pc">o</span><span class="c">s.path</span><span class="pc">, </span><span class="c">'</span><span class="pc">i</span><span class="c">slink</span><span class="pc">',</span> <span class="w">_</span><span class="pc">s</span><span class="c">tub_islink)</span>
+<span class="w">randomBytes</span> <span class="c">=</span> <span class="c">os.</span><span class="w">urandom</span>
+<span class="w">armor</span> <span class="c">=</span> <span class="w">base64</span><span class="pc">.</span><span class="w">urlsafe_b64encode</span>
+
+
+
+<span class="w">c</span><span class="c">lass</span> <span class="w">IFilePath</span><span class="c">(</span><span class="w">I</span><span class="c">nterface):</span>
+    
+    <span class="w">sep</span> <span class="c">=</span> <span class="w">A</span><span class="c">ttribute</span><span class="pc">("</span><span class="w">T</span><span class="pc">he</span> <span class="w">p</span><span class="c">ath</span> <span class="w">separator</span> <span class="w">t</span><span class="c">o</span> <span class="w">u</span><span class="pc">s</span><span class="c">e</span> <span class="w">i</span><span class="pc">n</span> <span class="w">s</span><span class="pc">tri</span><span class="c">ng</span> <span class="w">representations</span><span class="pc">")</span>
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">c</span><span class="c">hild(</span><span class="w">n</span><span class="c">ame</span><span class="pc">)</span><span class="c">:</span>
+        
+
+    <span class="w">d</span><span class="c">ef</span> <span class="w">o</span><span class="c">pen(</span><span class="w">m</span><span class="pc">ode=</span><span class="c">"</span><span class="w">r</span><span class="c">"):</span>
+        
+
+    <span class="w">d</span><span class="pc">ef</span> <span class="w">changed</span><span class="pc">()</span><span class="c">:</span>
+        
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">getsize</span><span class="c">():</span>
+        
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">getModificationTime</span><span class="pc">()</span><span class="c">:</span>
+        
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">getStatusChangeTime</span><span class="c">():</span>
+        
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">getAccessTime</span><span class="c">():</span>
+        
+
+    <span class="w">d</span><span class="c">ef</span> <span class="w">e</span><span class="pc">xi</span><span class="c">sts():</span>
+        
+
+    <span class="w">d</span><span class="c">ef</span> <span class="w">isdir</span><span class="c">():</span>
+        
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">isfile</span><span class="c">():</span>
+        
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">ch</span><span class="pc">ildr</span><span class="c">en():</span>
+        
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">b</span><span class="pc">a</span><span class="c">sename():</span>
+        
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">p</span><span class="pc">are</span><span class="c">nt():</span>
+        
+
+    <span class="w">d</span><span class="c">ef</span> <span class="w">sibling</span><span class="pc">(</span><span class="w">n</span><span class="c">ame):</span>
+        
+
+
+<span class="w">cl</span><span class="pc">a</span><span class="c">ss</span> <span class="w">InsecurePath</span><span class="pc">(E</span><span class="c">xception):</span>
+    
+
+
+
+<span class="pc">c</span><span class="c">lass</span> <span class="w">LinkError</span><span class="c">(</span><span class="pc">E</span><span class="c">xception):</span>
+    
+
+
+
+<span class="pc">c</span><span class="c">lass</span> <span class="w">UnlistableError</span><span class="c">(</span><span class="w">O</span><span class="pc">S</span><span class="c">Error):</span>
+    
+    <span class="pc">d</span><span class="c">ef</span> <span class="pc">_</span><span class="c">_init__(self,</span> <span class="w">originalException</span><span class="c">):</span>
+        
+        <span class="c">self.</span><span class="w">_</span><span class="pc">_d</span><span class="c">ict__</span><span class="pc">.</span><span class="w">u</span><span class="pc">p</span><span class="c">date(originalException</span><span class="pc">.</span><span class="w">_</span><span class="pc">_d</span><span class="c">ict__)</span>
+        <span class="pc">s</span><span class="c">elf.</span><span class="pc">o</span><span class="c">riginalException</span> <span class="c">=</span> <span class="c">originalException</span>
+
+
+
+<span class="w">c</span><span class="c">lass</span> <span class="w">_WindowsUnlistableError</span><span class="c">(</span><span class="w">U</span><span class="c">nlistableError</span><span class="pc">,</span> <span class="w">WindowsError</span><span class="c">):</span>
+    
+
+
+
+<span class="c">def</span> <span class="w">_secureEnoughString</span><span class="c">(</span><span class="w">p</span><span class="c">ath):</span>
+    
+    <span class="w">secureishString</span> <span class="c">=</span> <span class="w">armor</span><span class="c">(</span><span class="w">sh</span><span class="pc">a</span><span class="c">1</span><span class="w">(randomBytes(64)).di</span><span class="pc">g</span><span class="c">est</span><span class="w">())[:1</span><span class="pc">6</span><span class="w">]</span>
+    <span class="pc">r</span><span class="c">eturn</span> <span class="w">_coerceToFilesystemEncoding</span><span class="c">(</span><span class="w">p</span><span class="c">ath,</span> <span class="c">secureishString</span><span class="pc">)</span>
+
+
+
+<span class="pc">c</span><span class="c">lass</span> <span class="w">AbstractFilePath</span><span class="c">(object):</span>
+    
+
+    <span class="c">def</span> <span class="w">getContent</span><span class="c">(self):</span>
+        
+        <span class="w">f</span><span class="pc">p</span> <span class="c">=</span> <span class="pc">s</span><span class="c">elf.</span><span class="w">o</span><span class="pc">p</span><span class="c">en</span><span class="pc">()</span>
+        <span class="w">t</span><span class="c">ry:</span>
+            <span class="pc">r</span><span class="c">eturn</span> <span class="w">fp</span><span class="c">.</span><span class="w">r</span><span class="pc">ea</span><span class="c">d()</span>
+        <span class="w">f</span><span class="pc">i</span><span class="c">nally:</span>
+            <span class="w">f</span><span class="pc">p</span><span class="c">.</span><span class="pc">c</span><span class="c">lose()</span>
+
+
+    <span class="c">def</span> <span class="w">parents</span><span class="c">(self):</span>
+        
+        <span class="w">p</span><span class="pc">at</span><span class="c">h</span> <span class="c">=</span> <span class="pc">s</span><span class="c">elf</span>
+        <span class="w">p</span><span class="pc">ar</span><span class="c">ent</span> <span class="w">=</span> <span class="w">p</span><span class="c">ath.</span><span class="pc">par</span><span class="c">ent()</span>
+        
+        <span class="w">w</span><span class="c">hile</span> <span class="pc">p</span><span class="c">ath</span> <span class="pc">!</span><span class="c">=</span> <span class="pc">par</span><span class="c">ent:</span>
+            <span class="w">y</span><span class="c">ield</span> <span class="w">p</span><span class="pc">ar</span><span class="c">ent</span>
+            <span class="w">p</span><span class="pc">at</span><span class="c">h</span> <span class="pc">=</span> <span class="w">p</span><span class="pc">ar</span><span class="c">ent</span>
+            <span class="w">p</span><span class="pc">arent</span> <span class="c">=</span> <span class="w">p</span><span class="pc">ar</span><span class="c">ent.</span><span class="pc">par</span><span class="c">ent()</span>
+
+
+    <span class="w">d</span><span class="c">ef</span> <span class="w">ch</span><span class="pc">ildr</span><span class="c">en(self):</span>
+        
+        <span class="w">t</span><span class="c">ry:</span>
+            <span class="w">subnames</span> <span class="c">=</span> <span class="c">self.</span><span class="w">listdir</span><span class="c">()</span>
+        <span class="c">except</span> <span class="w">WindowsError</span> <span class="w">a</span><span class="c">s</span> <span class="w">winErrObj</span><span class="c">:</span>
+            
+            
+            
+            
+
+            
+            
+            
+            
+            
+
+            
+            
+
+            
+            
+            
+
+            
+            
+            
+            
+            <span class="w">winerror</span> <span class="c">=</span> <span class="w">g</span><span class="c">etattr(</span><span class="pc">w</span><span class="c">inErrObj</span><span class="pc">, '</span><span class="c">winerror</span><span class="pc">',</span> <span class="pc">winE</span><span class="c">rrObj</span><span class="pc">.</span><span class="w">er</span><span class="pc">rn</span><span class="c">o)</span>
+            <span class="pc">i</span><span class="c">f</span> <span class="pc">w</span><span class="c">inerror</span> <span class="w">n</span><span class="c">ot</span> <span class="w">i</span><span class="c">n</span> <span class="c">(</span><span class="w">ERROR_PATH_NOT_FOUND</span><span class="pc">,</span>
+                                <span class="w">ERROR_FILE_NOT_FOUND</span><span class="pc">,</span>
+                                <span class="w">ERROR_INVALID_NAME</span><span class="pc">,</span>
+                                <span class="w">ERROR_DIRECTORY</span><span class="c">):</span>
+                <span class="w">r</span><span class="pc">a</span><span class="c">ise</span>
+            <span class="w">r</span><span class="pc">a</span><span class="c">ise</span> <span class="w">_WindowsUnlistableError</span><span class="c">(</span><span class="w">w</span><span class="pc">inE</span><span class="c">rrObj</span><span class="pc">)</span>
+        <span class="w">e</span><span class="pc">x</span><span class="c">cept</span> <span class="w">O</span><span class="c">SError</span> <span class="pc">a</span><span class="c">s</span> <span class="w">ose</span><span class="c">:</span>
+            <span class="pc">i</span><span class="c">f</span> <span class="w">o</span><span class="c">se.</span><span class="w">e</span><span class="c">rrno</span> <span class="w">n</span><span class="c">ot</span> <span class="w">i</span><span class="pc">n</span> <span class="c">(</span><span class="w">e</span><span class="pc">r</span><span class="c">rno.</span><span class="w">ENOENT</span><span class="pc">,</span> <span class="w">e</span><span class="c">rrno.</span><span class="w">ENOTDIR</span><span class="c">):</span>
+                
+                
+                
+                <span class="pc">ra</span><span class="c">ise</span>
+            <span class="w">r</span><span class="pc">a</span><span class="c">ise</span> <span class="w">UnlistableError</span><span class="c">(</span><span class="w">o</span><span class="pc">s</span><span class="c">e</span><span class="pc">)</span>
+        <span class="pc">r</span><span class="c">eturn</span> <span class="w">m</span><span class="pc">a</span><span class="c">p(self</span><span class="pc">.</span><span class="w">chi</span><span class="pc">ld</span><span class="c">,</span> <span class="w">subnames</span><span class="pc">)</span>
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">walk</span><span class="c">(self,</span> <span class="w">descend</span><span class="pc">=</span><span class="c">None):</span>
+        
+        <span class="w">y</span><span class="c">ield</span> <span class="pc">s</span><span class="c">elf</span>
+        <span class="w">i</span><span class="c">f</span> <span class="pc">s</span><span class="c">elf.</span><span class="w">isdir(</span><span class="pc">)</span><span class="c">:</span>
+            <span class="w">f</span><span class="c">or</span> <span class="w">c</span> <span class="c">in</span> <span class="c">self.</span><span class="w">c</span><span class="c">hildren</span><span class="w">(</span><span class="pc">)</span><span class="c">:</span>
+                
+                
+                <span class="c">if</span> <span class="pc">(d</span><span class="c">escend</span> <span class="w">i</span><span class="pc">s</span> <span class="c">None</span> <span class="pc">o</span><span class="c">r</span> <span class="pc">d</span><span class="c">escend</span><span class="pc">(</span><span class="w">c)</span><span class="pc">)</span><span class="c">:</span>
+                    <span class="pc">f</span><span class="c">or</span> <span class="w">subc</span> <span class="c">in</span> <span class="w">c</span><span class="pc">.</span><span class="w">w</span><span class="c">alk</span><span class="pc">(d</span><span class="c">escend</span><span class="pc">):</span>
+                        <span class="c">if</span> <span class="w">o</span><span class="pc">s</span><span class="c">.path.</span><span class="w">realpath</span><span class="c">(self.</span><span class="pc">p</span><span class="c">ath</span><span class="w">).s</span><span class="pc">t</span><span class="c">artswith(</span>
+                            <span class="w">o</span><span class="pc">s</span><span class="c">.path.</span><span class="w">r</span><span class="c">ealpath(</span><span class="w">s</span><span class="pc">u</span><span class="c">bc</span><span class="pc">.</span><span class="c">path</span><span class="w">))</span><span class="pc">:</span>
+                            <span class="w">r</span><span class="pc">a</span><span class="c">ise</span> <span class="w">LinkError</span><span class="c">("</span><span class="w">Cycle</span> <span class="w">i</span><span class="c">n</span> <span class="w">f</span><span class="pc">ile</span> <span class="w">graph.</span><span class="c">")</span>
+                        <span class="w">y</span><span class="c">ield</span> <span class="c">subc</span>
+                <span class="w">e</span><span class="c">lse:</span>
+                    <span class="w">y</span><span class="c">ield</span> <span class="w">c</span>
+
+
+    <span class="w">d</span><span class="c">ef</span> <span class="w">sibling</span><span class="c">(self</span><span class="pc">,</span> <span class="pc">p</span><span class="c">ath):</span>
+        
+        <span class="pc">r</span><span class="c">eturn</span> <span class="c">self.</span><span class="w">p</span><span class="pc">ar</span><span class="c">ent</span><span class="w">(</span><span class="pc">)</span><span class="c">.</span><span class="w">c</span><span class="c">hild(</span><span class="pc">p</span><span class="c">ath</span><span class="pc">)</span>
+
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">descendant</span><span class="c">(self</span><span class="pc">,</span> <span class="w">segments</span><span class="c">):</span>
+        
+        <span class="w">p</span><span class="pc">at</span><span class="c">h</span> <span class="c">=</span> <span class="c">self</span>
+        <span class="w">f</span><span class="c">or</span> <span class="w">n</span><span class="pc">a</span><span class="c">me</span> <span class="pc">i</span><span class="c">n</span> <span class="c">segments:</span>
+            <span class="pc">p</span><span class="c">ath</span> <span class="c">=</span> <span class="pc">p</span><span class="c">ath.</span><span class="pc">c</span><span class="c">hild(</span><span class="w">n</span><span class="c">ame</span><span class="pc">)</span>
+        <span class="c">return</span> <span class="w">p</span><span class="pc">a</span><span class="c">th</span>
+
+
+    <span class="c">def</span> <span class="w">segmentsFrom</span><span class="c">(self</span><span class="pc">,</span> <span class="w">ancestor</span><span class="c">):</span>
+        
+        
+        
+        
+        <span class="w">f</span> <span class="c">=</span> <span class="c">self</span>
+        <span class="w">p</span> <span class="pc">=</span> <span class="w">f</span><span class="c">.</span><span class="w">p</span><span class="pc">ar</span><span class="c">ent()</span>
+        <span class="w">s</span><span class="pc">eg</span><span class="c">ments</span> <span class="pc">= </span><span class="c">[]</span>
+        <span class="w">w</span><span class="c">hile</span> <span class="pc">f</span> <span class="pc">!</span><span class="c">=</span> <span class="pc">a</span><span class="c">ncestor</span> <span class="pc">a</span><span class="c">nd</span> <span class="w">p</span> <span class="pc">!</span><span class="c">=</span> <span class="pc">f</span><span class="c">:</span>
+            <span class="w">s</span><span class="c">egments</span><span class="pc">[</span><span class="c">0</span><span class="w">:0] = [f</span><span class="pc">.</span><span class="w">b</span><span class="c">asename</span><span class="w">()]</span>
+            <span class="w">f</span> <span class="pc">=</span> <span class="w">p</span>
+            <span class="w">p</span> <span class="pc">=</span> <span class="pc">p</span><span class="c">.</span><span class="w">pa</span><span class="pc">r</span><span class="c">ent()</span>
+        <span class="pc">i</span><span class="c">f</span> <span class="c">f</span> <span class="pc">=</span><span class="c">=</span> <span class="w">a</span><span class="pc">n</span><span class="c">cestor</span> <span class="pc">a</span><span class="c">nd</span> <span class="w">s</span><span class="pc">eg</span><span class="c">ments:</span>
+            <span class="pc">r</span><span class="c">eturn</span> <span class="w">se</span><span class="pc">g</span><span class="c">ments</span>
+        <span class="w">ra</span><span class="c">ise</span> <span class="w">V</span><span class="c">alueError</span><span class="w">("</span><span class="pc">%</span><span class="c">r</span> <span class="w">n</span><span class="c">ot</span> <span class="w">par</span><span class="pc">e</span><span class="c">nt</span> <span class="w">o</span><span class="pc">f</span> <span class="pc">%r</span><span class="c">" % (</span><span class="w">a</span><span class="pc">n</span><span class="c">cestor,</span> <span class="pc">s</span><span class="c">elf</span><span class="pc">))</span>
+
+
+    
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">__hash__</span><span class="c">(self</span><span class="pc">)</span><span class="c">:</span>
+        
+        <span class="c">return</span> <span class="w">h</span><span class="pc">a</span><span class="c">sh</span><span class="w">((</span><span class="c">self.__class__</span><span class="pc">,</span> <span class="c">self.</span><span class="pc">p</span><span class="c">ath</span><span class="w">)</span><span class="pc">)</span>
+
+
+    
+    <span class="c">def</span> <span class="w">getmtime</span><span class="c">(self):</span>
+        
+        <span class="c">return</span> <span class="w">in</span><span class="pc">t</span><span class="c">(self.</span><span class="w">getModificationTime</span><span class="pc">()</span><span class="c">)</span>
+
+
+    <span class="c">def</span> <span class="w">getatime</span><span class="c">(self):</span>
+        
+        <span class="c">return</span> <span class="w">in</span><span class="pc">t</span><span class="c">(self.</span><span class="w">getAccessTime</span><span class="pc">(</span><span class="c">))</span>
+
+
+    <span class="c">def</span> <span class="w">getctime</span><span class="c">(self):</span>
+        
+        <span class="c">return</span> <span class="w">in</span><span class="pc">t</span><span class="c">(self.</span><span class="w">getStatusChangeTime</span><span class="pc">(</span><span class="c">))</span>
+
+
+
+<span class="pc">c</span><span class="c">lass</span> <span class="w">RWX</span><span class="c">(</span><span class="w">FancyEqMixin</span><span class="pc">,</span> <span class="pc">o</span><span class="c">bject):</span>
+    
+    <span class="w">compareAttributes</span> <span class="w">= (</span><span class="pc">'</span><span class="w">rea</span><span class="pc">d</span><span class="c">', '</span><span class="w">w</span><span class="pc">r</span><span class="c">ite</span><span class="pc">', </span><span class="c">'</span><span class="w">execute</span><span class="pc">')</span>
+    <span class="c">def</span> <span class="c">__init__(self,</span> <span class="w">readable</span><span class="pc">,</span> <span class="w">writable</span><span class="pc">,</span> <span class="w">e</span><span class="pc">xecuta</span><span class="c">ble):</span>
+        <span class="c">self.</span><span class="w">rea</span><span class="pc">d</span> <span class="pc">=</span> <span class="pc">r</span><span class="c">eadable</span>
+        <span class="c">self.</span><span class="w">w</span><span class="pc">rite</span> <span class="c">=</span> <span class="pc">w</span><span class="c">ritable</span>
+        <span class="c">self.</span><span class="w">e</span><span class="c">xecute</span> <span class="c">=</span> <span class="w">e</span><span class="pc">xecuta</span><span class="c">ble</span>
+
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">_</span><span class="c">_repr__(self):</span>
+        <span class="c">return</span> <span class="w">"RWX(read=%</span><span class="pc">s</span><span class="w">,</span> <span class="w">wr</span><span class="pc">ite</span><span class="w">=</span><span class="pc">%</span><span class="c">s</span><span class="w">,</span> <span class="pc">e</span><span class="c">xecute</span><span class="w">=</span><span class="pc">%</span><span class="c">s</span><span class="w">)" % (</span>
+            <span class="c">self.</span><span class="w">rea</span><span class="pc">d,</span> <span class="c">self.</span><span class="w">w</span><span class="pc">rite,</span> <span class="c">self.</span><span class="pc">e</span><span class="c">xecute</span><span class="w">)</span>
+
+
+    <span class="c">def</span> <span class="w">shorthand</span><span class="c">(self</span><span class="pc">)</span><span class="c">:</span>
+        
+        <span class="w">returnval</span> <span class="w">= [</span><span class="pc">'</span><span class="w">r</span><span class="c">', '</span><span class="w">w</span><span class="c">', '</span><span class="w">x']</span>
+        <span class="w">i</span> <span class="c">=</span> <span class="w">0</span>
+        <span class="pc">f</span><span class="c">or</span> <span class="w">v</span><span class="pc">a</span><span class="c">l</span> <span class="c">in</span> <span class="w">(</span><span class="c">self.</span><span class="w">rea</span><span class="pc">d</span><span class="c">,</span> <span class="c">self.</span><span class="w">w</span><span class="pc">r</span><span class="c">ite</span><span class="pc">,</span> <span class="pc">s</span><span class="c">elf.execute</span><span class="pc">)</span><span class="c">:</span>
+            <span class="c">if</span> <span class="pc">n</span><span class="c">ot</span> <span class="w">v</span><span class="c">al:</span>
+                <span class="w">r</span><span class="pc">eturnv</span><span class="c">al</span><span class="w">[i] = '-'</span>
+            <span class="w">i</span> <span class="w">+</span><span class="pc">=</span> <span class="c">1</span>
+        <span class="pc">r</span><span class="c">eturn</span> <span class="w">'</span><span class="pc">'</span><span class="c">.join(</span><span class="w">r</span><span class="c">eturnval)</span>
+
+
+
+<span class="w">c</span><span class="c">lass</span> <span class="w">Permissions</span><span class="c">(</span><span class="w">FancyEqMixin</span><span class="pc">,</span> <span class="pc">o</span><span class="c">bject):</span>
+    
+
+    <span class="w">compareAttributes</span> <span class="w">= (</span><span class="pc">'</span><span class="w">u</span><span class="pc">ser</span><span class="c">', '</span><span class="w">g</span><span class="pc">roup</span><span class="c">', '</span><span class="w">o</span><span class="pc">t</span><span class="c">her</span><span class="pc">')</span>
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="c">__init__(self,</span> <span class="w">statModeInt</span><span class="pc">)</span><span class="c">:</span>
+        <span class="c">self.</span><span class="w">u</span><span class="pc">ser,</span> <span class="pc">se</span><span class="c">lf.</span><span class="w">g</span><span class="pc">roup</span><span class="c">,</span> <span class="c">self.</span><span class="w">o</span><span class="pc">t</span><span class="c">her</span> <span class="w">= </span><span class="pc">(</span>
+            <span class="w">[RWX(*[</span><span class="pc">st</span><span class="c">atModeInt</span> <span class="w">&amp;</span> <span class="w">bit</span> <span class="w">&gt;</span> <span class="w">0</span> <span class="w">f</span><span class="c">or</span> <span class="w">b</span><span class="pc">i</span><span class="c">t</span> <span class="c">in</span> <span class="w">bitGroup]</span><span class="pc">)</span> <span class="pc">f</span><span class="c">or</span> <span class="w">b</span><span class="pc">itG</span><span class="c">roup</span> <span class="c">in</span>
+             <span class="w">[[S_IRUSR</span><span class="c">,</span> <span class="w">S_IWUSR</span><span class="c">,</span> <span class="w">S_IXUSR]</span><span class="pc">,</span>
+              <span class="pc">[</span><span class="w">S_IRGRP</span><span class="c">,</span> <span class="w">S_IWGRP</span><span class="c">,</span> <span class="w">S_IXGRP]</span><span class="pc">,</span>
+              <span class="pc">[</span><span class="w">S_IROTH</span><span class="c">,</span> <span class="w">S_IWOTH</span><span class="c">,</span> <span class="w">S_IXOTH]]]</span>
+        <span class="w">)</span>
+
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">__r</span><span class="c">epr__(self):</span>
+        <span class="pc">r</span><span class="c">eturn</span> <span class="w">"[%s</span> <span class="w">| %</span><span class="c">s</span> <span class="w">|</span><span class="c"> %s</span><span class="w">]" % (</span>
+            <span class="w">s</span><span class="pc">t</span><span class="c">r(</span><span class="pc">se</span><span class="c">lf.</span><span class="w">u</span><span class="pc">ser),</span> <span class="w">s</span><span class="pc">t</span><span class="c">r(self.</span><span class="w">g</span><span class="pc">roup</span><span class="c">),</span> <span class="w">s</span><span class="pc">t</span><span class="c">r(</span><span class="w">s</span><span class="pc">e</span><span class="c">lf.</span><span class="w">o</span><span class="pc">t</span><span class="c">her</span><span class="pc">))</span>
+
+
+    <span class="c">def</span> <span class="w">shorthand</span><span class="c">(self):</span>
+        
+        <span class="pc">r</span><span class="c">eturn</span> <span class="w">"".j</span><span class="c">oin(</span>
+            <span class="w">[x.s</span><span class="pc">h</span><span class="c">orthand</span><span class="w">(</span><span class="pc">)</span> <span class="pc">f</span><span class="c">or</span> <span class="pc">x</span> <span class="c">in</span> <span class="w">(</span><span class="pc">s</span><span class="c">elf.</span><span class="w">u</span><span class="pc">ser</span><span class="c">,</span> <span class="c">self.</span><span class="w">g</span><span class="pc">roup,</span> <span class="c">self.</span><span class="w">o</span><span class="c">ther</span><span class="w">)]</span><span class="pc">)</span>
+
+
+<span class="pc">c</span><span class="c">lass</span> <span class="w">_SpecialNoValue</span><span class="c">(</span><span class="pc">o</span><span class="c">bject):</span>
+    
+    <span class="pc">p</span><span class="c">ass</span>
+
+
+
+<span class="pc">d</span><span class="c">ef</span> <span class="w">_asFilesystemBytes</span><span class="c">(</span><span class="w">p</span><span class="pc">at</span><span class="c">h,</span> <span class="w">en</span><span class="pc">codi</span><span class="c">ng</span><span class="pc">=</span><span class="c">None):</span>
+    
+    <span class="c">if</span> <span class="w">t</span><span class="c">ype</span><span class="pc">(</span><span class="w">p</span><span class="c">ath</span><span class="pc">)</span><span class="c"> ==</span> <span class="w">b</span><span class="pc">y</span><span class="c">tes</span><span class="pc">:</span>
+        <span class="c">return</span> <span class="w">pa</span><span class="pc">t</span><span class="c">h</span>
+    <span class="w">e</span><span class="c">lse:</span>
+        <span class="pc">i</span><span class="c">f</span> <span class="w">en</span><span class="pc">c</span><span class="c">oding</span> <span class="pc">i</span><span class="c">s</span> <span class="c">None:</span>
+            <span class="w">en</span><span class="pc">c</span><span class="c">oding</span> <span class="c">=</span> <span class="w">s</span><span class="pc">y</span><span class="c">s.</span><span class="w">getfilesystemencoding</span><span class="pc">()</span>
+        <span class="pc">r</span><span class="c">eturn</span> <span class="w">pa</span><span class="pc">t</span><span class="c">h.</span><span class="w">e</span><span class="c">ncode</span><span class="pc">(</span><span class="w">en</span><span class="pc">codi</span><span class="c">ng)</span>
+
+
+
+<span class="pc">d</span><span class="c">ef</span> <span class="w">_asFilesystemText</span><span class="c">(</span><span class="pc">p</span><span class="c">ath,</span> <span class="w">en</span><span class="pc">codi</span><span class="c">ng</span><span class="pc">=</span><span class="c">None):</span>
+    
+    <span class="c">if</span> <span class="w">t</span><span class="c">ype</span><span class="pc">(p</span><span class="c">ath</span><span class="pc">)</span><span class="c"> ==</span> <span class="w">u</span><span class="c">nicode:</span>
+        <span class="c">return</span> <span class="w">p</span><span class="c">ath</span>
+    <span class="pc">e</span><span class="c">lse:</span>
+        <span class="pc">i</span><span class="c">f</span> <span class="w">en</span><span class="pc">c</span><span class="c">oding</span> <span class="c">is</span> <span class="pc">N</span><span class="c">one:</span>
+            <span class="w">en</span><span class="pc">c</span><span class="c">oding</span> <span class="c">=</span> <span class="pc">s</span><span class="c">ys.</span><span class="w">g</span><span class="c">etfilesystemencoding</span><span class="pc">()</span>
+        <span class="pc">r</span><span class="c">eturn</span> <span class="w">pa</span><span class="c">th.</span><span class="w">d</span><span class="c">ecode(</span><span class="w">en</span><span class="pc">c</span><span class="c">oding)</span>
+
+
+
+<span class="pc">d</span><span class="c">ef</span> <span class="w">_coerceToFilesystemEncoding</span><span class="c">(</span><span class="pc">p</span><span class="c">ath,</span> <span class="w">newpath</span><span class="pc">,</span> <span class="w">en</span><span class="pc">c</span><span class="c">oding</span><span class="pc">=</span><span class="c">None):</span>
+    
+    <span class="c">if</span> <span class="w">t</span><span class="c">ype</span><span class="pc">(</span><span class="w">p</span><span class="c">ath</span><span class="pc">) </span><span class="c">==</span> <span class="w">b</span><span class="pc">y</span><span class="c">tes:</span>
+        <span class="c">return</span> <span class="w">_asFilesystemBytes</span><span class="c">(</span><span class="w">n</span><span class="pc">e</span><span class="c">wpath,</span> <span class="w">en</span><span class="pc">codi</span><span class="c">ng</span><span class="pc">=</span><span class="w">en</span><span class="pc">c</span><span class="c">oding)</span>
+    <span class="pc">e</span><span class="c">lse:</span>
+        <span class="c">return</span> <span class="w">_asFilesystemText</span><span class="c">(</span><span class="pc">n</span><span class="c">ewpath,</span> <span class="w">en</span><span class="pc">codi</span><span class="c">ng=</span><span class="w">en</span><span class="pc">c</span><span class="c">oding)</span>
+
+
+
+<span class="w">@comparable</span>
+<span class="w">@</span><span class="c">implementer(</span><span class="w">IFilePath</span><span class="c">)</span>
+<span class="c">class</span> <span class="w">F</span><span class="pc">i</span><span class="c">lePath(</span><span class="w">AbstractFilePath</span><span class="c">):</span>
+    
+    <span class="w">_statinfo</span> <span class="c">=</span> <span class="c">None</span>
+    <span class="w">pa</span><span class="pc">t</span><span class="c">h</span> <span class="c">=</span> <span class="c">None</span>
+
+
+    <span class="c">def</span> <span class="c">__init__(self,</span> <span class="w">p</span><span class="c">ath</span><span class="pc">,</span> <span class="w">alwaysCreate</span><span class="pc">=</span><span class="w">F</span><span class="c">alse):</span>
+        
+        <span class="pc">s</span><span class="c">elf.</span><span class="w">p</span><span class="c">ath</span> <span class="c">=</span> <span class="w">abspath</span><span class="pc">(p</span><span class="c">ath</span><span class="pc">)</span>
+        <span class="c">self.alwaysCreate</span> <span class="c">=</span> <span class="pc">a</span><span class="c">lwaysCreate</span>
+
+        <span class="w">i</span><span class="c">f</span> <span class="w">t</span><span class="c">ype</span><span class="pc">(</span><span class="c">self.path</span><span class="w">) !=</span> <span class="w">t</span><span class="pc">y</span><span class="c">pe</span><span class="pc">(p</span><span class="c">ath</span><span class="pc">):</span>
+            <span class="w">wa</span><span class="pc">rn</span><span class="w">(</span><span class="pc">"</span><span class="w">o</span><span class="c">s.path.</span><span class="w">a</span><span class="pc">b</span><span class="c">spath</span> <span class="w">i</span><span class="pc">s</span> <span class="w">broken</span> <span class="w">o</span><span class="pc">n</span> <span class="w">Python</span> <span class="w">versions</span> <span class="w">below</span> <span class="w">2</span><span class="pc">.</span><span class="w">6</span><span class="c">.</span><span class="w">5</span> <span class="w">a</span><span class="pc">n</span><span class="c">d</span><span class="w">"</span>
+                 <span class="w">"</span> <span class="w">coerces</span> <span class="w">Unicode</span> <span class="w">paths</span> <span class="pc">t</span><span class="c">o</span> <span class="w">by</span><span class="pc">t</span><span class="c">es</span><span class="w">.</span> <span class="w">Please</span> <span class="w">up</span><span class="pc">d</span><span class="c">ate</span> <span class="w">your</span> <span class="w">P</span><span class="c">ython</span><span class="w">.</span><span class="pc">",</span>
+                 <span class="w">D</span><span class="c">eprecationWarning</span><span class="pc">)</span>
+            <span class="pc">s</span><span class="c">elf.</span><span class="w">p</span><span class="pc">ath</span> <span class="pc">=</span> <span class="pc">s</span><span class="c">elf.</span><span class="w">_getPathAsSameTypeAs</span><span class="c">(</span><span class="w">p</span><span class="pc">ath)</span>
+
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">__getstate__</span><span class="c">(self):</span>
+        
+        <span class="w">d</span> <span class="c">=</span> <span class="c">self.</span><span class="w">_</span><span class="pc">_d</span><span class="c">ict__.</span><span class="pc">c</span><span class="c">opy()</span>
+        <span class="pc">i</span><span class="c">f</span> <span class="w">'_statinfo</span><span class="pc">'</span> <span class="c">in</span> <span class="w">d</span><span class="c">:</span>
+            <span class="w">d</span><span class="pc">e</span><span class="c">l</span> <span class="w">d</span><span class="pc">[</span><span class="c">'_statinfo</span><span class="pc">']</span>
+        <span class="pc">r</span><span class="c">eturn</span> <span class="pc">d</span>
+
+
+    <span class="w">@p</span><span class="c">roperty</span>
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">sep</span><span class="c">(self):</span>
+        
+        <span class="pc">r</span><span class="c">eturn</span> <span class="w">_coerceToFilesystemEncoding</span><span class="c">(self.</span><span class="w">p</span><span class="pc">a</span><span class="c">th,</span> <span class="w">o</span><span class="pc">s</span><span class="c">.</span><span class="w">s</span><span class="pc">e</span><span class="c">p</span><span class="w">)</span>
+
+
+    <span class="c">def</span> <span class="w">_asBytesPath</span><span class="c">(self,</span> <span class="w">enc</span><span class="c">oding</span><span class="pc">=</span><span class="c">None):</span>
+        
+        <span class="pc">r</span><span class="c">eturn</span> <span class="w">_asFilesystemBytes</span><span class="c">(self.</span><span class="pc">p</span><span class="c">ath,</span> <span class="w">enc</span><span class="pc">odi</span><span class="c">ng</span><span class="pc">=</span><span class="w">enc</span><span class="pc">odi</span><span class="c">ng</span><span class="pc">)</span>
+
+
+    <span class="c">def</span> <span class="w">_asTextPath</span><span class="c">(self</span><span class="pc">,</span> <span class="w">enc</span><span class="c">oding</span><span class="pc">=</span><span class="c">None):</span>
+        
+        <span class="pc">r</span><span class="c">eturn</span> <span class="w">_asFilesystemText</span><span class="c">(self.path,</span> <span class="w">en</span><span class="pc">c</span><span class="c">oding=</span><span class="w">enc</span><span class="pc">odi</span><span class="c">ng</span><span class="pc">)</span>
+
+
+    <span class="c">def</span> <span class="w">asBytesMode</span><span class="c">(self,</span> <span class="w">en</span><span class="pc">c</span><span class="c">oding</span><span class="pc">=</span><span class="c">None):</span>
+        
+        <span class="c">if</span> <span class="w">t</span><span class="c">ype</span><span class="pc">(</span><span class="c">self.path</span><span class="w">)</span><span class="pc"> =</span><span class="c">=</span> <span class="w">u</span><span class="pc">n</span><span class="c">icode</span><span class="pc">:</span>
+            <span class="c">return</span> <span class="c">self.</span><span class="w">clonePath</span><span class="c">(self.</span><span class="w">_asBytesPath</span><span class="pc">(</span><span class="w">en</span><span class="pc">c</span><span class="c">oding</span><span class="w">=en</span><span class="pc">c</span><span class="c">oding</span><span class="w">)</span><span class="pc">)</span>
+        <span class="pc">r</span><span class="c">eturn</span> <span class="c">self</span>
+
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">asTextMode</span><span class="c">(self,</span> <span class="w">enc</span><span class="c">oding</span><span class="pc">=</span><span class="c">None):</span>
+        
+        <span class="c">if</span> <span class="w">t</span><span class="c">ype</span><span class="pc">(</span><span class="c">self.</span><span class="w">p</span><span class="c">ath</span><span class="w">)</span><span class="pc"> =</span><span class="c">=</span> <span class="w">b</span><span class="pc">y</span><span class="c">tes:</span>
+            <span class="c">return</span> <span class="c">self.clonePath(self.</span><span class="w">_asTextPath</span><span class="pc">(</span><span class="w">en</span><span class="pc">c</span><span class="c">oding</span><span class="w">=en</span><span class="pc">c</span><span class="c">oding</span><span class="w">)</span><span class="pc">)</span>
+        <span class="pc">r</span><span class="c">eturn</span> <span class="c">self</span>
+
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">_getPathAsSameTypeAs</span><span class="c">(self,</span> <span class="w">pattern</span><span class="c">):</span>
+        
+        <span class="pc">i</span><span class="c">f</span> <span class="w">t</span><span class="c">ype(</span><span class="pc">p</span><span class="c">attern) ==</span> <span class="w">b</span><span class="c">ytes:</span>
+            <span class="c">return</span> <span class="c">self.</span><span class="w">_asBytesPath</span><span class="pc">()</span>
+        <span class="w">e</span><span class="c">lse:</span>
+            <span class="c">return</span> <span class="pc">s</span><span class="c">elf.</span><span class="pc">_a</span><span class="c">sTextPath</span><span class="pc">()</span>
+
+
+    <span class="c">def</span> <span class="w">ch</span><span class="pc">i</span><span class="c">ld(self,</span> <span class="w">p</span><span class="pc">ath</span><span class="c">):</span>
+        
+        <span class="w">colon</span> <span class="c">=</span> <span class="w">_coerceToFilesystemEncoding</span><span class="pc">(</span><span class="w">p</span><span class="pc">ath</span><span class="w">, ":")</span>
+        <span class="w">sep</span> <span class="c">=</span>  <span class="w">_</span><span class="c">coerceToFilesystemEncoding</span><span class="pc">(p</span><span class="c">ath,</span> <span class="w">o</span><span class="c">s.</span><span class="w">s</span><span class="pc">e</span><span class="c">p</span><span class="pc">)</span>
+        <span class="w">ourPath</span> <span class="c">=</span> <span class="pc">sel</span><span class="c">f.</span><span class="w">_getPathAsSameTypeAs</span><span class="c">(</span><span class="pc">p</span><span class="c">ath</span><span class="pc">)</span>
+
+        <span class="pc">i</span><span class="c">f</span> <span class="w">p</span><span class="c">latform.</span><span class="w">isWindows(</span><span class="pc">)</span> <span class="w">a</span><span class="c">nd</span> <span class="w">p</span><span class="pc">a</span><span class="c">th.</span><span class="w">co</span><span class="pc">u</span><span class="c">nt(</span><span class="w">c</span><span class="c">olon</span><span class="pc">):</span>
+            
+            <span class="w">r</span><span class="pc">a</span><span class="c">ise</span> <span class="w">InsecurePath("</span><span class="pc">%</span><span class="c">r</span> <span class="w">contains</span> <span class="w">a</span> <span class="w">c</span><span class="c">olon</span><span class="w">." % (p</span><span class="c">ath</span><span class="w">,</span><span class="pc">)</span><span class="c">)</span>
+
+        <span class="w">norm</span> <span class="c">=</span> <span class="w">normpath</span><span class="c">(</span><span class="pc">p</span><span class="c">ath)</span>
+        <span class="c">if</span> <span class="w">s</span><span class="c">ep</span> <span class="pc">in</span> <span class="w">n</span><span class="c">orm</span><span class="pc">:</span>
+            <span class="w">r</span><span class="c">aise</span> <span class="pc">I</span><span class="c">nsecurePath</span><span class="w">("</span><span class="pc">%r</span> <span class="w">c</span><span class="c">ontains</span> <span class="w">on</span><span class="pc">e</span> <span class="w">o</span><span class="pc">r</span> <span class="w">more</span> <span class="w">di</span><span class="pc">r</span><span class="c">ectory</span> <span class="w">separators" </span><span class="pc">%</span>
+                               <span class="pc">(</span><span class="w">p</span><span class="c">ath</span><span class="w">,</span><span class="pc">)</span><span class="c">)</span>
+
+        <span class="w">newpath</span> <span class="pc">=</span> <span class="w">abspath</span><span class="c">(</span><span class="w">joinpath</span><span class="pc">(</span><span class="w">ourPath</span><span class="pc">,</span> <span class="pc">no</span><span class="c">rm</span><span class="pc">))</span>
+        <span class="c">if</span> <span class="c">not</span> <span class="pc">ne</span><span class="c">wpath</span><span class="pc">.</span><span class="w">s</span><span class="pc">t</span><span class="c">artswith(</span><span class="w">o</span><span class="pc">u</span><span class="c">rPath):</span>
+            <span class="pc">ra</span><span class="c">ise</span> <span class="pc">I</span><span class="c">nsecurePath</span><span class="w">(</span><span class="pc">"%r</span> <span class="w">i</span><span class="c">s</span> <span class="c">not</span> <span class="w">a</span> <span class="w">ch</span><span class="pc">i</span><span class="c">ld</span> <span class="w">o</span><span class="pc">f</span> <span class="w">%</span><span class="pc">s" %</span>
+                               <span class="pc">(</span><span class="c">newpath</span><span class="pc">,</span> <span class="pc">o</span><span class="c">urPath</span><span class="pc">))</span>
+        <span class="pc">r</span><span class="c">eturn</span> <span class="pc">s</span><span class="c">elf.</span><span class="w">clonePath</span><span class="c">(</span><span class="pc">ne</span><span class="c">wpath)</span>
+
+
+    <span class="c">def</span> <span class="w">preauthChild</span><span class="c">(self,</span> <span class="w">p</span><span class="c">ath):</span>
+        
+        <span class="w">o</span><span class="c">urPath</span> <span class="c">=</span> <span class="pc">s</span><span class="c">elf.</span><span class="w">_getPathAsSameTypeAs</span><span class="c">(</span><span class="w">p</span><span class="pc">a</span><span class="c">th)</span>
+
+        <span class="w">n</span><span class="pc">e</span><span class="c">wpath</span> <span class="pc">=</span> <span class="w">abspath</span><span class="c">(</span><span class="w">joinpath</span><span class="pc">(</span><span class="w">o</span><span class="c">urPath,</span> <span class="w">normpath(p</span><span class="pc">a</span><span class="c">th</span><span class="w">)</span><span class="pc">))</span>
+        <span class="pc">i</span><span class="c">f</span> <span class="c">not</span> <span class="w">n</span><span class="pc">e</span><span class="c">wpath</span><span class="pc">.</span><span class="w">s</span><span class="pc">t</span><span class="c">artswith(ourPath):</span>
+            <span class="w">r</span><span class="pc">a</span><span class="c">ise</span> <span class="w">InsecurePath("</span><span class="pc">%s</span> <span class="w">i</span><span class="pc">s</span> <span class="c">not</span> <span class="pc">a</span> <span class="w">ch</span><span class="c">ild</span> <span class="w">o</span><span class="pc">f</span> <span class="w">%</span><span class="c">s</span><span class="w">"</span><span class="pc"> %</span>
+                               <span class="pc">(</span><span class="c">newpath</span><span class="pc">,</span> <span class="pc">o</span><span class="c">urPath</span><span class="pc">))</span>
+        <span class="pc">r</span><span class="c">eturn</span> <span class="pc">se</span><span class="c">lf.</span><span class="w">clonePath</span><span class="c">(</span><span class="w">n</span><span class="pc">e</span><span class="c">wpath)</span>
+
+
+    <span class="c">def</span> <span class="w">childSearchPreauth</span><span class="c">(self</span><span class="pc">, </span><span class="c">*</span><span class="w">paths</span><span class="c">):</span>
+        
+        <span class="pc">f</span><span class="c">or</span> <span class="w">ch</span><span class="pc">ild</span> <span class="c">in</span> <span class="w">p</span><span class="pc">aths</span><span class="c">:</span>
+            <span class="w">p</span> <span class="pc">=</span> <span class="c">self.</span><span class="w">_getPathAsSameTypeAs</span><span class="c">(</span><span class="w">c</span><span class="pc">hild</span><span class="c">)</span>
+            <span class="w">jp</span> <span class="c">=</span> <span class="w">joinpath</span><span class="c">(</span><span class="w">p</span><span class="pc">,</span> <span class="w">ch</span><span class="pc">ild)</span>
+            <span class="c">if</span> <span class="w">ex</span><span class="pc">i</span><span class="c">sts</span><span class="pc">(j</span><span class="c">p):</span>
+                <span class="pc">r</span><span class="c">eturn</span> <span class="c">self.</span><span class="w">c</span><span class="pc">l</span><span class="c">onePath(</span><span class="w">j</span><span class="c">p</span><span class="pc">)</span>
+
+
+    <span class="c">def</span> <span class="w">siblingExtensionSearch</span><span class="c">(self</span><span class="pc">, </span><span class="c">*</span><span class="w">exts</span><span class="c">):</span>
+        
+        <span class="pc">f</span><span class="c">or</span> <span class="w">ext</span> <span class="c">in</span> <span class="w">e</span><span class="c">xts:</span>
+            <span class="pc">i</span><span class="c">f</span> <span class="pc">n</span><span class="c">ot</span> <span class="pc">ext</span> <span class="w">a</span><span class="c">nd</span> <span class="c">self.</span><span class="w">ex</span><span class="pc">i</span><span class="c">sts</span><span class="pc">(</span><span class="c">):</span>
+                <span class="pc">r</span><span class="c">eturn</span> <span class="c">self</span>
+
+            <span class="w">p</span> <span class="pc">=</span> <span class="c">self.</span><span class="w">_getPathAsSameTypeAs</span><span class="c">(</span><span class="w">e</span><span class="pc">xt</span><span class="c">)</span>
+            <span class="w">star</span> <span class="c">=</span> <span class="w">_coerceToFilesystemEncoding</span><span class="c">(</span><span class="pc">ext</span><span class="w">, "*")</span>
+            <span class="w">dot</span> <span class="c">=</span> <span class="w">_</span><span class="pc">c</span><span class="c">oerceToFilesystemEncoding</span><span class="pc">(e</span><span class="c">xt</span><span class="w">, ".")</span>
+
+            <span class="pc">i</span><span class="c">f</span> <span class="w">e</span><span class="pc">xt</span> <span class="w">=</span><span class="c">=</span> <span class="w">s</span><span class="c">tar:</span>
+                <span class="w">basedot</span> <span class="c">=</span> <span class="w">ba</span><span class="pc">sen</span><span class="c">ame(</span><span class="w">p) </span><span class="pc">+</span> <span class="w">d</span><span class="c">ot</span>
+                <span class="w">f</span><span class="c">or</span> <span class="w">fn</span> <span class="c">in</span> <span class="w">listdir</span><span class="c">(</span><span class="w">di</span><span class="pc">rn</span><span class="c">ame</span><span class="pc">(</span><span class="w">p)</span><span class="pc">):</span>
+                    <span class="c">if</span> <span class="w">fn.s</span><span class="pc">tart</span><span class="c">swith(</span><span class="pc">ba</span><span class="c">sedot</span><span class="pc">)</span><span class="c">:</span>
+                        <span class="c">return</span> <span class="pc">s</span><span class="c">elf.</span><span class="w">clonePath</span><span class="c">(</span><span class="w">joinpath</span><span class="pc">(</span><span class="w">di</span><span class="pc">rn</span><span class="c">ame</span><span class="pc">(</span><span class="w">p</span><span class="pc">),</span> <span class="w">fn</span><span class="pc">))</span>
+            <span class="w">p2</span> <span class="c">=</span> <span class="w">p</span> <span class="w">+</span> <span class="w">ext</span>
+            <span class="w">i</span><span class="c">f</span> <span class="w">exi</span><span class="pc">s</span><span class="c">ts</span><span class="pc">(p2):</span>
+                <span class="pc">r</span><span class="c">eturn</span> <span class="pc">s</span><span class="c">elf.clonePath(</span><span class="w">p</span><span class="c">2</span><span class="pc">)</span>
+
+
+    <span class="c">def</span> <span class="w">realpath</span><span class="c">(self</span><span class="pc">)</span><span class="c">:</span>
+        
+        <span class="pc">i</span><span class="c">f</span> <span class="c">self.</span><span class="w">islink(</span><span class="pc">)</span><span class="c">:</span>
+            <span class="w">r</span><span class="pc">es</span><span class="c">ult</span> <span class="pc">=</span> <span class="w">o</span><span class="pc">s</span><span class="c">.path.</span><span class="w">r</span><span class="pc">eal</span><span class="c">path</span><span class="pc">(</span><span class="c">self.</span><span class="pc">p</span><span class="c">ath)</span>
+            <span class="c">if</span> <span class="w">r</span><span class="pc">es</span><span class="c">ult</span> <span class="w">=</span><span class="c">=</span> <span class="w">s</span><span class="c">elf.</span><span class="pc">p</span><span class="c">ath:</span>
+                <span class="pc">ra</span><span class="c">ise</span> <span class="w">LinkError</span><span class="pc">("</span><span class="w">Cyclical</span> <span class="w">link</span> <span class="w">-</span> <span class="w">will</span> <span class="w">loop</span> <span class="w">forever"</span><span class="c">)</span>
+            <span class="pc">r</span><span class="c">eturn</span> <span class="c">self.</span><span class="w">clonePath</span><span class="c">(</span><span class="w">r</span><span class="pc">es</span><span class="c">ult)</span>
+        <span class="pc">r</span><span class="c">eturn</span> <span class="c">self</span>
+
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">siblingExtension</span><span class="c">(self</span><span class="pc">,</span> <span class="w">ext</span><span class="c">):</span>
+        
+        <span class="w">ourPath</span> <span class="c">=</span> <span class="c">self.</span><span class="w">_getPathAsSameTypeAs</span><span class="c">(</span><span class="pc">e</span><span class="c">xt)</span>
+        <span class="pc">r</span><span class="c">eturn</span> <span class="pc">s</span><span class="c">elf.</span><span class="w">c</span><span class="c">lonePath</span><span class="pc">(o</span><span class="c">urPath</span> <span class="w">+</span> <span class="pc">e</span><span class="c">xt)</span>
+
+
+    <span class="c">def</span> <span class="w">linkTo</span><span class="c">(self</span><span class="pc">,</span> <span class="w">linkFilePath</span><span class="c">):</span>
+        
+        <span class="w">o</span><span class="pc">s</span><span class="c">.</span><span class="w">symlink</span><span class="c">(self.</span><span class="w">p</span><span class="c">ath,</span> <span class="pc">l</span><span class="c">inkFilePath</span><span class="pc">.</span><span class="w">p</span><span class="c">ath</span><span class="pc">)</span>
+
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">o</span><span class="pc">p</span><span class="c">en(self</span><span class="pc">,</span> <span class="w">m</span><span class="pc">o</span><span class="c">de</span><span class="w">=</span><span class="pc">'</span><span class="w">r</span><span class="c">'):</span>
+        
+        <span class="pc">i</span><span class="c">f</span> <span class="pc">s</span><span class="c">elf.</span><span class="w">alwaysCreate</span><span class="c">:</span>
+            <span class="w">a</span><span class="pc">s</span><span class="c">sert</span> <span class="w">'a'</span> <span class="pc">n</span><span class="c">ot</span> <span class="w">i</span><span class="c">n</span> <span class="w">m</span><span class="pc">ode</span><span class="w">, ("Appending</span> <span class="w">n</span><span class="c">ot</span> <span class="w">su</span><span class="c">pported</span> <span class="w">wh</span><span class="pc">e</span><span class="c">n</span> <span class="c">"</span>
+                                     <span class="pc">"</span><span class="w">a</span><span class="pc">l</span><span class="c">waysCreate</span> <span class="w">==</span> <span class="w">T</span><span class="c">rue</span><span class="w">"</span><span class="pc">)</span>
+            <span class="pc">r</span><span class="c">eturn</span> <span class="c">self.</span><span class="w">create</span><span class="pc">()</span>
+        
+        
+        <span class="w">mo</span><span class="pc">de</span> <span class="c">=</span> <span class="w">m</span><span class="pc">o</span><span class="c">de.</span><span class="w">r</span><span class="c">eplace</span><span class="pc">('</span><span class="w">b', '')</span>
+        <span class="w">r</span><span class="c">eturn</span> <span class="w">op</span><span class="pc">e</span><span class="c">n(self.</span><span class="w">p</span><span class="c">ath,</span> <span class="w">m</span><span class="pc">o</span><span class="c">de</span> <span class="w">+ 'b'</span><span class="pc">)</span>
+
+    
+
+    <span class="c">def</span> <span class="w">restat</span><span class="c">(self</span><span class="pc">,</span> <span class="w">reraise</span><span class="pc">=T</span><span class="c">rue):</span>
+        
+        <span class="w">t</span><span class="c">ry:</span>
+            <span class="pc">s</span><span class="c">elf.</span><span class="w">_statinfo</span> <span class="pc">=</span> <span class="w">sta</span><span class="pc">t(s</span><span class="c">elf.</span><span class="pc">p</span><span class="c">ath)</span>
+        <span class="pc">e</span><span class="c">xcept</span> <span class="w">O</span><span class="c">SError:</span>
+            <span class="c">self.</span><span class="pc">_</span><span class="c">statinfo</span> <span class="pc">=</span> <span class="pc">0</span>
+            <span class="pc">i</span><span class="c">f</span> <span class="pc">r</span><span class="c">eraise</span><span class="pc">:</span>
+                <span class="pc">ra</span><span class="c">ise</span>
+
+
+    <span class="w">def</span> <span class="w">changed</span><span class="c">(self):</span>
+        
+        <span class="pc">s</span><span class="c">elf._statinfo</span> <span class="pc">=</span> <span class="pc">N</span><span class="c">one</span>
+
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">chmod</span><span class="c">(self</span><span class="pc">,</span> <span class="w">m</span><span class="c">ode):</span>
+        
+        <span class="w">o</span><span class="c">s.</span><span class="w">c</span><span class="pc">h</span><span class="c">mod(self.path</span><span class="pc">,</span> <span class="w">m</span><span class="pc">o</span><span class="c">de</span><span class="pc">)</span>
+
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">getsize</span><span class="c">(self):</span>
+        
+        <span class="w">st</span> <span class="c">=</span> <span class="pc">s</span><span class="c">elf._statinfo</span>
+        <span class="w">i</span><span class="c">f</span> <span class="pc">n</span><span class="c">ot</span> <span class="w">st</span><span class="pc">:</span>
+            <span class="c">self.</span><span class="w">restat</span><span class="pc">()</span>
+            <span class="w">st</span> <span class="pc">=</span> <span class="c">self.</span><span class="w">_</span><span class="c">statinfo</span>
+        <span class="w">r</span><span class="c">eturn</span> <span class="w">st</span><span class="c">.</span><span class="w">st_size</span>
+
+
+    <span class="w">d</span><span class="c">ef</span> <span class="w">getModificationTime</span><span class="c">(self):</span>
+        
+        <span class="w">st</span> <span class="pc">=</span> <span class="c">self.</span><span class="pc">_</span><span class="c">statinfo</span>
+        <span class="w">i</span><span class="c">f</span> <span class="pc">n</span><span class="c">ot</span> <span class="w">st</span><span class="pc">:</span>
+            <span class="c">self.restat</span><span class="pc">(</span><span class="c">)</span>
+            <span class="w">st</span> <span class="c">=</span> <span class="c">self.</span><span class="pc">_</span><span class="c">statinfo</span>
+        <span class="w">r</span><span class="c">eturn</span> <span class="w">fl</span><span class="pc">o</span><span class="c">at(</span><span class="w">st</span><span class="c">.</span><span class="w">st_mtime</span><span class="c">)</span>
+
+
+    <span class="c">def</span> <span class="w">getStatusChangeTime</span><span class="c">(self):</span>
+        
+        <span class="w">st</span> <span class="c">=</span> <span class="c">self._statinfo</span>
+        <span class="w">i</span><span class="c">f</span> <span class="c">not</span> <span class="w">st</span><span class="pc">:</span>
+            <span class="pc">s</span><span class="c">elf.restat</span><span class="pc">(</span><span class="c">)</span>
+            <span class="w">st</span> <span class="pc">=</span> <span class="c">self._statinfo</span>
+        <span class="w">r</span><span class="c">eturn</span> <span class="w">fl</span><span class="pc">o</span><span class="c">at(</span><span class="w">st</span><span class="pc">.</span><span class="w">st_ctime</span><span class="c">)</span>
+
+
+    <span class="c">def</span> <span class="w">getAccessTime</span><span class="c">(self):</span>
+        
+        <span class="w">st</span> <span class="c">=</span> <span class="c">self._statinfo</span>
+        <span class="w">i</span><span class="c">f</span> <span class="c">not</span> <span class="w">st</span><span class="pc">:</span>
+            <span class="pc">s</span><span class="c">elf.restat</span><span class="pc">(</span><span class="c">)</span>
+            <span class="w">st</span> <span class="pc">=</span> <span class="c">self._statinfo</span>
+        <span class="w">r</span><span class="c">eturn</span> <span class="w">fl</span><span class="pc">o</span><span class="c">at(</span><span class="w">st</span><span class="pc">.</span><span class="w">st_atime</span><span class="c">)</span>
+
+
+    <span class="c">def</span> <span class="w">getInodeNumber</span><span class="c">(self):</span>
+        
+        <span class="pc">i</span><span class="c">f</span> <span class="w">p</span><span class="c">latform.</span><span class="w">isWindows</span><span class="c">():</span>
+            <span class="w">r</span><span class="pc">a</span><span class="c">ise</span> <span class="pc">N</span><span class="c">otImplementedError</span>
+
+        <span class="w">st</span> <span class="pc">=</span> <span class="c">self._statinfo</span>
+        <span class="w">i</span><span class="c">f</span> <span class="c">not</span> <span class="w">st</span><span class="pc">:</span>
+            <span class="pc">s</span><span class="c">elf.</span><span class="pc">r</span><span class="c">estat</span><span class="pc">()</span>
+            <span class="w">st</span> <span class="pc">=</span> <span class="c">self.</span><span class="w">_</span><span class="pc">s</span><span class="c">tatinfo</span>
+        <span class="w">r</span><span class="c">eturn</span> <span class="w">st</span><span class="c">.</span><span class="w">st_ino</span>
+
+
+    <span class="w">d</span><span class="c">ef</span> <span class="w">getDevice</span><span class="c">(self):</span>
+        
+        <span class="pc">i</span><span class="c">f</span> <span class="w">p</span><span class="c">latform.</span><span class="w">i</span><span class="c">sWindows</span><span class="pc">(</span><span class="c">):</span>
+            <span class="pc">ra</span><span class="c">ise</span> <span class="pc">N</span><span class="c">otImplementedError</span>
+
+        <span class="w">st</span> <span class="pc">=</span> <span class="c">self.</span><span class="w">_</span><span class="pc">s</span><span class="c">tatinfo</span>
+        <span class="w">i</span><span class="c">f</span> <span class="c">not</span> <span class="w">st</span><span class="pc">:</span>
+            <span class="pc">s</span><span class="c">elf.</span><span class="pc">r</span><span class="c">estat</span><span class="w">(</span><span class="pc">)</span>
+            <span class="w">st</span> <span class="pc">=</span> <span class="c">self.</span><span class="w">_</span><span class="pc">s</span><span class="c">tatinfo</span>
+        <span class="w">r</span><span class="c">eturn</span> <span class="w">st</span><span class="c">.</span><span class="w">st_dev</span>
+
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">getNumberOfHardLinks</span><span class="c">(self):</span>
+        
+        <span class="c">if</span> <span class="w">p</span><span class="c">latform.</span><span class="w">i</span><span class="c">sWindows</span><span class="pc">(</span><span class="c">):</span>
+            <span class="pc">ra</span><span class="c">ise</span> <span class="pc">N</span><span class="c">otImplementedError</span>
+
+        <span class="w">st</span> <span class="pc">=</span> <span class="c">self.</span><span class="w">_</span><span class="pc">s</span><span class="c">tatinfo</span>
+        <span class="w">i</span><span class="c">f</span> <span class="c">not</span> <span class="w">st</span><span class="pc">:</span>
+            <span class="pc">s</span><span class="c">elf.</span><span class="pc">r</span><span class="c">estat</span><span class="w">(</span><span class="pc">)</span>
+            <span class="w">st</span> <span class="pc">=</span> <span class="c">self.</span><span class="w">_</span><span class="pc">s</span><span class="c">tatinfo</span>
+        <span class="w">r</span><span class="c">eturn</span> <span class="w">st</span><span class="c">.</span><span class="w">st_nlink</span>
+
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">getUserID</span><span class="c">(self):</span>
+        
+        <span class="c">if</span> <span class="w">p</span><span class="c">latform.</span><span class="w">i</span><span class="c">sWindows</span><span class="pc">(</span><span class="c">):</span>
+            <span class="pc">ra</span><span class="c">ise</span> <span class="pc">N</span><span class="c">otImplementedError</span>
+
+        <span class="w">st</span> <span class="pc">=</span> <span class="c">self.</span><span class="w">_</span><span class="pc">s</span><span class="c">tatinfo</span>
+        <span class="w">i</span><span class="c">f</span> <span class="c">not</span> <span class="w">st</span><span class="pc">:</span>
+            <span class="pc">s</span><span class="c">elf.</span><span class="pc">r</span><span class="c">estat</span><span class="w">(</span><span class="pc">)</span>
+            <span class="w">st</span> <span class="pc">=</span> <span class="c">self.</span><span class="w">_</span><span class="pc">s</span><span class="c">tatinfo</span>
+        <span class="w">r</span><span class="c">eturn</span> <span class="w">st</span><span class="c">.</span><span class="w">st_uid</span>
+
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">getGroupID</span><span class="c">(self):</span>
+        
+        <span class="c">if</span> <span class="w">p</span><span class="c">latform.</span><span class="w">i</span><span class="c">sWindows</span><span class="pc">(</span><span class="c">):</span>
+            <span class="pc">ra</span><span class="c">ise</span> <span class="pc">N</span><span class="c">otImplementedError</span>
+
+        <span class="w">st</span> <span class="pc">=</span> <span class="c">self.</span><span class="w">_</span><span class="pc">s</span><span class="c">tatinfo</span>
+        <span class="w">i</span><span class="c">f</span> <span class="c">not</span> <span class="w">st</span><span class="pc">:</span>
+            <span class="pc">s</span><span class="c">elf.</span><span class="pc">r</span><span class="c">estat</span><span class="w">(</span><span class="pc">)</span>
+            <span class="w">st</span> <span class="pc">=</span> <span class="c">self.</span><span class="w">_</span><span class="pc">s</span><span class="c">tatinfo</span>
+        <span class="w">r</span><span class="c">eturn</span> <span class="w">st</span><span class="c">.</span><span class="w">st_gid</span>
+
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">getPermissions</span><span class="c">(self):</span>
+        
+        <span class="w">st</span> <span class="c">=</span> <span class="c">self.</span><span class="pc">_</span><span class="c">statinfo</span>
+        <span class="w">i</span><span class="c">f</span> <span class="c">not</span> <span class="w">st</span><span class="pc">:</span>
+            <span class="c">self.</span><span class="pc">r</span><span class="c">estat</span><span class="pc">(</span><span class="c">)</span>
+            <span class="w">st</span> <span class="c">=</span> <span class="c">self.</span><span class="pc">_</span><span class="c">statinfo</span>
+        <span class="w">r</span><span class="c">eturn</span> <span class="w">Permissions</span><span class="c">(</span><span class="w">S_IMODE</span><span class="pc">(</span><span class="w">st</span><span class="pc">.</span><span class="w">st_mode)</span><span class="pc">)</span>
+
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">ex</span><span class="pc">i</span><span class="c">sts(self):</span>
+        
+        <span class="pc">i</span><span class="c">f</span> <span class="c">self.</span><span class="pc">_</span><span class="c">statinfo:</span>
+            <span class="pc">r</span><span class="c">eturn</span> <span class="pc">T</span><span class="c">rue</span>
+        <span class="pc">e</span><span class="c">lse:</span>
+            <span class="pc">s</span><span class="c">elf.restat</span><span class="pc">(</span><span class="w">F</span><span class="pc">al</span><span class="c">se)</span>
+            <span class="w">i</span><span class="c">f</span> <span class="pc">s</span><span class="c">elf._statinfo:</span>
+                <span class="pc">r</span><span class="c">eturn</span> <span class="pc">T</span><span class="c">rue</span>
+            <span class="pc">e</span><span class="c">lse:</span>
+                <span class="pc">r</span><span class="c">eturn</span> <span class="pc">F</span><span class="c">alse</span>
+
+
+    <span class="c">def</span> <span class="w">isdir</span><span class="c">(self):</span>
+        
+        <span class="w">st</span> <span class="c">=</span> <span class="c">self._statinfo</span>
+        <span class="w">i</span><span class="c">f</span> <span class="pc">n</span><span class="c">ot</span> <span class="w">st</span><span class="pc">:</span>
+            <span class="c">self.</span><span class="pc">r</span><span class="c">estat</span><span class="w">(F</span><span class="pc">al</span><span class="c">se)</span>
+            <span class="w">st</span> <span class="pc">=</span> <span class="c">self._statinfo</span>
+            <span class="w">i</span><span class="c">f</span> <span class="c">not</span> <span class="w">st</span><span class="pc">:</span>
+                <span class="pc">r</span><span class="c">eturn</span> <span class="w">F</span><span class="c">alse</span>
+        <span class="pc">r</span><span class="c">eturn</span> <span class="w">S_ISDIR</span><span class="c">(</span><span class="w">st</span><span class="pc">.</span><span class="w">st_mode</span><span class="pc">)</span>
+
+
+    <span class="c">def</span> <span class="w">isfile</span><span class="c">(self):</span>
+        
+        <span class="w">st</span> <span class="c">=</span> <span class="c">self.</span><span class="pc">_</span><span class="c">statinfo</span>
+        <span class="w">i</span><span class="c">f</span> <span class="c">not</span> <span class="w">st</span><span class="pc">:</span>
+            <span class="pc">s</span><span class="c">elf.</span><span class="w">r</span><span class="c">estat</span><span class="pc">(</span><span class="w">F</span><span class="pc">al</span><span class="c">se)</span>
+            <span class="w">st</span> <span class="pc">=</span> <span class="c">self.</span><span class="pc">_</span><span class="c">statinfo</span>
+            <span class="w">i</span><span class="c">f</span> <span class="c">not</span> <span class="w">st</span><span class="pc">:</span>
+                <span class="c">return</span> <span class="w">F</span><span class="c">alse</span>
+        <span class="pc">r</span><span class="c">eturn</span> <span class="w">S_ISREG</span><span class="c">(</span><span class="w">st</span><span class="c">.</span><span class="w">s</span><span class="pc">t_</span><span class="c">mode)</span>
+
+
+    <span class="c">def</span> <span class="w">isBlockDevice</span><span class="c">(self):</span>
+        
+        <span class="w">st</span> <span class="c">=</span> <span class="c">self.</span><span class="pc">_</span><span class="c">statinfo</span>
+        <span class="w">i</span><span class="c">f</span> <span class="c">not</span> <span class="w">st</span><span class="pc">:</span>
+            <span class="pc">s</span><span class="c">elf.</span><span class="w">r</span><span class="c">estat</span><span class="pc">(</span><span class="w">F</span><span class="pc">al</span><span class="c">se)</span>
+            <span class="w">st</span> <span class="pc">=</span> <span class="c">self.</span><span class="pc">_</span><span class="c">statinfo</span>
+            <span class="w">i</span><span class="c">f</span> <span class="c">not</span> <span class="w">st</span><span class="pc">:</span>
+                <span class="c">return</span> <span class="w">F</span><span class="c">alse</span>
+        <span class="pc">r</span><span class="c">eturn</span> <span class="w">S_ISBLK</span><span class="c">(</span><span class="w">st</span><span class="c">.</span><span class="w">s</span><span class="pc">t_</span><span class="c">mode)</span>
+
+
+    <span class="c">def</span> <span class="w">isSocket</span><span class="c">(self):</span>
+        
+        <span class="w">st</span> <span class="c">=</span> <span class="c">self.</span><span class="pc">_</span><span class="c">statinfo</span>
+        <span class="w">i</span><span class="c">f</span> <span class="c">not</span> <span class="w">st</span><span class="pc">:</span>
+            <span class="pc">s</span><span class="c">elf.</span><span class="w">r</span><span class="c">estat</span><span class="pc">(</span><span class="w">F</span><span class="pc">al</span><span class="c">se)</span>
+            <span class="w">st</span> <span class="pc">=</span> <span class="c">self.</span><span class="pc">_</span><span class="c">statinfo</span>
+            <span class="w">i</span><span class="c">f</span> <span class="c">not</span> <span class="w">st</span><span class="pc">:</span>
+                <span class="c">return</span> <span class="w">F</span><span class="c">alse</span>
+        <span class="pc">r</span><span class="c">eturn</span> <span class="w">S_ISSOCK</span><span class="c">(</span><span class="w">st</span><span class="c">.</span><span class="w">s</span><span class="pc">t_</span><span class="c">mode)</span>
+
+
+    <span class="c">def</span> <span class="w">islink</span><span class="c">(self):</span>
+        
+        
+        
+        
+        
+        <span class="c">return</span> <span class="w">i</span><span class="pc">s</span><span class="c">link(self.</span><span class="w">p</span><span class="c">ath</span><span class="pc">)</span>
+
+
+    <span class="c">def</span> <span class="w">isabs</span><span class="c">(self):</span>
+        
+        <span class="c">return</span> <span class="w">i</span><span class="pc">sa</span><span class="c">bs(self.path)</span>
+
+
+    <span class="c">def</span> <span class="w">listdir</span><span class="c">(self):</span>
+        
+        <span class="c">return</span> <span class="w">l</span><span class="pc">istd</span><span class="c">ir</span><span class="pc">(</span><span class="c">self.path)</span>
+
+
+    <span class="c">def</span> <span class="w">splitext</span><span class="c">(self):</span>
+        
+        <span class="c">return</span> <span class="w">s</span><span class="pc">p</span><span class="c">litext</span><span class="pc">(</span><span class="c">self.path)</span>
+
+
+    <span class="c">def</span> <span class="w">_</span><span class="pc">_r</span><span class="c">epr__(self):</span>
+        <span class="c">return</span> <span class="w">'F</span><span class="pc">ileP</span><span class="c">ath</span><span class="w">(</span><span class="pc">%r</span><span class="w">)' % (</span><span class="c">self.</span><span class="w">p</span><span class="c">ath</span><span class="w">,</span><span class="pc">)</span>
+
+
+    <span class="c">def</span> <span class="w">touch</span><span class="c">(self):</span>
+        
+        <span class="w">t</span><span class="c">ry:</span>
+            <span class="c">self.</span><span class="w">op</span><span class="pc">e</span><span class="c">n</span><span class="pc">('</span><span class="w">a')</span><span class="pc">.c</span><span class="c">lose()</span>
+        <span class="w">e</span><span class="c">xcept</span> <span class="w">I</span><span class="pc">O</span><span class="c">Error:</span>
+            <span class="pc">p</span><span class="c">ass</span>
+        <span class="w">utime</span><span class="pc">(</span><span class="c">self.path</span><span class="pc">,</span> <span class="w">N</span><span class="c">one)</span>
+
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">rem</span><span class="c">ove(self):</span>
+        
+        <span class="pc">i</span><span class="c">f</span> <span class="c">self.</span><span class="w">isdir(</span><span class="pc">)</span> <span class="w">a</span><span class="c">nd</span> <span class="pc">n</span><span class="c">ot</span> <span class="c">self.</span><span class="w">islink</span><span class="pc">():</span>
+            <span class="w">f</span><span class="c">or</span> <span class="w">ch</span><span class="pc">i</span><span class="c">ld</span> <span class="c">in</span> <span class="c">self.</span><span class="w">c</span><span class="c">hildren</span><span class="w">(</span><span class="c">):</span>
+                <span class="w">c</span><span class="c">hild.</span><span class="w">r</span><span class="pc">em</span><span class="c">ove()</span>
+            <span class="w">o</span><span class="c">s.</span><span class="w">rmdir</span><span class="pc">(</span><span class="c">self.path</span><span class="pc">)</span>
+        <span class="w">e</span><span class="c">lse:</span>
+            <span class="pc">o</span><span class="c">s.</span><span class="w">r</span><span class="c">emove(self.path)</span>
+        <span class="c">self.</span><span class="w">changed</span><span class="c">()</span>
+
+
+    <span class="c">def</span> <span class="w">ma</span><span class="pc">ked</span><span class="c">irs(self):</span>
+        
+        <span class="pc">r</span><span class="c">eturn</span> <span class="pc">o</span><span class="c">s.</span><span class="pc">m</span><span class="c">akedirs</span><span class="pc">(</span><span class="c">self.path</span><span class="pc">)</span>
+
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">globChildren</span><span class="c">(self</span><span class="pc">,</span> <span class="w">pattern</span><span class="c">):</span>
+        
+        <span class="w">sep</span> <span class="c">=</span> <span class="w">_coerceToFilesystemEncoding</span><span class="c">(</span><span class="pc">p</span><span class="c">attern</span><span class="pc">,</span> <span class="w">o</span><span class="c">s.</span><span class="w">s</span><span class="pc">e</span><span class="c">p)</span>
+        <span class="w">ourPath</span> <span class="c">=</span> <span class="pc">sel</span><span class="c">f.</span><span class="w">_getPathAsSameTypeAs</span><span class="c">(</span><span class="pc">p</span><span class="c">attern)</span>
+
+        <span class="w">im</span><span class="c">port</span> <span class="w">glob</span>
+        <span class="w">p</span><span class="pc">ath</span> <span class="pc">=</span> <span class="pc">ou</span><span class="c">rPath</span><span class="w">[</span><span class="pc">-</span><span class="c">1</span><span class="w">] ==</span> <span class="w">s</span><span class="pc">ep</span> <span class="w">a</span><span class="pc">n</span><span class="c">d</span> <span class="pc">o</span><span class="c">urPath</span> <span class="w">+</span> <span class="c">pattern</span> <span class="w">\</span>
+               <span class="w">or</span> <span class="pc">s</span><span class="c">ep</span><span class="w">.j</span><span class="pc">o</span><span class="c">in</span><span class="pc">([o</span><span class="c">urPath</span><span class="pc">,</span> <span class="pc">p</span><span class="c">attern</span><span class="w">]</span><span class="c">)</span>
+        <span class="pc">r</span><span class="c">eturn</span> <span class="w">l</span><span class="pc">i</span><span class="c">st(</span><span class="w">m</span><span class="c">ap(</span><span class="pc">s</span><span class="c">elf.</span><span class="w">clonePath</span><span class="c">,</span> <span class="w">g</span><span class="c">lob</span><span class="pc">.</span><span class="w">g</span><span class="c">lob</span><span class="w">(p</span><span class="pc">ath</span><span class="w">)</span><span class="pc">))</span>
+
+
+    <span class="c">def</span> <span class="w">b</span><span class="pc">a</span><span class="c">sename(self):</span>
+        
+        <span class="pc">r</span><span class="c">eturn</span> <span class="w">ba</span><span class="pc">sen</span><span class="c">ame(</span><span class="pc">sel</span><span class="c">f.</span><span class="w">p</span><span class="pc">ath)</span>
+
+
+    <span class="c">def</span> <span class="w">di</span><span class="pc">r</span><span class="c">name(self):</span>
+        
+        <span class="c">return</span> <span class="w">di</span><span class="pc">rn</span><span class="c">ame(self.</span><span class="pc">p</span><span class="c">ath</span><span class="pc">)</span>
+
+
+    <span class="c">def</span> <span class="w">p</span><span class="c">arent(self):</span>
+        
+        <span class="c">return</span> <span class="c">self.</span><span class="pc">c</span><span class="c">lonePath(self.</span><span class="w">d</span><span class="pc">i</span><span class="c">rname</span><span class="w">(</span><span class="pc">)</span><span class="c">)</span>
+
+
+    <span class="c">def</span> <span class="w">set</span><span class="pc">C</span><span class="c">ontent(self</span><span class="pc">,</span> <span class="w">c</span><span class="pc">ont</span><span class="c">ent</span><span class="pc">,</span> <span class="w">ext</span><span class="pc">=</span><span class="w">b'.ne</span><span class="pc">w</span><span class="w">'</span><span class="pc">)</span><span class="c">:</span>
+        
+        <span class="w">sib</span> <span class="c">=</span> <span class="c">self.</span><span class="w">temporarySibling</span><span class="c">(ext</span><span class="pc">)</span>
+        <span class="w">f</span> <span class="c">=</span> <span class="pc">si</span><span class="c">b.</span><span class="w">o</span><span class="c">pen</span><span class="pc">('</span><span class="w">w</span><span class="c">')</span>
+        <span class="w">t</span><span class="c">ry:</span>
+            <span class="pc">f</span><span class="c">.</span><span class="pc">w</span><span class="c">rite(</span><span class="w">c</span><span class="pc">on</span><span class="c">tent)</span>
+        <span class="w">fi</span><span class="pc">n</span><span class="c">ally:</span>
+            <span class="pc">f</span><span class="c">.close()</span>
+        <span class="pc">i</span><span class="c">f</span> <span class="pc">p</span><span class="c">latform.</span><span class="w">isWindows</span><span class="pc">()</span> <span class="w">a</span><span class="c">nd</span> <span class="w">ex</span><span class="pc">i</span><span class="c">sts</span><span class="pc">(</span><span class="w">s</span><span class="pc">e</span><span class="c">lf.path</span><span class="w">)</span><span class="pc">:</span>
+            <span class="w">o</span><span class="c">s.</span><span class="w">unlink</span><span class="c">(self</span><span class="pc">.</span><span class="c">path</span><span class="pc">)</span>
+        <span class="pc">o</span><span class="c">s.</span><span class="w">rename</span><span class="c">(</span><span class="w">sib</span><span class="pc">.</span><span class="c">path,</span> <span class="pc">s</span><span class="c">elf.path)</span>
+
+
+    <span class="w">d</span><span class="c">ef</span> <span class="w">__cmp__</span><span class="c">(self</span><span class="pc">,</span> <span class="w">o</span><span class="pc">t</span><span class="c">her):</span>
+        <span class="pc">i</span><span class="c">f</span> <span class="pc">n</span><span class="c">ot</span> <span class="pc">i</span><span class="c">sinstance(</span><span class="w">o</span><span class="pc">t</span><span class="c">her,</span> <span class="w">F</span><span class="pc">i</span><span class="c">lePath):</span>
+            <span class="pc">r</span><span class="c">eturn</span> <span class="w">NotImplemented</span>
+        <span class="pc">r</span><span class="c">eturn</span> <span class="w">cmp</span><span class="c">(self.</span><span class="pc">p</span><span class="c">ath,</span> <span class="pc">o</span><span class="c">ther.path</span><span class="pc">)</span>
+
+
+    <span class="c">def</span> <span class="w">createDirectory</span><span class="c">(self):</span>
+        
+        <span class="w">o</span><span class="pc">s</span><span class="c">.</span><span class="w">mkdir</span><span class="c">(self.path</span><span class="pc">)</span>
+
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">requireCreate</span><span class="c">(self</span><span class="pc">,</span> <span class="w">v</span><span class="c">al</span><span class="pc">=</span><span class="w">1</span><span class="c">):</span>
+        
+        <span class="pc">s</span><span class="c">elf.</span><span class="w">alwaysCreate</span> <span class="pc">=</span> <span class="w">v</span><span class="c">al</span>
+
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">create</span><span class="c">(self):</span>
+        
+        <span class="w">fdint</span> <span class="c">=</span> <span class="pc">o</span><span class="c">s.</span><span class="w">o</span><span class="c">pen(self.path</span><span class="pc">,</span> <span class="w">_CREATE_FLAGS</span><span class="pc">)</span>
+
+        
+        
+        
+
+        <span class="pc">r</span><span class="c">eturn</span> <span class="w">o</span><span class="c">s.</span><span class="w">fdopen</span><span class="c">(</span><span class="pc">f</span><span class="c">dint</span><span class="w">,</span><span class="pc"> '</span><span class="w">w+b</span><span class="pc">')</span>
+
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">temporarySibling</span><span class="c">(self</span><span class="pc">,</span> <span class="w">extension</span><span class="pc">=</span><span class="w">b""):</span>
+        
+        <span class="w">ourPath</span> <span class="c">=</span> <span class="pc">s</span><span class="c">elf.</span><span class="w">_getPathAsSameTypeAs</span><span class="c">(extension)</span>
+        <span class="w">sib</span> <span class="c">=</span> <span class="c">self.</span><span class="w">sibling</span><span class="c">(</span><span class="w">_secureEnoughString</span><span class="pc">(o</span><span class="c">urPath</span><span class="w">) </span><span class="c">+</span>
+                           <span class="w">s</span><span class="pc">e</span><span class="c">lf.</span><span class="w">clonePath</span><span class="pc">(</span><span class="w">o</span><span class="c">urPath</span><span class="w">).b</span><span class="pc">a</span><span class="c">sename</span><span class="w">() +</span> <span class="c">extension</span><span class="pc">)</span>
+        <span class="w">s</span><span class="pc">i</span><span class="c">b</span><span class="pc">.</span><span class="w">requireCreate</span><span class="pc">()</span>
+        <span class="pc">r</span><span class="c">eturn</span> <span class="pc">si</span><span class="c">b</span>
+
+
+    <span class="w">_chunkSize</span> <span class="c">=</span> <span class="w">2</span> <span class="w">*</span><span class="pc">*</span> <span class="w">2</span> <span class="w">*</span><span class="pc">*</span> <span class="c">2</span> <span class="w">*</span><span class="pc">*</span> <span class="c">2</span>
+
+    <span class="w">d</span><span class="c">ef</span> <span class="w">copyTo</span><span class="c">(self</span><span class="pc">,</span> <span class="w">destination</span><span class="pc">,</span> <span class="w">followLinks</span><span class="c">=</span><span class="pc">T</span><span class="c">rue):</span>
+        
+        <span class="pc">i</span><span class="c">f</span> <span class="pc">s</span><span class="c">elf.</span><span class="w">islink(</span><span class="pc">)</span> <span class="w">a</span><span class="c">nd</span> <span class="c">not</span> <span class="c">followLinks:</span>
+            <span class="w">o</span><span class="c">s.</span><span class="w">symlink</span><span class="pc">(</span><span class="w">o</span><span class="c">s.</span><span class="w">readlink</span><span class="c">(self.</span><span class="pc">p</span><span class="c">ath</span><span class="pc">)</span><span class="c">,</span> <span class="w">d</span><span class="c">estination</span><span class="pc">.p</span><span class="c">ath</span><span class="pc">)</span>
+            <span class="w">r</span><span class="c">eturn</span>
+        
+        
+        
+        
+        <span class="w">i</span><span class="pc">f</span> <span class="c">self.</span><span class="w">isdir(</span><span class="pc">):</span>
+            <span class="pc">i</span><span class="c">f</span> <span class="pc">n</span><span class="c">ot</span> <span class="w">d</span><span class="pc">e</span><span class="c">stination.</span><span class="pc">e</span><span class="c">xists</span><span class="pc">()</span><span class="c">:</span>
+                <span class="w">d</span><span class="pc">es</span><span class="c">tination.</span><span class="w">createDirectory</span><span class="pc">()</span>
+            <span class="pc">f</span><span class="c">or</span> <span class="w">ch</span><span class="pc">i</span><span class="c">ld</span> <span class="c">in</span> <span class="pc">s</span><span class="c">elf.</span><span class="w">c</span><span class="c">hildren</span><span class="w">(</span><span class="c">):</span>
+                <span class="w">destChild</span> <span class="c">=</span> <span class="w">d</span><span class="c">estination</span><span class="pc">.c</span><span class="c">hild</span><span class="pc">(</span><span class="w">c</span><span class="pc">h</span><span class="c">ild</span><span class="w">.b</span><span class="c">asename</span><span class="pc">(</span><span class="c">))</span>
+                <span class="w">c</span><span class="c">hild.</span><span class="w">copyTo</span><span class="pc">(</span><span class="c">destChild</span><span class="pc">,</span> <span class="w">followLinks</span><span class="c">)</span>
+        <span class="w">e</span><span class="pc">li</span><span class="c">f</span> <span class="w">s</span><span class="c">elf.</span><span class="w">isfile</span><span class="pc">(</span><span class="c">):</span>
+            <span class="w">writefile</span> <span class="c">=</span> <span class="w">d</span><span class="c">estination.</span><span class="w">o</span><span class="c">pen</span><span class="pc">('</span><span class="w">w</span><span class="c">')</span>
+            <span class="w">t</span><span class="c">ry:</span>
+                <span class="w">readfile</span> <span class="c">=</span> <span class="pc">s</span><span class="c">elf.</span><span class="w">op</span><span class="pc">e</span><span class="c">n</span><span class="w">(</span><span class="pc">)</span>
+                <span class="w">t</span><span class="c">ry:</span>
+                    <span class="w">w</span><span class="pc">h</span><span class="c">ile</span> <span class="w">1</span><span class="c">:</span>
+                        
+                        
+                        
+                        
+                        
+                        <span class="w">chunk</span> <span class="c">=</span> <span class="pc">r</span><span class="c">eadfile.</span><span class="w">r</span><span class="pc">ead(</span><span class="c">self.</span><span class="w">_chunkSize</span><span class="pc">)</span>
+                        <span class="w">w</span><span class="c">ritefile.</span><span class="pc">w</span><span class="c">rite</span><span class="pc">(c</span><span class="c">hunk)</span>
+                        <span class="c">if</span> <span class="pc">l</span><span class="c">en(chunk</span><span class="w">) &lt;</span> <span class="c">self.</span><span class="w">_</span><span class="pc">c</span><span class="c">hunkSize:</span>
+                            <span class="w">b</span><span class="c">reak</span>
+                <span class="w">fi</span><span class="c">nally:</span>
+                    <span class="w">r</span><span class="pc">ea</span><span class="c">dfile.</span><span class="w">c</span><span class="pc">l</span><span class="c">ose()</span>
+            <span class="w">f</span><span class="pc">i</span><span class="c">nally:</span>
+                <span class="w">w</span><span class="c">ritefile.</span><span class="pc">c</span><span class="c">lose()</span>
+        <span class="w">e</span><span class="pc">li</span><span class="c">f</span> <span class="pc">n</span><span class="c">ot</span> <span class="pc">s</span><span class="c">elf.</span><span class="w">e</span><span class="pc">x</span><span class="c">ists</span><span class="w">(</span><span class="pc">):</span>
+            <span class="w">r</span><span class="pc">a</span><span class="c">ise</span> <span class="w">O</span><span class="c">SError(</span><span class="w">e</span><span class="pc">rrn</span><span class="c">o.</span><span class="w">ENOENT,</span><span class="pc"> </span><span class="c">"</span><span class="w">N</span><span class="c">o</span> <span class="w">such</span> <span class="w">f</span><span class="c">ile</span> <span class="w">o</span><span class="pc">r</span> <span class="w">d</span><span class="pc">i</span><span class="c">rectory</span><span class="pc">"</span><span class="c">)</span>
+        <span class="pc">e</span><span class="c">lse:</span>
+            
+            
+            
+            
+            <span class="pc">r</span><span class="c">aise</span> <span class="pc">N</span><span class="c">otImplementedError</span><span class="pc">(</span>
+                <span class="c">"</span><span class="w">Only</span> <span class="w">copying</span> <span class="w">o</span><span class="pc">f</span> <span class="w">fi</span><span class="pc">les</span> <span class="w">a</span><span class="c">nd</span> <span class="w">directories</span> <span class="w">su</span><span class="pc">p</span><span class="c">ported")</span>
+
+
+    <span class="c">def</span> <span class="w">moveTo</span><span class="c">(self</span><span class="pc">,</span> <span class="w">destination</span><span class="pc">,</span> <span class="w">followLinks</span><span class="pc">=T</span><span class="c">rue):</span>
+        
+        <span class="w">t</span><span class="c">ry:</span>
+            <span class="w">o</span><span class="c">s.</span><span class="w">rename</span><span class="c">(</span><span class="pc">s</span><span class="c">elf</span><span class="pc">.p</span><span class="c">ath,</span> <span class="pc">d</span><span class="c">estination</span><span class="pc">.p</span><span class="c">ath</span><span class="pc">)</span>
+        <span class="pc">e</span><span class="c">xcept</span> <span class="w">O</span><span class="c">SError</span> <span class="pc">a</span><span class="c">s</span> <span class="w">ose</span><span class="c">:</span>
+            <span class="w">i</span><span class="c">f</span> <span class="w">o</span><span class="c">se.</span><span class="pc">e</span><span class="c">rrno</span> <span class="pc">=</span><span class="c">=</span> <span class="pc">e</span><span class="c">rrno.</span><span class="w">EXDEV</span><span class="c">:</span>
+                
+
+                
+                
+                
+                
+
+                
+                <span class="w">secsib</span> <span class="c">=</span> <span class="pc">d</span><span class="c">estination.</span><span class="w">temporarySibling</span><span class="pc">()</span>
+                <span class="pc">s</span><span class="c">elf.</span><span class="w">copyTo</span><span class="pc">(s</span><span class="c">ecsib</span><span class="pc">,</span> <span class="w">followLinks</span><span class="c">)</span> 
+                <span class="w">s</span><span class="pc">ec</span><span class="c">sib.</span><span class="w">moveTo</span><span class="c">(</span><span class="pc">d</span><span class="c">estination</span><span class="pc">,</span> <span class="pc">f</span><span class="c">ollowLinks)</span> 
+
+                
+                <span class="w">mysecsib</span> <span class="c">=</span> <span class="pc">sel</span><span class="c">f.</span><span class="w">t</span><span class="c">emporarySibling</span><span class="pc">()</span>
+                <span class="c">self.</span><span class="w">m</span><span class="pc">o</span><span class="c">veTo</span><span class="pc">(m</span><span class="c">ysecsib</span><span class="pc">,</span> <span class="pc">f</span><span class="c">ollowLinks)</span> 
+                <span class="pc">m</span><span class="c">ysecsib.</span><span class="w">r</span><span class="pc">e</span><span class="c">move()</span> 
+            <span class="w">e</span><span class="c">lse:</span>
+                <span class="w">r</span><span class="pc">a</span><span class="c">ise</span>
+        <span class="w">e</span><span class="pc">l</span><span class="c">se:</span>
+            <span class="pc">s</span><span class="c">elf.</span><span class="w">changed</span><span class="pc">()</span>
+            <span class="w">d</span><span class="pc">es</span><span class="c">tination</span><span class="pc">.</span><span class="w">c</span><span class="pc">h</span><span class="c">anged</span><span class="pc">(</span><span class="c">)</span>
+
+
+    <span class="c">def</span> <span class="w">statinfo</span><span class="c">(self</span><span class="pc">,</span> <span class="w">v</span><span class="pc">a</span><span class="c">lue</span><span class="pc">=</span><span class="w">_SpecialNoValue</span><span class="c">):</span>
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        <span class="c">if</span> <span class="w">v</span><span class="pc">alu</span><span class="c">e</span> <span class="c">is</span> <span class="w">_</span><span class="c">SpecialNoValue:</span>
+            <span class="pc">r</span><span class="c">eturn</span> <span class="c">self.</span><span class="w">_statinfo</span>
+        <span class="w">e</span><span class="c">lse:</span>
+            <span class="c">self.</span><span class="w">_</span><span class="pc">s</span><span class="c">tatinfo</span> <span class="c">=</span> <span class="w">v</span><span class="c">alue</span>
+
+
+
+<span class="w">_tmp</span> <span class="c">=</span> <span class="w">dep</span><span class="c">recated</span><span class="pc">(</span>
+    <span class="w">V</span><span class="c">ersion</span><span class="pc">('</span><span class="c">Twisted',</span> <span class="w">1</span><span class="pc">5</span><span class="c">,</span> <span class="c">0,</span> <span class="c">0),</span>
+    <span class="w">"ot</span><span class="c">her</span> <span class="w">F</span><span class="pc">ileP</span><span class="c">ath</span> <span class="w">methods</span> <span class="w">such</span> <span class="w">a</span><span class="pc">s</span> <span class="w">getsize(),</span><span class="pc"> </span><span class="c">"</span>
+    <span class="pc">"</span><span class="w">isdir()</span><span class="pc">,</span> <span class="w">getModificationTime()</span><span class="pc">,</span> <span class="w">etc.")(F</span><span class="pc">ileP</span><span class="c">ath</span><span class="w">.statinfo)</span>
+<span class="w">F</span><span class="c">ilePath</span><span class="pc">.</span><span class="w">s</span><span class="pc">t</span><span class="c">atinfo</span> <span class="c">=</span> <span class="w">pr</span><span class="pc">op</span><span class="c">erty</span><span class="pc">(_</span><span class="c">tmp</span><span class="pc">,</span> <span class="w">_</span><span class="c">tmp)</span>
+
+
+<span class="w">F</span><span class="c">ilePath.</span><span class="w">clonePath</span> <span class="pc">=</span> <span class="w">F</span><span class="pc">i</span><span class="c">lePath</span>
+
+</pre>
+</body>
+</html>
+

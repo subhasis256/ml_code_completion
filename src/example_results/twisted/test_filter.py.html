@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+
+
+
+<span class="w">from</span> <span class="w">zope.interface.verify</span> <span class="w">import</span> <span class="w">verifyObject,</span> <span class="w">BrokenMethodImplementation</span>
+
+<span class="w">from</span> <span class="w">twisted.trial</span> <span class="w">import</span> <span class="w">unittest</span>
+
+<span class="w">from</span> <span class="w">.._levels</span> <span class="w">import</span> <span class="w">InvalidLogLevelError</span>
+<span class="w">from</span> <span class="w">.._levels</span> <span class="w">import</span> <span class="w">LogLevel</span>
+<span class="w">from</span> <span class="w">.._observer</span> <span class="w">import</span> <span class="w">ILogObserver</span>
+<span class="w">from</span> <span class="w">.._observer</span> <span class="w">import</span> <span class="w">LogPublisher</span>
+<span class="w">from</span> <span class="w">.._filter</span> <span class="w">import</span> <span class="w">FilteringLogObserver</span>
+<span class="c">from</span> <span class="w">.</span><span class="pc">.</span><span class="w">_</span><span class="pc">f</span><span class="c">ilter</span> <span class="c">import</span> <span class="w">PredicateResult</span>
+<span class="c">from</span> <span class="w">.</span><span class="c">.</span><span class="w">_</span><span class="c">filter</span> <span class="c">import</span> <span class="w">LogLevelFilterPredicate</span>
+
+
+
+<span class="pc">c</span><span class="c">lass</span> <span class="w">FilteringLogObserverTests</span><span class="c">(unittest.TestCase):</span>
+    
+
+    <span class="c">def</span> <span class="w">test_interface</span><span class="c">(self):</span>
+        
+        <span class="w">ob</span><span class="pc">s</span><span class="c">erver</span> <span class="c">=</span> <span class="w">F</span><span class="pc">ilteringLogObserver(</span><span class="w">l</span><span class="pc">a</span><span class="c">mbda</span> <span class="w">e</span><span class="c">:</span> <span class="w">N</span><span class="c">one</span><span class="w">, ())</span>
+        <span class="w">t</span><span class="pc">r</span><span class="c">y:</span>
+            <span class="w">v</span><span class="pc">erifyO</span><span class="c">bject(</span><span class="w">ILogObserver</span><span class="c">,</span> <span class="w">ob</span><span class="pc">s</span><span class="c">erver)</span>
+        <span class="pc">e</span><span class="c">xcept</span> <span class="w">BrokenMethodImplementation</span> <span class="pc">a</span><span class="c">s</span> <span class="c">e:</span>
+            <span class="c">self.</span><span class="pc">f</span><span class="c">ail(</span><span class="pc">e</span><span class="c">)</span>
+
+
+    <span class="c">def</span> <span class="w">filterWith</span><span class="c">(self</span><span class="pc">,</span> <span class="w">filters</span><span class="pc">,</span> <span class="w">ot</span><span class="c">her</span><span class="pc">=</span><span class="w">F</span><span class="c">alse):</span>
+        
+        <span class="w">e</span><span class="pc">vents</span> <span class="w">=</span><span class="pc"> [</span>
+            <span class="w">d</span><span class="c">ict(</span><span class="w">co</span><span class="pc">u</span><span class="c">nt</span><span class="pc">=0),</span>
+            <span class="w">d</span><span class="pc">i</span><span class="c">ct(</span><span class="w">co</span><span class="pc">u</span><span class="c">nt</span><span class="pc">=</span><span class="c">1),</span>
+            <span class="w">d</span><span class="pc">i</span><span class="c">ct(</span><span class="w">co</span><span class="pc">u</span><span class="c">nt</span><span class="pc">=2</span><span class="c">),</span>
+            <span class="w">d</span><span class="pc">i</span><span class="c">ct(</span><span class="w">co</span><span class="pc">u</span><span class="c">nt</span><span class="pc">=</span><span class="w">3</span><span class="c">),</span>
+        <span class="w">]</span>
+
+        <span class="w">c</span><span class="c">lass</span> <span class="w">Filters</span><span class="c">(object):</span>
+            <span class="pc">@</span><span class="w">staticmethod</span>
+            <span class="c">def</span> <span class="w">twoMinus</span><span class="c">(</span><span class="w">e</span><span class="c">vent):</span>
+                
+                <span class="pc">i</span><span class="c">f</span> <span class="w">e</span><span class="pc">v</span><span class="c">ent</span><span class="w">[</span><span class="c">"</span><span class="w">co</span><span class="pc">u</span><span class="c">nt</span><span class="w">"] &lt;=</span> <span class="pc">2:</span>
+                    <span class="c">return</span> <span class="w">PredicateResult.yes</span>
+                <span class="w">r</span><span class="c">eturn</span> <span class="w">P</span><span class="c">redicateResult.</span><span class="w">maybe</span>
+
+            <span class="w">@s</span><span class="pc">t</span><span class="c">aticmethod</span>
+            <span class="pc">d</span><span class="c">ef</span> <span class="w">twoPlus</span><span class="c">(</span><span class="w">e</span><span class="c">vent):</span>
+                
+                <span class="pc">i</span><span class="c">f</span> <span class="w">e</span><span class="pc">v</span><span class="c">ent</span><span class="w">[</span><span class="pc">"</span><span class="w">co</span><span class="pc">u</span><span class="c">nt</span><span class="w">"] &gt;=</span> <span class="w">2</span><span class="pc">:</span>
+                    <span class="c">return</span> <span class="w">P</span><span class="c">redicateResult.yes</span>
+                <span class="w">r</span><span class="c">eturn</span> <span class="w">P</span><span class="c">redicateResult.maybe</span>
+
+            <span class="w">@</span><span class="c">staticmethod</span>
+            <span class="pc">d</span><span class="c">ef</span> <span class="w">notTwo</span><span class="c">(</span><span class="w">e</span><span class="c">vent):</span>
+                
+                <span class="pc">i</span><span class="c">f</span> <span class="w">e</span><span class="pc">v</span><span class="c">ent</span><span class="w">[</span><span class="pc">"</span><span class="w">co</span><span class="pc">u</span><span class="c">nt</span><span class="w">"] ==</span> <span class="w">2</span><span class="pc">:</span>
+                    <span class="c">return</span> <span class="pc">P</span><span class="c">redicateResult.</span><span class="w">no</span>
+                <span class="w">r</span><span class="c">eturn</span> <span class="w">P</span><span class="c">redicateResult.maybe</span>
+
+            <span class="w">@</span><span class="c">staticmethod</span>
+            <span class="pc">d</span><span class="c">ef</span> <span class="w">n</span><span class="pc">o</span><span class="c">(</span><span class="w">e</span><span class="c">vent):</span>
+                
+                <span class="c">return</span> <span class="w">P</span><span class="c">redicateResult.</span><span class="w">no</span>
+
+            <span class="w">@</span><span class="pc">s</span><span class="c">taticmethod</span>
+            <span class="pc">d</span><span class="c">ef</span> <span class="w">bogus</span><span class="c">(</span><span class="w">e</span><span class="c">vent):</span>
+                
+                <span class="c">return</span> <span class="w">N</span><span class="c">one</span>
+
+        <span class="w">predicates</span> <span class="w">=</span><span class="pc"> (</span><span class="w">g</span><span class="c">etattr(</span><span class="w">Filters</span><span class="c">,</span> <span class="w">f</span><span class="pc">)</span> <span class="w">f</span><span class="c">or</span> <span class="w">f</span> <span class="c">in</span> <span class="w">filters)</span>
+        <span class="w">eventsSeen</span> <span class="w">=</span><span class="pc"> []</span>
+        <span class="w">eventsNotSeen</span> <span class="pc">= </span><span class="c">[]</span>
+        <span class="w">trackingObserver</span> <span class="c">=</span> <span class="w">e</span><span class="c">ventsSeen.</span><span class="pc">a</span><span class="c">ppend</span>
+        <span class="w">i</span><span class="c">f</span> <span class="w">o</span><span class="pc">t</span><span class="c">her</span><span class="pc">:</span>
+            <span class="w">extra</span> <span class="w">=</span><span class="pc"> [</span><span class="c">eventsNotSeen.append</span><span class="w">]</span>
+        <span class="c">else:</span>
+            <span class="pc">e</span><span class="c">xtra</span> <span class="pc">= </span><span class="c">[]</span>
+        <span class="w">filteringObserver</span> <span class="c">=</span> <span class="w">FilteringLogObserver</span><span class="pc">(</span>
+            <span class="pc">t</span><span class="c">rackingObserver</span><span class="pc">,</span> <span class="w">predicates,</span><span class="pc"> *e</span><span class="c">xtra</span>
+        <span class="pc">)</span>
+        <span class="pc">f</span><span class="c">or</span> <span class="w">e</span> <span class="c">in</span> <span class="w">ev</span><span class="pc">ents</span><span class="c">:</span>
+            <span class="w">f</span><span class="pc">ilteri</span><span class="c">ngObserver</span><span class="pc">(</span><span class="w">e</span><span class="c">)</span>
+
+        <span class="c">if</span> <span class="w">e</span><span class="pc">x</span><span class="c">tra:</span>
+            <span class="c">return</span> <span class="w">(</span>
+                <span class="w">[e[</span><span class="pc">"</span><span class="w">co</span><span class="pc">u</span><span class="c">nt</span><span class="w">"</span><span class="pc">]</span> <span class="pc">f</span><span class="c">or</span> <span class="w">e</span> <span class="c">in</span> <span class="w">eventsSeen]</span><span class="pc">,</span>
+                <span class="pc">[</span><span class="w">e[</span><span class="pc">"</span><span class="w">co</span><span class="pc">u</span><span class="c">nt</span><span class="pc">"]</span> <span class="pc">f</span><span class="c">or</span> <span class="w">e</span> <span class="c">in</span> <span class="w">eventsNotSeen]</span><span class="pc">,</span>
+            <span class="w">)</span>
+        <span class="pc">r</span><span class="c">eturn</span> <span class="w">[e</span><span class="pc">["</span><span class="w">co</span><span class="pc">u</span><span class="c">nt</span><span class="pc">"]</span> <span class="c">for</span> <span class="w">e</span> <span class="c">in</span> <span class="w">ev</span><span class="pc">entsS</span><span class="c">een</span><span class="w">]</span>
+
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">test_shouldLogEventNoFilters</span><span class="c">(self</span><span class="pc">)</span><span class="c">:</span>
+        
+        <span class="pc">s</span><span class="c">elf.assertEqual(</span><span class="pc">s</span><span class="c">elf.</span><span class="w">filterWith([]), [0</span><span class="pc">,</span> <span class="pc">1,</span> <span class="pc">2,</span> <span class="c">3</span><span class="w">]</span><span class="c">)</span>
+
+
+    <span class="c">def</span> <span class="w">test_shouldLogEventNoFilter</span><span class="c">(self):</span>
+        
+        <span class="c">self.assertEqual(self.</span><span class="w">f</span><span class="pc">il</span><span class="c">terWith</span><span class="w">([</span><span class="pc">"</span><span class="w">notTwo"]), [</span><span class="pc">0</span><span class="w">,</span> <span class="pc">1</span><span class="c">,</span> <span class="pc">3</span><span class="w">]</span><span class="c">)</span>
+
+
+    <span class="c">def</span> <span class="w">test_shouldLogEventOtherObserver</span><span class="c">(self):</span>
+        
+        <span class="c">self.assertEqual(self.</span><span class="w">f</span><span class="pc">i</span><span class="c">lterWith</span><span class="w">([</span><span class="pc">"n</span><span class="c">otTwo</span><span class="w">"]</span><span class="pc">,</span> <span class="w">T</span><span class="c">rue</span><span class="w">), ([0</span><span class="pc">,</span> <span class="c">1</span><span class="pc">,</span> <span class="pc">3</span><span class="w">], [</span><span class="c">2</span><span class="w">]</span><span class="pc">))</span>
+
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">test_shouldLogEventYesFilter</span><span class="c">(self):</span>
+        
+        <span class="c">self.assertEqual(self.</span><span class="pc">f</span><span class="c">ilterWith</span><span class="w">([</span><span class="pc">"</span><span class="w">twoPlus"]), [</span><span class="pc">0</span><span class="w">,</span> <span class="c">1</span><span class="pc">,</span> <span class="pc">2</span><span class="c">,</span> <span class="c">3</span><span class="w">]</span><span class="c">)</span>
+
+
+    <span class="c">def</span> <span class="w">test_shouldLogEventYesNoFilter</span><span class="c">(self):</span>
+        
+        <span class="c">self.assertEqual(self.filterWith</span><span class="w">([</span><span class="pc">"t</span><span class="c">woPlus", "</span><span class="w">n</span><span class="pc">o</span><span class="w">"]</span><span class="pc">),</span><span class="c"> [</span><span class="pc">2</span><span class="w">,</span> <span class="pc">3</span><span class="w">]</span><span class="c">)</span>
+
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">test_shouldLogEventYesYesNoFilter</span><span class="c">(self):</span>
+        
+        <span class="c">self.assertEqual(</span>
+            <span class="c">self.</span><span class="w">f</span><span class="pc">i</span><span class="c">lterWith</span><span class="w">([</span><span class="pc">"t</span><span class="c">woPlus", "</span><span class="w">twoMinus</span><span class="c">", "</span><span class="w">n</span><span class="pc">o</span><span class="w">"]),</span>
+            <span class="w">[</span><span class="c">0</span><span class="w">,</span> <span class="w">1</span><span class="c">,</span> <span class="pc">2</span><span class="c">,</span> <span class="pc">3</span><span class="w">]</span>
+        <span class="pc">)</span>
+
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">test_shouldLogEventBadPredicateResult</span><span class="c">(self):</span>
+        
+        <span class="c">self.</span><span class="pc">assertR</span><span class="c">aises(</span><span class="w">T</span><span class="c">ypeError,</span> <span class="c">self.</span><span class="w">f</span><span class="c">ilterWith</span><span class="w">, ["bogus"]</span><span class="pc">)</span>
+
+
+    <span class="c">def</span> <span class="w">test_call</span><span class="c">(self):</span>
+        
+        <span class="w">e</span> <span class="c">=</span> <span class="w">d</span><span class="pc">i</span><span class="c">ct(</span><span class="w">o</span><span class="pc">bj=</span><span class="w">o</span><span class="c">bject())</span>
+
+        <span class="pc">d</span><span class="c">ef</span> <span class="w">callWithPredicateResult</span><span class="c">(</span><span class="w">r</span><span class="pc">esult</span><span class="c">):</span>
+            <span class="w">seen</span> <span class="pc">= []</span>
+            <span class="w">ob</span><span class="pc">s</span><span class="c">erver</span> <span class="c">=</span> <span class="w">FilteringLogObserver</span><span class="pc">(</span>
+                <span class="w">l</span><span class="pc">a</span><span class="c">mbda</span> <span class="pc">e</span><span class="c">:</span> <span class="c">seen.append(e</span><span class="w">)</span><span class="pc">,</span>
+                <span class="w">(l</span><span class="pc">a</span><span class="c">mbda</span> <span class="c">e:</span> <span class="pc">r</span><span class="c">esult</span><span class="w">,)</span>
+            <span class="c">)</span>
+            <span class="w">o</span><span class="pc">b</span><span class="c">server</span><span class="pc">(</span><span class="c">e)</span>
+            <span class="w">r</span><span class="pc">et</span><span class="c">urn</span> <span class="pc">s</span><span class="c">een</span>
+
+        <span class="w">s</span><span class="pc">el</span><span class="c">f.</span><span class="w">assertI</span><span class="pc">n</span><span class="c">(</span><span class="pc">e,</span> <span class="w">c</span><span class="c">allWithPredicateResult</span><span class="w">(PredicateResult.yes</span><span class="pc">))</span>
+        <span class="pc">s</span><span class="c">elf.</span><span class="pc">assertI</span><span class="c">n(</span><span class="w">e</span><span class="c">,</span> <span class="c">callWithPredicateResult</span><span class="w">(</span><span class="c">PredicateResult</span><span class="pc">.</span><span class="w">maybe)</span><span class="pc">)</span>
+        <span class="pc">s</span><span class="c">elf.</span><span class="w">assertN</span><span class="c">otIn(</span><span class="w">e</span><span class="c">,</span> <span class="c">callWithPredicateResult</span><span class="pc">(</span><span class="c">PredicateResult</span><span class="pc">.</span><span class="w">no</span><span class="pc">))</span>
+
+
+    <span class="c">def</span> <span class="w">test_trace</span><span class="c">(self):</span>
+        
+        <span class="w">e</span><span class="c">vent</span> <span class="c">=</span> <span class="w">d</span><span class="c">ict(</span><span class="w">log_trace=[])</span>
+
+        <span class="w">oYes</span> <span class="c">=</span> <span class="w">l</span><span class="c">ambda</span> <span class="c">e:</span> <span class="pc">N</span><span class="c">one</span>
+        <span class="w">oNo</span> <span class="c">=</span> <span class="pc">l</span><span class="c">ambda</span> <span class="c">e:</span> <span class="pc">N</span><span class="c">one</span>
+
+        <span class="w">d</span><span class="c">ef</span> <span class="w">testObserver</span><span class="c">(</span><span class="pc">e</span><span class="c">):</span>
+            <span class="c">self.</span><span class="w">assertI</span><span class="pc">s</span><span class="c">(</span><span class="pc">e,</span> <span class="w">e</span><span class="pc">v</span><span class="c">ent)</span>
+            <span class="c">self.assertEqual(</span>
+                <span class="w">e</span><span class="pc">vent</span><span class="w">[</span><span class="pc">"</span><span class="w">l</span><span class="c">og_trace</span><span class="pc">"],</span>
+                <span class="w">[</span>
+                    <span class="w">(pu</span><span class="c">blisher</span><span class="pc">,</span> <span class="w">yesFilter)</span><span class="pc">,</span>
+                    <span class="pc">(</span><span class="w">y</span><span class="c">esFilter</span><span class="pc">,</span> <span class="w">oYes</span><span class="pc">),</span>
+                    <span class="pc">(</span><span class="w">pu</span><span class="c">blisher,</span> <span class="w">noFilter</span><span class="pc">),</span>
+                    
+                    <span class="pc">(</span><span class="w">pu</span><span class="c">blisher,</span> <span class="w">oTest</span><span class="c">),</span>
+                <span class="w">]</span>
+            <span class="pc">)</span>
+        <span class="w">o</span><span class="c">Test</span> <span class="c">=</span> <span class="w">testObserver</span>
+
+        <span class="w">y</span><span class="c">esFilter</span> <span class="c">=</span> <span class="w">FilteringLogObserver</span><span class="pc">(</span>
+            <span class="pc">o</span><span class="c">Yes</span><span class="pc">,</span>
+            <span class="w">(l</span><span class="pc">a</span><span class="c">mbda</span> <span class="pc">e</span><span class="c">:</span> <span class="w">PredicateResult</span><span class="pc">.</span><span class="w">yes,</span><span class="pc">)</span>
+        <span class="pc">)</span>
+        <span class="w">n</span><span class="pc">oF</span><span class="c">ilter</span> <span class="pc">=</span> <span class="w">F</span><span class="c">ilteringLogObserver</span><span class="pc">(</span>
+            <span class="w">oNo</span><span class="pc">,</span>
+            <span class="w">(l</span><span class="c">ambda</span> <span class="w">e</span><span class="c">:</span> <span class="w">P</span><span class="c">redicateResult.</span><span class="w">no,</span><span class="pc">)</span>
+        <span class="pc">)</span>
+
+        <span class="w">pu</span><span class="c">blisher</span> <span class="pc">=</span> <span class="w">LogPublisher</span><span class="c">(</span><span class="w">y</span><span class="c">esFilter</span><span class="pc">,</span> <span class="w">n</span><span class="c">oFilter,</span> <span class="w">t</span><span class="c">estObserver)</span>
+        <span class="w">pu</span><span class="c">blisher</span><span class="pc">(</span><span class="w">e</span><span class="c">vent</span><span class="pc">)</span>
+
+
+
+<span class="w">c</span><span class="c">lass</span> <span class="w">LogLevelFilterPredicateTests</span><span class="c">(</span><span class="pc">u</span><span class="c">nittest.TestCase):</span>
+    
+
+    <span class="c">def</span> <span class="w">test_defaultLogLevel</span><span class="c">(self):</span>
+        
+        <span class="w">predicate</span> <span class="c">=</span> <span class="w">LogLevelFilterPredicate</span><span class="c">()</span>
+
+        <span class="c">self.assertEqual(</span>
+            <span class="pc">p</span><span class="c">redicate.</span><span class="w">logLevelForNamespace</span><span class="pc">(N</span><span class="c">one</span><span class="pc">),</span>
+            <span class="pc">p</span><span class="c">redicate</span><span class="pc">.</span><span class="w">defaultLogLevel</span>
+        <span class="c">)</span>
+        <span class="pc">s</span><span class="c">elf.assertEqual(</span>
+            <span class="c">predicate.</span><span class="w">l</span><span class="c">ogLevelForNamespace</span><span class="w">(""),</span>
+            <span class="pc">p</span><span class="c">redicate</span><span class="pc">.d</span><span class="c">efaultLogLevel</span>
+        <span class="c">)</span>
+        <span class="c">self.assertEqual(</span>
+            <span class="pc">p</span><span class="c">redicate.</span><span class="pc">l</span><span class="c">ogLevelForNamespace</span><span class="w">("rocker</span><span class="pc">.</span><span class="w">cool.n</span><span class="c">amespace</span><span class="w">"</span><span class="pc">),</span>
+            <span class="c">predicate.</span><span class="pc">d</span><span class="c">efaultLogLevel</span>
+        <span class="pc">)</span>
+
+
+    <span class="c">def</span> <span class="w">test_setLogLevel</span><span class="c">(self):</span>
+        
+        <span class="pc">p</span><span class="c">redicate</span> <span class="c">=</span> <span class="w">LogLevelFilterPredicate</span><span class="c">()</span>
+
+        <span class="pc">p</span><span class="c">redicate.</span><span class="w">setLogLevelForNamespace</span><span class="pc">(</span><span class="w">N</span><span class="c">one</span><span class="pc">,</span> <span class="w">L</span><span class="pc">ogLevel</span><span class="c">.</span><span class="w">er</span><span class="pc">ror</span><span class="c">)</span>
+        <span class="pc">p</span><span class="c">redicate.</span><span class="pc">s</span><span class="c">etLogLevelForNamespace</span><span class="pc">("</span><span class="w">twext.web2</span><span class="pc">"</span><span class="c">,</span> <span class="w">L</span><span class="pc">ogLevel</span><span class="c">.</span><span class="w">de</span><span class="pc">b</span><span class="c">ug)</span>
+        <span class="w">p</span><span class="pc">re</span><span class="c">dicate.</span><span class="w">s</span><span class="pc">e</span><span class="c">tLogLevelForNamespace</span><span class="pc">("</span><span class="c">twext</span><span class="pc">.w</span><span class="c">eb2</span><span class="pc">.</span><span class="w">dav"</span><span class="pc">,</span> <span class="w">L</span><span class="pc">ogLevel</span><span class="c">.</span><span class="w">w</span><span class="pc">a</span><span class="c">rn</span><span class="pc">)</span>
+
+        <span class="pc">s</span><span class="c">elf.assertEqual(</span>
+            <span class="pc">p</span><span class="c">redicate.</span><span class="w">logLevelForNamespace</span><span class="pc">(</span><span class="w">N</span><span class="c">one</span><span class="pc">),</span>
+            <span class="w">L</span><span class="c">ogLevel.</span><span class="w">e</span><span class="pc">r</span><span class="c">ror</span>
+        <span class="pc">)</span>
+        <span class="pc">s</span><span class="c">elf.assertEqual(</span>
+            <span class="c">predicate.</span><span class="pc">l</span><span class="c">ogLevelForNamespace</span><span class="w">(</span><span class="pc">"t</span><span class="c">wisted</span><span class="w">")</span><span class="pc">,</span>
+            <span class="w">L</span><span class="c">ogLevel.</span><span class="w">e</span><span class="pc">r</span><span class="c">ror</span>
+        <span class="pc">)</span>
+        <span class="pc">s</span><span class="c">elf.assertEqual(</span>
+            <span class="c">predicate.</span><span class="pc">l</span><span class="c">ogLevelForNamespace</span><span class="w">("twext.web2"</span><span class="pc">),</span>
+            <span class="w">L</span><span class="c">ogLevel.</span><span class="w">de</span><span class="pc">b</span><span class="c">ug</span>
+        <span class="pc">)</span>
+        <span class="pc">s</span><span class="c">elf.assertEqual(</span>
+            <span class="c">predicate.logLevelForNamespace</span><span class="w">(</span><span class="pc">"</span><span class="w">t</span><span class="pc">we</span><span class="c">xt</span><span class="pc">.</span><span class="w">w</span><span class="c">eb2.</span><span class="w">dav"</span><span class="pc">),</span>
+            <span class="w">L</span><span class="c">ogLevel.</span><span class="w">wa</span><span class="pc">rn</span>
+        <span class="pc">)</span>
+        <span class="pc">s</span><span class="c">elf.assertEqual(</span>
+            <span class="w">p</span><span class="c">redicate.logLevelForNamespace</span><span class="w">(</span><span class="pc">"</span><span class="w">t</span><span class="pc">we</span><span class="c">xt.</span><span class="pc">w</span><span class="c">eb2.</span><span class="w">d</span><span class="pc">a</span><span class="c">v.</span><span class="w">t</span><span class="pc">e</span><span class="c">st</span><span class="w">"</span><span class="pc">),</span>
+            <span class="w">L</span><span class="c">ogLevel.</span><span class="w">w</span><span class="pc">arn</span>
+        <span class="w">)</span>
+        <span class="pc">s</span><span class="c">elf.assertEqual(</span>
+            <span class="pc">p</span><span class="c">redicate.</span><span class="pc">l</span><span class="c">ogLevelForNamespace</span><span class="w">(</span><span class="pc">"t</span><span class="c">wext.web2.</span><span class="pc">d</span><span class="c">av.</span><span class="w">test1</span><span class="pc">.</span><span class="w">test2")</span><span class="pc">,</span>
+            <span class="w">L</span><span class="c">ogLevel.</span><span class="w">wa</span><span class="pc">rn</span>
+        <span class="pc">)</span>
+
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">test_setInvalidLogLevel</span><span class="c">(self):</span>
+        
+        <span class="w">p</span><span class="c">redicate</span> <span class="c">=</span> <span class="w">LogLevelFilterPredicate</span><span class="pc">(</span><span class="c">)</span>
+
+        <span class="c">self.</span><span class="pc">assertR</span><span class="c">aises(</span>
+            <span class="w">InvalidLogLevelError</span><span class="c">,</span>
+            <span class="pc">p</span><span class="c">redicate.</span><span class="w">setLogLevelForNamespace,</span><span class="pc"> "t</span><span class="c">wext</span><span class="pc">.</span><span class="c">web2</span><span class="pc">",</span> <span class="w">o</span><span class="pc">b</span><span class="c">ject</span><span class="w">(</span><span class="pc">)</span>
+        <span class="w">)</span>
+
+        
+        <span class="pc">s</span><span class="c">elf.</span><span class="pc">assertR</span><span class="c">aises(</span>
+            <span class="pc">I</span><span class="c">nvalidLogLevelError,</span>
+            <span class="c">predicate.setLogLevelForNamespace</span><span class="pc">, </span><span class="c">"</span><span class="pc">t</span><span class="c">wext</span><span class="w">.w</span><span class="c">eb2</span><span class="w">"</span><span class="pc">, </span><span class="c">"</span><span class="w">de</span><span class="pc">b</span><span class="c">ug</span><span class="w">"</span>
+        <span class="w">)</span>
+
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">test_clearLogLevels</span><span class="c">(self):</span>
+        
+        <span class="pc">p</span><span class="c">redicate</span> <span class="c">=</span> <span class="w">LogLevelFilterPredicate</span><span class="c">()</span>
+
+        <span class="pc">p</span><span class="c">redicate</span><span class="pc">.</span><span class="c">setLogLevelForNamespace("</span><span class="w">t</span><span class="c">wext</span><span class="pc">.</span><span class="w">w</span><span class="c">eb2</span><span class="pc">",</span> <span class="w">L</span><span class="pc">ogLevel</span><span class="c">.</span><span class="w">de</span><span class="pc">b</span><span class="c">ug)</span>
+        <span class="pc">p</span><span class="c">redicate.setLogLevelForNamespace</span><span class="pc">("</span><span class="c">twext</span><span class="w">.</span><span class="c">web2</span><span class="w">.dav"</span><span class="c">,</span> <span class="w">L</span><span class="pc">ogLevel</span><span class="c">.</span><span class="w">er</span><span class="c">ror)</span>
+
+        <span class="pc">p</span><span class="c">redicate.</span><span class="w">clearLogLevels</span><span class="pc">()</span>
+
+        <span class="c">self.assertEqual(</span>
+            <span class="c">predicate.</span><span class="w">logLevelForNamespace(</span><span class="pc">"</span><span class="w">t</span><span class="c">wisted</span><span class="w">"</span><span class="pc">),</span>
+            <span class="pc">p</span><span class="c">redicate.</span><span class="w">defaultLogLevel</span>
+        <span class="pc">)</span>
+        <span class="pc">s</span><span class="c">elf.assertEqual(</span>
+            <span class="pc">p</span><span class="c">redicate.</span><span class="w">l</span><span class="c">ogLevelForNamespace</span><span class="w">(</span><span class="pc">"twe</span><span class="c">xt</span><span class="pc">.w</span><span class="c">eb2</span><span class="w">")</span><span class="pc">,</span>
+            <span class="c">predicate.</span><span class="pc">d</span><span class="c">efaultLogLevel</span>
+        <span class="c">)</span>
+        <span class="pc">s</span><span class="c">elf.assertEqual(</span>
+            <span class="pc">p</span><span class="c">redicate.</span><span class="pc">l</span><span class="c">ogLevelForNamespace</span><span class="w">(</span><span class="pc">"</span><span class="w">t</span><span class="pc">we</span><span class="c">xt</span><span class="pc">.</span><span class="w">w</span><span class="c">eb2.</span><span class="w">dav"</span><span class="pc">),</span>
+            <span class="pc">p</span><span class="c">redicate.</span><span class="pc">d</span><span class="c">efaultLogLevel</span>
+        <span class="pc">)</span>
+        <span class="pc">s</span><span class="c">elf.assertEqual(</span>
+            <span class="pc">p</span><span class="c">redicate.</span><span class="pc">l</span><span class="c">ogLevelForNamespace</span><span class="w">(</span><span class="pc">"</span><span class="w">t</span><span class="pc">we</span><span class="c">xt.</span><span class="pc">w</span><span class="c">eb2.</span><span class="w">d</span><span class="pc">a</span><span class="c">v.</span><span class="w">t</span><span class="pc">e</span><span class="c">st</span><span class="w">"</span><span class="pc">),</span>
+            <span class="w">p</span><span class="c">redicate.</span><span class="pc">de</span><span class="c">faultLogLevel</span>
+        <span class="pc">)</span>
+        <span class="pc">s</span><span class="c">elf.assertEqual(</span>
+            <span class="pc">p</span><span class="c">redicate.</span><span class="pc">l</span><span class="c">ogLevelForNamespace</span><span class="w">("</span><span class="pc">t</span><span class="c">wext.web2.</span><span class="pc">d</span><span class="c">av.</span><span class="w">test1</span><span class="pc">.</span><span class="w">test2")</span><span class="pc">,</span>
+            <span class="w">p</span><span class="c">redicate.</span><span class="w">d</span><span class="c">efaultLogLevel</span>
+        <span class="pc">)</span>
+
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">test_filtering</span><span class="c">(self):</span>
+        
+        <span class="pc">p</span><span class="c">redicate</span> <span class="c">=</span> <span class="w">LogLevelFilterPredicate</span><span class="pc">(</span><span class="c">)</span>
+
+        <span class="w">p</span><span class="c">redicate</span><span class="pc">.</span><span class="w">setLogLevelForNamespace</span><span class="pc">(</span><span class="w">N</span><span class="c">one,</span> <span class="w">L</span><span class="pc">ogLevel</span><span class="c">.</span><span class="w">er</span><span class="pc">ror)</span>
+        <span class="pc">p</span><span class="c">redicate.</span><span class="w">s</span><span class="c">etLogLevelForNamespace</span><span class="pc">("</span><span class="w">t</span><span class="pc">w</span><span class="c">ext</span><span class="pc">.w</span><span class="c">eb2</span><span class="w">"</span><span class="c">,</span> <span class="w">L</span><span class="pc">ogLevel</span><span class="c">.</span><span class="w">de</span><span class="pc">b</span><span class="c">ug)</span>
+        <span class="w">p</span><span class="pc">re</span><span class="c">dicate.</span><span class="w">s</span><span class="pc">e</span><span class="c">tLogLevelForNamespace</span><span class="pc">("</span><span class="c">twext</span><span class="pc">.w</span><span class="c">eb2</span><span class="pc">.</span><span class="w">dav"</span><span class="pc">,</span> <span class="w">L</span><span class="pc">ogLevel</span><span class="c">.</span><span class="w">w</span><span class="pc">a</span><span class="c">rn</span><span class="pc">)</span>
+
+        <span class="c">def</span> <span class="w">checkPredicate</span><span class="c">(</span><span class="w">na</span><span class="pc">mesp</span><span class="c">ace</span><span class="pc">,</span> <span class="w">le</span><span class="pc">v</span><span class="c">el</span><span class="pc">,</span> <span class="w">expectedResult</span><span class="c">):</span>
+            <span class="w">e</span><span class="pc">v</span><span class="c">ent</span> <span class="c">=</span> <span class="w">d</span><span class="c">ict(</span><span class="w">log_namespace</span><span class="c">=</span><span class="w">n</span><span class="pc">ames</span><span class="c">pace</span><span class="pc">,</span> <span class="w">log_level</span><span class="c">=</span><span class="w">le</span><span class="pc">v</span><span class="c">el)</span>
+            <span class="c">self.assertEqual(</span><span class="w">e</span><span class="pc">x</span><span class="c">pectedResult</span><span class="pc">,</span> <span class="w">predicate(e</span><span class="c">vent</span><span class="pc">))</span>
+
+        <span class="w">ch</span><span class="pc">eckP</span><span class="c">redicate</span><span class="w">("",</span> <span class="w">L</span><span class="c">ogLevel.</span><span class="w">de</span><span class="pc">b</span><span class="c">ug</span><span class="pc">,</span> <span class="w">PredicateResult</span><span class="pc">.</span><span class="w">no</span><span class="c">)</span>
+        <span class="w">c</span><span class="pc">h</span><span class="c">eckPredicate</span><span class="w">(</span><span class="pc">""</span><span class="c">,</span> <span class="w">L</span><span class="c">ogLevel.</span><span class="w">er</span><span class="pc">ror</span><span class="w">,</span> <span class="w">P</span><span class="c">redicateResult.</span><span class="w">maybe</span><span class="c">)</span>
+
+        <span class="w">c</span><span class="pc">h</span><span class="c">eckPredicate</span><span class="w">(</span><span class="pc">"</span><span class="w">twext.web2"</span><span class="c">,</span> <span class="w">L</span><span class="c">ogLevel.</span><span class="w">de</span><span class="pc">b</span><span class="c">ug</span><span class="pc">,</span> <span class="c">PredicateResult.</span><span class="w">m</span><span class="c">aybe</span><span class="pc">)</span>
+        <span class="w">c</span><span class="pc">h</span><span class="c">eckPredicate</span><span class="w">(</span><span class="pc">"</span><span class="w">t</span><span class="pc">we</span><span class="c">xt.</span><span class="w">w</span><span class="c">eb2</span><span class="w">"</span><span class="c">,</span> <span class="w">L</span><span class="c">ogLevel.</span><span class="w">e</span><span class="c">rror,</span> <span class="c">PredicateResult.</span><span class="w">m</span><span class="c">aybe)</span>
+
+        <span class="w">c</span><span class="pc">h</span><span class="c">eckPredicate</span><span class="w">(</span><span class="pc">"</span><span class="c">twext.web2.</span><span class="w">dav"</span><span class="c">,</span> <span class="w">L</span><span class="c">ogLevel.</span><span class="w">de</span><span class="pc">b</span><span class="c">ug</span><span class="pc">,</span> <span class="pc">P</span><span class="c">redicateResult.</span><span class="w">no</span><span class="pc">)</span>
+        <span class="pc">c</span><span class="c">heckPredicate</span><span class="w">(</span><span class="pc">"twe</span><span class="c">xt.web2.</span><span class="pc">d</span><span class="c">av</span><span class="pc">"</span><span class="c">,</span> <span class="w">L</span><span class="c">ogLevel.</span><span class="w">er</span><span class="c">ror</span><span class="pc">,</span> <span class="c">PredicateResult.</span><span class="pc">m</span><span class="c">aybe)</span>
+
+        <span class="c">checkPredicate</span><span class="pc">(</span><span class="w">N</span><span class="c">one,</span> <span class="w">L</span><span class="c">ogLevel.</span><span class="w">critical</span><span class="c">,</span> <span class="pc">P</span><span class="c">redicateResult.</span><span class="w">n</span><span class="pc">o</span><span class="c">)</span>
+        <span class="w">c</span><span class="pc">h</span><span class="c">eckPredicate</span><span class="w">(</span><span class="pc">"t</span><span class="c">wext</span><span class="pc">.w</span><span class="c">eb2</span><span class="w">"</span><span class="c">,</span> <span class="w">N</span><span class="c">one</span><span class="pc">,</span> <span class="pc">P</span><span class="c">redicateResult</span><span class="pc">.</span><span class="w">n</span><span class="pc">o</span><span class="c">)</span>
+
+</pre>
+</body>
+</html>
+

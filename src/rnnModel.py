@@ -137,6 +137,7 @@ class GenericRNNModel(Model):
             idxs = [sampler.generate() for _ in range(batchsize)]
             widxs = [np.random.randint(len(filtTokenIDs[idx])-self.winSize)
                      for idx in idxs]
+#            widxs = [0 for idx in idxs]
             Xs = [filtTokenIDs[idx][widx:widx+self.winSize]
                   for widx,idx in zip(widxs,idxs)]
             ys = [filtTokenIDs[idx][widx+self.winSize]

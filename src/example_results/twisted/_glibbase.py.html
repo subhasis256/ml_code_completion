@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+
+
+
+
+<span class="w">from</span> <span class="w">__future__</span> <span class="w">import</span> <span class="w">division,</span> <span class="w">absolute_import</span>
+
+<span class="w">import</span> <span class="w">sys</span>
+
+<span class="w">from</span> <span class="w">zope.interface</span> <span class="w">import</span> <span class="w">implementer</span>
+
+<span class="w">from</span> <span class="w">twisted.internet</span> <span class="w">import</span> <span class="w">base,</span> <span class="w">posixbase,</span> <span class="w">selectreactor</span>
+<span class="w">from</span> <span class="w">twisted.internet.interfaces</span> <span class="w">import</span> <span class="w">IReactorFDSet</span>
+<span class="w">from</span> <span class="w">twisted.python</span> <span class="w">import</span> <span class="w">log</span>
+
+
+
+<span class="w">def</span> <span class="w">ensureNotImported</span><span class="c">(</span><span class="w">moduleNames</span><span class="pc">,</span> <span class="w">errorMessage</span><span class="pc">,</span> <span class="w">preventImports=[]):</span>
+    
+    <span class="w">f</span><span class="pc">o</span><span class="c">r</span> <span class="pc">n</span><span class="c">ame</span> <span class="pc">i</span><span class="c">n</span> <span class="pc">m</span><span class="c">oduleNames</span><span class="pc">:</span>
+        <span class="pc">i</span><span class="c">f</span> <span class="w">s</span><span class="c">ys.</span><span class="pc">m</span><span class="c">odules.</span><span class="w">g</span><span class="c">et(</span><span class="pc">n</span><span class="c">ame</span><span class="pc">)</span> <span class="w">i</span><span class="pc">s</span> <span class="c">not</span> <span class="c">None:</span>
+            <span class="w">r</span><span class="pc">a</span><span class="c">ise</span> <span class="pc">I</span><span class="c">mportError</span><span class="w">(</span><span class="pc">e</span><span class="c">rrorMessage)</span>
+
+    
+    <span class="pc">f</span><span class="c">or</span> <span class="w">n</span><span class="c">ame</span> <span class="c">in</span> <span class="w">p</span><span class="c">reventImports</span><span class="pc">:</span>
+        <span class="w">s</span><span class="pc">y</span><span class="c">s.</span><span class="pc">modules</span><span class="w">[n</span><span class="c">ame</span><span class="pc">] </span><span class="c">=</span> <span class="w">N</span><span class="c">one</span>
+
+
+
+<span class="w">c</span><span class="c">lass</span> <span class="w">GlibWaker</span><span class="c">(</span><span class="w">posixbase</span><span class="pc">.</span><span class="w">_UnixWaker</span><span class="c">):</span>
+    
+
+    <span class="c">def</span> <span class="w">doRead</span><span class="c">(self</span><span class="pc">)</span><span class="c">:</span>
+        <span class="w">p</span><span class="pc">o</span><span class="c">sixbase</span><span class="pc">._</span><span class="c">UnixWaker.</span><span class="pc">d</span><span class="c">oRead(self)</span>
+        <span class="pc">s</span><span class="c">elf.</span><span class="w">r</span><span class="c">eactor.</span><span class="w">_simulate</span><span class="pc">()</span>
+
+
+
+<span class="w">@</span><span class="c">implementer(</span><span class="w">IReactorFDSet</span><span class="c">)</span>
+<span class="pc">c</span><span class="c">lass</span> <span class="w">GlibReactorBase</span><span class="c">(</span><span class="w">p</span><span class="pc">o</span><span class="c">sixbase.</span><span class="w">PosixReactorBase</span><span class="pc">,</span> <span class="w">p</span><span class="pc">o</span><span class="c">sixbase</span><span class="pc">.</span><span class="w">_PollLikeMixin</span><span class="pc">):</span>
+    
+
+    
+    
+    <span class="w">_wakerFactory</span> <span class="c">=</span> <span class="w">GlibWaker</span>
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="c">__init__(self,</span> <span class="w">glib_module</span><span class="pc">,</span> <span class="w">gtk_module</span><span class="c">,</span> <span class="w">useGtk</span><span class="pc">=F</span><span class="c">alse):</span>
+        <span class="c">self.</span><span class="w">_simtag</span> <span class="c">=</span> <span class="w">N</span><span class="c">one</span>
+        <span class="c">self.</span><span class="w">_reads</span> <span class="c">=</span> <span class="w">s</span><span class="pc">et</span><span class="c">()</span>
+        <span class="c">self.</span><span class="w">_writes</span> <span class="c">=</span> <span class="w">s</span><span class="pc">et()</span>
+        <span class="c">self.</span><span class="w">_sources</span> <span class="w">=</span><span class="pc"> {</span><span class="c">}</span>
+        <span class="pc">s</span><span class="c">elf.</span><span class="w">_glib</span> <span class="c">=</span> <span class="w">g</span><span class="c">lib_module</span>
+        <span class="c">self.</span><span class="w">_gtk</span> <span class="c">=</span> <span class="w">g</span><span class="c">tk_module</span>
+        <span class="w">posixbase</span><span class="pc">.</span><span class="w">PosixReactorBase</span><span class="pc">.</span><span class="c">__init__(self)</span>
+
+        <span class="c">self.</span><span class="w">_source_remove</span> <span class="c">=</span> <span class="c">self.</span><span class="pc">_g</span><span class="c">lib.</span><span class="w">source_remove</span>
+        <span class="w">s</span><span class="c">elf.</span><span class="w">_timeout_add</span> <span class="c">=</span> <span class="c">self.</span><span class="pc">_gl</span><span class="c">ib.</span><span class="w">timeout_add</span>
+
+        <span class="w">d</span><span class="c">ef</span> <span class="w">_mainquit</span><span class="pc">()</span><span class="c">:</span>
+            <span class="pc">i</span><span class="c">f</span> <span class="pc">s</span><span class="c">elf.</span><span class="pc">_gt</span><span class="c">k</span><span class="pc">.</span><span class="w">main_level</span><span class="pc">():</span>
+                <span class="c">self.</span><span class="pc">_g</span><span class="c">tk.</span><span class="w">main_quit</span><span class="c">()</span>
+
+        <span class="pc">i</span><span class="c">f</span> <span class="w">useGtk:</span>
+            <span class="c">self.</span><span class="w">_pending</span> <span class="w">=</span> <span class="c">self.</span><span class="pc">_g</span><span class="c">tk.</span><span class="w">events_pending</span>
+            <span class="w">s</span><span class="c">elf.</span><span class="w">_iteration</span> <span class="c">=</span> <span class="c">self.</span><span class="pc">_gt</span><span class="c">k.</span><span class="w">main_iteration_do</span>
+            <span class="pc">s</span><span class="c">elf.</span><span class="w">_crash</span> <span class="c">=</span> <span class="w">_</span><span class="pc">m</span><span class="c">ainquit</span>
+            <span class="pc">s</span><span class="c">elf.</span><span class="w">_run</span> <span class="c">=</span> <span class="c">self.</span><span class="w">_</span><span class="pc">g</span><span class="c">tk.</span><span class="w">mai</span><span class="pc">n</span>
+        <span class="w">e</span><span class="pc">l</span><span class="c">se:</span>
+            <span class="c">self.</span><span class="w">cont</span><span class="pc">ext</span> <span class="pc">=</span> <span class="c">self.</span><span class="w">_glib</span><span class="pc">.</span><span class="w">main_context_default</span><span class="pc">()</span>
+            <span class="c">self.</span><span class="w">_pending</span> <span class="c">=</span> <span class="c">self.</span><span class="w">cont</span><span class="pc">ext</span><span class="c">.</span><span class="w">pending</span>
+            <span class="w">s</span><span class="c">elf.</span><span class="w">_iteration</span> <span class="c">=</span> <span class="pc">s</span><span class="c">elf.</span><span class="w">cont</span><span class="pc">ext</span><span class="c">.</span><span class="w">iteration</span>
+            <span class="pc">s</span><span class="c">elf.</span><span class="w">loop</span> <span class="c">=</span> <span class="c">self.</span><span class="pc">_gl</span><span class="c">ib.</span><span class="w">MainLoop</span><span class="pc">()</span>
+            <span class="c">self.</span><span class="w">_crash</span> <span class="c">=</span> <span class="w">l</span><span class="pc">a</span><span class="c">mbda:</span> <span class="c">self._glib.</span><span class="w">idle_add</span><span class="pc">(</span><span class="c">self.</span><span class="pc">l</span><span class="c">oop</span><span class="pc">.</span><span class="w">quit</span><span class="c">)</span>
+            <span class="c">self.</span><span class="w">_run</span> <span class="c">=</span> <span class="c">self.loop.</span><span class="w">ru</span><span class="pc">n</span>
+
+
+    <span class="w">d</span><span class="c">ef</span> <span class="w">_handleSignals</span><span class="c">(self):</span>
+        
+        <span class="w">b</span><span class="c">ase.</span><span class="w">_SignalReactorMixin</span><span class="pc">._h</span><span class="c">andleSignals(self</span><span class="pc">)</span>
+        
+        
+        
+        
+        <span class="c">self.</span><span class="w">ca</span><span class="pc">llL</span><span class="c">ater(</span><span class="pc">0</span><span class="c">,</span> <span class="w">posixbase</span><span class="pc">.</span><span class="w">PosixReactorBase</span><span class="pc">.</span><span class="w">_</span><span class="pc">h</span><span class="c">andleSignals</span><span class="pc">,</span> <span class="c">self</span><span class="pc">)</span>
+
+
+    
+    
+    
+    
+
+    
+    
+    
+    
+    <span class="c">def</span> <span class="w">input_add</span><span class="c">(self</span><span class="pc">,</span> <span class="w">so</span><span class="c">urce</span><span class="pc">,</span> <span class="w">condition</span><span class="pc">,</span> <span class="w">ca</span><span class="pc">l</span><span class="c">lback):</span>
+        <span class="c">if</span> <span class="w">h</span><span class="c">asattr(</span><span class="w">so</span><span class="pc">u</span><span class="c">rce, '</span><span class="w">fi</span><span class="pc">leno</span><span class="c">'):</span>
+            
+            <span class="pc">d</span><span class="c">ef</span> <span class="w">wr</span><span class="pc">a</span><span class="c">pper(</span><span class="w">i</span><span class="c">gnored</span><span class="pc">,</span> <span class="w">c</span><span class="c">ondition):</span>
+                <span class="c">return</span> <span class="w">ca</span><span class="pc">llb</span><span class="c">ack(</span><span class="w">so</span><span class="pc">u</span><span class="c">rce,</span> <span class="pc">c</span><span class="c">ondition</span><span class="pc">)</span>
+            <span class="w">fil</span><span class="pc">eno</span> <span class="c">=</span> <span class="w">so</span><span class="pc">u</span><span class="c">rce.</span><span class="w">f</span><span class="c">ileno()</span>
+        <span class="pc">e</span><span class="c">lse:</span>
+            <span class="w">fil</span><span class="pc">eno</span> <span class="c">=</span> <span class="w">so</span><span class="pc">u</span><span class="c">rce</span>
+            <span class="w">wr</span><span class="pc">a</span><span class="c">pper</span> <span class="c">=</span> <span class="w">ca</span><span class="pc">llb</span><span class="c">ack</span>
+        <span class="w">r</span><span class="c">eturn</span> <span class="pc">s</span><span class="c">elf.</span><span class="w">_glib</span><span class="pc">.</span><span class="w">io_add_watch</span><span class="c">(</span>
+            <span class="w">f</span><span class="pc">i</span><span class="c">leno</span><span class="pc">,</span> <span class="w">c</span><span class="pc">ond</span><span class="c">ition</span><span class="pc">,</span> <span class="w">w</span><span class="c">rapper,</span>
+            <span class="w">priority</span><span class="pc">=s</span><span class="c">elf.</span><span class="w">_</span><span class="c">glib.</span><span class="w">PRIORITY_DEFAULT_IDLE)</span>
+
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">_ioEventCallback</span><span class="c">(self,</span> <span class="w">so</span><span class="c">urce,</span> <span class="w">c</span><span class="c">ondition):</span>
+        
+        <span class="w">l</span><span class="c">og.</span><span class="w">callWithLogger</span><span class="c">(</span>
+            <span class="w">so</span><span class="pc">u</span><span class="c">rce,</span> <span class="pc">s</span><span class="c">elf.</span><span class="w">_doReadOrWrite</span><span class="c">,</span> <span class="w">so</span><span class="c">urce,</span> <span class="w">so</span><span class="pc">u</span><span class="c">rce,</span> <span class="w">c</span><span class="c">ondition</span><span class="pc">)</span>
+        <span class="w">r</span><span class="c">eturn</span> <span class="w">T</span><span class="c">rue</span>  
+
+
+    <span class="c">def</span> <span class="w">_add</span><span class="c">(self</span><span class="pc">,</span> <span class="w">so</span><span class="c">urce</span><span class="pc">,</span> <span class="w">primary</span><span class="pc">,</span> <span class="w">o</span><span class="pc">t</span><span class="c">her</span><span class="pc">,</span> <span class="w">primaryFlag</span><span class="pc">,</span> <span class="w">otherFlag</span><span class="pc">)</span><span class="c">:</span>
+        
+        <span class="c">if</span> <span class="w">so</span><span class="pc">u</span><span class="c">rce</span> <span class="w">i</span><span class="pc">n</span> <span class="pc">p</span><span class="c">rimary:</span>
+            <span class="pc">r</span><span class="c">eturn</span>
+        <span class="w">fl</span><span class="pc">ags</span> <span class="w">=</span> <span class="c">primaryFlag</span>
+        <span class="w">i</span><span class="c">f</span> <span class="w">so</span><span class="pc">u</span><span class="c">rce</span> <span class="w">i</span><span class="pc">n</span> <span class="w">ot</span><span class="pc">her</span><span class="c">:</span>
+            <span class="pc">s</span><span class="c">elf.</span><span class="w">_source_remove</span><span class="pc">(s</span><span class="c">elf.</span><span class="w">_sources</span><span class="pc">[</span><span class="w">so</span><span class="pc">u</span><span class="c">rce</span><span class="pc">])</span>
+            <span class="w">f</span><span class="pc">l</span><span class="c">ags</span> <span class="w">|=</span> <span class="w">o</span><span class="pc">t</span><span class="c">herFlag</span>
+        <span class="w">s</span><span class="c">elf.</span><span class="w">_</span><span class="c">sources</span><span class="pc">[</span><span class="w">so</span><span class="pc">u</span><span class="c">rce] =</span> <span class="pc">s</span><span class="c">elf.</span><span class="w">input_add</span><span class="c">(</span>
+            <span class="w">so</span><span class="c">urce,</span> <span class="w">f</span><span class="pc">l</span><span class="c">ags</span><span class="pc">,</span> <span class="pc">s</span><span class="c">elf.</span><span class="w">_ioEventCallback</span><span class="c">)</span>
+        <span class="w">primary</span><span class="pc">.</span><span class="w">add</span><span class="c">(</span><span class="w">so</span><span class="pc">u</span><span class="c">rce</span><span class="pc">)</span>
+
+
+    <span class="c">def</span> <span class="w">addReader</span><span class="c">(self</span><span class="pc">,</span> <span class="w">rea</span><span class="pc">d</span><span class="c">er):</span>
+        
+        <span class="pc">s</span><span class="c">elf.</span><span class="w">_add</span><span class="pc">(</span><span class="w">rea</span><span class="pc">d</span><span class="c">er,</span> <span class="c">self.</span><span class="w">_reads</span><span class="pc">,</span> <span class="c">self.</span><span class="w">_writes</span><span class="c">,</span>
+                  <span class="c">self.</span><span class="w">INFLAGS</span><span class="c">,</span> <span class="c">self.</span><span class="w">OUTFLAGS</span><span class="pc">)</span>
+
+
+    <span class="c">def</span> <span class="w">addWriter</span><span class="c">(self</span><span class="pc">,</span> <span class="w">w</span><span class="pc">r</span><span class="c">iter):</span>
+        
+        <span class="c">self._add</span><span class="pc">(</span><span class="w">w</span><span class="pc">r</span><span class="c">iter</span><span class="pc">,</span> <span class="c">self.</span><span class="pc">_w</span><span class="c">rites</span><span class="pc">,</span> <span class="c">self.</span><span class="pc">_</span><span class="c">reads</span><span class="pc">,</span>
+                  <span class="c">self.</span><span class="pc">O</span><span class="c">UTFLAGS</span><span class="pc">,</span> <span class="c">self.</span><span class="pc">I</span><span class="c">NFLAGS</span><span class="pc">)</span>
+
+
+    <span class="c">def</span> <span class="w">getReaders</span><span class="c">(self):</span>
+        
+        <span class="pc">r</span><span class="c">eturn</span> <span class="w">l</span><span class="pc">i</span><span class="c">st(self.</span><span class="pc">_</span><span class="c">reads</span><span class="pc">)</span>
+
+
+    <span class="c">def</span> <span class="w">getWriters</span><span class="c">(self):</span>
+        
+        <span class="c">return</span> <span class="w">l</span><span class="pc">i</span><span class="c">st(self.</span><span class="pc">_w</span><span class="c">rites)</span>
+
+
+    <span class="c">def</span> <span class="w">removeAll</span><span class="c">(self):</span>
+        
+        <span class="c">return</span> <span class="c">self.</span><span class="w">_removeAll</span><span class="c">(self._reads</span><span class="pc">,</span> <span class="c">self._writes)</span>
+
+
+    <span class="c">def</span> <span class="w">_remove</span><span class="c">(self</span><span class="pc">,</span> <span class="w">so</span><span class="c">urce</span><span class="pc">,</span> <span class="w">primary</span><span class="pc">,</span> <span class="w">o</span><span class="c">ther</span><span class="pc">,</span> <span class="w">f</span><span class="pc">l</span><span class="c">ags):</span>
+        
+        <span class="pc">i</span><span class="c">f</span> <span class="w">so</span><span class="pc">u</span><span class="c">rce</span> <span class="w">n</span><span class="c">ot</span> <span class="pc">i</span><span class="c">n</span> <span class="pc">p</span><span class="c">rimary:</span>
+            <span class="c">return</span>
+        <span class="c">self.</span><span class="w">_source_remove</span><span class="c">(self.</span><span class="w">_sources</span><span class="pc">[</span><span class="w">so</span><span class="pc">u</span><span class="c">rce</span><span class="w">]</span><span class="pc">)</span>
+        <span class="w">p</span><span class="pc">rim</span><span class="c">ary</span><span class="pc">.</span><span class="w">r</span><span class="pc">e</span><span class="c">move(</span><span class="w">so</span><span class="pc">u</span><span class="c">rce)</span>
+        <span class="pc">i</span><span class="c">f</span> <span class="w">so</span><span class="pc">u</span><span class="c">rce</span> <span class="w">i</span><span class="pc">n</span> <span class="w">o</span><span class="pc">t</span><span class="c">her</span><span class="pc">:</span>
+            <span class="c">self.</span><span class="pc">_</span><span class="c">sources</span><span class="pc">[</span><span class="w">so</span><span class="pc">u</span><span class="c">rce</span><span class="pc">] </span><span class="c">=</span> <span class="pc">s</span><span class="c">elf.</span><span class="w">input_add</span><span class="c">(</span>
+                <span class="w">so</span><span class="pc">u</span><span class="c">rce,</span> <span class="w">f</span><span class="pc">l</span><span class="c">ags</span><span class="pc">,</span> <span class="c">self.</span><span class="w">_ioEventCallback</span><span class="c">)</span>
+        <span class="pc">e</span><span class="c">lse:</span>
+            <span class="c">self._sources.</span><span class="w">p</span><span class="pc">o</span><span class="c">p(</span><span class="w">so</span><span class="pc">u</span><span class="c">rce)</span>
+
+
+    <span class="c">def</span> <span class="w">removeReader</span><span class="c">(self</span><span class="pc">,</span> <span class="w">r</span><span class="pc">ead</span><span class="c">er):</span>
+        
+        <span class="pc">s</span><span class="c">elf.</span><span class="w">_remove</span><span class="c">(</span><span class="w">rea</span><span class="pc">d</span><span class="c">er,</span> <span class="c">self.</span><span class="w">_reads</span><span class="pc">,</span> <span class="c">self.</span><span class="w">_writes</span><span class="c">,</span> <span class="c">self.</span><span class="w">OUTFLAGS</span><span class="pc">)</span>
+
+
+    <span class="c">def</span> <span class="w">removeWriter</span><span class="c">(self,</span> <span class="w">w</span><span class="pc">r</span><span class="c">iter):</span>
+        
+        <span class="pc">s</span><span class="c">elf._remove(</span><span class="w">w</span><span class="pc">r</span><span class="c">iter,</span> <span class="c">self.</span><span class="pc">_w</span><span class="c">rites</span><span class="pc">,</span> <span class="c">self.</span><span class="pc">_r</span><span class="c">eads</span><span class="pc">,</span> <span class="c">self.</span><span class="w">INFLAGS</span><span class="c">)</span>
+
+
+    <span class="c">def</span> <span class="w">iterate</span><span class="c">(self</span><span class="pc">,</span> <span class="w">delay</span><span class="pc">=0</span><span class="c">):</span>
+        
+        <span class="c">self.</span><span class="w">runUntilCurrent</span><span class="c">()</span>
+        <span class="w">w</span><span class="c">hile</span> <span class="c">self.</span><span class="w">_pending(</span><span class="pc">):</span>
+            <span class="c">self.</span><span class="w">_iteration</span><span class="pc">(</span><span class="w">0</span><span class="pc">)</span>
+
+
+    <span class="c">def</span> <span class="w">crash</span><span class="c">(self):</span>
+        
+        <span class="w">posixbase.PosixReactorBase.</span><span class="pc">c</span><span class="c">rash(self</span><span class="pc">)</span>
+        <span class="pc">s</span><span class="c">elf.</span><span class="w">_crash</span><span class="pc">(</span><span class="c">)</span>
+
+
+    <span class="c">def</span> <span class="w">s</span><span class="pc">top</span><span class="c">(self):</span>
+        
+        <span class="w">p</span><span class="pc">o</span><span class="c">sixbase</span><span class="pc">.P</span><span class="c">osixReactorBase</span><span class="pc">.</span><span class="w">s</span><span class="pc">t</span><span class="c">op</span><span class="w">(</span><span class="c">self</span><span class="pc">)</span>
+        
+        
+        
+        
+        
+        
+        
+        <span class="c">self.</span><span class="w">wakeUp</span><span class="pc">(</span><span class="c">)</span>
+
+
+    <span class="c">def</span> <span class="w">r</span><span class="pc">u</span><span class="c">n(self</span><span class="pc">,</span> <span class="w">installSignalHandlers</span><span class="pc">=T</span><span class="c">rue):</span>
+        
+        <span class="c">self.</span><span class="w">callWhenRunning</span><span class="c">(</span><span class="pc">s</span><span class="c">elf.</span><span class="w">_reschedule</span><span class="c">)</span>
+        <span class="c">self.</span><span class="w">startRunning</span><span class="pc">(i</span><span class="c">nstallSignalHandlers</span><span class="w">=i</span><span class="c">nstallSignalHandlers)</span>
+        <span class="pc">i</span><span class="c">f</span> <span class="c">self.</span><span class="w">_started</span><span class="c">:</span>
+            <span class="c">self.</span><span class="w">_run</span><span class="pc">(</span><span class="c">)</span>
+
+
+    <span class="c">def</span> <span class="w">ca</span><span class="pc">llL</span><span class="c">ater(self</span><span class="pc">, </span><span class="c">*args, **kwargs):</span>
+        
+        <span class="w">r</span><span class="pc">es</span><span class="c">ult</span> <span class="c">=</span> <span class="w">posixbase</span><span class="pc">.</span><span class="w">PosixReactorBase</span><span class="pc">.</span><span class="w">c</span><span class="pc">a</span><span class="c">llLater(</span><span class="pc">s</span><span class="c">elf</span><span class="pc">, </span><span class="c">*args, **</span><span class="pc">kwa</span><span class="c">rgs)</span>
+        
+        
+        <span class="pc">s</span><span class="c">elf.</span><span class="w">_reschedule</span><span class="pc">(</span><span class="c">)</span>
+        <span class="w">r</span><span class="c">eturn</span> <span class="w">r</span><span class="c">esult</span>
+
+
+    <span class="c">def</span> <span class="w">_</span><span class="pc">r</span><span class="c">eschedule(self):</span>
+        
+        <span class="pc">i</span><span class="c">f</span> <span class="c">self.</span><span class="w">_simtag</span> <span class="pc">i</span><span class="c">s</span> <span class="c">not</span> <span class="c">None:</span>
+            <span class="c">self.</span><span class="w">_source_remove</span><span class="pc">(</span><span class="c">self._simtag)</span>
+            <span class="pc">s</span><span class="c">elf._simtag</span> <span class="pc">=</span> <span class="pc">N</span><span class="c">one</span>
+        <span class="w">t</span><span class="pc">i</span><span class="c">meout</span> <span class="c">=</span> <span class="c">self.</span><span class="w">t</span><span class="c">imeout</span><span class="pc">()</span>
+        <span class="pc">i</span><span class="c">f</span> <span class="w">t</span><span class="c">imeout</span> <span class="pc">i</span><span class="c">s</span> <span class="pc">n</span><span class="c">ot</span> <span class="c">None:</span>
+            <span class="c">self._simtag</span> <span class="c">=</span> <span class="pc">s</span><span class="c">elf.</span><span class="w">_timeout_add</span><span class="c">(</span>
+                <span class="w">i</span><span class="pc">n</span><span class="c">t</span><span class="pc">(</span><span class="w">t</span><span class="c">imeout</span> <span class="w">*</span> <span class="w">1000</span><span class="pc">),</span> <span class="pc">s</span><span class="c">elf.</span><span class="w">_simulate</span><span class="pc">,</span>
+                <span class="w">priority</span><span class="c">=self.</span><span class="w">_glib</span><span class="pc">.</span><span class="w">PRIORITY_DEFAULT_IDLE)</span>
+
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="pc">_s</span><span class="c">imulate(self</span><span class="pc">)</span><span class="c">:</span>
+        
+        <span class="c">self.</span><span class="w">runUntilCurrent</span><span class="pc">()</span>
+        <span class="c">self.</span><span class="w">_reschedule</span><span class="pc">(</span><span class="c">)</span>
+
+
+
+<span class="pc">c</span><span class="c">lass</span> <span class="w">PortableGlibReactorBase</span><span class="c">(</span><span class="w">selectreactor</span><span class="pc">.</span><span class="w">SelectReactor</span><span class="c">):</span>
+    
+    <span class="c">def</span> <span class="pc">_</span><span class="c">_init__(self,</span> <span class="w">glib_module</span><span class="pc">,</span> <span class="w">gtk_module</span><span class="pc">,</span> <span class="w">useGtk</span><span class="pc">=F</span><span class="c">alse):</span>
+        <span class="pc">s</span><span class="c">elf.</span><span class="w">_simtag</span> <span class="c">=</span> <span class="pc">N</span><span class="c">one</span>
+        <span class="c">self.</span><span class="w">_glib</span> <span class="c">=</span> <span class="pc">g</span><span class="c">lib_module</span>
+        <span class="c">self.</span><span class="w">_gtk</span> <span class="c">=</span> <span class="pc">gt</span><span class="c">k_module</span>
+        <span class="w">s</span><span class="pc">ele</span><span class="c">ctreactor</span><span class="pc">.</span><span class="w">S</span><span class="c">electReactor</span><span class="pc">.</span><span class="c">__init__(self)</span>
+
+        <span class="c">self.</span><span class="w">_source_remove</span> <span class="c">=</span> <span class="c">self.</span><span class="w">_</span><span class="pc">gl</span><span class="c">ib.</span><span class="w">source_remove</span>
+        <span class="w">s</span><span class="c">elf.</span><span class="w">_timeout_add</span> <span class="c">=</span> <span class="c">self.</span><span class="pc">_gl</span><span class="c">ib.</span><span class="w">timeout_add</span>
+
+        <span class="w">d</span><span class="c">ef</span> <span class="w">_mainquit</span><span class="pc">()</span><span class="c">:</span>
+            <span class="pc">i</span><span class="c">f</span> <span class="pc">s</span><span class="c">elf.</span><span class="pc">_gt</span><span class="c">k</span><span class="pc">.</span><span class="w">main_level</span><span class="pc">():</span>
+                <span class="c">self.</span><span class="pc">_g</span><span class="c">tk.</span><span class="w">main_quit</span><span class="c">()</span>
+
+        <span class="pc">i</span><span class="c">f</span> <span class="w">useGtk:</span>
+            <span class="c">self.</span><span class="w">_crash</span> <span class="w">=</span> <span class="w">_</span><span class="pc">m</span><span class="c">ainquit</span>
+            <span class="pc">s</span><span class="c">elf.</span><span class="w">_run</span> <span class="c">=</span> <span class="c">self.</span><span class="pc">_gt</span><span class="c">k.</span><span class="w">mai</span><span class="pc">n</span>
+        <span class="w">e</span><span class="c">lse:</span>
+            <span class="c">self.</span><span class="w">loop</span> <span class="c">=</span> <span class="c">self.</span><span class="w">_glib</span><span class="pc">.</span><span class="w">MainLoop</span><span class="pc">()</span>
+            <span class="c">self.</span><span class="w">_</span><span class="pc">c</span><span class="c">rash</span> <span class="c">=</span> <span class="w">l</span><span class="pc">a</span><span class="c">mbda</span><span class="pc">:</span> <span class="pc">s</span><span class="c">elf.</span><span class="pc">_g</span><span class="c">lib.</span><span class="w">idle_add</span><span class="c">(self.</span><span class="pc">l</span><span class="c">oop</span><span class="pc">.</span><span class="w">quit</span><span class="c">)</span>
+            <span class="c">self.</span><span class="w">_</span><span class="pc">r</span><span class="c">un</span> <span class="c">=</span> <span class="c">self.loop.</span><span class="w">ru</span><span class="pc">n</span>
+
+
+    <span class="w">d</span><span class="c">ef</span> <span class="w">crash</span><span class="c">(self):</span>
+        <span class="w">selectreactor</span><span class="pc">.</span><span class="w">SelectReactor</span><span class="pc">.c</span><span class="c">rash(self</span><span class="pc">)</span>
+        <span class="c">self.</span><span class="pc">_c</span><span class="c">rash</span><span class="pc">(</span><span class="c">)</span>
+
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">r</span><span class="pc">u</span><span class="c">n(self</span><span class="pc">,</span> <span class="w">installSignalHandlers</span><span class="pc">=T</span><span class="c">rue):</span>
+        <span class="c">self.</span><span class="w">startRunning</span><span class="pc">(</span><span class="c">installSignalHandlers</span><span class="w">=</span><span class="pc">i</span><span class="c">nstallSignalHandlers)</span>
+        <span class="c">self.</span><span class="w">_timeout_add</span><span class="pc">(</span><span class="w">0</span><span class="c">,</span> <span class="pc">s</span><span class="c">elf.</span><span class="w">simulate</span><span class="c">)</span>
+        <span class="pc">i</span><span class="c">f</span> <span class="c">self.</span><span class="w">_started</span><span class="c">:</span>
+            <span class="c">self.</span><span class="w">_run</span><span class="pc">()</span>
+
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">s</span><span class="pc">i</span><span class="c">mulate(self):</span>
+        
+        <span class="pc">i</span><span class="c">f</span> <span class="c">self.</span><span class="w">_simtag</span> <span class="c">is</span> <span class="c">not</span> <span class="c">None:</span>
+            <span class="c">self.</span><span class="w">_source_remove</span><span class="pc">(</span><span class="c">self._simtag)</span>
+        <span class="c">self.</span><span class="w">iterate</span><span class="pc">(</span><span class="c">)</span>
+        <span class="w">ti</span><span class="pc">meo</span><span class="c">ut</span> <span class="c">=</span> <span class="w">m</span><span class="c">in(self.</span><span class="w">t</span><span class="pc">imeo</span><span class="c">ut</span><span class="w">(</span><span class="pc">),</span> <span class="pc">0.</span><span class="w">01</span><span class="c">)</span>
+        <span class="pc">i</span><span class="c">f</span> <span class="w">t</span><span class="c">imeout</span> <span class="c">is</span> <span class="c">None:</span>
+            <span class="w">t</span><span class="c">imeout</span> <span class="c">=</span> <span class="pc">0</span><span class="c">.</span><span class="w">0</span><span class="pc">1</span>
+        <span class="pc">s</span><span class="c">elf._simtag</span> <span class="pc">=</span> <span class="pc">s</span><span class="c">elf.</span><span class="w">_timeout_add</span><span class="c">(</span>
+            <span class="w">i</span><span class="pc">n</span><span class="c">t</span><span class="pc">(</span><span class="w">t</span><span class="c">imeout</span> <span class="w">*</span> <span class="w">1000</span><span class="c">),</span> <span class="pc">s</span><span class="c">elf.</span><span class="w">simulate</span><span class="pc">,</span>
+            <span class="w">priority</span><span class="c">=self.</span><span class="w">_glib</span><span class="pc">.</span><span class="w">PRIORITY_DEFAULT_IDLE)</span>
+
+</pre>
+</body>
+</html>
+

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+
+<span class="w">import</span> <span class="w">random</span>
+<span class="w">from</span> <span class="w">twisted.python</span> <span class="w">import</span> <span class="w">failure</span>
+
+<span class="w">random.seed(10050)</span>
+<span class="w">O</span> <span class="w">= [0,</span> <span class="w">20,</span> <span class="w">40,</span> <span class="w">60,</span> <span class="w">80,</span> <span class="w">10,</span> <span class="w">30,</span> <span class="w">50,</span> <span class="w">70,</span> <span class="w">90]</span>
+<span class="w">DEPTH</span> <span class="w">=</span> <span class="w">30</span>
+
+<span class="w">def</span> <span class="w">pickVal</span><span class="pc">()</span><span class="c">:</span>
+    <span class="pc">r</span><span class="c">eturn</span> <span class="w">ra</span><span class="c">ndom.</span><span class="w">choice([N</span><span class="c">one,</span> <span class="w">1,</span><span class="pc"> '</span><span class="w">H</span><span class="pc">e</span><span class="c">llo</span><span class="w">', [], {1:</span> <span class="w">1}, (</span><span class="pc">1,</span> <span class="c">2,</span> <span class="c">3</span><span class="w">)</span><span class="pc">]</span><span class="c">)</span>
+
+<span class="c">def</span> <span class="w">makeLocals</span><span class="c">(</span><span class="w">n</span><span class="c">):</span>
+    <span class="pc">r</span><span class="c">eturn</span> <span class="w">';'.j</span><span class="c">oin</span><span class="w">([</span><span class="pc">'</span><span class="w">x%d</span> <span class="w">= %s</span><span class="pc">'</span><span class="c"> % (</span><span class="w">i</span><span class="c">,</span> <span class="w">p</span><span class="c">ickVal</span><span class="w">(</span><span class="pc">)</span><span class="c">)</span> <span class="pc">f</span><span class="c">or</span> <span class="c">i</span> <span class="c">in</span> <span class="c">range(</span><span class="w">n)]</span><span class="pc">)</span>
+
+<span class="pc">f</span><span class="c">or</span> <span class="w">nLocals</span> <span class="c">in</span> <span class="w">O</span><span class="pc">:</span>
+    <span class="w">f</span><span class="c">or</span> <span class="c">i</span> <span class="c">in</span> <span class="c">range(</span><span class="w">DEPTH</span><span class="c">):</span>
+        <span class="w">s</span> <span class="w">=  % (n</span><span class="pc">L</span><span class="c">ocals</span><span class="w">,</span> <span class="w">i</span><span class="c">,</span> <span class="w">makeLocals</span><span class="pc">(n</span><span class="c">Locals</span><span class="w">)</span><span class="pc">,</span> <span class="pc">n</span><span class="c">Locals,</span> <span class="w">i</span> <span class="w">+</span> <span class="c">1)</span>
+    <span class="w">exec</span> <span class="w">s</span>
+
+    <span class="w">e</span><span class="pc">x</span><span class="c">ec</span>  <span class="w">%</span><span class="pc"> </span><span class="c">(nLocals,</span> <span class="c">DEPTH)</span>
+
+<span class="w">R</span> <span class="c">=</span> <span class="w">r</span><span class="pc">a</span><span class="c">nge(</span><span class="w">5000</span><span class="pc">)</span>
+<span class="pc">d</span><span class="c">ef</span> <span class="w">f</span><span class="pc">a</span><span class="c">il(</span><span class="w">n</span><span class="c">):</span>
+    <span class="pc">f</span><span class="c">or</span> <span class="c">i</span> <span class="c">in</span> <span class="pc">R</span><span class="c">:</span>
+        <span class="w">t</span><span class="c">ry:</span>
+            <span class="w">eval('deepFailure</span><span class="pc">%</span><span class="w">d_0'</span><span class="pc"> %</span> <span class="w">n)()</span>
+        <span class="w">e</span><span class="pc">x</span><span class="c">cept:</span>
+            <span class="w">fa</span><span class="c">ilure.Failure</span><span class="pc">()</span>
+
+<span class="pc">d</span><span class="c">ef</span> <span class="w">fail_str</span><span class="c">(</span><span class="w">n</span><span class="c">):</span>
+    <span class="w">f</span><span class="c">or</span> <span class="pc">i</span> <span class="c">in</span> <span class="pc">R</span><span class="c">:</span>
+        <span class="pc">t</span><span class="c">ry:</span>
+            <span class="w">e</span><span class="c">val</span><span class="w">(</span><span class="pc">'</span><span class="w">d</span><span class="c">eepFailure</span><span class="w">%d</span><span class="pc">_</span><span class="c">0</span><span class="w">'</span><span class="pc"> %</span> <span class="w">n)</span><span class="pc">(</span><span class="c">)</span>
+        <span class="pc">e</span><span class="c">xcept:</span>
+            <span class="w">s</span><span class="pc">t</span><span class="c">r(</span><span class="w">f</span><span class="pc">ailu</span><span class="c">re.Failure</span><span class="pc">()</span><span class="c">)</span>
+
+<span class="pc">c</span><span class="c">lass</span> <span class="w">PythonException</span><span class="c">(</span><span class="pc">E</span><span class="c">xception):</span> <span class="pc">p</span><span class="c">ass</span>
+
+<span class="pc">d</span><span class="c">ef</span> <span class="w">fail_easy</span><span class="c">(</span><span class="w">n</span><span class="c">):</span>
+    <span class="w">f</span><span class="c">or</span> <span class="pc">i</span> <span class="c">in</span> <span class="w">R</span><span class="pc">:</span>
+        <span class="pc">t</span><span class="c">ry:</span>
+            <span class="w">f</span><span class="pc">ailu</span><span class="c">re.Failure(</span><span class="w">P</span><span class="c">ythonException</span><span class="pc">(</span><span class="c">))</span>
+        <span class="c">except:</span>
+            <span class="pc">p</span><span class="c">ass</span>
+
+<span class="w">f</span><span class="pc">r</span><span class="c">om</span> <span class="w">timer</span> <span class="c">import</span> <span class="w">timeit</span>
+
+
+
+
+
+
+<span class="w">f</span><span class="pc">o</span><span class="c">r</span> <span class="pc">i</span> <span class="c">in</span> <span class="w">O</span><span class="pc">:</span>
+    <span class="w">p</span><span class="pc">r</span><span class="c">int</span> <span class="pc">'</span><span class="w">failing'</span><span class="pc">,</span> <span class="w">i</span><span class="c">,</span> <span class="pc">timei</span><span class="c">t</span><span class="w">(fa</span><span class="pc">il,</span> <span class="w">1,</span> <span class="w">i</span><span class="c">)</span>
+
+
+
+
+</pre>
+</body>
+</html>
+

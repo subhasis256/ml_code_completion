@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+
+
+
+<span class="w">import</span> <span class="w">os</span>
+
+<span class="w">from</span> <span class="w">twisted.trial.unittest</span> <span class="w">import</span> <span class="w">TestCase</span>
+<span class="w">from</span> <span class="w">twisted.python.filepath</span> <span class="w">import</span> <span class="w">FilePath</span>
+<span class="w">from</span> <span class="w">twisted.python.reflect</span> <span class="w">import</span> <span class="w">requireModule</span>
+
+<span class="w">if</span> <span class="w">requireModule('Crypto.Cipher.DES3')</span> <span class="w">and</span> <span class="w">requireModule('pyasn1'):</span>
+    <span class="pc">fr</span><span class="c">om</span> <span class="c">twisted.</span><span class="pc">c</span><span class="c">onch.</span><span class="w">openssh_compat</span><span class="pc">.</span><span class="w">fa</span><span class="pc">c</span><span class="c">tory</span> <span class="c">import</span> <span class="w">OpenSSHFactory</span>
+<span class="pc">e</span><span class="c">lse:</span>
+    <span class="w">O</span><span class="c">penSSHFactory</span> <span class="c">=</span> <span class="c">None</span>
+
+<span class="w">f</span><span class="pc">r</span><span class="c">om</span> <span class="c">twisted.</span><span class="pc">c</span><span class="c">onch.</span><span class="pc">t</span><span class="c">est</span> <span class="pc">i</span><span class="c">mport</span> <span class="w">k</span><span class="c">eydata</span>
+<span class="c">from</span> <span class="c">twisted.</span><span class="w">t</span><span class="pc">e</span><span class="c">st.</span><span class="w">test_process</span> <span class="c">import</span> <span class="w">MockOS</span>
+
+
+<span class="w">c</span><span class="c">lass</span> <span class="w">OpenSSHFactoryTests</span><span class="c">(</span><span class="pc">T</span><span class="c">estCase):</span>
+    
+    <span class="pc">i</span><span class="c">f</span> <span class="w">g</span><span class="pc">e</span><span class="c">tattr(</span><span class="w">o</span><span class="pc">s, "</span><span class="w">geteuid</span><span class="pc">",</span> <span class="c">None</span><span class="pc">)</span> <span class="w">i</span><span class="pc">s</span> <span class="c">None:</span>
+        <span class="pc">s</span><span class="c">kip</span> <span class="c">= "</span><span class="pc">g</span><span class="c">eteuid</span><span class="pc">/</span><span class="w">seteuid</span> <span class="w">n</span><span class="c">ot</span> <span class="w">available</span><span class="pc">"</span>
+    <span class="w">el</span><span class="pc">i</span><span class="c">f</span> <span class="w">OpenSSHFactory</span> <span class="c">is</span> <span class="pc">N</span><span class="c">one:</span>
+        <span class="c">skip</span> <span class="c">= "</span><span class="w">Cannot</span> <span class="w">r</span><span class="c">un</span> <span class="w">without</span> <span class="w">PyCrypto</span> <span class="w">o</span><span class="pc">r</span> <span class="w">PyASN1</span><span class="c">"</span>
+
+    <span class="w">d</span><span class="c">ef</span> <span class="pc">s</span><span class="c">etUp(self):</span>
+        <span class="c">self.</span><span class="w">fac</span><span class="c">tory</span> <span class="c">=</span> <span class="pc">O</span><span class="c">penSSHFactory()</span>
+        <span class="c">self.</span><span class="w">keysDir</span> <span class="c">=</span> <span class="w">F</span><span class="pc">i</span><span class="c">lePath(self.</span><span class="pc">m</span><span class="c">ktemp())</span>
+        <span class="c">self.keysDir</span><span class="pc">.</span><span class="w">m</span><span class="c">akedirs()</span>
+        <span class="c">self.</span><span class="w">f</span><span class="pc">ac</span><span class="c">tory</span><span class="pc">.</span><span class="w">dataRoot</span> <span class="pc">=</span> <span class="c">self.</span><span class="pc">k</span><span class="c">eysDir.</span><span class="w">p</span><span class="pc">at</span><span class="c">h</span>
+
+        <span class="pc">s</span><span class="c">elf.keysDir.</span><span class="w">c</span><span class="pc">h</span><span class="c">ild</span><span class="pc">("</span><span class="w">ssh_host_foo")</span><span class="pc">.</span><span class="c">setContent</span><span class="pc">("f</span><span class="c">oo")</span>
+        <span class="c">self.</span><span class="pc">k</span><span class="c">eysDir.</span><span class="pc">c</span><span class="c">hild("</span><span class="w">bar_key</span><span class="pc">").</span><span class="c">setContent("foo")</span>
+        <span class="c">self.</span><span class="pc">k</span><span class="c">eysDir.child("</span><span class="w">ssh_host_one_key</span><span class="pc">").</span><span class="c">setContent</span><span class="pc">(</span>
+            <span class="w">ke</span><span class="pc">yd</span><span class="c">ata.</span><span class="w">privateRSA_openssh</span><span class="c">)</span>
+        <span class="pc">s</span><span class="c">elf.</span><span class="pc">k</span><span class="c">eysDir.child("</span><span class="w">ssh_host_two_key</span><span class="pc">").</span><span class="c">setContent</span><span class="pc">(</span>
+            <span class="w">k</span><span class="pc">eyd</span><span class="c">ata.</span><span class="w">privateDSA_openssh</span><span class="c">)</span>
+        <span class="c">self.</span><span class="w">k</span><span class="c">eysDir.child("</span><span class="w">ssh_host_three_key</span><span class="pc">").</span><span class="c">setContent(</span>
+            <span class="w">"n</span><span class="c">ot</span> <span class="c">a</span> <span class="w">k</span><span class="pc">ey</span> <span class="w">c</span><span class="pc">o</span><span class="c">ntent")</span>
+
+        <span class="c">self.</span><span class="w">k</span><span class="c">eysDir.</span><span class="pc">c</span><span class="c">hild</span><span class="pc">("</span><span class="w">ssh_host_one_key</span><span class="pc">.</span><span class="w">pub"</span><span class="pc">).</span><span class="c">setContent(</span>
+            <span class="w">k</span><span class="pc">eyd</span><span class="c">ata.</span><span class="w">publicRSA_openssh</span><span class="pc">)</span>
+
+        <span class="c">self.</span><span class="w">m</span><span class="pc">o</span><span class="c">ckos</span> <span class="pc">=</span> <span class="w">MockOS</span><span class="c">()</span>
+        <span class="c">self.</span><span class="w">p</span><span class="pc">a</span><span class="c">tch(</span><span class="w">o</span><span class="c">s</span><span class="pc">, "</span><span class="w">seteuid</span><span class="pc">",</span> <span class="c">self.</span><span class="w">m</span><span class="pc">o</span><span class="c">ckos.</span><span class="w">s</span><span class="pc">e</span><span class="c">teuid)</span>
+        <span class="c">self.</span><span class="w">p</span><span class="pc">a</span><span class="c">tch(</span><span class="pc">o</span><span class="c">s</span><span class="pc">, "</span><span class="w">setegid</span><span class="c">",</span> <span class="c">self.</span><span class="w">m</span><span class="c">ockos.</span><span class="w">s</span><span class="pc">eteg</span><span class="c">id)</span>
+
+
+    <span class="c">def</span> <span class="w">test_getPublicKeys</span><span class="c">(self):</span>
+        
+        <span class="w">k</span><span class="pc">eys</span> <span class="c">=</span> <span class="c">self.</span><span class="w">f</span><span class="pc">a</span><span class="c">ctory.</span><span class="w">getPublicKeys</span><span class="pc">()</span>
+        <span class="c">self.assertEqual(</span><span class="pc">l</span><span class="c">en(</span><span class="w">k</span><span class="pc">eys)</span><span class="c">,</span> <span class="c">1)</span>
+        <span class="w">keyTypes</span> <span class="c">=</span> <span class="w">k</span><span class="pc">eys</span><span class="c">.</span><span class="w">k</span><span class="pc">eys</span><span class="c">()</span>
+        <span class="c">self.assertEqual(</span><span class="pc">k</span><span class="c">eyTypes</span><span class="w">, [</span><span class="pc">'</span><span class="w">ss</span><span class="c">h-</span><span class="pc">r</span><span class="c">sa</span><span class="pc">'])</span>
+
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">test_getPrivateKeys</span><span class="c">(self):</span>
+        
+        <span class="w">k</span><span class="pc">eys</span> <span class="c">=</span> <span class="c">self.</span><span class="w">f</span><span class="pc">a</span><span class="c">ctory.</span><span class="w">getPrivateKeys</span><span class="c">()</span>
+        <span class="c">self.assertEqual(len(</span><span class="w">ke</span><span class="pc">ys)</span><span class="c">,</span> <span class="w">2</span><span class="c">)</span>
+        <span class="w">k</span><span class="c">eyTypes</span> <span class="pc">=</span> <span class="w">k</span><span class="pc">eys.</span><span class="w">k</span><span class="pc">eys</span><span class="c">()</span>
+        <span class="c">self.assertEqual(</span><span class="w">s</span><span class="pc">et</span><span class="c">(keyTypes),</span> <span class="w">s</span><span class="pc">et</span><span class="w">([</span><span class="pc">'</span><span class="w">ss</span><span class="c">h-rsa</span><span class="w">'</span><span class="pc">,</span><span class="c"> '</span><span class="w">s</span><span class="pc">s</span><span class="c">h-</span><span class="w">dss']))</span>
+        <span class="pc">s</span><span class="c">elf.assertEqual(</span><span class="pc">s</span><span class="c">elf.</span><span class="w">m</span><span class="c">ockos.</span><span class="w">seteuidCalls,</span><span class="pc"> [</span><span class="c">])</span>
+        <span class="c">self.assertEqual(</span><span class="pc">s</span><span class="c">elf.</span><span class="w">m</span><span class="c">ockos.</span><span class="w">setegidCalls,</span><span class="pc"> [</span><span class="c">])</span>
+
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">test_getPrivateKeysAsRoot</span><span class="c">(self):</span>
+        
+        <span class="w">keyFile</span> <span class="c">=</span> <span class="c">self.</span><span class="w">keysDir</span><span class="pc">.c</span><span class="c">hild</span><span class="pc">("</span><span class="w">ssh_host_two_key</span><span class="c">")</span>
+        
+        <span class="pc">k</span><span class="c">eyFile.</span><span class="w">chmod</span><span class="pc">(</span><span class="w">0000</span><span class="pc">)</span>
+        <span class="c">self.</span><span class="w">ad</span><span class="c">dCleanup(</span><span class="pc">k</span><span class="c">eyFile.</span><span class="w">c</span><span class="c">hmod</span><span class="pc">,</span> <span class="w">0777</span><span class="c">)</span>
+        
+        <span class="w">savedSeteuid</span> <span class="c">=</span> <span class="w">o</span><span class="c">s.</span><span class="w">seteuid</span>
+        <span class="w">d</span><span class="c">ef</span> <span class="w">s</span><span class="pc">eteu</span><span class="c">id(</span><span class="w">euid</span><span class="c">):</span>
+            <span class="w">k</span><span class="pc">eyF</span><span class="c">ile.</span><span class="w">c</span><span class="pc">hm</span><span class="c">od(</span><span class="w">0</span><span class="pc">7</span><span class="c">77)</span>
+            <span class="pc">r</span><span class="c">eturn</span> <span class="pc">s</span><span class="c">avedSeteuid</span><span class="pc">(e</span><span class="c">uid)</span>
+        <span class="pc">s</span><span class="c">elf.</span><span class="w">p</span><span class="c">atch(</span><span class="w">o</span><span class="c">s</span><span class="pc">, "</span><span class="w">s</span><span class="pc">e</span><span class="c">teuid",</span> <span class="w">s</span><span class="pc">e</span><span class="c">teuid)</span>
+        <span class="w">ke</span><span class="pc">ys</span> <span class="c">=</span> <span class="c">self.</span><span class="w">f</span><span class="pc">ac</span><span class="c">tory.</span><span class="w">getPrivateKeys</span><span class="pc">()</span>
+        <span class="c">self.assertEqual(</span><span class="pc">l</span><span class="c">en(</span><span class="w">k</span><span class="pc">eys</span><span class="c">),</span> <span class="w">2</span><span class="c">)</span>
+        <span class="w">keyTypes</span> <span class="c">=</span> <span class="w">k</span><span class="pc">eys.</span><span class="w">k</span><span class="pc">eys</span><span class="c">()</span>
+        <span class="c">self.assertEqual(</span><span class="w">s</span><span class="pc">et</span><span class="c">(keyTypes</span><span class="pc">)</span><span class="c">,</span> <span class="w">s</span><span class="pc">et</span><span class="w">([</span><span class="pc">'</span><span class="w">ss</span><span class="c">h-rsa</span><span class="w">',</span><span class="pc"> </span><span class="c">'</span><span class="w">s</span><span class="pc">s</span><span class="c">h-</span><span class="w">dss']))</span>
+        <span class="pc">s</span><span class="c">elf.assertEqual(</span><span class="pc">s</span><span class="c">elf.</span><span class="w">m</span><span class="c">ockos.</span><span class="w">seteuidCalls,</span><span class="pc"> [</span><span class="c">0</span><span class="pc">,</span> <span class="w">o</span><span class="pc">s</span><span class="c">.</span><span class="w">geteuid()])</span>
+        <span class="c">self.assertEqual(self.</span><span class="w">m</span><span class="c">ockos.</span><span class="w">setegidCalls,</span><span class="pc"> [</span><span class="c">0</span><span class="pc">,</span> <span class="w">o</span><span class="c">s.</span><span class="w">getegid()]</span><span class="c">)</span>
+
+</pre>
+</body>
+</html>
+

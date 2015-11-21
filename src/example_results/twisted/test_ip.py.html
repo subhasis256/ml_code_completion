@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+<span class="w">from</span> <span class="w">twisted.trial</span> <span class="w">import</span> <span class="w">unittest</span>
+
+<span class="w">from</span> <span class="w">twisted.python</span> <span class="w">import</span> <span class="w">components</span>
+<span class="w">from</span> <span class="w">twisted.pair</span> <span class="w">import</span> <span class="w">ip,</span> <span class="w">raw</span>
+<span class="w">from</span> <span class="w">zope</span> <span class="w">import</span> <span class="w">interface</span>
+
+
+<span class="w">class</span> <span class="w">MyProtocol:</span>
+    <span class="w">interface.implements(raw.IRawDatagramProtocol)</span>
+
+    <span class="w">def</span> <span class="w">__init__(self,</span> <span class="w">expecting</span><span class="c">):</span>
+        <span class="c">self.expecting</span> <span class="c">=</span> <span class="w">l</span><span class="c">ist(expecting)</span>
+
+    <span class="c">def</span> <span class="w">da</span><span class="pc">tag</span><span class="c">ramReceived(self,</span> <span class="pc">d</span><span class="c">ata</span><span class="w">,</span><span class="pc"> **</span><span class="c">kw):</span>
+        <span class="w">a</span><span class="c">ssert</span> <span class="c">self.expecting</span><span class="w">,</span><span class="pc"> '</span><span class="w">Got</span> <span class="w">a</span> <span class="w">p</span><span class="pc">ac</span><span class="c">ket</span> <span class="w">wh</span><span class="pc">e</span><span class="c">n</span> <span class="w">n</span><span class="pc">o</span><span class="c">t</span> <span class="c">expecting</span> <span class="w">anymore.'</span>
+        <span class="w">expectData,</span> <span class="w">expectKw</span> <span class="pc">=</span> <span class="c">self.expecting.</span><span class="w">p</span><span class="c">op(0)</span>
+
+        <span class="w">expectKwKeys</span> <span class="c">=</span> <span class="pc">e</span><span class="c">xpectKw.</span><span class="w">k</span><span class="c">eys</span><span class="w">();</span> <span class="pc">expectKwK</span><span class="c">eys.</span><span class="w">s</span><span class="pc">o</span><span class="c">rt()</span>
+        <span class="w">kwKeys</span> <span class="c">=</span> <span class="w">kw</span><span class="c">.</span><span class="w">k</span><span class="pc">e</span><span class="c">ys</span><span class="w">();</span> <span class="pc">k</span><span class="c">wKeys.</span><span class="w">s</span><span class="pc">o</span><span class="c">rt()</span>
+        <span class="w">a</span><span class="pc">s</span><span class="c">sert</span> <span class="pc">expectKwK</span><span class="c">eys</span> <span class="w">=</span><span class="c">=</span> <span class="pc">k</span><span class="c">wKeys</span><span class="w">,</span><span class="pc"> </span><span class="c">"</span><span class="w">Expected</span> <span class="w">%</span><span class="pc">r</span><span class="w">,</span> <span class="w">go</span><span class="c">t</span> <span class="w">%</span><span class="pc">r</span><span class="c">" % (expectKwKeys,</span> <span class="c">kwKeys</span><span class="pc">)</span>
+
+        <span class="w">f</span><span class="c">or</span> <span class="pc">k</span> <span class="pc">i</span><span class="c">n</span> <span class="c">expectKwKeys:</span>
+            <span class="w">a</span><span class="c">ssert</span> <span class="w">expectKw[k] ==</span> <span class="w">k</span><span class="pc">w[k</span><span class="w">], "E</span><span class="c">xpected</span> <span class="pc">%</span><span class="c">s</span><span class="w">=</span><span class="c">%</span><span class="pc">r</span><span class="w">,</span> <span class="w">go</span><span class="c">t</span> <span class="c">%r" % (</span><span class="pc">k</span><span class="c">,</span> <span class="pc">e</span><span class="c">xpectKw</span><span class="pc">[k</span><span class="w">]</span><span class="pc">,</span> <span class="w">k</span><span class="pc">w</span><span class="c">[k</span><span class="pc">])</span>
+        <span class="w">a</span><span class="pc">s</span><span class="c">sert</span> <span class="pc">e</span><span class="c">xpectKw</span> <span class="pc">=</span><span class="c">=</span> <span class="w">kw,</span><span class="pc"> </span><span class="c">"</span><span class="pc">E</span><span class="c">xpected</span> <span class="pc">%r,</span> <span class="w">g</span><span class="pc">o</span><span class="c">t</span> <span class="c">%</span><span class="pc">r</span><span class="c">" % (</span><span class="w">e</span><span class="c">xpectKw</span><span class="pc">,</span> <span class="w">k</span><span class="pc">w)</span>
+        <span class="w">a</span><span class="pc">s</span><span class="c">sert</span> <span class="w">expectData</span> <span class="pc">=</span><span class="c">=</span> <span class="w">d</span><span class="c">ata</span><span class="w">,</span><span class="pc"> </span><span class="c">"</span><span class="w">E</span><span class="c">xpected</span> <span class="pc">%</span><span class="c">r</span><span class="w">,</span> <span class="w">g</span><span class="pc">o</span><span class="c">t</span> <span class="c">%r" % (</span><span class="w">e</span><span class="pc">xpectD</span><span class="c">ata,</span> <span class="w">d</span><span class="c">ata</span><span class="pc">)</span>
+
+<span class="w">c</span><span class="c">lass</span> <span class="w">IPTests</span><span class="c">(</span><span class="pc">u</span><span class="c">nittest.TestCase):</span>
+    <span class="c">def</span> <span class="w">testPacketParsing</span><span class="c">(self):</span>
+        <span class="w">p</span><span class="pc">r</span><span class="c">oto</span> <span class="c">=</span> <span class="w">ip</span><span class="pc">.</span><span class="w">IPProtocol</span><span class="c">()</span>
+        <span class="w">p1</span> <span class="c">=</span> <span class="w">MyProtocol(</span><span class="pc">[</span>
+
+            <span class="w">(</span><span class="pc">'f</span><span class="c">oobar</span><span class="w">', {</span>
+            <span class="pc">'</span><span class="w">partial':</span> <span class="w">0</span><span class="c">,</span>
+            <span class="pc">'</span><span class="w">des</span><span class="pc">t</span><span class="w">'</span><span class="pc">: </span><span class="c">'</span><span class="w">1</span><span class="c">.2</span><span class="pc">.</span><span class="c">3.4',</span>
+            <span class="c">'</span><span class="w">so</span><span class="c">urce</span><span class="pc">':</span><span class="c"> '</span><span class="w">5</span><span class="c">.</span><span class="w">6</span><span class="pc">.</span><span class="w">7</span><span class="c">.</span><span class="w">8</span><span class="c">',</span>
+            <span class="c">'</span><span class="w">pr</span><span class="pc">otoc</span><span class="c">ol</span><span class="pc">':</span> <span class="w">0x0F</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">v</span><span class="c">ersion':</span> <span class="w">4</span><span class="pc">,</span>
+            <span class="c">'</span><span class="w">ihl</span><span class="c">':</span> <span class="w">2</span><span class="pc">0</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">tos</span><span class="pc">':</span> <span class="w">7</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">tot_len</span><span class="c">':</span> <span class="w">2</span><span class="pc">0</span><span class="w">+6</span><span class="pc">,</span>
+            <span class="c">'</span><span class="w">fragment_id</span><span class="c">':</span> <span class="w">0xDEAD</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">fragment_offset</span><span class="c">':</span> <span class="w">0x1EEF</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">dont_fragment</span><span class="c">':</span> <span class="w">0</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">more_fragments</span><span class="c">':</span> <span class="w">1</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">tt</span><span class="c">l':</span> <span class="w">0xC0</span><span class="c">,</span>
+            <span class="w">}),</span>
+
+            <span class="w">]</span><span class="pc">)</span>
+        <span class="w">p</span><span class="pc">roto</span><span class="c">.</span><span class="w">addProto</span><span class="c">(</span><span class="w">0x0F</span><span class="c">,</span> <span class="w">p1</span><span class="pc">)</span>
+
+        <span class="w">p</span><span class="c">roto.</span><span class="w">da</span><span class="pc">tag</span><span class="c">ramReceived</span><span class="w">("\x54"</span> 
+                               <span class="w">+</span><span class="c"> "\</span><span class="w">x07"</span> 
+                               <span class="w">+</span><span class="c"> "\</span><span class="w">x</span><span class="c">00\</span><span class="w">x1a</span><span class="pc">"</span> 
+                               <span class="pc">+</span><span class="c"> "\</span><span class="w">xDE</span><span class="c">\</span><span class="w">xAD</span><span class="c">"</span> 
+                               <span class="pc">+</span><span class="c"> "\</span><span class="w">xBE</span><span class="c">\</span><span class="w">xEF</span><span class="c">"</span> 
+                               <span class="pc">+</span><span class="c"> "\</span><span class="w">xC0</span><span class="pc">"</span> 
+                               <span class="pc">+</span><span class="c"> "\</span><span class="w">x0F</span><span class="pc">"</span> 
+                               <span class="w">+ "FE</span><span class="pc">"</span> 
+                               <span class="w">+</span><span class="c"> "\</span><span class="w">x05</span><span class="c">\</span><span class="w">x06</span><span class="pc">\</span><span class="w">x0</span><span class="pc">7</span><span class="c">\</span><span class="w">x08" + "\x01</span><span class="c">\</span><span class="w">x02</span><span class="c">\</span><span class="w">x03</span><span class="pc">\</span><span class="w">x04" + "f</span><span class="pc">oob</span><span class="c">ar</span><span class="w">"</span><span class="pc">,</span>
+                               <span class="w">partial</span><span class="pc">=</span><span class="w">0</span><span class="pc">,</span>
+                               <span class="w">de</span><span class="c">st</span><span class="pc">=</span><span class="c">'dummy',</span>
+                               <span class="w">s</span><span class="c">ource='dummy',</span>
+                               <span class="w">p</span><span class="pc">r</span><span class="c">otocol='dummy',</span>
+                               <span class="pc">)</span>
+
+        <span class="w">a</span><span class="c">ssert</span> <span class="w">n</span><span class="c">ot</span> <span class="w">p</span><span class="pc">1</span><span class="c">.</span><span class="w">expecting, \</span>
+               <span class="pc">'</span><span class="w">Should</span> <span class="w">n</span><span class="c">ot</span> <span class="w">expect</span> <span class="w">any</span> <span class="w">more</span> <span class="w">p</span><span class="pc">ackets</span><span class="c">,</span> <span class="w">but</span> <span class="w">still</span> <span class="w">want</span> <span class="w">%</span><span class="pc">r</span><span class="w">'</span><span class="pc"> %</span> <span class="w">p1</span><span class="pc">.</span><span class="c">expecting</span>
+
+    <span class="w">d</span><span class="c">ef</span> <span class="w">testMultiplePackets</span><span class="c">(self):</span>
+        <span class="pc">p</span><span class="c">roto</span> <span class="c">=</span> <span class="w">ip</span><span class="c">.</span><span class="w">IPProtocol</span><span class="c">()</span>
+        <span class="w">p</span><span class="pc">1</span> <span class="c">=</span> <span class="w">MyProtocol(</span><span class="pc">[</span>
+
+            <span class="w">(</span><span class="c">'</span><span class="pc">f</span><span class="c">oobar</span><span class="w">', {</span>
+            <span class="pc">'</span><span class="w">partial'</span><span class="pc">:</span> <span class="pc">0</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">des</span><span class="c">t</span><span class="pc">': </span><span class="c">'</span><span class="w">1</span><span class="c">.2.3.4',</span>
+            <span class="c">'</span><span class="w">so</span><span class="c">urce</span><span class="pc">':</span><span class="c"> '</span><span class="w">5</span><span class="c">.</span><span class="w">6</span><span class="pc">.</span><span class="w">7</span><span class="c">.</span><span class="w">8</span><span class="c">',</span>
+            <span class="c">'</span><span class="w">pr</span><span class="pc">otoc</span><span class="c">ol</span><span class="pc">':</span> <span class="w">0x0F</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">v</span><span class="c">ersion':</span> <span class="w">4</span><span class="pc">,</span>
+            <span class="c">'</span><span class="w">ihl</span><span class="c">':</span> <span class="w">2</span><span class="pc">0</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">tos</span><span class="pc">':</span> <span class="w">7</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">tot_len</span><span class="c">':</span> <span class="w">2</span><span class="pc">0</span><span class="w">+6</span><span class="pc">,</span>
+            <span class="c">'</span><span class="w">fragment_id</span><span class="c">':</span> <span class="w">0xDEAD</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">fragment_offset</span><span class="c">':</span> <span class="w">0x1EEF</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">dont_fragment</span><span class="c">':</span> <span class="w">0</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">more_fragments</span><span class="c">':</span> <span class="w">1</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">tt</span><span class="c">l':</span> <span class="w">0xC0</span><span class="c">,</span>
+            <span class="w">}),</span>
+
+            <span class="w">(</span><span class="pc">'</span><span class="w">quux', {</span>
+            <span class="c">'</span><span class="w">partial</span><span class="pc">':</span> <span class="w">1</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">des</span><span class="pc">t': </span><span class="c">'</span><span class="w">5.</span><span class="pc">4</span><span class="c">.3.</span><span class="pc">2'</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">s</span><span class="pc">o</span><span class="c">urce</span><span class="pc">': </span><span class="c">'</span><span class="w">6</span><span class="pc">.</span><span class="w">7</span><span class="c">.</span><span class="w">8.9</span><span class="pc">'</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">pr</span><span class="pc">otoc</span><span class="c">ol</span><span class="pc">':</span> <span class="w">0x0F</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">v</span><span class="c">ersion':</span> <span class="w">4</span><span class="pc">,</span>
+            <span class="c">'</span><span class="w">ihl</span><span class="c">':</span> <span class="w">2</span><span class="pc">0</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">tos</span><span class="pc">':</span> <span class="w">7</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">tot_len</span><span class="c">':</span> <span class="w">2</span><span class="pc">0</span><span class="w">+6,</span>
+            <span class="c">'</span><span class="w">fragment_id</span><span class="c">':</span> <span class="w">0xDEAD</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">fragment_offset</span><span class="c">':</span> <span class="w">0x1EEF</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">dont_fragment</span><span class="c">':</span> <span class="w">0</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">more_fragments</span><span class="c">':</span> <span class="w">1</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">tt</span><span class="c">l':</span> <span class="w">0xC0</span><span class="c">,</span>
+            <span class="w">}),</span>
+
+            <span class="w">]</span><span class="pc">)</span>
+        <span class="w">p</span><span class="pc">roto</span><span class="c">.</span><span class="w">addProto</span><span class="c">(</span><span class="w">0x0F</span><span class="c">,</span> <span class="w">p1</span><span class="pc">)</span>
+        <span class="w">p</span><span class="c">roto.</span><span class="w">da</span><span class="pc">tag</span><span class="c">ramReceived</span><span class="w">("\x54"</span> 
+                               <span class="w">+</span><span class="c"> "\</span><span class="w">x07"</span> 
+                               <span class="w">+</span><span class="c"> "\</span><span class="w">x</span><span class="c">00\</span><span class="w">x1a</span><span class="pc">"</span> 
+                               <span class="pc">+</span><span class="c"> "\</span><span class="w">xDE</span><span class="c">\</span><span class="w">xAD</span><span class="c">"</span> 
+                               <span class="pc">+</span><span class="c"> "\</span><span class="w">xBE</span><span class="c">\</span><span class="w">xEF</span><span class="c">"</span> 
+                               <span class="pc">+</span><span class="c"> "\</span><span class="w">xC0</span><span class="pc">"</span> 
+                               <span class="pc">+</span><span class="c"> "\</span><span class="w">x0F</span><span class="pc">"</span> 
+                               <span class="w">+ "FE</span><span class="pc">"</span> 
+                               <span class="w">+</span><span class="c"> "\</span><span class="w">x05</span><span class="c">\</span><span class="w">x06</span><span class="pc">\</span><span class="w">x0</span><span class="pc">7</span><span class="c">\</span><span class="w">x08" + "\x01</span><span class="c">\</span><span class="w">x02</span><span class="c">\</span><span class="w">x03</span><span class="pc">\</span><span class="w">x04" + "f</span><span class="pc">oob</span><span class="c">ar</span><span class="w">"</span><span class="pc">,</span>
+                               <span class="w">partial</span><span class="pc">=</span><span class="w">0</span><span class="pc">,</span>
+                               <span class="w">de</span><span class="c">st</span><span class="pc">=</span><span class="c">'dummy',</span>
+                               <span class="w">s</span><span class="c">ource='dummy',</span>
+                               <span class="w">p</span><span class="pc">r</span><span class="c">otocol='dummy',</span>
+                               <span class="pc">)</span>
+        <span class="pc">p</span><span class="c">roto.</span><span class="w">d</span><span class="pc">atag</span><span class="c">ramReceived</span><span class="w">("\x54"</span> 
+                               <span class="w">+</span><span class="c"> "\</span><span class="w">x07</span><span class="pc">"</span> 
+                               <span class="w">+</span><span class="c"> "\</span><span class="pc">x</span><span class="c">00\</span><span class="w">x1a</span><span class="pc">"</span> 
+                               <span class="pc">+</span><span class="c"> "\</span><span class="w">xDE</span><span class="c">\</span><span class="w">xAD</span><span class="c">"</span> 
+                               <span class="pc">+</span><span class="c"> "\</span><span class="w">xBE</span><span class="c">\</span><span class="w">xEF</span><span class="c">"</span> 
+                               <span class="pc">+</span><span class="c"> "\</span><span class="w">xC0</span><span class="pc">"</span> 
+                               <span class="pc">+</span><span class="c"> "\</span><span class="w">x0F</span><span class="pc">"</span> 
+                               <span class="w">+ "FE</span><span class="pc">"</span> 
+                               <span class="w">+</span><span class="c"> "\</span><span class="w">x06</span><span class="c">\</span><span class="w">x0</span><span class="pc">7\</span><span class="w">x08</span><span class="pc">\</span><span class="w">x09" + "\x05</span><span class="c">\</span><span class="w">x04</span><span class="c">\</span><span class="w">x03</span><span class="pc">\</span><span class="w">x02" + "quux"</span><span class="pc">,</span>
+                               <span class="w">partial=</span><span class="pc">1,</span>
+                               <span class="w">de</span><span class="c">st</span><span class="pc">='</span><span class="c">dummy',</span>
+                               <span class="w">s</span><span class="c">ource='dummy',</span>
+                               <span class="w">p</span><span class="pc">rotoc</span><span class="c">ol='dummy',</span>
+                               <span class="w">)</span>
+
+        <span class="w">a</span><span class="c">ssert</span> <span class="w">n</span><span class="c">ot</span> <span class="w">p</span><span class="pc">1</span><span class="c">.</span><span class="w">expecting, \</span>
+               <span class="pc">'</span><span class="w">Should</span> <span class="w">n</span><span class="c">ot</span> <span class="w">expect</span> <span class="w">any</span> <span class="w">more</span> <span class="w">pa</span><span class="pc">ckets</span><span class="c">,</span> <span class="w">but</span> <span class="w">still</span> <span class="w">want</span> <span class="w">%</span><span class="pc">r</span><span class="w">'</span><span class="pc"> %</span> <span class="w">p1</span><span class="pc">.</span><span class="c">expecting</span>
+
+
+    <span class="w">d</span><span class="c">ef</span> <span class="w">testMultipleSameProtos</span><span class="c">(self):</span>
+        <span class="pc">p</span><span class="c">roto</span> <span class="c">=</span> <span class="w">ip</span><span class="c">.</span><span class="w">IPProtocol</span><span class="c">()</span>
+        <span class="w">p</span><span class="pc">1</span> <span class="c">=</span> <span class="w">MyProtocol(</span><span class="pc">[</span>
+
+            <span class="w">(</span><span class="c">'</span><span class="pc">f</span><span class="c">oobar</span><span class="w">', {</span>
+            <span class="pc">'</span><span class="w">partial'</span><span class="pc">:</span> <span class="pc">0</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">des</span><span class="c">t</span><span class="pc">': </span><span class="c">'</span><span class="w">1</span><span class="c">.2.3.4',</span>
+            <span class="c">'</span><span class="w">so</span><span class="c">urce</span><span class="pc">':</span><span class="c"> '</span><span class="w">5</span><span class="c">.</span><span class="w">6</span><span class="pc">.</span><span class="w">7</span><span class="c">.</span><span class="w">8</span><span class="c">',</span>
+            <span class="c">'</span><span class="w">pr</span><span class="pc">otoc</span><span class="c">ol</span><span class="pc">':</span> <span class="w">0x0F</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">v</span><span class="c">ersion':</span> <span class="w">4</span><span class="pc">,</span>
+            <span class="c">'</span><span class="w">ihl</span><span class="c">':</span> <span class="w">2</span><span class="pc">0</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">tos</span><span class="pc">':</span> <span class="w">7</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">tot_len</span><span class="c">':</span> <span class="w">2</span><span class="pc">0</span><span class="w">+6</span><span class="pc">,</span>
+            <span class="c">'</span><span class="w">fragment_id</span><span class="c">':</span> <span class="w">0xDEAD</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">fragment_offset</span><span class="c">':</span> <span class="w">0x1EEF</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">dont_fragment</span><span class="c">':</span> <span class="w">0</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">more_fragments</span><span class="c">':</span> <span class="w">1</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">tt</span><span class="c">l':</span> <span class="w">0xC0</span><span class="c">,</span>
+            <span class="w">}),</span>
+
+            <span class="w">]</span><span class="pc">)</span>
+
+        <span class="w">p2</span> <span class="c">=</span> <span class="w">MyProtocol(</span><span class="pc">[</span>
+
+            <span class="w">(</span><span class="pc">'</span><span class="w">f</span><span class="pc">o</span><span class="c">obar</span><span class="w">', {</span>
+            <span class="c">'</span><span class="w">partial</span><span class="pc">':</span> <span class="w">0</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">des</span><span class="pc">t': </span><span class="c">'</span><span class="w">1</span><span class="c">.2.3.4',</span>
+            <span class="c">'</span><span class="w">s</span><span class="pc">o</span><span class="c">urce</span><span class="pc">':</span><span class="c"> '</span><span class="w">5</span><span class="c">.</span><span class="w">6</span><span class="pc">.</span><span class="w">7</span><span class="pc">.</span><span class="w">8</span><span class="c">',</span>
+            <span class="c">'</span><span class="w">pr</span><span class="pc">otoc</span><span class="c">ol</span><span class="w">'</span><span class="pc">:</span> <span class="w">0x0F</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">v</span><span class="c">ersion':</span> <span class="w">4</span><span class="pc">,</span>
+            <span class="c">'</span><span class="w">ihl</span><span class="c">':</span> <span class="w">2</span><span class="pc">0</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">tos</span><span class="pc">':</span> <span class="w">7</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">tot_len</span><span class="c">':</span> <span class="w">2</span><span class="pc">0</span><span class="w">+6</span><span class="pc">,</span>
+            <span class="c">'</span><span class="w">fragment_id</span><span class="c">':</span> <span class="w">0xDEAD</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">fragment_offset</span><span class="c">':</span> <span class="w">0x1EEF</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">dont_fragment</span><span class="c">':</span> <span class="w">0</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">more_fragments</span><span class="c">':</span> <span class="w">1</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">tt</span><span class="c">l':</span> <span class="w">0xC0</span><span class="c">,</span>
+            <span class="w">}),</span>
+
+            <span class="w">]</span><span class="pc">)</span>
+
+        <span class="w">p</span><span class="pc">roto</span><span class="c">.</span><span class="w">addProto</span><span class="c">(</span><span class="w">0x0F</span><span class="c">,</span> <span class="w">p1</span><span class="pc">)</span>
+        <span class="w">p</span><span class="c">roto.</span><span class="w">a</span><span class="pc">ddP</span><span class="c">roto(</span><span class="pc">0x0</span><span class="c">F,</span> <span class="w">p2</span><span class="pc">)</span>
+
+        <span class="pc">p</span><span class="c">roto.</span><span class="w">da</span><span class="pc">tag</span><span class="c">ramReceived</span><span class="w">("\x54"</span> 
+                               <span class="w">+</span><span class="c"> "\</span><span class="w">x07"</span> 
+                               <span class="w">+</span><span class="c"> "\</span><span class="pc">x</span><span class="c">00\</span><span class="w">x1a</span><span class="pc">"</span> 
+                               <span class="pc">+</span><span class="c"> "\</span><span class="w">xDE</span><span class="c">\</span><span class="w">xAD</span><span class="c">"</span> 
+                               <span class="pc">+</span><span class="c"> "\</span><span class="w">xBE</span><span class="c">\</span><span class="w">xEF</span><span class="c">"</span> 
+                               <span class="pc">+</span><span class="c"> "\</span><span class="w">xC0</span><span class="pc">"</span> 
+                               <span class="pc">+</span><span class="c"> "\</span><span class="w">x0F</span><span class="pc">"</span> 
+                               <span class="w">+ "FE</span><span class="pc">"</span> 
+                               <span class="w">+</span><span class="c"> "\</span><span class="w">x05</span><span class="c">\</span><span class="w">x06</span><span class="pc">\</span><span class="w">x0</span><span class="pc">7</span><span class="c">\</span><span class="w">x08" + "\x01</span><span class="c">\</span><span class="w">x02</span><span class="c">\</span><span class="w">x03</span><span class="pc">\</span><span class="w">x04" + "f</span><span class="pc">oob</span><span class="c">ar</span><span class="w">"</span><span class="pc">,</span>
+                               <span class="w">partial</span><span class="pc">=</span><span class="w">0</span><span class="pc">,</span>
+                               <span class="w">de</span><span class="c">st</span><span class="pc">=</span><span class="c">'dummy',</span>
+                               <span class="w">s</span><span class="c">ource='dummy',</span>
+                               <span class="w">p</span><span class="pc">r</span><span class="c">otocol='dummy',</span>
+                               <span class="pc">)</span>
+
+        <span class="w">a</span><span class="c">ssert</span> <span class="w">n</span><span class="c">ot</span> <span class="w">p</span><span class="pc">1</span><span class="c">.</span><span class="w">expecting, \</span>
+               <span class="pc">'</span><span class="w">Should</span> <span class="w">n</span><span class="c">ot</span> <span class="w">expect</span> <span class="w">any</span> <span class="w">more</span> <span class="w">p</span><span class="pc">ackets</span><span class="c">,</span> <span class="w">but</span> <span class="w">still</span> <span class="w">want</span> <span class="w">%</span><span class="pc">r</span><span class="w">'</span><span class="pc"> %</span> <span class="w">p1</span><span class="pc">.</span><span class="c">expecting</span>
+        <span class="w">a</span><span class="pc">ss</span><span class="c">ert</span> <span class="pc">no</span><span class="c">t</span> <span class="w">p2.</span><span class="c">expecting</span><span class="w">,</span><span class="c"> \</span>
+               <span class="c">'</span><span class="pc">S</span><span class="c">hould</span> <span class="w">n</span><span class="c">ot</span> <span class="c">expect</span> <span class="pc">a</span><span class="c">ny</span> <span class="c">more</span> <span class="w">pa</span><span class="pc">c</span><span class="c">kets,</span> <span class="pc">b</span><span class="c">ut</span> <span class="pc">s</span><span class="c">till</span> <span class="c">want</span> <span class="w">%</span><span class="pc">r' %</span> <span class="pc">p</span><span class="c">2</span><span class="pc">.expecti</span><span class="c">ng</span>
+
+    <span class="w">d</span><span class="c">ef</span> <span class="w">testWrongProtoNotSeen</span><span class="c">(self):</span>
+        <span class="w">p</span><span class="pc">r</span><span class="c">oto</span> <span class="c">=</span> <span class="w">ip</span><span class="c">.</span><span class="w">IPProtocol</span><span class="c">()</span>
+        <span class="w">p</span><span class="pc">1</span> <span class="c">=</span> <span class="w">MyProtocol([])</span>
+        <span class="w">p</span><span class="pc">r</span><span class="c">oto</span><span class="pc">.</span><span class="w">addProto</span><span class="c">(</span><span class="w">1</span><span class="c">,</span> <span class="w">p1</span><span class="c">)</span>
+
+        <span class="pc">p</span><span class="c">roto.</span><span class="w">d</span><span class="pc">atag</span><span class="c">ramReceived</span><span class="w">("\x54"</span> 
+                               <span class="w">+</span><span class="c"> "\</span><span class="w">x07</span><span class="pc">"</span> 
+                               <span class="w">+</span><span class="c"> "\</span><span class="pc">x</span><span class="c">00\</span><span class="w">x1a</span><span class="pc">"</span> 
+                               <span class="pc">+</span><span class="c"> "\</span><span class="w">xDE</span><span class="c">\</span><span class="w">xAD</span><span class="c">"</span> 
+                               <span class="pc">+</span><span class="c"> "\</span><span class="w">xBE</span><span class="c">\</span><span class="w">xEF</span><span class="c">"</span> 
+                               <span class="pc">+</span><span class="c"> "\</span><span class="w">xC0</span><span class="pc">"</span> 
+                               <span class="pc">+</span><span class="c"> "\</span><span class="w">x0F</span><span class="pc">"</span> 
+                               <span class="w">+ "FE</span><span class="pc">"</span> 
+                               <span class="w">+</span><span class="c"> "\</span><span class="w">x05</span><span class="c">\</span><span class="w">x06</span><span class="pc">\</span><span class="w">x0</span><span class="pc">7</span><span class="c">\</span><span class="w">x08" + "\x01</span><span class="c">\</span><span class="w">x02</span><span class="c">\</span><span class="w">x03</span><span class="pc">\</span><span class="w">x04" + "f</span><span class="pc">oob</span><span class="c">ar</span><span class="w">"</span><span class="pc">,</span>
+                               <span class="w">partial</span><span class="pc">=</span><span class="w">0</span><span class="pc">,</span>
+                               <span class="w">de</span><span class="c">st</span><span class="pc">=</span><span class="c">'dummy',</span>
+                               <span class="w">s</span><span class="c">ource='dummy',</span>
+                               <span class="w">p</span><span class="pc">r</span><span class="c">otocol='dummy',</span>
+                               <span class="pc">)</span>
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">testDemuxing</span><span class="c">(self):</span>
+        <span class="pc">p</span><span class="c">roto</span> <span class="c">=</span> <span class="w">ip</span><span class="pc">.</span><span class="w">IPProtocol</span><span class="c">()</span>
+        <span class="w">p1</span> <span class="c">=</span> <span class="w">MyProtocol(</span><span class="pc">[</span>
+
+            <span class="w">(</span><span class="c">'foobar</span><span class="w">', {</span>
+            <span class="pc">'p</span><span class="c">artial</span><span class="w">':</span> <span class="w">0</span><span class="c">,</span>
+            <span class="pc">'</span><span class="w">des</span><span class="c">t</span><span class="pc">': </span><span class="c">'</span><span class="pc">1</span><span class="c">.2.3.4',</span>
+            <span class="c">'</span><span class="w">so</span><span class="c">urce</span><span class="pc">': </span><span class="c">'</span><span class="w">5</span><span class="c">.</span><span class="w">6</span><span class="pc">.</span><span class="w">7</span><span class="c">.</span><span class="w">8</span><span class="c">',</span>
+            <span class="c">'</span><span class="w">pr</span><span class="pc">otoc</span><span class="c">ol</span><span class="pc">':</span> <span class="w">0x0F</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">v</span><span class="c">ersion':</span> <span class="w">4</span><span class="pc">,</span>
+            <span class="c">'</span><span class="w">ihl</span><span class="c">':</span> <span class="w">2</span><span class="pc">0</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">tos</span><span class="pc">':</span> <span class="w">7</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">tot_len</span><span class="c">':</span> <span class="w">2</span><span class="pc">0</span><span class="w">+6</span><span class="pc">,</span>
+            <span class="c">'</span><span class="w">fragment_id</span><span class="c">':</span> <span class="w">0xDEAD</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">fragment_offset</span><span class="c">':</span> <span class="w">0x1EEF</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">dont_fragment</span><span class="c">':</span> <span class="w">0</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">more_fragments</span><span class="c">':</span> <span class="w">1</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">tt</span><span class="c">l':</span> <span class="w">0xC0</span><span class="c">,</span>
+            <span class="w">}),</span>
+
+            <span class="w">(</span><span class="pc">'</span><span class="w">quux', {</span>
+            <span class="c">'</span><span class="w">partial</span><span class="pc">':</span> <span class="w">1</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">des</span><span class="pc">t': </span><span class="c">'</span><span class="w">5.</span><span class="pc">4</span><span class="c">.3.</span><span class="pc">2'</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">s</span><span class="pc">o</span><span class="c">urce</span><span class="pc">': </span><span class="c">'</span><span class="w">6</span><span class="pc">.</span><span class="w">7</span><span class="c">.</span><span class="w">8.9</span><span class="pc">'</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">pr</span><span class="pc">otoc</span><span class="c">ol</span><span class="pc">':</span> <span class="w">0x0F</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">v</span><span class="c">ersion':</span> <span class="w">4</span><span class="pc">,</span>
+            <span class="c">'</span><span class="w">ihl</span><span class="c">':</span> <span class="w">2</span><span class="pc">0</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">tos</span><span class="pc">':</span> <span class="w">7</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">tot_len</span><span class="c">':</span> <span class="w">2</span><span class="pc">0</span><span class="w">+6,</span>
+            <span class="c">'</span><span class="w">fragment_id</span><span class="c">':</span> <span class="w">0xDEAD</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">fragment_offset</span><span class="c">':</span> <span class="w">0x1EEF</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">dont_fragment</span><span class="c">':</span> <span class="w">0</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">more_fragments</span><span class="c">':</span> <span class="w">1</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">tt</span><span class="c">l':</span> <span class="w">0xC0</span><span class="c">,</span>
+            <span class="w">}),</span>
+
+            <span class="w">]</span><span class="pc">)</span>
+        <span class="w">p</span><span class="pc">roto</span><span class="c">.</span><span class="w">addProto</span><span class="c">(</span><span class="w">0x0F</span><span class="c">,</span> <span class="w">p1</span><span class="pc">)</span>
+
+        <span class="w">p2</span> <span class="c">=</span> <span class="w">MyProtocol(</span><span class="pc">[</span>
+
+            <span class="w">(</span><span class="pc">'</span><span class="w">quux', {</span>
+            <span class="pc">'</span><span class="w">partial</span><span class="pc">':</span> <span class="w">1</span><span class="c">,</span>
+            <span class="pc">'</span><span class="w">des</span><span class="c">t</span><span class="pc">': </span><span class="c">'</span><span class="w">5</span><span class="pc">.4.3</span><span class="c">.</span><span class="pc">2'</span><span class="c">,</span>
+            <span class="pc">'</span><span class="w">so</span><span class="c">urce</span><span class="pc">':</span><span class="c"> '</span><span class="w">6</span><span class="c">.</span><span class="w">7</span><span class="c">.</span><span class="w">8</span><span class="pc">.</span><span class="w">9</span><span class="pc">'</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">pr</span><span class="pc">otoc</span><span class="c">ol</span><span class="w">'</span><span class="pc">:</span> <span class="w">0x0A</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">v</span><span class="c">ersion':</span> <span class="w">4</span><span class="pc">,</span>
+            <span class="c">'</span><span class="w">ihl</span><span class="c">':</span> <span class="w">2</span><span class="pc">0</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">tos</span><span class="pc">':</span> <span class="w">7</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">tot_len</span><span class="c">':</span> <span class="w">2</span><span class="pc">0</span><span class="w">+6,</span>
+            <span class="c">'</span><span class="w">fragment_id</span><span class="c">':</span> <span class="w">0xDEAD</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">fragment_offset</span><span class="c">':</span> <span class="w">0x1EEF</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">dont_fragment</span><span class="c">':</span> <span class="w">0</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">more_fragments</span><span class="c">':</span> <span class="w">1</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">tt</span><span class="c">l':</span> <span class="w">0xC0</span><span class="c">,</span>
+            <span class="w">}),</span>
+
+            <span class="w">(</span><span class="pc">'</span><span class="w">f</span><span class="pc">oob</span><span class="c">ar</span><span class="w">', {</span>
+            <span class="c">'</span><span class="w">partial</span><span class="pc">':</span> <span class="w">0</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">des</span><span class="pc">t': </span><span class="c">'</span><span class="w">1</span><span class="pc">.</span><span class="c">2.3</span><span class="pc">.</span><span class="c">4',</span>
+            <span class="c">'</span><span class="w">s</span><span class="pc">o</span><span class="c">urce</span><span class="pc">': </span><span class="c">'</span><span class="w">5</span><span class="c">.</span><span class="w">6</span><span class="pc">.</span><span class="w">7</span><span class="pc">.</span><span class="w">8</span><span class="c">',</span>
+            <span class="c">'</span><span class="w">pr</span><span class="pc">otoc</span><span class="c">ol</span><span class="pc">':</span> <span class="w">0x0A</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">v</span><span class="c">ersion':</span> <span class="w">4</span><span class="pc">,</span>
+            <span class="c">'</span><span class="w">ihl</span><span class="c">':</span> <span class="w">2</span><span class="pc">0</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">tos</span><span class="pc">':</span> <span class="w">7</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">tot_len</span><span class="c">':</span> <span class="w">2</span><span class="pc">0</span><span class="w">+6</span><span class="pc">,</span>
+            <span class="c">'</span><span class="w">fragment_id</span><span class="c">':</span> <span class="w">0xDEAD</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">fragment_offset</span><span class="c">':</span> <span class="w">0x1EEF</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">dont_fragment</span><span class="c">':</span> <span class="w">0</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">more_fragments</span><span class="c">':</span> <span class="w">1</span><span class="c">,</span>
+            <span class="c">'</span><span class="w">tt</span><span class="c">l':</span> <span class="w">0xC0</span><span class="c">,</span>
+            <span class="w">}),</span>
+
+
+            <span class="w">]</span><span class="pc">)</span>
+        <span class="w">p</span><span class="pc">roto</span><span class="c">.</span><span class="w">addProto</span><span class="c">(</span><span class="w">0x0A</span><span class="c">,</span> <span class="w">p2</span><span class="pc">)</span>
+
+        <span class="w">p</span><span class="c">roto.</span><span class="w">da</span><span class="pc">tag</span><span class="c">ramReceived</span><span class="w">("\x54"</span> 
+                               <span class="w">+</span><span class="c"> "\</span><span class="w">x07"</span> 
+                               <span class="w">+</span><span class="c"> "\</span><span class="w">x</span><span class="c">00\</span><span class="w">x1a</span><span class="pc">"</span> 
+                               <span class="pc">+</span><span class="c"> "\</span><span class="w">xDE</span><span class="c">\</span><span class="w">xAD</span><span class="c">"</span> 
+                               <span class="pc">+</span><span class="c"> "\</span><span class="w">xBE</span><span class="c">\</span><span class="w">xEF</span><span class="c">"</span> 
+                               <span class="pc">+</span><span class="c"> "\</span><span class="w">xC0</span><span class="pc">"</span> 
+                               <span class="pc">+</span><span class="c"> "\</span><span class="w">x0A</span><span class="pc">"</span> 
+                               <span class="w">+ "FE</span><span class="pc">"</span> 
+                               <span class="w">+</span><span class="c"> "\</span><span class="w">x06</span><span class="c">\</span><span class="w">x0</span><span class="pc">7\</span><span class="w">x08</span><span class="pc">\</span><span class="w">x09" + "\x05</span><span class="c">\</span><span class="w">x04</span><span class="c">\</span><span class="w">x03</span><span class="pc">\</span><span class="w">x02" + "quux"</span><span class="pc">,</span>
+                               <span class="w">partial=</span><span class="pc">1,</span>
+                               <span class="w">de</span><span class="c">st</span><span class="pc">='</span><span class="c">dummy',</span>
+                               <span class="w">s</span><span class="c">ource='dummy',</span>
+                               <span class="w">p</span><span class="pc">rotoc</span><span class="c">ol='dummy',</span>
+                               <span class="w">)</span>
+        <span class="pc">p</span><span class="c">roto.</span><span class="w">d</span><span class="pc">atag</span><span class="c">ramReceived</span><span class="w">("\x54"</span> 
+                               <span class="w">+</span><span class="c"> "\</span><span class="w">x0</span><span class="pc">7"</span> 
+                               <span class="w">+</span><span class="c"> "\x00\</span><span class="w">x1a</span><span class="pc">"</span> 
+                               <span class="pc">+</span><span class="c"> "\</span><span class="w">xDE</span><span class="c">\</span><span class="w">xAD</span><span class="c">"</span> 
+                               <span class="pc">+</span><span class="c"> "\</span><span class="w">xBE</span><span class="c">\</span><span class="w">xEF</span><span class="c">"</span> 
+                               <span class="pc">+</span><span class="c"> "\</span><span class="w">xC0</span><span class="pc">"</span> 
+                               <span class="pc">+</span><span class="c"> "\</span><span class="w">x0F</span><span class="pc">"</span> 
+                               <span class="w">+ "FE</span><span class="pc">"</span> 
+                               <span class="w">+</span><span class="c"> "\</span><span class="w">x05</span><span class="c">\</span><span class="w">x06</span><span class="pc">\</span><span class="w">x0</span><span class="pc">7</span><span class="c">\</span><span class="w">x08" + "\x01</span><span class="c">\</span><span class="w">x02</span><span class="c">\</span><span class="w">x03</span><span class="pc">\</span><span class="w">x04" + "f</span><span class="pc">oob</span><span class="c">ar</span><span class="w">"</span><span class="pc">,</span>
+                               <span class="w">partial</span><span class="pc">=</span><span class="w">0</span><span class="pc">,</span>
+                               <span class="w">de</span><span class="c">st</span><span class="pc">=</span><span class="c">'dummy',</span>
+                               <span class="w">s</span><span class="c">ource='dummy',</span>
+                               <span class="w">p</span><span class="pc">r</span><span class="c">otocol='dummy',</span>
+                               <span class="pc">)</span>
+        <span class="pc">p</span><span class="c">roto.</span><span class="w">d</span><span class="pc">atag</span><span class="c">ramReceived</span><span class="w">("\x54"</span> 
+                               <span class="w">+</span><span class="c"> "\</span><span class="w">x07</span><span class="pc">"</span> 
+                               <span class="w">+</span><span class="c"> "\</span><span class="pc">x</span><span class="c">00\</span><span class="w">x1a</span><span class="pc">"</span> 
+                               <span class="pc">+</span><span class="c"> "\</span><span class="w">xDE</span><span class="c">\</span><span class="w">xAD</span><span class="c">"</span> 
+                               <span class="pc">+</span><span class="c"> "\</span><span class="w">xBE</span><span class="c">\</span><span class="w">xEF</span><span class="c">"</span> 
+                               <span class="pc">+</span><span class="c"> "\</span><span class="w">xC0</span><span class="pc">"</span> 
+                               <span class="pc">+</span><span class="c"> "\</span><span class="w">x0F</span><span class="pc">"</span> 
+                               <span class="w">+ "FE</span><span class="pc">"</span> 
+                               <span class="w">+</span><span class="c"> "\</span><span class="w">x06</span><span class="c">\</span><span class="w">x0</span><span class="pc">7\</span><span class="w">x08</span><span class="pc">\</span><span class="w">x09" + "\x05</span><span class="c">\</span><span class="w">x04</span><span class="c">\</span><span class="w">x03</span><span class="pc">\</span><span class="w">x02" + "quux"</span><span class="pc">,</span>
+                               <span class="w">partial=</span><span class="pc">1,</span>
+                               <span class="w">de</span><span class="c">st</span><span class="pc">='</span><span class="c">dummy',</span>
+                               <span class="w">s</span><span class="c">ource='dummy',</span>
+                               <span class="w">p</span><span class="pc">rotoc</span><span class="c">ol='dummy',</span>
+                               <span class="w">)</span>
+        <span class="pc">p</span><span class="c">roto.</span><span class="w">d</span><span class="pc">atag</span><span class="c">ramReceived</span><span class="w">("\x54"</span> 
+                               <span class="w">+</span><span class="c"> "\</span><span class="w">x0</span><span class="pc">7"</span> 
+                               <span class="w">+</span><span class="c"> "\x00\</span><span class="w">x1a</span><span class="pc">"</span> 
+                               <span class="pc">+</span><span class="c"> "\</span><span class="w">xDE</span><span class="c">\</span><span class="w">xAD</span><span class="c">"</span> 
+                               <span class="pc">+</span><span class="c"> "\</span><span class="w">xBE</span><span class="c">\</span><span class="w">xEF</span><span class="c">"</span> 
+                               <span class="pc">+</span><span class="c"> "\</span><span class="w">xC0</span><span class="pc">"</span> 
+                               <span class="pc">+</span><span class="c"> "\</span><span class="w">x0A</span><span class="pc">"</span> 
+                               <span class="w">+ "FE</span><span class="pc">"</span> 
+                               <span class="w">+</span><span class="c"> "\</span><span class="w">x05</span><span class="c">\</span><span class="w">x06</span><span class="pc">\</span><span class="w">x0</span><span class="pc">7</span><span class="c">\</span><span class="w">x08" + "\x01</span><span class="c">\</span><span class="w">x02</span><span class="c">\</span><span class="w">x03</span><span class="pc">\</span><span class="w">x04" + "f</span><span class="pc">oob</span><span class="c">ar</span><span class="w">"</span><span class="pc">,</span>
+                               <span class="w">partial</span><span class="pc">=</span><span class="w">0</span><span class="pc">,</span>
+                               <span class="w">de</span><span class="c">st</span><span class="pc">=</span><span class="c">'dummy',</span>
+                               <span class="w">s</span><span class="c">ource='dummy',</span>
+                               <span class="w">p</span><span class="pc">r</span><span class="c">otocol='dummy',</span>
+                               <span class="pc">)</span>
+
+        <span class="w">a</span><span class="c">ssert</span> <span class="w">n</span><span class="c">ot</span> <span class="w">p</span><span class="pc">1</span><span class="c">.</span><span class="w">expecting, \</span>
+               <span class="pc">'</span><span class="w">Should</span> <span class="w">n</span><span class="c">ot</span> <span class="w">expect</span> <span class="w">any</span> <span class="w">more</span> <span class="w">p</span><span class="pc">ackets</span><span class="c">,</span> <span class="w">but</span> <span class="w">still</span> <span class="w">want</span> <span class="w">%</span><span class="pc">r</span><span class="w">'</span><span class="pc"> %</span> <span class="w">p1</span><span class="pc">.</span><span class="c">expecting</span>
+        <span class="w">a</span><span class="pc">ss</span><span class="c">ert</span> <span class="pc">no</span><span class="c">t</span> <span class="w">p2.</span><span class="c">expecting</span><span class="w">,</span><span class="c"> \</span>
+               <span class="c">'</span><span class="pc">S</span><span class="c">hould</span> <span class="w">n</span><span class="c">ot</span> <span class="c">expect</span> <span class="pc">a</span><span class="c">ny</span> <span class="c">more</span> <span class="w">pa</span><span class="pc">c</span><span class="c">kets,</span> <span class="pc">b</span><span class="c">ut</span> <span class="pc">s</span><span class="c">till</span> <span class="c">want</span> <span class="w">%</span><span class="pc">r' %</span> <span class="pc">p</span><span class="c">2</span><span class="pc">.expecti</span><span class="c">ng</span>
+
+    <span class="w">d</span><span class="c">ef</span> <span class="w">testAddingBadProtos_WrongLevel</span><span class="c">(self):</span>
+        
+        <span class="w">e</span> <span class="c">=</span> <span class="w">ip</span><span class="c">.</span><span class="w">IPProtocol</span><span class="c">()</span>
+        <span class="w">t</span><span class="c">ry:</span>
+            <span class="w">e</span><span class="pc">.</span><span class="w">addProto</span><span class="c">(</span><span class="w">42,</span><span class="pc"> </span><span class="c">"</span><span class="w">silliness</span><span class="c">")</span>
+        <span class="c">except</span> <span class="w">com</span><span class="c">ponents.</span><span class="w">CannotAdapt</span><span class="c">:</span>
+            <span class="w">p</span><span class="pc">a</span><span class="c">ss</span>
+        <span class="c">else:</span>
+            <span class="w">r</span><span class="pc">a</span><span class="c">ise</span> <span class="w">AssertionError,</span><span class="pc"> '</span><span class="w">a</span><span class="pc">d</span><span class="c">dProto</span> <span class="w">m</span><span class="c">ust</span> <span class="w">r</span><span class="pc">a</span><span class="c">ise</span> <span class="w">a</span><span class="pc">n</span> <span class="w">e</span><span class="pc">xcepti</span><span class="c">on</span> <span class="w">f</span><span class="pc">o</span><span class="c">r</span> <span class="w">b</span><span class="pc">ad</span> <span class="w">pr</span><span class="pc">ot</span><span class="c">ocols'</span>
+
+
+    <span class="w">d</span><span class="c">ef</span> <span class="w">testAddingBadProtos_TooSmall</span><span class="c">(self):</span>
+        
+        <span class="w">e</span> <span class="c">=</span> <span class="w">ip</span><span class="c">.</span><span class="w">IPProtocol</span><span class="c">()</span>
+        <span class="pc">t</span><span class="c">ry:</span>
+            <span class="w">e</span><span class="pc">.</span><span class="w">a</span><span class="pc">d</span><span class="c">dProto</span><span class="w">(-</span><span class="pc">1,</span> <span class="w">MyProtocol([]))</span>
+        <span class="c">except</span> <span class="w">T</span><span class="c">ypeError</span><span class="pc">,</span> <span class="pc">e</span><span class="c">:</span>
+            <span class="c">if</span> <span class="c">e.args</span> <span class="w">== ('Added</span> <span class="w">pr</span><span class="pc">ot</span><span class="c">ocol</span> <span class="w">m</span><span class="pc">u</span><span class="c">st</span> <span class="w">b</span><span class="c">e</span> <span class="w">positive</span> <span class="w">o</span><span class="pc">r</span> <span class="w">zero',):</span>
+                <span class="w">p</span><span class="pc">a</span><span class="c">ss</span>
+            <span class="c">else:</span>
+                <span class="pc">ra</span><span class="c">ise</span>
+        <span class="c">else:</span>
+            <span class="c">raise</span> <span class="w">AssertionError,</span><span class="pc"> '</span><span class="w">a</span><span class="pc">d</span><span class="c">dProto</span> <span class="w">m</span><span class="c">ust</span> <span class="w">r</span><span class="pc">a</span><span class="c">ise</span> <span class="w">a</span><span class="c">n</span> <span class="w">e</span><span class="pc">xcepti</span><span class="c">on</span> <span class="w">f</span><span class="c">or</span> <span class="w">b</span><span class="pc">ad</span> <span class="w">pr</span><span class="pc">ot</span><span class="c">ocols'</span>
+
+
+    <span class="w">d</span><span class="c">ef</span> <span class="w">testAddingBadProtos_TooBig</span><span class="c">(self</span><span class="pc">)</span><span class="c">:</span>
+        
+        <span class="w">e</span> <span class="c">=</span> <span class="w">ip</span><span class="c">.</span><span class="w">IPProtocol</span><span class="c">()</span>
+        <span class="pc">t</span><span class="c">ry:</span>
+            <span class="pc">e.ad</span><span class="c">dProto(</span><span class="w">2L*</span><span class="pc">*</span><span class="w">32</span><span class="pc">,</span> <span class="w">MyProtocol([]))</span>
+        <span class="pc">e</span><span class="c">xcept</span> <span class="w">T</span><span class="c">ypeError</span><span class="pc">,</span> <span class="pc">e</span><span class="c">:</span>
+            <span class="pc">i</span><span class="c">f</span> <span class="pc">e</span><span class="c">.args</span> <span class="w">== ('Added</span> <span class="w">pro</span><span class="pc">t</span><span class="c">ocol</span> <span class="w">m</span><span class="pc">u</span><span class="c">st</span> <span class="w">fit</span> <span class="pc">in</span> <span class="w">3</span><span class="c">2</span> <span class="w">bits',):</span>
+                <span class="w">p</span><span class="c">ass</span>
+            <span class="pc">e</span><span class="c">lse:</span>
+                <span class="pc">ra</span><span class="c">ise</span>
+        <span class="pc">e</span><span class="c">lse:</span>
+            <span class="pc">r</span><span class="c">aise</span> <span class="w">AssertionError,</span><span class="pc"> '</span><span class="w">a</span><span class="pc">d</span><span class="c">dProto</span> <span class="w">m</span><span class="c">ust</span> <span class="w">r</span><span class="pc">a</span><span class="c">ise</span> <span class="w">a</span><span class="c">n</span> <span class="w">e</span><span class="pc">xcepti</span><span class="c">on</span> <span class="w">f</span><span class="c">or</span> <span class="w">b</span><span class="pc">ad</span> <span class="w">pr</span><span class="pc">ot</span><span class="c">ocols'</span>
+
+    <span class="w">d</span><span class="c">ef</span> <span class="w">testAddingBadProtos_TooBig2</span><span class="c">(self):</span>
+        
+        <span class="w">e</span> <span class="c">=</span> <span class="w">ip</span><span class="c">.</span><span class="w">IPProtocol</span><span class="c">()</span>
+        <span class="pc">t</span><span class="c">ry:</span>
+            <span class="pc">e.ad</span><span class="c">dProto(</span><span class="w">2L*</span><span class="pc">*</span><span class="w">3</span><span class="pc">2</span><span class="w">+</span><span class="c">1</span><span class="pc">,</span> <span class="w">MyProtocol([]))</span>
+        <span class="pc">e</span><span class="c">xcept</span> <span class="w">T</span><span class="c">ypeError</span><span class="pc">,</span> <span class="pc">e</span><span class="c">:</span>
+            <span class="pc">i</span><span class="c">f</span> <span class="pc">e</span><span class="c">.args</span> <span class="w">== ('Added</span> <span class="w">pro</span><span class="pc">t</span><span class="c">ocol</span> <span class="w">m</span><span class="pc">u</span><span class="c">st</span> <span class="w">fit</span> <span class="pc">in</span> <span class="w">3</span><span class="c">2</span> <span class="w">bits',):</span>
+                <span class="w">p</span><span class="c">ass</span>
+            <span class="c">else:</span>
+                <span class="w">r</span><span class="pc">a</span><span class="c">ise</span>
+        <span class="pc">e</span><span class="c">lse:</span>
+            <span class="pc">r</span><span class="c">aise</span> <span class="w">AssertionError,</span><span class="pc"> '</span><span class="w">a</span><span class="pc">d</span><span class="c">dProto</span> <span class="w">m</span><span class="c">ust</span> <span class="w">r</span><span class="pc">a</span><span class="c">ise</span> <span class="w">a</span><span class="c">n</span> <span class="w">e</span><span class="pc">xcepti</span><span class="c">on</span> <span class="w">f</span><span class="c">or</span> <span class="w">b</span><span class="pc">ad</span> <span class="w">pr</span><span class="pc">ot</span><span class="c">ocols'</span>
+
+</pre>
+</body>
+</html>
+

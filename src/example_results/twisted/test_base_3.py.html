@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+<span class="w">from</span> <span class="w">calculus.base_3</span> <span class="w">import</span> <span class="w">Calculation</span>
+<span class="w">from</span> <span class="w">twisted.trial</span> <span class="w">import</span> <span class="w">unittest</span>
+
+
+
+<span class="w">class</span> <span class="w">CalculationTestCase(unittest.TestCase):</span>
+    <span class="w">def</span> <span class="w">setUp(self):</span>
+        <span class="w">self.calc</span> <span class="w">=</span> <span class="w">Calculation()</span>
+
+
+    <span class="w">def</span> <span class="w">_test(self,</span> <span class="w">operation,</span> <span class="w">a,</span> <span class="w">b,</span> <span class="w">e</span><span class="c">xpected</span><span class="pc">)</span><span class="c">:</span>
+        <span class="w">r</span><span class="pc">es</span><span class="c">ult</span> <span class="c">=</span> <span class="w">o</span><span class="c">peration</span><span class="pc">(</span><span class="w">a</span><span class="c">,</span> <span class="c">b</span><span class="pc">)</span>
+        <span class="c">self.assertEqual(</span><span class="w">r</span><span class="c">esult,</span> <span class="c">expected)</span>
+
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">_test_error</span><span class="c">(self</span><span class="pc">,</span> <span class="c">operation</span><span class="pc">)</span><span class="c">:</span>
+        <span class="pc">s</span><span class="c">elf.</span><span class="pc">assertR</span><span class="c">aises(</span><span class="pc">T</span><span class="c">ypeError,</span> <span class="c">operation</span><span class="pc">, </span><span class="c">"foo",</span> <span class="w">2</span><span class="pc">)</span>
+        <span class="pc">s</span><span class="c">elf.</span><span class="pc">assertR</span><span class="c">aises(</span><span class="pc">T</span><span class="c">ypeError,</span> <span class="pc">o</span><span class="c">peration</span><span class="pc">, </span><span class="c">"</span><span class="pc">b</span><span class="c">ar</span><span class="pc">", </span><span class="c">"</span><span class="w">egg</span><span class="c">")</span>
+        <span class="c">self.</span><span class="pc">assertR</span><span class="c">aises(</span><span class="pc">T</span><span class="c">ypeError,</span> <span class="c">operation</span><span class="w">,</span><span class="pc"> [</span><span class="w">3], [8</span><span class="pc">,</span> <span class="w">2]</span><span class="c">)</span>
+        <span class="pc">s</span><span class="c">elf.</span><span class="pc">assertR</span><span class="c">aises(</span><span class="pc">T</span><span class="c">ypeError,</span> <span class="pc">o</span><span class="c">peration</span><span class="w">, {"e"</span><span class="c">:</span> <span class="w">3}, {"r":</span><span class="pc"> </span><span class="c">"</span><span class="w">t"})</span>
+
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">test_add</span><span class="c">(self):</span>
+        <span class="c">self.</span><span class="w">_test</span><span class="pc">(</span><span class="c">self.</span><span class="w">calc</span><span class="pc">.</span><span class="w">a</span><span class="pc">dd,</span> <span class="w">3</span><span class="pc">,</span> <span class="w">8</span><span class="pc">,</span> <span class="w">1</span><span class="pc">1)</span>
+
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">test_subtract</span><span class="c">(self):</span>
+        <span class="c">self.</span><span class="w">_</span><span class="c">test</span><span class="pc">(</span><span class="c">self.</span><span class="w">c</span><span class="c">alc</span><span class="pc">.</span><span class="w">subtract</span><span class="c">,</span> <span class="w">7</span><span class="pc">,</span> <span class="w">3</span><span class="c">,</span> <span class="w">4</span><span class="pc">)</span>
+
+
+    <span class="c">def</span> <span class="w">test_multiply</span><span class="c">(self):</span>
+        <span class="c">self.</span><span class="w">_</span><span class="c">test</span><span class="pc">(</span><span class="c">self.</span><span class="pc">c</span><span class="c">alc</span><span class="pc">.</span><span class="w">multiply</span><span class="c">,</span> <span class="w">6</span><span class="pc">,</span> <span class="w">9</span><span class="c">,</span> <span class="w">54</span><span class="pc">)</span>
+
+
+    <span class="c">def</span> <span class="w">test_divide</span><span class="c">(self):</span>
+        <span class="c">self.</span><span class="w">_</span><span class="c">test</span><span class="pc">(</span><span class="c">self.</span><span class="pc">c</span><span class="c">alc</span><span class="pc">.</span><span class="w">divide</span><span class="c">,</span> <span class="w">12</span><span class="pc">,</span> <span class="w">5</span><span class="c">,</span> <span class="w">2</span><span class="pc">)</span>
+
+
+    <span class="c">def</span> <span class="w">test_errorAdd</span><span class="c">(self):</span>
+        <span class="c">self.</span><span class="w">_test_error</span><span class="pc">(</span><span class="c">self.</span><span class="pc">c</span><span class="c">alc</span><span class="pc">.</span><span class="w">a</span><span class="pc">d</span><span class="c">d</span><span class="pc">)</span>
+
+
+    <span class="c">def</span> <span class="w">test_errorSubtract</span><span class="c">(self):</span>
+        <span class="c">self.</span><span class="pc">_test_</span><span class="c">error</span><span class="pc">(</span><span class="c">self.calc.</span><span class="w">subtract</span><span class="c">)</span>
+
+
+    <span class="c">def</span> <span class="w">test_errorMultiply</span><span class="c">(self):</span>
+        <span class="c">self.</span><span class="pc">_</span><span class="c">test_error</span><span class="pc">(</span><span class="c">self.</span><span class="pc">c</span><span class="c">alc.</span><span class="w">multiply</span><span class="c">)</span>
+
+
+    <span class="c">def</span> <span class="w">test_errorDivide</span><span class="c">(self):</span>
+        <span class="c">self.</span><span class="pc">_</span><span class="c">test_error</span><span class="pc">(</span><span class="c">self.</span><span class="pc">c</span><span class="c">alc.</span><span class="w">divide</span><span class="c">)</span>
+
+</pre>
+</body>
+</html>
+

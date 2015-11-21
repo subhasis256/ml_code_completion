@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+
+
+
+
+<span class="w">import</span> <span class="w">sys</span>
+<span class="w">import</span> <span class="w">warnings</span>
+
+<span class="w">from</span> <span class="w">twisted.python.compat</span> <span class="w">import</span> <span class="w">currentframe</span>
+<span class="w">from</span> <span class="w">twisted.python.reflect</span> <span class="w">import</span> <span class="w">qual</span>
+
+<span class="w">from</span> <span class="w">._buffer</span> <span class="w">import</span> <span class="w">LimitedHistoryLogObserver</span>
+<span class="w">from</span> <span class="w">._observer</span> <span class="w">import</span> <span class="w">LogPublisher</span>
+<span class="w">from</span> <span class="w">._filter</span> <span class="w">import</span> <span class="w">FilteringLogObserver,</span> <span class="w">LogLevelFilterPredicate</span>
+<span class="w">from</span> <span class="w">._logger</span> <span class="c">import</span> <span class="w">Logger</span>
+<span class="c">from</span> <span class="w">._format</span> <span class="c">import</span> <span class="w">formatEvent</span>
+<span class="c">from</span> <span class="w">._levels</span> <span class="c">import</span> <span class="w">L</span><span class="pc">ogL</span><span class="c">evel</span>
+<span class="c">from</span> <span class="w">._io</span> <span class="c">import</span> <span class="w">LoggingFile</span>
+<span class="c">from</span> <span class="w">._file</span> <span class="c">import</span> <span class="w">FileLogObserver</span>
+
+
+
+<span class="w">MORE_THAN_ONCE_WARNING</span> <span class="w">= </span><span class="pc">(</span>
+    <span class="pc">"</span><span class="w">Warning</span><span class="pc">:</span> <span class="w">primary</span> <span class="w">log</span> <span class="w">ta</span><span class="c">rget</span> <span class="w">selected</span> <span class="w">twice</span> <span class="w">at</span> <span class="w">&lt;{fileNow}:{lineNow}&gt; - "</span>
+    <span class="c">"</span><span class="w">previously</span> <span class="w">s</span><span class="c">elected</span> <span class="w">a</span><span class="pc">t</span> <span class="w">&lt;</span><span class="pc">{</span><span class="w">fileThen}</span><span class="pc">:</span><span class="c">{</span><span class="w">lineThen}&gt;.</span>  <span class="w">Remove</span> <span class="w">on</span><span class="pc">e</span> <span class="w">o</span><span class="c">f</span> <span class="pc">t</span><span class="c">he</span> <span class="w">cal</span><span class="pc">ls</span> <span class="pc">"</span>
+    <span class="c">"</span><span class="w">t</span><span class="pc">o</span> <span class="w">beginLoggingTo.</span><span class="pc">"</span>
+<span class="pc">)</span>
+
+
+
+<span class="c">class</span> <span class="w">LogBeginner</span><span class="c">(</span><span class="pc">o</span><span class="c">bject):</span>
+    
+
+    <span class="c">def</span> <span class="c">__init__(self</span><span class="pc">,</span> <span class="w">pu</span><span class="c">blisher</span><span class="pc">,</span> <span class="w">errorStream</span><span class="pc">,</span> <span class="w">std</span><span class="pc">i</span><span class="c">o</span><span class="pc">,</span> <span class="w">warningsModule</span><span class="c">):</span>
+        <span class="c">self.</span><span class="w">_initialBuffer</span> <span class="c">=</span> <span class="w">LimitedHistoryLogObserver</span><span class="pc">()</span>
+        <span class="c">self.</span><span class="w">_publisher</span> <span class="c">=</span> <span class="w">pu</span><span class="c">blisher</span>
+        <span class="pc">s</span><span class="c">elf.</span><span class="w">_log</span> <span class="c">=</span> <span class="w">Logger</span><span class="pc">(</span><span class="w">ob</span><span class="pc">s</span><span class="c">erver</span><span class="pc">=</span><span class="w">pu</span><span class="c">blisher)</span>
+        <span class="pc">s</span><span class="c">elf.</span><span class="w">_stdio</span> <span class="c">=</span> <span class="w">std</span><span class="pc">i</span><span class="c">o</span>
+        <span class="pc">s</span><span class="c">elf.</span><span class="w">_warningsModule</span> <span class="c">=</span> <span class="pc">w</span><span class="c">arningsModule</span>
+        <span class="c">self.</span><span class="w">_temporaryObserver</span> <span class="c">=</span> <span class="w">LogPublisher</span><span class="c">(</span>
+            <span class="c">self.</span><span class="w">_i</span><span class="c">nitialBuffer</span><span class="pc">,</span>
+            <span class="w">FilteringLogObserver</span><span class="pc">(</span>
+                <span class="w">FileLogObserver(</span>
+                    <span class="w">errorStream</span><span class="pc">,</span> <span class="w">l</span><span class="c">ambda</span> <span class="w">e</span><span class="pc">v</span><span class="c">ent:</span> <span class="w">formatEvent</span><span class="pc">(</span><span class="w">e</span><span class="c">vent</span><span class="w">) </span><span class="pc">+</span> <span class="w">u</span><span class="pc">"\</span><span class="c">n</span><span class="pc">"</span>
+                <span class="w">),</span>
+                <span class="w">[LogLevelFilterPredicate(defaultLogLevel=L</span><span class="pc">ogLevel</span><span class="c">.</span><span class="w">critical)</span><span class="pc">]</span>
+            <span class="w">)</span>
+        <span class="w">)</span>
+        <span class="w">p</span><span class="pc">u</span><span class="c">blisher.</span><span class="w">a</span><span class="pc">ddO</span><span class="c">bserver(self.</span><span class="w">_temporaryObserver</span><span class="pc">)</span>
+        <span class="c">self.</span><span class="w">_oldshowwarning</span> <span class="pc">=</span> <span class="w">warningsModule</span><span class="pc">.</span><span class="w">showwarning</span>
+
+
+    <span class="w">d</span><span class="c">ef</span> <span class="w">beginLoggingTo</span><span class="c">(</span>
+        <span class="c">self</span><span class="pc">,</span> <span class="w">observers</span><span class="pc">,</span> <span class="w">discardBuffer</span><span class="pc">=F</span><span class="c">alse</span><span class="pc">,</span> <span class="w">redirectStandardIO</span><span class="c">=</span><span class="pc">T</span><span class="c">rue</span>
+    <span class="c">):</span>
+        
+        <span class="w">caller</span> <span class="c">=</span> <span class="w">currentframe</span><span class="c">(</span><span class="w">1</span><span class="pc">)</span>
+        <span class="w">f</span><span class="pc">i</span><span class="c">lename</span><span class="pc">,</span> <span class="w">lineno</span> <span class="c">=</span> <span class="pc">c</span><span class="c">aller</span><span class="pc">.</span><span class="w">f_code</span><span class="pc">.</span><span class="w">co_filename,</span> <span class="pc">c</span><span class="c">aller</span><span class="pc">.</span><span class="w">f_lineno</span>
+
+        <span class="w">f</span><span class="pc">o</span><span class="c">r</span> <span class="w">ob</span><span class="pc">server</span> <span class="pc">i</span><span class="c">n</span> <span class="pc">o</span><span class="c">bservers</span><span class="pc">:</span>
+            <span class="pc">s</span><span class="c">elf.</span><span class="w">_publisher</span><span class="pc">.</span><span class="w">a</span><span class="pc">ddO</span><span class="c">bserver(</span><span class="w">ob</span><span class="pc">server</span><span class="c">)</span>
+
+        <span class="c">if</span> <span class="w">s</span><span class="c">elf.</span><span class="w">_temporaryObserver</span> <span class="pc">i</span><span class="c">s</span> <span class="c">not</span> <span class="c">None:</span>
+            <span class="pc">s</span><span class="c">elf.</span><span class="w">_</span><span class="pc">p</span><span class="c">ublisher.</span><span class="w">removeObserver</span><span class="pc">(</span><span class="c">self.</span><span class="pc">_t</span><span class="c">emporaryObserver)</span>
+            <span class="pc">i</span><span class="c">f</span> <span class="pc">n</span><span class="c">ot</span> <span class="w">discardBuffer</span><span class="c">:</span>
+                <span class="c">self.</span><span class="w">_initialBuffer</span><span class="pc">.</span><span class="w">replayTo</span><span class="c">(self.</span><span class="pc">_</span><span class="c">publisher)</span>
+            <span class="pc">s</span><span class="c">elf.</span><span class="pc">_t</span><span class="c">emporaryObserver</span> <span class="pc">=</span> <span class="c">None</span>
+            <span class="c">self.</span><span class="w">_warningsModule</span><span class="pc">.</span><span class="w">showwarning</span> <span class="pc">=</span> <span class="c">self.</span><span class="pc">s</span><span class="c">howwarning</span>
+        <span class="w">e</span><span class="c">lse:</span>
+            <span class="w">previousFile,</span> <span class="w">previousLine</span> <span class="c">=</span> <span class="c">self.</span><span class="w">_previousBegin</span>
+            <span class="w">s</span><span class="c">elf.</span><span class="w">_log</span><span class="pc">.</span><span class="w">wa</span><span class="pc">rn</span><span class="c">(</span>
+                <span class="w">MORE_THAN_ONCE_WARNING</span><span class="c">,</span>
+                <span class="w">fileNow</span><span class="pc">=</span><span class="w">f</span><span class="pc">ilen</span><span class="c">ame</span><span class="pc">,</span> <span class="w">lineNow</span><span class="c">=</span><span class="w">lineno</span><span class="pc">,</span>
+                <span class="w">fileThen</span><span class="c">=</span><span class="w">p</span><span class="pc">reviousF</span><span class="c">ile,</span> <span class="w">lineThen</span><span class="c">=</span><span class="w">p</span><span class="c">reviousLine</span><span class="pc">,</span>
+            <span class="pc">)</span>
+
+        <span class="w">s</span><span class="c">elf.</span><span class="w">_</span><span class="pc">p</span><span class="c">reviousBegin</span> <span class="c">=</span> <span class="w">f</span><span class="pc">ilen</span><span class="c">ame</span><span class="pc">,</span> <span class="w">l</span><span class="pc">inen</span><span class="c">o</span>
+        <span class="w">i</span><span class="pc">f</span> <span class="w">redirectStandardIO</span><span class="c">:</span>
+            <span class="w">streams</span> <span class="w">= [("std</span><span class="c">out</span><span class="w">"</span><span class="pc">,</span> <span class="w">L</span><span class="c">ogLevel.</span><span class="w">i</span><span class="pc">n</span><span class="c">fo</span><span class="w">), ("std</span><span class="pc">e</span><span class="c">rr</span><span class="w">"</span><span class="c">,</span> <span class="w">L</span><span class="c">ogLevel.</span><span class="w">e</span><span class="pc">r</span><span class="c">ror</span><span class="w">)]</span>
+        <span class="c">else:</span>
+            <span class="pc">s</span><span class="c">treams</span> <span class="w">=</span><span class="pc"> []</span>
+
+        <span class="pc">f</span><span class="c">or</span> <span class="c">(</span><span class="w">stre</span><span class="pc">am</span><span class="c">,</span> <span class="w">le</span><span class="pc">v</span><span class="c">el)</span> <span class="c">in</span> <span class="w">s</span><span class="pc">t</span><span class="c">reams:</span>
+            <span class="w">oldStream</span> <span class="c">=</span> <span class="w">g</span><span class="c">etattr(</span><span class="pc">s</span><span class="c">elf</span><span class="pc">.</span><span class="w">_stdio</span><span class="c">,</span> <span class="w">str</span><span class="pc">eam</span><span class="c">)</span>
+            <span class="w">loggingFile</span> <span class="pc">=</span> <span class="w">LoggingFile</span><span class="pc">(</span>
+                <span class="w">log</span><span class="pc">ge</span><span class="c">r</span><span class="w">=Logger</span><span class="pc">(</span><span class="w">n</span><span class="pc">ames</span><span class="c">pace</span><span class="pc">=</span><span class="w">st</span><span class="pc">ream,</span> <span class="w">o</span><span class="pc">bs</span><span class="c">erver=self.</span><span class="w">_publisher),</span>
+                <span class="w">le</span><span class="pc">v</span><span class="c">el=</span><span class="w">le</span><span class="pc">v</span><span class="c">el</span><span class="pc">,</span>
+                <span class="w">en</span><span class="pc">c</span><span class="c">oding=</span><span class="w">g</span><span class="c">etattr(</span><span class="w">o</span><span class="c">ldStream</span><span class="w">,</span><span class="pc"> "</span><span class="w">en</span><span class="pc">codi</span><span class="c">ng</span><span class="pc">",</span> <span class="pc">N</span><span class="c">one</span><span class="w">)</span><span class="pc">,</span>
+            <span class="w">)</span>
+            <span class="w">setattr</span><span class="pc">(</span><span class="c">self.</span><span class="w">_stdio</span><span class="c">,</span> <span class="w">str</span><span class="pc">e</span><span class="c">am</span><span class="pc">,</span> <span class="w">loggingFile</span><span class="c">)</span>
+
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">showwarning</span><span class="c">(</span>
+        <span class="c">self,</span> <span class="w">m</span><span class="c">essage</span><span class="pc">,</span> <span class="w">c</span><span class="c">ategory</span><span class="pc">,</span> <span class="w">f</span><span class="c">ilename</span><span class="pc">,</span> <span class="w">lineno</span><span class="pc">,</span> <span class="w">f</span><span class="pc">ile</span><span class="c">=</span><span class="pc">N</span><span class="c">one,</span> <span class="w">li</span><span class="pc">ne</span><span class="c">=None</span>
+    <span class="c">):</span>
+        
+        <span class="c">if</span> <span class="w">fi</span><span class="pc">le</span> <span class="c">is</span> <span class="c">None:</span>
+            <span class="c">self.</span><span class="w">_log</span><span class="pc">.</span><span class="w">w</span><span class="pc">a</span><span class="c">rn(</span>
+                <span class="w">"{fi</span><span class="pc">len</span><span class="c">ame</span><span class="w">}:{l</span><span class="c">ineno</span><span class="w">}: {ca</span><span class="pc">t</span><span class="c">egory</span><span class="w">}</span><span class="pc">: </span><span class="c">{</span><span class="w">warning}",</span>
+                <span class="w">w</span><span class="c">arning</span><span class="pc">=</span><span class="w">m</span><span class="c">essage,</span> <span class="w">c</span><span class="c">ategory=</span><span class="w">q</span><span class="c">ual(</span><span class="w">c</span><span class="pc">a</span><span class="c">tegory</span><span class="w">),</span>
+                <span class="pc">f</span><span class="c">ilename</span><span class="pc">=f</span><span class="c">ilename</span><span class="pc">,</span> <span class="w">l</span><span class="c">ineno=</span><span class="w">l</span><span class="c">ineno</span><span class="pc">,</span>
+            <span class="w">)</span>
+        <span class="w">e</span><span class="c">lse:</span>
+            <span class="pc">i</span><span class="c">f</span> <span class="w">s</span><span class="pc">y</span><span class="c">s.</span><span class="w">version_info</span> <span class="w">&lt; (</span><span class="pc">2,</span> <span class="w">6</span><span class="pc">)</span><span class="c">:</span>
+                <span class="pc">s</span><span class="c">elf.</span><span class="w">_oldshowwarning</span><span class="c">(</span><span class="w">m</span><span class="c">essage,</span> <span class="w">c</span><span class="c">ategory</span><span class="pc">,</span> <span class="w">f</span><span class="c">ilename</span><span class="pc">,</span> <span class="pc">l</span><span class="c">ineno,</span> <span class="w">f</span><span class="pc">ile)</span>
+            <span class="w">e</span><span class="c">lse:</span>
+                <span class="pc">s</span><span class="c">elf.</span><span class="pc">_</span><span class="c">oldshowwarning</span><span class="pc">(</span>
+                    <span class="pc">m</span><span class="c">essage,</span> <span class="w">c</span><span class="pc">a</span><span class="c">tegory,</span> <span class="pc">f</span><span class="c">ilename,</span> <span class="w">l</span><span class="c">ineno,</span> <span class="w">f</span><span class="pc">ile</span><span class="c">,</span> <span class="w">l</span><span class="pc">ine</span>
+                <span class="c">)</span>
+
+
+
+<span class="w">globalLogPublisher</span> <span class="c">=</span> <span class="w">LogPublisher</span><span class="pc">()</span>
+<span class="w">globalLogBeginner</span> <span class="c">=</span> <span class="w">LogBeginner</span><span class="c">(</span><span class="pc">g</span><span class="c">lobalLogPublisher</span><span class="pc">,</span> <span class="w">sy</span><span class="c">s.</span><span class="w">s</span><span class="pc">tde</span><span class="c">rr</span><span class="pc">,</span> <span class="w">s</span><span class="pc">y</span><span class="c">s</span><span class="pc">,</span> <span class="w">wa</span><span class="pc">rnings)</span>
+
+</pre>
+</body>
+</html>
+

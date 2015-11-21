@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+
+
+
+
+
+<span class="w">from</span> <span class="w">twisted.manhole</span> <span class="w">import</span> <span class="w">telnet</span>
+<span class="w">from</span> <span class="w">twisted.python</span> <span class="w">import</span> <span class="w">usage</span>
+<span class="w">from</span> <span class="w">twisted.application</span> <span class="w">import</span> <span class="w">strports</span>
+
+<span class="w">class</span> <span class="w">Options(usage.Options):</span>
+    <span class="w">synopsis</span> <span class="w">= "[options]"</span>
+    <span class="w">longdesc</span> <span class="w">= "Makes</span> <span class="w">a</span> <span class="w">telnet</span> <span class="w">server</span> <span class="w">to</span> <span class="w">a</span> <span class="w">Python</span> <span class="w">shell."</span>
+    <span class="w">optParameters</span> <span class="pc">= [</span>
+         <span class="w">[</span><span class="c">"</span><span class="w">u</span><span class="pc">sern</span><span class="c">ame", "</span><span class="w">u</span><span class="c">", "</span><span class="w">admin","se</span><span class="pc">t</span> <span class="w">t</span><span class="c">he</span> <span class="w">log</span><span class="pc">i</span><span class="c">n</span> <span class="w">u</span><span class="pc">sern</span><span class="c">ame</span><span class="w">"</span><span class="pc">]</span><span class="c">,</span>
+         <span class="pc">["</span><span class="w">p</span><span class="pc">as</span><span class="c">sword", "</span><span class="w">w</span><span class="c">", "</span><span class="w">changeme",</span><span class="pc">"</span><span class="w">se</span><span class="pc">t</span> <span class="w">t</span><span class="pc">h</span><span class="c">e</span> <span class="w">p</span><span class="pc">as</span><span class="c">sword</span><span class="pc">"]</span><span class="c">,</span>
+         <span class="pc">["p</span><span class="c">ort", "</span><span class="w">p</span><span class="c">", "</span><span class="w">4040</span><span class="c">", "</span><span class="pc">p</span><span class="c">ort</span> <span class="w">t</span><span class="c">o</span> <span class="w">listen</span> <span class="w">o</span><span class="pc">n</span><span class="w">"</span><span class="pc">]</span><span class="c">,</span>
+    <span class="w">]</span>
+
+    <span class="w">compData</span> <span class="c">=</span> <span class="c">usage.</span><span class="w">Completions</span><span class="pc">(</span>
+        <span class="w">optActions={"u</span><span class="pc">sern</span><span class="c">ame</span><span class="w">"</span><span class="pc">:</span> <span class="pc">u</span><span class="c">sage.</span><span class="w">CompleteUsernames()}</span>
+        <span class="w">)</span>
+
+<span class="c">def</span> <span class="w">makeService</span><span class="c">(</span><span class="pc">c</span><span class="c">onfig):</span>
+    <span class="w">t</span> <span class="c">=</span> <span class="w">te</span><span class="pc">l</span><span class="c">net.</span><span class="w">ShellFactory</span><span class="c">()</span>
+    <span class="w">t</span><span class="pc">.</span><span class="w">u</span><span class="pc">se</span><span class="c">rname</span><span class="w">,</span> <span class="w">t</span><span class="c">.</span><span class="w">p</span><span class="pc">a</span><span class="c">ssword</span> <span class="w">=</span> <span class="w">c</span><span class="pc">o</span><span class="c">nfig</span><span class="pc">[</span><span class="c">'</span><span class="w">u</span><span class="c">sername</span><span class="pc">'],</span> <span class="c">config</span><span class="pc">[</span><span class="c">'password</span><span class="pc">']</span>
+    <span class="w">s</span> <span class="c">=</span> <span class="w">strports</span><span class="c">.</span><span class="w">s</span><span class="pc">e</span><span class="c">rvice</span><span class="pc">(</span><span class="c">config['</span><span class="w">p</span><span class="pc">o</span><span class="c">rt</span><span class="pc">'],</span> <span class="w">t</span><span class="pc">)</span>
+    <span class="w">t</span><span class="pc">.</span><span class="w">setService</span><span class="c">(</span><span class="pc">s</span><span class="c">)</span>
+    <span class="pc">r</span><span class="c">eturn</span> <span class="c">s</span>
+
+</pre>
+</body>
+</html>
+

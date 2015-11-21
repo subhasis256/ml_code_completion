@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+
+
+
+
+
+
+<span class="w">from</span> <span class="w">serial</span> <span class="w">import</span> <span class="w">PARITY_NONE</span>
+<span class="w">from</span> <span class="w">serial</span> <span class="w">import</span> <span class="w">STOPBITS_ONE</span>
+<span class="w">from</span> <span class="w">serial</span> <span class="w">import</span> <span class="w">EIGHTBITS</span>
+
+<span class="w">from</span> <span class="w">serialport</span> <span class="w">import</span> <span class="w">BaseSerialPort</span>
+
+<span class="w">from</span> <span class="w">twisted.internet</span> <span class="w">import</span> <span class="w">abstract,</span> <span class="w">fdesc</span>
+
+
+
+<span class="w">class</span> <span class="w">SerialPort(BaseSerialPort,</span> <span class="w">abstract.FileDescriptor):</span>
+    
+
+    <span class="w">connected</span> <span class="w">=</span> <span class="w">1</span>
+
+    <span class="w">def</span> <span class="w">__init__(self</span><span class="pc">,</span> <span class="w">p</span><span class="pc">r</span><span class="c">otocol</span><span class="pc">,</span> <span class="w">deviceNameOrPortNumber</span><span class="pc">,</span> <span class="w">r</span><span class="pc">eac</span><span class="c">tor,</span>
+        <span class="w">baudrate</span> <span class="pc">=</span> <span class="w">9600</span><span class="pc">,</span> <span class="w">bytesize</span> <span class="c">=</span> <span class="w">EIGHTBITS</span><span class="c">,</span> <span class="w">parity</span> <span class="c">=</span> <span class="w">PARITY_NONE</span><span class="c">,</span>
+        <span class="w">stopbits</span> <span class="c">=</span> <span class="w">STOPBITS_ONE</span><span class="c">,</span> <span class="w">t</span><span class="pc">imeo</span><span class="c">ut</span> <span class="c">=</span> <span class="pc">0</span><span class="c">,</span> <span class="w">xonxoff</span> <span class="c">=</span> <span class="pc">0</span><span class="c">,</span> <span class="w">rtscts</span> <span class="c">=</span> <span class="pc">0)</span><span class="c">:</span>
+        <span class="w">abstract</span><span class="pc">.</span><span class="w">FileDescriptor</span><span class="pc">._</span><span class="c">_init__(self,</span> <span class="w">r</span><span class="c">eactor</span><span class="pc">)</span>
+        <span class="c">self.</span><span class="w">_serial</span> <span class="c">=</span> <span class="pc">s</span><span class="c">elf.</span><span class="w">_serialFactory</span><span class="c">(</span>
+            <span class="w">deviceNameOrPortNumber</span><span class="c">,</span> <span class="w">baudrate</span><span class="pc">=b</span><span class="c">audrate,</span> <span class="w">bytesize</span><span class="c">=</span><span class="w">b</span><span class="pc">y</span><span class="c">tesize</span><span class="pc">,</span>
+            <span class="w">parity</span><span class="c">=</span><span class="w">p</span><span class="c">arity,</span> <span class="w">stopbits</span><span class="c">=</span><span class="w">s</span><span class="c">topbits,</span> <span class="w">t</span><span class="pc">imeo</span><span class="c">ut=</span><span class="w">t</span><span class="pc">imeo</span><span class="c">ut,</span>
+            <span class="w">xonxoff</span><span class="c">=</span><span class="w">x</span><span class="c">onxoff,</span> <span class="w">rtscts</span><span class="c">=</span><span class="pc">r</span><span class="c">tscts</span><span class="pc">)</span>
+        <span class="pc">s</span><span class="c">elf.</span><span class="w">r</span><span class="pc">ea</span><span class="c">ctor</span> <span class="pc">=</span> <span class="pc">r</span><span class="c">eactor</span>
+        <span class="pc">s</span><span class="c">elf.</span><span class="w">flushInput</span><span class="pc">()</span>
+        <span class="pc">s</span><span class="c">elf.</span><span class="w">flushOutput</span><span class="pc">()</span>
+        <span class="pc">s</span><span class="c">elf.</span><span class="w">p</span><span class="pc">r</span><span class="c">otocol</span> <span class="c">=</span> <span class="w">pr</span><span class="pc">otoc</span><span class="c">ol</span>
+        <span class="pc">s</span><span class="c">elf.</span><span class="pc">p</span><span class="c">rotocol</span><span class="pc">.</span><span class="w">m</span><span class="c">akeConnection(self)</span>
+        <span class="pc">s</span><span class="c">elf.</span><span class="w">startReading</span><span class="c">()</span>
+
+
+    <span class="c">def</span> <span class="w">f</span><span class="pc">i</span><span class="c">leno(self):</span>
+        <span class="pc">r</span><span class="c">eturn</span> <span class="c">self.</span><span class="w">_serial</span><span class="pc">.</span><span class="w">fd</span>
+
+
+    <span class="w">d</span><span class="c">ef</span> <span class="w">writeSomeData</span><span class="c">(self</span><span class="pc">,</span> <span class="pc">d</span><span class="c">ata):</span>
+        
+        <span class="w">r</span><span class="c">eturn</span> <span class="w">fdesc</span><span class="pc">.</span><span class="w">writeToFD</span><span class="c">(self.</span><span class="w">f</span><span class="pc">i</span><span class="c">leno</span><span class="w">(</span><span class="pc">),</span> <span class="pc">d</span><span class="c">ata)</span>
+
+
+    <span class="c">def</span> <span class="w">doRead</span><span class="c">(self</span><span class="pc">)</span><span class="c">:</span>
+        
+        <span class="pc">r</span><span class="c">eturn</span> <span class="w">f</span><span class="c">desc.</span><span class="w">readFromFD</span><span class="c">(self.</span><span class="w">f</span><span class="pc">i</span><span class="c">leno</span><span class="w">(</span><span class="pc">),</span> <span class="c">self.</span><span class="w">pr</span><span class="pc">otoc</span><span class="c">ol.dataReceived</span><span class="w">)</span>
+
+
+    <span class="c">def</span> <span class="pc">c</span><span class="c">onnectionLost(self,</span> <span class="c">reason):</span>
+        
+        <span class="w">abstract</span><span class="pc">.</span><span class="w">FileDescriptor</span><span class="pc">.co</span><span class="c">nnectionLost(</span><span class="pc">s</span><span class="c">elf</span><span class="pc">,</span> <span class="c">reason)</span>
+        <span class="c">self.</span><span class="w">_serial</span><span class="pc">.cl</span><span class="c">ose()</span>
+        <span class="pc">s</span><span class="c">elf.</span><span class="w">p</span><span class="pc">rot</span><span class="c">ocol.</span><span class="pc">c</span><span class="c">onnectionLost(</span><span class="pc">r</span><span class="c">eason)</span>
+
+</pre>
+</body>
+</html>
+

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+<span class="w">from</span> <span class="w">twisted.internet</span> <span class="w">import</span> <span class="w">protocol,</span> <span class="w">reactor,</span> <span class="w">defer,</span> <span class="w">utils</span>
+<span class="w">from</span> <span class="w">twisted.protocols</span> <span class="w">import</span> <span class="w">basic</span>
+<span class="w">from</span> <span class="w">twisted.web</span> <span class="w">import</span> <span class="w">client</span>
+
+<span class="w">class</span> <span class="w">FingerProtocol(basic.LineReceiver):</span>
+    <span class="w">def</span> <span class="w">lineReceived(self,</span> <span class="w">user):</span>
+        <span class="w">d</span> <span class="w">=</span> <span class="c">self.</span><span class="w">f</span><span class="c">actory.</span><span class="w">getUser</span><span class="c">(</span><span class="w">u</span><span class="c">ser)</span>
+
+        <span class="c">def</span> <span class="w">onError</span><span class="c">(</span><span class="w">e</span><span class="c">rr):</span>
+            <span class="pc">r</span><span class="c">eturn</span> <span class="pc">'</span><span class="w">Internal</span> <span class="w">e</span><span class="c">rror</span> <span class="pc">i</span><span class="c">n</span> <span class="w">s</span><span class="pc">er</span><span class="c">ver</span><span class="w">'</span>
+        <span class="pc">d</span><span class="c">.</span><span class="pc">addE</span><span class="c">rrback(</span><span class="w">o</span><span class="c">nError)</span>
+
+        <span class="c">def</span> <span class="w">writeResponse</span><span class="c">(</span><span class="w">m</span><span class="c">essage):</span>
+            <span class="c">self.</span><span class="w">t</span><span class="c">ransport.</span><span class="pc">w</span><span class="c">rite</span><span class="pc">(m</span><span class="c">essage</span> <span class="w">+</span><span class="pc"> </span><span class="c">'\r\n')</span>
+            <span class="c">self.</span><span class="pc">t</span><span class="c">ransport.loseConnection()</span>
+        <span class="pc">d</span><span class="c">.addCallback(</span><span class="pc">w</span><span class="c">riteResponse)</span>
+
+<span class="pc">c</span><span class="c">lass</span> <span class="w">FingerFactory</span><span class="c">(</span><span class="pc">p</span><span class="c">rotocol.</span><span class="pc">S</span><span class="c">erverFactory):</span>
+    <span class="pc">p</span><span class="c">rotocol</span> <span class="c">=</span> <span class="w">FingerProtocol</span>
+    
+    <span class="c">def</span> <span class="w">_</span><span class="c">_init__(self</span><span class="pc">,</span> <span class="w">pr</span><span class="pc">e</span><span class="c">fix</span><span class="pc">)</span><span class="c">:</span>
+        <span class="c">self.</span><span class="w">pre</span><span class="c">fix=</span><span class="w">pre</span><span class="c">fix</span>
+    
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">getUser</span><span class="c">(self</span><span class="pc">,</span> <span class="pc">u</span><span class="c">ser):</span>
+        <span class="pc">r</span><span class="c">eturn</span> <span class="w">c</span><span class="c">lient.</span><span class="w">getPage</span><span class="c">(self.</span><span class="w">pr</span><span class="pc">e</span><span class="c">fix</span><span class="w">+u</span><span class="c">ser</span><span class="pc">)</span>
+
+<span class="w">rea</span><span class="pc">c</span><span class="c">tor.</span><span class="w">l</span><span class="pc">i</span><span class="c">stenTCP(</span><span class="w">1079</span><span class="c">,</span> <span class="w">FingerFactory</span><span class="pc">(</span><span class="w">pr</span><span class="pc">e</span><span class="c">fix</span><span class="w">=</span><span class="pc">'</span><span class="w">h</span><span class="pc">t</span><span class="c">tp</span><span class="pc">:</span><span class="c">//</span><span class="w">livejournal</span><span class="c">.com</span><span class="w">/~'))</span>
+<span class="w">re</span><span class="pc">a</span><span class="c">ctor</span><span class="pc">.</span><span class="w">r</span><span class="c">un()</span>
+
+</pre>
+</body>
+</html>
+

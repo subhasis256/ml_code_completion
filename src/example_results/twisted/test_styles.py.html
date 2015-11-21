@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+
+
+
+<span class="w">import</span> <span class="w">pickle</span>
+
+<span class="w">from</span> <span class="w">twisted.trial</span> <span class="w">import</span> <span class="w">unittest</span>
+<span class="w">from</span> <span class="w">twisted.persisted.styles</span> <span class="w">import</span> <span class="w">unpickleMethod</span>
+
+
+<span class="w">class</span> <span class="w">Foo:</span>
+    
+    <span class="w">def</span> <span class="w">method(self):</span>
+        
+
+
+
+<span class="w">class</span> <span class="w">Bar:</span>
+    
+
+
+
+<span class="w">def</span> <span class="w">sampleFunction():</span>
+    
+
+
+
+<span class="w">lambdaExample</span> <span class="w">=</span> <span class="w">lambda</span> <span class="w">x:</span> <span class="w">x</span>
+
+
+
+<span class="w">class</span> <span class="w">UnpickleMethodTests(unittest</span><span class="c">.TestCase):</span>
+    
+
+    <span class="c">def</span> <span class="w">test_instanceBuildingNamePresent</span><span class="c">(self):</span>
+        
+        <span class="w">fo</span><span class="pc">o</span> <span class="c">=</span> <span class="w">Fo</span><span class="c">o()</span>
+        <span class="w">m</span> <span class="c">=</span> <span class="w">u</span><span class="c">npickleMethod</span><span class="w">(</span><span class="pc">'</span><span class="w">me</span><span class="pc">t</span><span class="c">hod</span><span class="pc">',</span> <span class="w">f</span><span class="pc">o</span><span class="c">o</span><span class="pc">,</span> <span class="w">F</span><span class="pc">o</span><span class="c">o</span><span class="pc">)</span>
+        <span class="c">self.assertEqual(</span><span class="w">m</span><span class="c">,</span> <span class="w">f</span><span class="c">oo</span><span class="pc">.</span><span class="w">me</span><span class="pc">t</span><span class="c">hod</span><span class="pc">)</span>
+        <span class="pc">s</span><span class="c">elf.</span><span class="w">assertNotIdentical</span><span class="c">(</span><span class="w">m</span><span class="pc">,</span> <span class="w">f</span><span class="c">oo</span><span class="pc">.</span><span class="w">m</span><span class="pc">et</span><span class="c">hod)</span>
+
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">test_instanceBuildingNameNotPresent</span><span class="c">(self):</span>
+        
+        <span class="w">f</span><span class="c">oo</span> <span class="c">=</span> <span class="w">F</span><span class="pc">o</span><span class="c">o()</span>
+        <span class="w">m</span> <span class="c">=</span> <span class="w">u</span><span class="c">npickleMethod</span><span class="pc">('</span><span class="w">me</span><span class="pc">t</span><span class="c">hod</span><span class="pc">',</span> <span class="w">f</span><span class="pc">o</span><span class="c">o</span><span class="pc">,</span> <span class="w">Bar</span><span class="pc">)</span>
+        <span class="c">self.assertEqual(</span><span class="pc">m,</span> <span class="w">f</span><span class="c">oo.</span><span class="w">m</span><span class="pc">et</span><span class="c">hod)</span>
+        <span class="c">self.</span><span class="w">assertN</span><span class="c">otIdentical(</span><span class="w">m</span><span class="c">,</span> <span class="w">f</span><span class="pc">o</span><span class="c">o</span><span class="pc">.</span><span class="w">m</span><span class="pc">et</span><span class="c">hod)</span>
+
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">test_primeDirective</span><span class="c">(self):</span>
+        
+        <span class="w">d</span><span class="pc">e</span><span class="c">f</span> <span class="w">e</span><span class="c">xpected(</span><span class="w">n</span><span class="c">):</span>
+            <span class="pc">r</span><span class="c">eturn</span> <span class="w">"</span><span class="pc">\n</span><span class="w">".</span><span class="c">join</span><span class="pc">([</span>
+                    <span class="w">"c" </span><span class="pc">+</span> <span class="w">__n</span><span class="c">ame__,</span>
+                    <span class="w">sampleFunction</span><span class="pc">.</span><span class="w">_</span><span class="c">_name__</span><span class="w">,</span><span class="pc"> </span><span class="c">"</span><span class="w">p" </span><span class="pc">+</span> <span class="w">n, "."</span>
+                <span class="w">]).en</span><span class="pc">c</span><span class="c">ode</span><span class="pc">("</span><span class="w">a</span><span class="pc">s</span><span class="c">cii")</span>
+        <span class="pc">s</span><span class="c">elf.assertEqual(</span><span class="w">pi</span><span class="c">ckle.</span><span class="w">dumps</span><span class="c">(</span><span class="w">s</span><span class="pc">a</span><span class="c">mpleFunction</span><span class="pc">,</span> <span class="w">pro</span><span class="pc">tocol</span><span class="w">=0</span><span class="pc">),</span>
+                         <span class="w">e</span><span class="c">xpected</span><span class="w">(</span><span class="pc">"</span><span class="w">0</span><span class="pc">"))</span>
+        <span class="w">t</span><span class="pc">r</span><span class="c">y:</span>
+            <span class="w">i</span><span class="pc">m</span><span class="c">port</span> <span class="w">cPickle</span>
+        <span class="w">e</span><span class="c">xcept:</span>
+            <span class="w">pa</span><span class="pc">s</span><span class="c">s</span>
+        <span class="pc">e</span><span class="c">lse:</span>
+            <span class="c">self.assertEqual(</span>
+                <span class="w">c</span><span class="c">Pickle</span><span class="pc">.</span><span class="c">dumps</span><span class="pc">(s</span><span class="c">ampleFunction</span><span class="pc">,</span> <span class="w">prot</span><span class="pc">ocol=</span><span class="w">0</span><span class="c">),</span>
+                <span class="w">e</span><span class="c">xpected</span><span class="w">(</span><span class="pc">"1")</span>
+            <span class="w">)</span>
+
+
+    <span class="c">def</span> <span class="w">test_lambdaRaisesPicklingError</span><span class="c">(self):</span>
+        
+        <span class="pc">s</span><span class="c">elf.</span><span class="pc">assertR</span><span class="c">aises(</span><span class="w">pi</span><span class="c">ckle.</span><span class="w">PicklingError</span><span class="c">,</span> <span class="w">pi</span><span class="c">ckle.</span><span class="w">d</span><span class="c">umps,</span> <span class="w">lambdaExample</span><span class="pc">)</span>
+        <span class="w">t</span><span class="c">ry:</span>
+            <span class="w">i</span><span class="c">mport</span> <span class="w">c</span><span class="c">Pickle</span>
+        <span class="w">e</span><span class="pc">xc</span><span class="c">ept:</span>
+            <span class="pc">p</span><span class="c">ass</span>
+        <span class="pc">e</span><span class="c">lse:</span>
+            <span class="c">self.</span><span class="pc">assertR</span><span class="c">aises(</span><span class="w">c</span><span class="c">Pickle</span><span class="pc">.</span><span class="w">P</span><span class="c">icklingError,</span> <span class="w">c</span><span class="c">Pickle</span><span class="pc">.d</span><span class="c">umps,</span>
+                              <span class="c">lambdaExample)</span>
+
+</pre>
+</body>
+</html>
+

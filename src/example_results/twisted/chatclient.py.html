@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+
+
+<span class="w">from</span> <span class="w">twisted.spread</span> <span class="w">import</span> <span class="w">pb</span>
+<span class="w">from</span> <span class="w">twisted.internet</span> <span class="w">import</span> <span class="w">reactor</span>
+<span class="w">from</span> <span class="w">twisted.cred</span> <span class="w">import</span> <span class="w">credentials</span>
+
+<span class="w">class</span> <span class="w">Client(pb.Referenceable):</span>
+
+    <span class="w">def</span> <span class="w">remote_print(self,</span> <span class="w">message):</span>
+        <span class="w">print</span> <span class="w">message</span>
+
+    <span class="w">def</span> <span class="w">connect(self):</span>
+        <span class="w">factory</span> <span class="pc">=</span> <span class="w">p</span><span class="pc">b</span><span class="c">.</span><span class="w">PBClientFactory</span><span class="c">()</span>
+        <span class="pc">r</span><span class="c">eactor.</span><span class="pc">co</span><span class="c">nnectTCP</span><span class="pc">("</span><span class="w">l</span><span class="c">ocalhost",</span> <span class="w">8800</span><span class="c">,</span> <span class="w">f</span><span class="c">actory)</span>
+        <span class="w">def1</span> <span class="c">=</span> <span class="w">f</span><span class="c">actory.</span><span class="w">l</span><span class="pc">o</span><span class="c">gin(</span><span class="w">c</span><span class="pc">r</span><span class="c">edentials.</span><span class="w">U</span><span class="c">sernamePassword</span><span class="pc">("</span><span class="w">a</span><span class="c">lice</span><span class="pc">"</span><span class="c">, "</span><span class="w">1</span><span class="pc">23</span><span class="c">4</span><span class="w">")</span><span class="pc">,</span>
+                             <span class="w">c</span><span class="pc">l</span><span class="c">ient</span><span class="pc">=</span><span class="w">s</span><span class="pc">el</span><span class="c">f</span><span class="pc">)</span>
+        <span class="w">d</span><span class="pc">ef1</span><span class="c">.</span><span class="pc">a</span><span class="c">ddCallback(self.</span><span class="w">con</span><span class="pc">necte</span><span class="c">d)</span>
+        <span class="w">r</span><span class="pc">ea</span><span class="c">ctor.</span><span class="pc">r</span><span class="c">un()</span>
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">co</span><span class="pc">nnecte</span><span class="c">d(self</span><span class="pc">,</span> <span class="w">pe</span><span class="c">rspective):</span>
+        <span class="w">p</span><span class="c">rint</span> <span class="c">"</span><span class="w">c</span><span class="pc">o</span><span class="c">nnected</span><span class="w">,</span> <span class="w">joining</span> <span class="w">gr</span><span class="pc">oup</span> 
+        
+        
+        
+        <span class="c">self.</span><span class="w">pe</span><span class="c">rspective</span> <span class="pc">=</span> <span class="w">pe</span><span class="c">rspective</span>
+        <span class="w">d</span> <span class="c">=</span> <span class="w">pe</span><span class="c">rspective.</span><span class="pc">c</span><span class="c">allRemote</span><span class="pc">("</span><span class="w">joinGroup</span><span class="pc">", </span><span class="c">"</span>
+        <span class="w">d</span><span class="pc">.a</span><span class="c">ddCallback(</span><span class="pc">s</span><span class="c">elf.</span><span class="w">gotGroup</span><span class="c">)</span>
+
+    <span class="c">def</span> <span class="c">gotGroup(self</span><span class="pc">,</span> <span class="w">g</span><span class="pc">roup)</span><span class="c">:</span>
+        <span class="w">p</span><span class="pc">r</span><span class="c">int</span> <span class="c">"</span><span class="w">joined</span> <span class="w">g</span><span class="pc">r</span><span class="c">oup</span><span class="w">,</span> <span class="w">no</span><span class="pc">w</span> <span class="w">sending</span> <span class="pc">a</span> <span class="w">m</span><span class="c">essage</span> <span class="w">t</span><span class="c">o</span> <span class="w">all</span> <span class="w">members"</span>
+        
+        <span class="w">d</span> <span class="c">=</span> <span class="w">gr</span><span class="pc">oup</span><span class="c">.</span><span class="pc">c</span><span class="c">allRemote("</span><span class="w">se</span><span class="pc">nd", </span><span class="c">"</span><span class="w">You</span> <span class="w">c</span><span class="c">an</span> <span class="w">cal</span><span class="pc">l</span> <span class="w">me</span> <span class="w">Al.</span><span class="pc">"</span><span class="c">)</span>
+        <span class="pc">d</span><span class="c">.addCallback(self.</span><span class="w">shutdown</span><span class="pc">)</span>
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="c">shutdown(self</span><span class="pc">,</span> <span class="w">r</span><span class="pc">es</span><span class="c">ult):</span>
+        <span class="w">rea</span><span class="c">ctor.stop()</span>
+
+
+<span class="w">Client(</span><span class="pc">).</span><span class="w">co</span><span class="pc">nnect()</span>
+
+
+</pre>
+</body>
+</html>
+

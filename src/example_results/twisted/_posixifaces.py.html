@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+
+
+
+<span class="w">from</span> <span class="w">__future__</span> <span class="w">import</span> <span class="w">division,</span> <span class="w">absolute_import</span>
+
+<span class="w">import</span> <span class="w">sys,</span> <span class="w">socket</span>
+
+<span class="w">from</span> <span class="w">socket</span> <span class="w">import</span> <span class="w">AF_INET,</span> <span class="w">AF_INET6,</span> <span class="w">inet_ntop</span>
+<span class="w">from</span> <span class="w">ctypes</span> <span class="w">import</span> <span class="w">(</span>
+    <span class="w">CDLL,</span> <span class="w">POINTER,</span> <span class="w">Structure,</span> <span class="w">c_char_p,</span> <span class="w">c_ushort,</span> <span class="w">c_int,</span>
+    <span class="w">c_uint32,</span> <span class="w">c_uint8,</span> <span class="w">c_void_p,</span> <span class="w">c_ubyte</span><span class="c">,</span> <span class="w">pointer</span><span class="c">,</span> <span class="w">cast</span><span class="pc">)</span>
+<span class="pc">f</span><span class="c">rom</span> <span class="w">ct</span><span class="c">ypes</span><span class="pc">.</span><span class="w">ut</span><span class="c">il</span> <span class="c">import</span> <span class="w">find_library</span>
+
+<span class="c">from</span> <span class="c">twisted.python</span><span class="pc">.co</span><span class="c">mpat</span> <span class="c">import</span> <span class="w">_</span><span class="pc">P</span><span class="c">Y3</span><span class="pc">,</span> <span class="w">n</span><span class="pc">at</span><span class="c">iveString</span>
+
+<span class="w">i</span><span class="pc">f</span> <span class="w">_</span><span class="pc">P</span><span class="c">Y3:</span>
+    
+    
+    <span class="w">d</span><span class="c">ef</span> <span class="w">ch</span><span class="pc">r</span><span class="c">(</span><span class="w">i</span><span class="c">):</span>
+        
+        <span class="c">return</span> <span class="w">b</span><span class="pc">ytes</span><span class="w">(</span><span class="pc">[</span><span class="w">i]</span><span class="pc">)</span>
+
+
+<span class="w">libc</span> <span class="c">=</span> <span class="w">CDLL</span><span class="c">(</span><span class="w">f</span><span class="c">ind_library</span><span class="w">(</span><span class="pc">"</span><span class="w">c"</span><span class="pc">))</span>
+
+<span class="pc">i</span><span class="c">f</span> <span class="w">sy</span><span class="c">s.</span><span class="w">p</span><span class="pc">l</span><span class="c">atform.</span><span class="w">s</span><span class="pc">ta</span><span class="c">rtswith</span><span class="pc">('</span><span class="w">freebsd</span><span class="pc">')</span> <span class="w">o</span><span class="c">r</span> <span class="w">sy</span><span class="c">s.</span><span class="w">pl</span><span class="c">atform</span> <span class="w">=</span><span class="pc">= </span><span class="c">'</span><span class="w">darwin</span><span class="c">':</span>
+    <span class="w">_sockaddrCommon</span> <span class="w">=</span><span class="pc"> </span><span class="c">[</span>
+        <span class="w">(</span><span class="pc">"</span><span class="w">sin_len</span><span class="pc">",</span> <span class="w">c_uint8)</span><span class="pc">,</span>
+        <span class="w">(</span><span class="pc">"</span><span class="w">sin_family</span><span class="pc">",</span> <span class="w">c</span><span class="pc">_</span><span class="c">uint8</span><span class="w">)</span><span class="pc">,</span>
+        <span class="w">]</span>
+<span class="w">e</span><span class="c">lse:</span>
+    <span class="w">_</span><span class="c">sockaddrCommon</span> <span class="w">=</span><span class="pc"> </span><span class="c">[</span>
+        <span class="w">(</span><span class="c">"</span><span class="w">s</span><span class="c">in_family</span><span class="pc">",</span> <span class="w">c_ushort)</span><span class="pc">,</span>
+        <span class="w">]</span>
+
+
+
+<span class="pc">c</span><span class="c">lass</span> <span class="w">in_addr</span><span class="c">(</span><span class="w">Structure</span><span class="c">):</span>
+    <span class="w">_fields_</span> <span class="pc">= [</span>
+        <span class="w">(</span><span class="pc">"</span><span class="w">i</span><span class="c">n_addr</span><span class="pc">",</span> <span class="w">c_ubyte</span> <span class="w">*</span> <span class="w">4</span><span class="pc">),</span>
+        <span class="w">]</span>
+
+
+
+<span class="w">c</span><span class="c">lass</span> <span class="w">in6_addr</span><span class="c">(</span><span class="w">S</span><span class="pc">t</span><span class="c">ructure):</span>
+    <span class="w">_</span><span class="pc">f</span><span class="c">ields_</span> <span class="pc">= </span><span class="c">[</span>
+        <span class="w">(</span><span class="c">"</span><span class="w">i</span><span class="c">n_addr",</span> <span class="w">c</span><span class="pc">_ub</span><span class="c">yte</span> <span class="w">*</span> <span class="w">16)</span><span class="pc">,</span>
+        <span class="w">]</span>
+
+
+
+<span class="pc">c</span><span class="c">lass</span> <span class="w">sockaddr</span><span class="c">(</span><span class="w">S</span><span class="c">tructure):</span>
+    <span class="w">_</span><span class="c">fields_</span> <span class="c">=</span> <span class="w">_sockaddrCommon</span> <span class="w">+ [</span>
+        <span class="w">(</span><span class="pc">"</span><span class="w">sin_port</span><span class="c">",</span> <span class="w">c_ushort)</span><span class="pc">,</span>
+        <span class="w">]</span>
+
+
+
+<span class="pc">c</span><span class="c">lass</span> <span class="w">sockaddr_in</span><span class="c">(</span><span class="w">S</span><span class="c">tructure):</span>
+    <span class="w">_</span><span class="c">fields_</span> <span class="c">=</span> <span class="w">_</span><span class="pc">s</span><span class="c">ockaddrCommon</span> <span class="w">+</span><span class="pc"> </span><span class="c">[</span>
+        <span class="w">(</span><span class="c">"</span><span class="w">s</span><span class="pc">i</span><span class="c">n_port</span><span class="pc">"</span><span class="c">,</span> <span class="pc">c_us</span><span class="c">hort</span><span class="w">)</span><span class="pc">,</span>
+        <span class="w">(</span><span class="c">"</span><span class="w">sin_addr</span><span class="pc">",</span> <span class="w">i</span><span class="c">n_addr</span><span class="pc">),</span>
+        <span class="w">]</span>
+
+
+
+<span class="pc">c</span><span class="c">lass</span> <span class="w">sockaddr_in6</span><span class="c">(</span><span class="pc">S</span><span class="c">tructure):</span>
+    <span class="w">_</span><span class="c">fields_</span> <span class="c">=</span> <span class="w">_</span><span class="pc">s</span><span class="c">ockaddrCommon</span> <span class="w">+</span><span class="c"> [</span>
+        <span class="w">(</span><span class="c">"sin_port",</span> <span class="pc">c</span><span class="c">_ushort</span><span class="w">)</span><span class="pc">,</span>
+        <span class="w">(</span><span class="pc">"</span><span class="w">sin_flowinfo</span><span class="c">",</span> <span class="w">c_uint32</span><span class="pc">),</span>
+        <span class="w">(</span><span class="pc">"</span><span class="w">s</span><span class="pc">in_a</span><span class="c">ddr",</span> <span class="w">in6_addr</span><span class="pc">),</span>
+        <span class="w">]</span>
+
+
+
+<span class="w">c</span><span class="c">lass</span> <span class="w">ifaddrs</span><span class="c">(</span><span class="pc">S</span><span class="c">tructure):</span>
+    <span class="w">p</span><span class="c">ass</span>
+
+<span class="w">ifaddrs_p</span> <span class="c">=</span> <span class="w">POINTER</span><span class="pc">(</span><span class="w">i</span><span class="pc">f</span><span class="c">addrs</span><span class="pc">)</span>
+<span class="pc">i</span><span class="c">faddrs.</span><span class="w">_</span><span class="pc">f</span><span class="c">ields_</span> <span class="w">=</span><span class="pc"> [</span>
+    <span class="w">(</span><span class="pc">'</span><span class="w">ifa_next</span><span class="pc">',</span> <span class="w">i</span><span class="pc">faddrs_</span><span class="c">p</span><span class="pc">),</span>
+    <span class="w">(</span><span class="c">'</span><span class="w">ifa_name</span><span class="pc">',</span> <span class="w">c_char_p</span><span class="c">),</span>
+    <span class="w">(</span><span class="pc">'</span><span class="w">ifa_flags</span><span class="c">',</span> <span class="w">c</span><span class="c">_uint32),</span>
+    <span class="w">(</span><span class="c">'</span><span class="w">ifa_addr</span><span class="pc">',</span> <span class="w">P</span><span class="c">OINTER</span><span class="w">(sockaddr)</span><span class="pc">),</span>
+    <span class="w">(</span><span class="c">'</span><span class="w">ifa_netmask</span><span class="c">',</span> <span class="w">P</span><span class="c">OINTER</span><span class="w">(s</span><span class="c">ockaddr</span><span class="w">))</span><span class="pc">,</span>
+    <span class="pc">(</span><span class="c">'</span><span class="w">ifa_dstaddr</span><span class="c">',</span> <span class="pc">P</span><span class="c">OINTER</span><span class="w">(</span><span class="pc">s</span><span class="c">ockaddr</span><span class="w">))</span><span class="pc">,</span>
+    <span class="c">('</span><span class="w">ifa_data</span><span class="c">',</span> <span class="w">c_void_p)]</span>
+
+<span class="w">getifaddrs</span> <span class="pc">=</span> <span class="w">libc</span><span class="pc">.</span><span class="w">g</span><span class="c">etifaddrs</span>
+<span class="w">g</span><span class="c">etifaddrs</span><span class="pc">.</span><span class="w">argtypes</span> <span class="w">=</span><span class="pc"> </span><span class="c">[</span><span class="pc">P</span><span class="c">OINTER</span><span class="pc">(</span><span class="w">ifaddrs_p)]</span>
+<span class="pc">g</span><span class="c">etifaddrs</span><span class="pc">.</span><span class="w">restype</span> <span class="pc">=</span> <span class="w">c_int</span>
+
+<span class="w">freeifaddrs</span> <span class="c">=</span> <span class="w">l</span><span class="pc">ib</span><span class="c">c.</span><span class="pc">f</span><span class="c">reeifaddrs</span>
+<span class="w">f</span><span class="pc">r</span><span class="c">eeifaddrs</span><span class="pc">.</span><span class="w">a</span><span class="c">rgtypes</span> <span class="w">=</span><span class="pc"> [</span><span class="w">i</span><span class="pc">fad</span><span class="c">drs_p</span><span class="pc">]</span>
+
+
+
+<span class="pc">d</span><span class="c">ef</span> <span class="w">_maybeCleanupScopeIndex</span><span class="c">(</span><span class="w">family</span><span class="pc">,</span> <span class="w">packed</span><span class="c">):</span>
+    
+    <span class="pc">i</span><span class="c">f</span> <span class="w">sy</span><span class="c">s.</span><span class="w">p</span><span class="pc">l</span><span class="c">atform.</span><span class="w">sta</span><span class="pc">rts</span><span class="c">with('</span><span class="w">freebsd')</span> <span class="w">a</span><span class="c">nd</span> <span class="w">p</span><span class="c">acked</span><span class="w">[</span><span class="pc">:2</span><span class="w">] ==</span> <span class="w">b"</span><span class="pc">\</span><span class="w">xfe</span><span class="pc">\</span><span class="w">x80":</span>
+        <span class="w">r</span><span class="c">eturn</span> <span class="c">packed</span><span class="w">[</span><span class="pc">:</span><span class="w">2] +</span> <span class="w">b</span><span class="pc">"\x</span><span class="c">00\x00</span><span class="w">" </span><span class="pc">+</span> <span class="w">p</span><span class="c">acked</span><span class="pc">[4</span><span class="w">:</span><span class="c">]</span>
+    <span class="pc">r</span><span class="c">eturn</span> <span class="w">p</span><span class="pc">a</span><span class="c">cked</span>
+
+
+
+<span class="pc">d</span><span class="c">ef</span> <span class="w">_interfaces</span><span class="pc">()</span><span class="c">:</span>
+    
+    <span class="w">ifaddrs</span> <span class="c">=</span> <span class="w">ifaddrs_p</span><span class="c">()</span>
+    <span class="pc">if</span> <span class="w">getifaddrs</span><span class="pc">(</span><span class="w">pointer(</span><span class="pc">i</span><span class="c">faddrs</span><span class="w">)) &lt;</span> <span class="w">0</span><span class="pc">:</span>
+        <span class="w">r</span><span class="pc">a</span><span class="c">ise</span> <span class="w">O</span><span class="c">SError</span><span class="w">(</span><span class="pc">)</span>
+    <span class="w">re</span><span class="pc">sults</span> <span class="pc">=</span><span class="c"> []</span>
+    <span class="w">t</span><span class="pc">r</span><span class="c">y:</span>
+        <span class="w">w</span><span class="pc">h</span><span class="c">ile</span> <span class="w">i</span><span class="pc">faddrs</span><span class="c">:</span>
+            <span class="w">i</span><span class="pc">f</span> <span class="pc">i</span><span class="c">faddrs</span><span class="w">[</span><span class="c">0</span><span class="pc">].</span><span class="w">ifa_addr</span><span class="c">:</span>
+                <span class="w">family</span> <span class="c">=</span> <span class="w">i</span><span class="pc">f</span><span class="c">addrs</span><span class="pc">[</span><span class="c">0</span><span class="pc">].i</span><span class="c">fa_addr[</span><span class="pc">0].</span><span class="w">sin_family</span>
+                <span class="w">i</span><span class="c">f</span> <span class="c">family</span> <span class="pc">=</span><span class="c">=</span> <span class="w">AF_INET</span><span class="c">:</span>
+                    <span class="w">ad</span><span class="c">dr</span> <span class="c">=</span> <span class="w">cast</span><span class="pc">(</span><span class="w">i</span><span class="pc">fad</span><span class="c">drs[0</span><span class="pc">].i</span><span class="c">fa_addr</span><span class="pc">,</span> <span class="w">POINTER(sockaddr_in</span><span class="pc">))</span>
+                <span class="w">e</span><span class="pc">li</span><span class="c">f</span> <span class="w">f</span><span class="c">amily</span> <span class="pc">=</span><span class="c">=</span> <span class="w">AF_INET6</span><span class="pc">:</span>
+                    <span class="w">ad</span><span class="pc">dr</span> <span class="c">=</span> <span class="w">c</span><span class="c">ast</span><span class="pc">(</span><span class="w">i</span><span class="pc">fad</span><span class="c">drs</span><span class="pc">[</span><span class="c">0</span><span class="pc">].ifa_</span><span class="c">addr</span><span class="pc">,</span> <span class="w">P</span><span class="c">OINTER</span><span class="w">(sockaddr_in6</span><span class="pc">))</span>
+                <span class="pc">e</span><span class="c">lse:</span>
+                    <span class="w">ad</span><span class="pc">dr</span> <span class="pc">=</span> <span class="pc">N</span><span class="c">one</span>
+
+                <span class="pc">i</span><span class="c">f</span> <span class="w">ad</span><span class="pc">dr:</span>
+                    <span class="w">packed</span> <span class="c">=</span> <span class="w">b'</span><span class="pc">'</span><span class="c">.</span><span class="pc">j</span><span class="c">oin(</span><span class="w">m</span><span class="pc">a</span><span class="c">p(</span><span class="w">c</span><span class="pc">h</span><span class="c">r</span><span class="pc">,</span> <span class="w">a</span><span class="pc">d</span><span class="c">dr</span><span class="w">[</span><span class="c">0</span><span class="w">]</span><span class="pc">.</span><span class="w">sin_addr</span><span class="pc">.</span><span class="w">in_addr[:]))</span>
+                    <span class="pc">p</span><span class="c">acked</span> <span class="c">=</span> <span class="w">_maybeCleanupScopeIndex</span><span class="c">(</span><span class="w">family</span><span class="c">,</span> <span class="c">packed</span><span class="pc">)</span>
+                    <span class="w">res</span><span class="pc">ults</span><span class="c">.</span><span class="pc">ap</span><span class="c">pend</span><span class="pc">((</span>
+                            <span class="w">ifaddrs[</span><span class="c">0</span><span class="pc">].</span><span class="w">ifa_name</span><span class="pc">,</span>
+                            <span class="w">f</span><span class="pc">a</span><span class="c">mily,</span>
+                            <span class="w">inet_ntop(f</span><span class="c">amily,</span> <span class="c">packed</span><span class="w">)</span><span class="pc">))</span>
+
+            <span class="w">if</span><span class="pc">ad</span><span class="c">drs</span> <span class="pc">=</span> <span class="w">i</span><span class="pc">fad</span><span class="c">drs</span><span class="pc">[</span><span class="c">0</span><span class="pc">].</span><span class="w">ifa_next</span>
+    <span class="w">fi</span><span class="pc">n</span><span class="c">ally:</span>
+        <span class="w">freeifaddrs</span><span class="pc">(</span><span class="w">i</span><span class="pc">f</span><span class="c">addrs</span><span class="pc">)</span>
+    <span class="pc">r</span><span class="c">eturn</span> <span class="w">r</span><span class="pc">esults</span>
+
+
+
+<span class="c">def</span> <span class="w">posixGetLinkLocalIPv6Addresses</span><span class="pc">()</span><span class="c">:</span>
+    
+    <span class="w">retList</span> <span class="w">=</span><span class="pc"> []</span>
+    <span class="pc">f</span><span class="c">or</span> <span class="c">(</span><span class="w">int</span><span class="pc">erface</span><span class="c">,</span> <span class="pc">f</span><span class="c">amily,</span> <span class="w">a</span><span class="pc">ddre</span><span class="c">ss</span><span class="pc">)</span> <span class="c">in</span> <span class="w">_interfaces</span><span class="pc">()</span><span class="c">:</span>
+        <span class="w">int</span><span class="pc">erface</span> <span class="pc">=</span> <span class="w">na</span><span class="pc">t</span><span class="c">iveString(</span><span class="w">int</span><span class="pc">erface)</span>
+        <span class="w">a</span><span class="pc">d</span><span class="c">dress</span> <span class="c">=</span> <span class="w">n</span><span class="pc">at</span><span class="c">iveString(address</span><span class="pc">)</span>
+        <span class="c">if</span> <span class="w">f</span><span class="pc">a</span><span class="c">mily</span> <span class="pc">=</span><span class="c">=</span> <span class="w">so</span><span class="c">cket.</span><span class="w">AF_INET6</span> <span class="pc">a</span><span class="c">nd</span> <span class="w">a</span><span class="c">ddress.</span><span class="w">s</span><span class="pc">ta</span><span class="c">rtswith('</span><span class="w">fe80:'):</span>
+            <span class="w">re</span><span class="pc">tL</span><span class="c">ist</span><span class="pc">.a</span><span class="c">ppend</span><span class="w">('</span><span class="pc">%</span><span class="c">s</span><span class="w">%%%</span><span class="c">s' % (</span><span class="w">a</span><span class="c">ddress</span><span class="pc">,</span> <span class="w">i</span><span class="pc">nte</span><span class="c">rface))</span>
+    <span class="c">return</span> <span class="w">r</span><span class="pc">etL</span><span class="c">ist</span>
+
+</pre>
+</body>
+</html>
+

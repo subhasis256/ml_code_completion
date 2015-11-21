@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+<span class="w">from</span> <span class="w">twisted.internet.protocol</span> <span class="w">import</span> <span class="w">DatagramProtocol</span>
+<span class="w">from</span> <span class="w">twisted.internet</span> <span class="w">import</span> <span class="w">reactor</span>
+
+
+<span class="w">class</span> <span class="w">MulticastPingPong(DatagramProtocol):</span>
+
+    <span class="w">def</span> <span class="w">startProtocol(self):</span>
+        
+        
+        <span class="w">self.transport.setTTL(5)</span>
+        
+        <span class="w">self.transport.joinGroup("228.</span><span class="pc">0</span><span class="c">.0.</span><span class="w">5</span><span class="pc">")</span>
+
+    <span class="pc">d</span><span class="c">ef</span> <span class="w">d</span><span class="pc">atag</span><span class="c">ramReceived(self</span><span class="pc">,</span> <span class="w">datagram</span><span class="pc">,</span> <span class="w">ad</span><span class="pc">dress</span><span class="c">):</span>
+        <span class="w">p</span><span class="pc">r</span><span class="c">int</span> <span class="c">"</span><span class="w">Datagram</span> <span class="w">%</span><span class="c">s</span> <span class="w">re</span><span class="pc">c</span><span class="c">eived</span> <span class="w">f</span><span class="pc">r</span><span class="c">om</span> <span class="c">%s" % (</span><span class="w">re</span><span class="pc">p</span><span class="c">r(</span><span class="pc">d</span><span class="c">atagram</span><span class="pc">),</span> <span class="w">r</span><span class="pc">ep</span><span class="c">r(</span><span class="w">a</span><span class="pc">d</span><span class="c">dress))</span>
+        <span class="w">i</span><span class="c">f</span> <span class="pc">d</span><span class="c">atagram</span> <span class="w">=</span><span class="pc">= "</span><span class="w">Client</span><span class="pc">:</span> <span class="w">Ping"</span><span class="c">:</span>
+            
+            
+            <span class="c">self.</span><span class="w">t</span><span class="c">ransport.</span><span class="pc">w</span><span class="c">rite</span><span class="pc">("</span><span class="w">S</span><span class="c">erver</span><span class="w">:</span> <span class="w">Pong</span><span class="pc">",</span> <span class="w">a</span><span class="c">ddress)</span>
+
+
+
+
+<span class="w">re</span><span class="pc">a</span><span class="c">ctor.</span><span class="w">listenMulticast</span><span class="pc">(</span><span class="w">8005</span><span class="pc">,</span> <span class="w">MulticastPingPong(</span><span class="pc">),</span>
+                        <span class="w">listenMultiple=</span><span class="pc">T</span><span class="c">rue)</span>
+<span class="pc">r</span><span class="c">eactor.run()</span>
+
+</pre>
+</body>
+</html>
+

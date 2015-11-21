@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+span.c {
+    background-color: #CCFFCC;
+}
+span.pc {
+    background-color: #FFEEBB;
+}
+span.w {
+    background-color: #FFCCCC;
+}
+</style>
+</head>
+<body>
+<pre>
+
+
+
+
+
+
+<span class="w">import</span> <span class="w">ctypes</span>
+<span class="w">import</span> <span class="w">ctypes.util</span>
+
+
+
+<span class="w">class</span> <span class="w">INotifyError(Exception):</span>
+    
+
+
+
+<span class="w">def</span> <span class="w">init():</span>
+    
+    <span class="w">fd</span> <span class="w">=</span> <span class="w">libc.inotify_init()</span>
+    <span class="w">if</span> <span class="w">fd</span> <span class="w">&lt;</span> <span class="w">0:</span>
+        <span class="w">raise</span> <span class="w">INotifyError("INotify</span> <span class="w">initialization</span> <span class="w">error.")</span>
+    <span class="w">return</span> <span class="w">fd</span>
+
+
+
+<span class="w">def</span> <span class="w">add(fd,</span> <span class="w">path</span><span class="pc">,</span> <span class="w">mask</span><span class="c">):</span>
+    
+    <span class="w">wd</span> <span class="c">=</span> <span class="w">l</span><span class="c">ibc</span><span class="pc">.</span><span class="w">inotify_add_watch</span><span class="c">(</span><span class="w">f</span><span class="c">d</span><span class="pc">,</span> <span class="w">p</span><span class="c">ath,</span> <span class="c">mask</span><span class="pc">)</span>
+    <span class="c">if</span> <span class="c">wd</span> <span class="w">&lt;</span> <span class="w">0</span><span class="c">:</span>
+        <span class="w">r</span><span class="pc">a</span><span class="c">ise</span> <span class="w">I</span><span class="pc">NotifyE</span><span class="c">rror("</span><span class="w">Failed</span> <span class="w">t</span><span class="c">o</span> <span class="w">ad</span><span class="c">d</span> <span class="w">watch</span> <span class="w">o</span><span class="c">n</span> <span class="w">'</span><span class="c">%</span><span class="pc">r</span><span class="w">' - (%r)" % (pat</span><span class="c">h</span><span class="pc">,</span> <span class="c">wd</span><span class="pc">)</span><span class="c">)</span>
+    <span class="pc">r</span><span class="c">eturn</span> <span class="c">wd</span>
+
+
+
+<span class="pc">d</span><span class="c">ef</span> <span class="w">rem</span><span class="c">ove(</span><span class="w">fd</span><span class="pc">,</span> <span class="w">w</span><span class="c">d):</span>
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    <span class="w">libc</span><span class="pc">.</span><span class="w">inotify_rm_watch</span><span class="c">(</span><span class="w">f</span><span class="pc">d</span><span class="c">,</span> <span class="pc">w</span><span class="c">d)</span>
+
+
+
+<span class="c">def</span> <span class="w">initializeModule</span><span class="c">(</span><span class="pc">l</span><span class="c">ibc):</span>
+    
+    <span class="w">f</span><span class="pc">o</span><span class="c">r</span> <span class="w">fu</span><span class="c">nction</span> <span class="c">in</span> <span class="w">(</span><span class="pc">"</span><span class="w">inotify_add_watch</span><span class="c">", "</span><span class="w">inotify_init</span><span class="c">", "</span><span class="w">i</span><span class="c">notify_rm_watch</span><span class="pc">")</span><span class="c">:</span>
+        <span class="pc">i</span><span class="c">f</span> <span class="w">g</span><span class="c">etattr(</span><span class="pc">l</span><span class="c">ibc,</span> <span class="w">fu</span><span class="pc">nct</span><span class="c">ion</span><span class="pc">,</span> <span class="pc">N</span><span class="c">one</span><span class="pc">)</span> <span class="pc">is</span> <span class="c">None:</span>
+            <span class="pc">ra</span><span class="c">ise</span> <span class="w">I</span><span class="c">mportError("</span><span class="w">libc6</span> <span class="w">2.4</span> <span class="w">o</span><span class="pc">r</span> <span class="w">higher</span> <span class="w">needed</span><span class="pc">")</span>
+    <span class="w">l</span><span class="pc">i</span><span class="c">bc</span><span class="pc">.</span><span class="w">i</span><span class="pc">notify_i</span><span class="c">nit</span><span class="pc">.</span><span class="w">argtypes</span> <span class="w">= </span><span class="pc">[</span><span class="c">]</span>
+    <span class="w">l</span><span class="c">ibc.</span><span class="w">i</span><span class="pc">notify_i</span><span class="c">nit.</span><span class="w">restype</span> <span class="c">=</span> <span class="w">ctypes</span><span class="c">.</span><span class="w">c_int</span>
+
+    <span class="w">l</span><span class="c">ibc.</span><span class="w">inotify_rm_watch</span><span class="pc">.</span><span class="w">a</span><span class="pc">r</span><span class="c">gtypes</span> <span class="w">=</span><span class="pc"> [</span>
+        <span class="w">c</span><span class="c">types.</span><span class="w">c</span><span class="pc">_</span><span class="c">int</span><span class="pc">,</span> <span class="w">c</span><span class="c">types.</span><span class="w">c</span><span class="pc">_</span><span class="c">int</span><span class="w">]</span>
+    <span class="w">l</span><span class="c">ibc.</span><span class="w">i</span><span class="pc">notify_r</span><span class="c">m_watch.</span><span class="pc">r</span><span class="c">estype</span> <span class="w">=</span> <span class="pc">c</span><span class="c">types.</span><span class="pc">c</span><span class="c">_int</span>
+
+    <span class="w">l</span><span class="c">ibc.</span><span class="w">inotify_add_watch</span><span class="c">.</span><span class="w">a</span><span class="c">rgtypes</span> <span class="w">=</span><span class="pc"> </span><span class="c">[</span>
+        <span class="w">c</span><span class="c">types.</span><span class="w">c</span><span class="c">_int,</span> <span class="w">c</span><span class="c">types.</span><span class="w">c_char_p</span><span class="pc">,</span> <span class="pc">c</span><span class="c">types.</span><span class="w">c_uint32]</span>
+    <span class="w">l</span><span class="c">ibc.</span><span class="w">i</span><span class="pc">notify_a</span><span class="c">dd_watch.</span><span class="pc">r</span><span class="c">estype</span> <span class="pc">=</span> <span class="pc">c</span><span class="c">types.c_int</span>
+
+
+
+<span class="w">n</span><span class="pc">a</span><span class="c">me</span> <span class="c">=</span> <span class="pc">ct</span><span class="c">ypes.</span><span class="w">ut</span><span class="c">il.</span><span class="w">find_library</span><span class="pc">('</span><span class="w">c</span><span class="c">')</span>
+<span class="pc">i</span><span class="c">f</span> <span class="pc">n</span><span class="c">ot</span> <span class="w">n</span><span class="pc">a</span><span class="c">me</span><span class="pc">:</span>
+    <span class="w">r</span><span class="pc">a</span><span class="c">ise</span> <span class="w">I</span><span class="pc">m</span><span class="c">portError("</span><span class="w">Can'</span><span class="pc">t</span> <span class="w">fi</span><span class="pc">nd</span> <span class="w">C</span> <span class="w">library.</span><span class="pc">"</span><span class="c">)</span>
+<span class="w">l</span><span class="c">ibc</span> <span class="pc">=</span> <span class="w">c</span><span class="c">types.</span><span class="w">cdll</span><span class="pc">.</span><span class="w">LoadLibrary</span><span class="c">(</span><span class="pc">n</span><span class="c">ame)</span>
+<span class="w">initializeModule</span><span class="pc">(l</span><span class="c">ibc</span><span class="pc">)</span>
+
+</pre>
+</body>
+</html>
+
