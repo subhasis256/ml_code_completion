@@ -99,7 +99,8 @@ if __name__ == '__main__':
 #                                 stepsize=args.lr,
 #                                 reg=args.reg)
     model = RnnLSTM(keywords, winSize=args.win,
-                    wdim=args.dim,
+                    wdim=args.dim, zdim=args.zdim,
+                    reg=args.reg,
                     load_from_file=False)
 #                    stepsize=args.lr,
 #                    reg=args.reg)
