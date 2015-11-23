@@ -224,6 +224,7 @@ class GenericRNNModel(Model):
         b = 0
         total = 0
         correct = 0
+        totalCorrectTopK = 0
         kwcorrect = 0
         totalkw = 0
         nonkwcorrect = 0
@@ -238,6 +239,10 @@ class GenericRNNModel(Model):
 
             correct += np.sum(ys == preds)
             total += ys.shape[0]
+
+            K = 3
+            inTopK = np.any(rankedPreds[:,:K] == ys[:,None], axis=1)
+            totalCorrectTopK += np.sum(inTopK)
 
             kwids = ys < self.winSize
             kwpreds = preds[kwids]
@@ -258,8 +263,10 @@ class GenericRNNModel(Model):
             nonkwcorrectrand += np.sum(nonkwX == nonkwys[:,None])
 
             if b % 10 == 0:
-                print 'Batch %d acc %.2f%% abs_acc %.2f%% kw_frac %.2f%% kw_acc %.2f%% non_kw_acc %.2f%% rand_non_kw_acc %.2f%%' % (b,
+                print 'Batch %d acc %.2f%% top-%d acc %.2f%% abs_acc %.2f%% kw_frac %.2f%% kw_acc %.2f%% non_kw_acc %.2f%% rand_non_kw_acc %.2f%%' % (b,
                                                                                                                            correct/float(total)*100,
+                                                                                                                           K,
+                                                                                                                           totalCorrectTopK/float(total)*100,
                                                                                                                            correct/float(b*batchsize)*100,
                                                                                                                            totalkw/float(total)*100,
                                                                                                                            kwcorrect/float(totalkw)*100,
