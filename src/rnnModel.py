@@ -30,10 +30,10 @@ class GenericRNNModel(Model):
             self.wordToID[k] = i
             self.IDToWord[i] = k
 
-    def restoreFrom(self, savedFile):
+    def restoreFrom(self, savedFilePrefix):
         raise NotImplementedError, "Implement me!"
 
-    def saveTo(self, savedFile):
+    def saveTo(self, savedFilePrefix):
         raise NotImplementedError, "Implement me!"
 
     def trainBatch(self, Xs, ys):
