@@ -2,6 +2,7 @@ import fnmatch as fn
 import os
 import re
 from vectorModel import *
+from rnnLSTM import RnnLSTM
 import utils
 import random
 
@@ -93,10 +94,15 @@ if __name__ == '__main__':
 #    model = ConstantAttentionVectorModel(keywords, winSize=args.win,
 #                                         wdim=args.dim, stepsize=args.lr,
 #                                         reg=args.reg)
-    model = NonLinearVectorModel(keywords, winSize=args.win,
-                                 wdim=args.dim, zdim=args.zdim,
-                                 stepsize=args.lr,
-                                 reg=args.reg)
+#    model = NonLinearVectorModel(keywords, winSize=args.win,
+#                                 wdim=args.dim, zdim=args.zdim,
+#                                 stepsize=args.lr,
+#                                 reg=args.reg)
+    model = RnnLSTM(keywords, winSize=args.win,
+                    wdim=args.dim,
+                    load_from_file=False)
+#                    stepsize=args.lr,
+#                    reg=args.reg)
     if args.restore is not None:
         model.restoreFrom(args.restore)
         print 'Restored model from %s' % args.restore

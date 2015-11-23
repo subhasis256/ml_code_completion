@@ -13,6 +13,7 @@ import time
 # keras imports
 from keras.layers.embeddings import Embedding
 from keras.layers.recurrent import LSTM, GRU
+from keras.layers.core import Dense
 from keras.models import Sequential
 from keras.models import model_from_json
 
@@ -20,7 +21,7 @@ class RnnLSTM(GenericRNNModel):
     """
     The actual impl here
     """
-    def __init__(selfm, keywords, winSize=100, wdim=32,
+    def __init__(self, keywords, winSize=100, wdim=32,
                  lstm_activation='tanh', lstm_inner_activation='hard_sigmoid',
                  output_activation='softmax',
                  loss_optimizer='adagrad',
@@ -34,10 +35,10 @@ class RnnLSTM(GenericRNNModel):
             self.restoreFrom(filename)
         else:
             # save parameters
-            vocab_size = keywords + winSize + 1
+            vocab_size = len(keywords) + winSize + 1
             self.params = {}
-            self.params.wdim = wdim
-            self.params.vocab_size = vocab_size
+            self.params["wdim"] = wdim
+            self.params["vocab_size"] = vocab_size
 
             # initialize keras model
             self.model = Sequential()
@@ -49,7 +50,7 @@ class RnnLSTM(GenericRNNModel):
                                 inner_activation=lstm_inner_activation,
                                 input_length=winSize))
             # determine output of RNN model
-            self.model.add(Dense(self.vocab_size, activation=output_activation))
+            self.model.add(Dense(vocab_size, activation=output_activation))
             # compile with optimizer, loss function
             self.model.compile(optimizer=loss_optimizer,
                                loss='categorical_crossentropy', class_mode='categorical')
@@ -59,7 +60,7 @@ class RnnLSTM(GenericRNNModel):
         savedFile: filename from which to read parameters
         """
         # try pickle if this doesn't work 
-        self.params = pkl.load(open(savedFilePrefix + "params"))
+        self.params = pkl.load(open(savedFilePrefix + "_params"))
         with open(savedFilePrefix + "_model") as fp:
             self.model = model_from_json(fp.read())
 
@@ -69,7 +70,7 @@ class RnnLSTM(GenericRNNModel):
         """
         # try pickle if this doesn't work 
         pkl.dump(self.params, open(savedFilePrefix + "_params", 'w'))
-        with open(savedFilePrefix + "_model", w) as fp:
+        with open(savedFilePrefix + "_model", 'w') as fp:
             fp.write(self.model.to_json())
 
     def trainBatch(self, Xs, ys):
@@ -79,7 +80,11 @@ class RnnLSTM(GenericRNNModel):
         ys: numpy array of shape (batch,) denoting wordIDs of final output
         return value: loss (using accuracy=True)
         """
-        return self.model.train_on_batch(Xs, ys, accuracy=True)
+        B = ys.shape[0]
+        ys_labels = np.zeros((B, self.params["vocab_size"]),
+                             dtype=np.int)
+        ys_labels[np.arange(B), ys] = 1
+        return self.model.train_on_batch(Xs, ys_labels, accuracy=True)
 
     def predictRanked(self, Xs, ys):
         """
