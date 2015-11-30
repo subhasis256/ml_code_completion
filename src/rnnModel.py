@@ -276,3 +276,31 @@ class GenericRNNModel(Model):
 
             b += 1
 
+    def getWord(self, idx, window, XWinID):
+        if idx < len(self.keywordList):
+            return self.IDToWord[idx]
+        else:
+            word = "<UNKUNK>"
+            # search among the list of XWinIDs
+            for ix,x in enumerate(XWinID):
+                if x == idx:
+                    word = window[ix]
+                    break
+            return word
+
+    def predict(self, tokensTillNow):
+        if len(tokensTillNow) < self.winSize:
+            return ['']
+
+        window = tokensTillNow[-self.winSize:]
+        X = self.convertToTokenIDs(window)
+        X, junk = self.makeWindow(X, 0, True)
+
+        rankedPreds = self.predictRanked(np.array([X]), 
+                                         np.array([junk]))[0]
+
+        rankedWords = [self.getWord(i, window, X) for i in rankedPreds]
+
+        return rankedWords
+
+

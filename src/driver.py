@@ -2,7 +2,7 @@ import fnmatch as fn
 import os
 import re
 from vectorModel import *
-from rnnLSTM import RnnLSTM
+from rnnLSTM import RnnLSTM, RnnDense, RnnDense2
 import utils
 import random
 
@@ -43,6 +43,10 @@ if __name__ == '__main__':
                         type=int,
                         default=512,
                         help='intermediate vector dimensions')
+    parser.add_argument('--zdim2',
+                        type=int,
+                        default=512,
+                        help='intermediate vector dimensions #2')
     parser.add_argument('--lr',
                         type=float,
                         default=0.05,
@@ -98,12 +102,16 @@ if __name__ == '__main__':
 #                                 wdim=args.dim, zdim=args.zdim,
 #                                 stepsize=args.lr,
 #                                 reg=args.reg)
-    model = RnnLSTM(keywords, winSize=args.win,
-                    wdim=args.dim, zdim=args.zdim,
-                    reg=args.reg,
-                    load_from_file=False)
+#    model = RnnDense(keywords, winSize=args.win,
+#                    wdim=args.dim, zdim=args.zdim,
+#                    reg=args.reg,
+#                    load_from_file=False)
 #                    stepsize=args.lr,
 #                    reg=args.reg)
+    model = RnnDense2(keywords, winSize=args.win,
+                    wdim=args.dim, zdim=args.zdim, zdim2=args.zdim2,
+                    reg=args.reg,
+                    load_from_file=False)
     if args.restore is not None:
         model.restoreFrom(args.restore)
         print 'Restored model from %s' % args.restore
