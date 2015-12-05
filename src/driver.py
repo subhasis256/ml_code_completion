@@ -2,7 +2,7 @@ import fnmatch as fn
 import os
 import re
 from vectorModel import *
-from rnnLSTM import RnnLSTM, RnnDense, RnnDense2
+from rnnLSTM import RnnLSTM, RnnDense, RnnDense2, RnnAttentionDense2, RnnConvDense, EnsembleModel
 import utils
 import random
 
@@ -39,6 +39,14 @@ if __name__ == '__main__':
                         type=int,
                         default=32,
                         help='word vector dimensions')
+    parser.add_argument('--filt',
+                        type=int,
+                        default=7,
+                        help='convolution filt size')
+    parser.add_argument('--cdim',
+                        type=int,
+                        default=64,
+                        help='number of convolution filters')
     parser.add_argument('--zdim',
                         type=int,
                         default=512,
@@ -59,7 +67,30 @@ if __name__ == '__main__':
                         type=int,
                         default=32,
                         help='batch size')
+    parser.add_argument('--files',
+                        type=listparse,
+                        help='list of files for prediction')
     args = parser.parse_args()
+
+    keywords = []
+    keywords_file = os.path.join('../key_words', args.project)
+    with open(keywords_file) as fp:
+        for line in fp:
+            kw = re.sub(' [0-9]*$', '', line.strip())
+            keywords.append(kw)
+    print keywords
+
+    if args.command == 'test' or args.command == 'predict':
+        model = EnsembleModel(keywords, winSize=args.win)
+    else:
+        model = RnnAttentionDense2(keywords, winSize=args.win,
+                                   wdim=args.dim, zdim=args.zdim, zdim2=args.zdim2,
+                                   reg=args.reg,
+                                   load_from_file=False)
+
+    if args.restore is not None:
+        model.restoreFrom(args.restore)
+        print 'Restored model from %s' % args.restore
 
     data_dir = os.path.join('../data', args.project)
     files = utils.matchingFiles([data_dir], args.langs)
@@ -84,14 +115,6 @@ if __name__ == '__main__':
         print len(filesAndTokens)
         print sum([len(tokens) for name,tokens in filesAndTokens])
 
-    keywords = []
-    keywords_file = os.path.join('../key_words', args.project)
-    with open(keywords_file) as fp:
-        for line in fp:
-            kw = re.sub(' [0-9]*$', '', line.strip())
-            keywords.append(kw)
-    print keywords
-
 #    model = PositionDependentVectorModel(keywords, winSize=args.win,
 #                                         wdim=args.dim, stepsize=args.lr,
 #                                         reg=args.reg)
@@ -108,23 +131,28 @@ if __name__ == '__main__':
 #                    load_from_file=False)
 #                    stepsize=args.lr,
 #                    reg=args.reg)
-    model = RnnDense2(keywords, winSize=args.win,
-                    wdim=args.dim, zdim=args.zdim, zdim2=args.zdim2,
-                    reg=args.reg,
-                    load_from_file=False)
-    if args.restore is not None:
-        model.restoreFrom(args.restore)
-        print 'Restored model from %s' % args.restore
+#    model = RnnConvDense(keywords, winSize=args.win,
+#                         wdim=args.dim, kSize=args.filt, convdim=args.cdim, 
+#                         zdim=args.zdim,
+#                         reg=args.reg,
+#                         load_from_file=False)
 
     if args.command == 'test':
         model.test(filesAndTokens, batchsize=args.batch)
 
     elif args.command == 'predict':
-        for _ in range(100):
-            randomFile = random.choice(fileSubset)
-            outputFile = os.path.basename(randomFile) + '.html'
-            print 'Evaluating on %s' % randomFile
-            tokens, content = utils.tokenize(randomFile, True)
+        predictionFiles = []
+        if args.files is None:
+            for _ in range(100):
+                randomFile = random.choice(fileSubset)
+                predictionFiles.append(randomFile)
+        else:
+            predictionFiles = args.files
+
+        for fileName in predictionFiles:
+            outputFile = os.path.basename(fileName) + '.html'
+            print 'Evaluating on %s' % fileName
+            tokens, content = utils.tokenize(fileName, True)
             annotations = model.testOverlap(tokens)
             spans = utils.matchTokensToContent(tokens, content)
             assert len(spans) == len(tokens)

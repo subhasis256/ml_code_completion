@@ -43,12 +43,19 @@ class GenericRNNModel(Model):
         """
         raise NotImplementedError, "Implement me!"
 
+    def score(self, Xs):
+        """
+        Xs: numpy array of shape (batch, winSize) denoting wordIDs of inputs
+        """
+        raise NotImplementedError, "Implement me!"
+
     def predictRanked(self, Xs, ys):
         """
         X: numpy array of shape (batch, winSize) denoting wordIDs of inputs
         y: numpy array of shape (batch,) denoting wordIDs of final output
         """
-        raise NotImplementedError, "Implement me!"
+        scores = self.score(Xs)
+        return np.argsort(-scores, axis=1)
 
     def convertToTokenIDs(self, tokens):
         """

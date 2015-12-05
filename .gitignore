@@ -61,3 +61,6 @@ target/
 
 # intermediate results
 key_words/
+
+# models
+*.p_*
