@@ -5,6 +5,7 @@ import fnmatch as fn
 import os
 import cgi
 import random
+import json
 
 def CUncomment(content):
     return re.sub(r'/\*.*?\*/', '', content,
@@ -96,6 +97,9 @@ def HTMLHeader():
 <html>
 <head>
 <style>
+pre {
+    color: #888888;
+}
 span.c {
     background-color: #CCFFCC;
 }
@@ -105,32 +109,115 @@ span.pc {
 span.w {
     background-color: #FFCCCC;
 }
+span.tok {
+    color: black;
+}
+div.popup {
+    color: black;
+    background-color: #EFEFFF;
+    outline: 2px solid blue;
+    position: fixed;
+    left: 50px;
+    top: 50px;
+    display: none;
+    z-index: 10;
+    padding: 2px 2px 2px 2px;
+}
+span.tok {
+    position: relative;
+    z-index: 1;
+}
 </style>
+<script src="https://code.jquery.com/jquery-1.10.2.js"></script>
 </head>
 <body>
-<pre>"""
+<pre>
+<div id="pdiv" class="popup">blah<br/>blah</div>
+"""
 
-def HTMLFooter():
+def attn_to_json(attn):
+    return '[' + ','.join(['%.3f' % x for x in attn]) + ']'
+
+def attns_to_json(attns):
+    return '[' + ','.join([attn_to_json(attn) for attn in attns]) + ']'
+
+def HTMLFooter(candidates, attentions):
     return """</pre>
+<script>
+    var candidates = """ + json.dumps(candidates) + """;
+    var attentions = """ + attns_to_json(attentions) + """;
+    $("span.tok")
+    .mouseenter(function() {
+        var myID = parseInt($(this).attr("id"));
+        for (nbrID = myID - 40; nbrID < myID; nbrID++) {
+            if(nbrID > 0) {
+                var nbrIDStr = nbrID.toString();
+                document.getElementById(nbrIDStr).style.fontWeight = "bold";
+                var allnbrs = document.getElementsByClassName("t" + nbrIDStr);
+                var d = 40 - (myID - nbrID);
+                var attn = attentions[myID-1][d];
+                var r = Math.floor(102 + (255-102)*(1-attn));
+                for(i = 0; i < allnbrs.length; i++) {
+                    allnbrs[i].style.backgroundColor = "rgb(" + r + ",255,255)";
+                }
+                document.getElementById(nbrIDStr).style.color = "black";
+            }
+        }
+        $(this).css("outline", "2px dotted red");
+        $(this).css("font-weight", "bold");
+        $(this).css("color", "black");
+        $(this).css("z-index", "2");
+
+        var rect = $(this)[0].getBoundingClientRect();
+        var popup = document.getElementById("pdiv");
+        popup.style.display = "inline";
+        popup.style.left = rect.left+"px";
+        popup.style.top = (rect.bottom+2)+"px";
+        popup.innerHTML = candidates[myID-1].join('<br/>');
+    })
+    .mouseleave(function() {
+        var myID = parseInt($(this).attr("id"));
+        for (nbrID = myID - 40; nbrID < myID; nbrID++) {
+            if(nbrID > 0) {
+                var nbrIDStr = nbrID.toString();
+                document.getElementById(nbrIDStr).style.fontWeight = "normal";
+                var allnbrs = document.getElementsByClassName("t" + nbrIDStr);
+                for(i = 0; i < allnbrs.length; i++) {
+                    allnbrs[i].style.backgroundColor = "inherit";
+                }
+                document.getElementById(nbrIDStr).style.color = "black";
+            }
+        }
+        $(this).css("outline", "none");
+        $(this).css("font-weight", "normal");
+        $(this).css("color", "black");
+        $(this).css("z-index", "1");
+
+        var popup = document.getElementById("pdiv");
+        popup.style.display = "none";
+    });
+</script>
 </body>
 </html>
 """
 
-def spanStart(annotation):
+def spanStart(annotation, sid):
     annClass = {0: 'w', 1: 'pc', 2: 'c'}
     if annotation in annClass:
-        return "<span class=\"" + annClass[annotation] + "\">"
+        annspan = "<span class=\"%s\">" % annClass[annotation]
+        tokspan = "<span class=\"t%d\">" % sid
+        return annspan + tokspan
     else:
         return ""
 
 def spanEnd(annotation):
     annClass = {0: 'w', 1: 'pc', 2: 'c'}
     if annotation in annClass:
-        return "</span>"
+        return "</span></span>"
     else:
         return ""
 
-def colorizedHTML(content, annotations):
+def colorizedHTML(content, annotations, spans):
     """
     annotation convention:
     0 -> wrong
@@ -140,13 +227,30 @@ def colorizedHTML(content, annotations):
     """
     pa = None
     s = ''
-    for c,a in zip(content, annotations):
-        if a != pa:
-            # start a new span
+    sid = 0
+    lno = 1
+    for i,(c,a) in enumerate(zip(content, annotations)):
+        if sid < len(spans) and spans[sid][0] == i:
+            # start a new token span
+            s += "<span class=\"tok\" id=\"%d\">" % (sid+1)
+            # and a new coloring span
+            s += spanStart(a, sid+1)
+        elif sid < len(spans) and a != pa:
+#        if a != pa:
+            # start a new coloring span
             s += spanEnd(pa)
-            s += spanStart(a)
+            s += spanStart(a, sid+1)
         s += cgi.escape(c)
+        if c == '\n':
+            s += '%4d    ' % lno
+            lno += 1
         pa = a
+        if sid < len(spans) and spans[sid][1]-1 == i:
+            # end the coloring span
+            s += "</span></span>"
+            # and the token span
+            s += "</span>"
+            sid += 1
     s += spanEnd(pa)
     return s
 

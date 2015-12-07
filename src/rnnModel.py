@@ -49,6 +49,9 @@ class GenericRNNModel(Model):
         """
         raise NotImplementedError, "Implement me!"
 
+    def attention(self, Xs):
+        return np.ones(Xs.shape)
+
     def predictRanked(self, Xs, ys):
         """
         X: numpy array of shape (batch, winSize) denoting wordIDs of inputs
@@ -199,10 +202,10 @@ class GenericRNNModel(Model):
                 if b % 10 == 0:
                     currentTime = time.time()
                     print '[%.3fs] Epoch %d batch %d smooth_loss %f smooth_acc %.2f%% smooth_abs_acc %.2f%%' % (currentTime-startTime, 
-                                                                                                                   epoch, b,
-                                                                                                                   smooth_loss,
-                                                                                                                   smooth_known_acc*100,
-                                                                                                                   smooth_abs_acc*100)
+                                                                                                                epoch, b,
+                                                                                                                smooth_loss,
+                                                                                                                smooth_known_acc*100,
+                                                                                                                smooth_abs_acc*100)
                 if b % 100000 == 0:
                     self.saveTo('%s-%d-%d.p' % (ckpt_prefix, epoch, b))
                 b += 1
@@ -297,7 +300,7 @@ class GenericRNNModel(Model):
 
     def predict(self, tokensTillNow):
         if len(tokensTillNow) < self.winSize:
-            return ['']
+            return [''], np.ones((self.winSize,))
 
         window = tokensTillNow[-self.winSize:]
         X = self.convertToTokenIDs(window)
@@ -305,9 +308,10 @@ class GenericRNNModel(Model):
 
         rankedPreds = self.predictRanked(np.array([X]), 
                                          np.array([junk]))[0]
+        attn = self.attention(np.array([X]))[0]
 
         rankedWords = [self.getWord(i, window, X) for i in rankedPreds]
 
-        return rankedWords
+        return rankedWords, attn
 
 

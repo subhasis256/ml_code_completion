@@ -80,7 +80,7 @@ if __name__ == '__main__':
             keywords.append(kw)
     print keywords
 
-    if args.command == 'test' or args.command == 'predict':
+    if args.command == 'test':
         model = EnsembleModel(keywords, winSize=args.win)
     else:
         model = RnnAttentionDense2(keywords, winSize=args.win,
@@ -153,7 +153,7 @@ if __name__ == '__main__':
             outputFile = os.path.basename(fileName) + '.html'
             print 'Evaluating on %s' % fileName
             tokens, content = utils.tokenize(fileName, True)
-            annotations = model.testOverlap(tokens)
+            annotations, candidates, attentions = model.testOverlap(tokens)
             spans = utils.matchTokensToContent(tokens, content)
             assert len(spans) == len(tokens)
             contentAnns = [-1 for _ in range(len(content))]
@@ -165,8 +165,8 @@ if __name__ == '__main__':
 
             with open(outputFile, 'w') as fp:
                 print >> fp, utils.HTMLHeader()
-                print >> fp, utils.colorizedHTML(content, contentAnns)
-                print >> fp, utils.HTMLFooter()
+                print >> fp, utils.colorizedHTML(content, contentAnns, spans)
+                print >> fp, utils.HTMLFooter(candidates, attentions)
 
     else:
         model.train(filesAndTokens, ckpt_prefix=args.ckpt, batchsize=args.batch)

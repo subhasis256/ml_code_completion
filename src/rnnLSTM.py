@@ -9,11 +9,12 @@ from utils import colorPrint
 import sys
 import collections
 import time
+import theano
 
 # keras imports
 from keras.layers.embeddings import Embedding
 from keras.layers.recurrent import LSTM, GRU
-from keras.layers.core import Dense, Flatten, RepeatVector, Reshape
+from keras.layers.core import Dense, Flatten, RepeatVector, Reshape, Permute
 from keras.layers.convolutional import Convolution1D
 from keras.regularizers import l2
 from keras.models import Sequential, Graph
@@ -266,10 +267,12 @@ class RnnAttentionDense2(GenericRNNModel):
         self.model.add_node(Dense(winSize, activation='sigmoid',
                                   W_regularizer=l2(reg)),
                             name='attn', input='wvecf')
-        self.model.add_node(Reshape(dims=(winSize,1)),
+        self.model.add_node(RepeatVector(wdim),
                             name='attnr', input='attn')
+        self.model.add_node(Permute(dims=(2,1)),
+                            name='attnp', input='attnr')
         # multiply word vector by attention and flatten output
-        self.model.add_node(Flatten(), name='awvecf', inputs=['wvec', 'attnr'], merge_mode='mul')
+        self.model.add_node(Flatten(), name='awvecf', inputs=['wvec', 'attnp'], merge_mode='mul')
         # fully connected layers
         self.model.add_node(Dense(zdim, activation='relu',
                                   W_regularizer=l2(reg)),
@@ -287,6 +290,13 @@ class RnnAttentionDense2(GenericRNNModel):
         self.model.compile(loss_optimizer,
                            {'probs': 'categorical_crossentropy'})
 
+        # also compile a function for getting the attention vector
+        self.get_attn = theano.function([self.model.inputs[i].input for i in
+                                         self.model.input_order],
+                                        self.model.nodes['attn'].get_output(train=False),
+                                        on_unused_input='ignore')
+
+
     def restoreFrom(self, savedFilePrefix):
         """
         savedFile: filename from which to read parameters
@@ -296,6 +306,13 @@ class RnnAttentionDense2(GenericRNNModel):
         with open(savedFilePrefix + "_model") as fp:
             self.model = model_from_json(fp.read())
         self.model.load_weights(savedFilePrefix + "_weights")
+
+        # also compile a function for getting the attention vector
+        print [self.model.inputs[i].input for i in self.model.input_order]
+        self.get_attn = theano.function([self.model.inputs[i].input for i in
+                                         self.model.input_order],
+                                        self.model.nodes['attn'].get_output(train=False),
+                                        on_unused_input='ignore')
 
     def saveTo(self, savedFilePrefix):
         """
@@ -322,10 +339,16 @@ class RnnAttentionDense2(GenericRNNModel):
         ys_labels[np.arange(B), ys] = 1
         loss = self.model.train_on_batch({'word': Xs,
                                           'probs': ys_labels})
+        if isinstance(loss, list):
+            loss = loss[0]
         return loss, acc
 
     def score(self, Xs):
         return self.model.predict({'word': Xs})['probs']
+
+    def attention(self, Xs):
+        attn = self.get_attn(Xs.astype(np.int32))
+        return attn
 
 class RnnConvDense(GenericRNNModel):
     """
@@ -441,4 +464,7 @@ class EnsembleModel(GenericRNNModel):
 
     def score(self, Xs):
         return np.sum([model.score(Xs) for model in self.models], axis=0)
+
+    def attention(self, Xs):
+        return np.mean([model.attention(Xs) for model in self.models], axis=0)
 

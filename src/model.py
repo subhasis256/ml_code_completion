@@ -45,12 +45,19 @@ class Model(object):
         Here, we will iterate through the tokens, and will get the prediction at
         each character granularity (i.e. filter predictions based on character
         level match after each character)
+        Returns the character level annotations for each token (partially
+        correct, correct or wrong), and also the top 5 candidates for each
+        token.
         """
         annotations = []
+        candidates = []
+        attentions = []
         for tid in range(len(fileTokens)):
             tokensTillNow = fileTokens[:tid]
             nextTok = fileTokens[tid]
-            sortedPreds = self.predict(tokensTillNow)
+            sortedPreds, attention = self.predict(tokensTillNow)
+            candidates.append(sortedPreds[:5])
+            attentions.append(attention)
             tokenAnn = []
             for cid in range(len(nextTok)):
                 filteredPred = [w for w in sortedPreds
@@ -65,7 +72,7 @@ class Model(object):
                 else:
                     tokenAnn.append(0)
             annotations.append(tokenAnn)
-        return annotations
+        return annotations, candidates, attentions
 
 
 if __name__ == '__main__':
