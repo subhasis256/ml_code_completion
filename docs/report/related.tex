@@ -2,12 +2,13 @@
 \section{Related Work}
 \label{sec:related}
 
-In this section we review some of the prior literature on language models in
-general and neural network based language models in particular.
+We use natural language techniques for predicting code.
+In this section, we review some literature on language models and
+neural network based language models.
 
 \subsection{Traditional Language Models}
 Statistical models of languages have been used extensively in various natural
-language processing tasks. One of the simplest such models to be proposed is the
+language processing tasks. One of the simplest such models proposed is the
 $n$-gram model, where the frequencies of consecutive $n$ tokens are used to
 predict the probability of occurence of a sequence of tokens. The frequencies of
 such $n$-grams are obtained from a corpus, and are smoothed by various
@@ -15,43 +16,49 @@ algorithms such as Kneser-Ney smoothing~\cite{ref:kneser-ney} to account for
 sparsity of $n$-grams. Such models can be easily extended to code completion,
 e.g., by assuming each token to be a word and doing $n$-gram analysis over a
 codebase. However, it is difficult to see how such an $n$-gram based model can be
-used for code completion considering the high fraction of {\tt UNKNOWN} tokens
-in codes. For example, even in a simple case such as {\tt for(int SOMEVAR = 0;
-SOMEVAR < EXPRESSION; SOMEVAR++)}, the token {\tt SOMEVAR} can be arbitrary, and
-{\tt EXPRESSION} can consist of multiple tokens. Also, it has been shown that
-neural network based language models far outperform such traditional language
-models. Thus, in this work we only consider neural network based language
-models.
+used for code completion considering the high fraction of unknown tokens
+from variable and function names.
+%used for code completion considering the high fraction of {\tt UNKNOWN} tokens
+%in codes. For example, even in a simple case such as {\tt for(int SOMEVAR = 0;
+%SOMEVAR < EXPRESSION; SOMEVAR++)}, the token {\tt SOMEVAR} can be arbitrary, and
+%{\tt EXPRESSION} can consist of multiple tokens. Also, it has been shown that
+%neural network based language models far outperform such traditional language
+%models. Hence, in our work, we only consider neural network based language
+%models.
 
 \subsection{Word Vector Embeddings and Neural Network Language Models (NNLM)}
 In their seminal work, Bengio et al.~\cite{ref:embedding} first propose a
-vector embedding space for words for constructing a language model, and show
-that this embedding space significantly outperforms traditional $n$-gram based
+vector embedding space for words for constructing a language model,
+that significantly outperforms traditional $n$-gram based
 approaches. Their proposal maps each word to a vector and expresses the
 probability of a token as the result of a multi-layer neural network on the
-vectors of a limited window of neighboring words. It has also been observed
-\cite{ref:regularities} that such models can capture word-pair relationships
+vectors of a limited window of neighboring words. T. Mikolov
+et al.~ \cite{ref:regularities} show that such models can capture word-pair relationships
 (such as ``{\em king} is to {\em queen} as {\em man} is to {\em woman}'') in
-the form of vector operations in the embedding space (i.e., $v_{\text king} -
+the form of vector operations (i.e., $v_{\text king} -
 v_{\text queen} = v_{\text man} - v_{\text woman}$). To distinguish such models
-from {\it recurrent} based models (discussed in Section~\ref{sec:rnnlm}, they
-have been termed as {\it feed-forward} neural network language models.
-
-We use the same concept in our token-embeddings, where we attempt to predict the
-probabilities of the next token depending on the token-vectors of a fixed window
-of prior tokens. We were able to observe significant clustering in the word
-vectors of similar tokens (e.g., vectors of {\tt uint8\_t} and {\tt uint16\_t}
-are very similar). However, we were {\it unable} to find vector relationships
-between tokens such as those discussed above.
+from {\it recurrent} models, we
+call them {\it feed-forward} neural network language models.
+We use the same concept in out token-embedding. We found singificant clustering
+of similar tokens, such as {\tt uint8\_t} and {\tt uint16\_t}, but were unable
+to fund vector relationships.
+%We use the same concept in our token-embeddings, where we attempt to predict
+%probabilities of the next token depending on the token-vectors of a fixed window
+%of prior tokens.
+%We were able to observe significant clustering in the word
+%vectors of similar tokens (e.g., vectors of {\tt uint8\_t} and {\tt uint16\_t}
+%are very similar). However, we were {\it unable} to find vector relationships
+%between tokens such as those discussed above.
 
 Later, such feed-forward NNLMs have been extended by Mikolov et
-al.~\cite{ref:mikolov:wvec} where they propose two models: the continuous
+al.~\cite{ref:mikolov:wvec} where they propose the continuous
 bag-of-words (CBOW), and the skip-gram. In CBOW, the probability of a token is
 obtained from the average of vectors of the neighboring tokens, whereas in
 skip-gram model the probabilities of the neighboring tokens is obtained from the
-vector of a single token. The main advantage of such models is their simplicity
-relative to a multi-layer feed-forward network, which enables them to be trained
-faster on billion-word corpuses. However, in our case the size of data was not
+vector of a single token. The main advantage of such models is their
+simplicity, which enables them to train
+% relative to a multi-layer feed-forward network, which enables them to be trained
+faster on billion-word corpuses. However, in our case, the size of data was not
 so huge, and we could train even a 4-layer model in 3 days.
 
 \subsection{RNN Language Models}
@@ -59,11 +66,11 @@ so huge, and we could train even a 4-layer model in 3 days.
 A significant drawback of feed-forward neural network based language models is
 their inability to consider dependencies longer than the window size. To fix
 this shortcoming, Mikolov et al. proposed a recurrent neural network based
-language model~\cite{ref:rnnlm}, where they associated a cell with a hidden state
-at each position, and update the state with each token. Subsequently, more
+language model~\cite{ref:rnnlm}, which associates a cell with a hidden state
+at each position, and updates the state with each token. Subsequently, more
 advanced memory cells such as LSTM~\cite{ref:lstm} and GRU~\cite{ref:gru} have
-been used for language modeling tasks, and also more sophsticated models such as
-tree-based LSTMs rather than simple sequential LSTMs~\cite{ref:treelstm} have
+been used for language modeling tasks. More sophsticated models such as
+tree-based LSTMs ~\cite{ref:treelstm} have also
 been proposed. We experimented with using GRUs in our setup, but surprisingly
 did not find them to be competitive with feed-forward networks.
 
@@ -78,3 +85,11 @@ prediction is separated into two parts: the attention mechanism which
 mechanism which predicts the output given the weighted input. We found an
 attention based feed-forward model to be the best performing model among the
 ones we considered.
+
+\subsection{Code Completion}
+\label{sec:code-completion}
+Frequency, association and matching neighbor based
+approaches~\cite{ref:learningexamples} are used to improve predictions of IDEs such
+as Eclipse.
+Our learning approach, on the other hand, attempts to automatically
+learn such rules and patterns.

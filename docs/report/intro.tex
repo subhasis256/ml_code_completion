@@ -2,7 +2,9 @@
 \label{sec:intro}
 
 \noindent
-Code IDEs such as Eclipse and Microsoft Visual Studio make the task of writing
+Code IDEs
+% such as Eclipse and Microsoft Visual Studio
+make the task of writing
 code in new languages easier by auto-completing key words and phrases.
 For example, when writing code in C++, an IDE may automatically close an
 opening parenthesis, and suggest else immediately following an if block.
@@ -12,11 +14,10 @@ Such code completion has several problems:
     of rules. This is tedious and repetitive when done for every new language.
   \item Predictions do not consider the category of code. For instance, driver
     codes and math libraries may exhibit different patterns.
-  \item Predictions do not consider context such as header file, class
-    definition, function definition, tabs and spaces, opening and closing
-    braces on the same line.
-  \item Recommendations are often ordered lexicographically, which means some
-    of the top recommendations may not be useful.
+  \item Predictions do not consider context such as class
+    definition, function definition, and tabs and spaces.
+  \item Recommendations are often ordered lexicographically, which may not be
+  very useful.
 \end{enumerate}
 
 \noindent
