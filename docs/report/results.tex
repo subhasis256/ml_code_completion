@@ -1,32 +1,49 @@
 %\vspace{-5pt}
 \section{Experiments and Results}
 \label{sec:results}
-In this section, we discuss some preliminary results for the models described in
-Section~\ref{sec:memoryless} evaluated on the Linux kernel source code with
-2000 key tokens ($K = 2000$) and window length of 40 ($W = 40$).
+
+In this section, we evaluate the methods outlined in Section~\ref{sec:methods},
+on Linux kernel and Twisted library. We first present the accuracy of
+predictions on the test set, and then present some interesting predictions that
+come out from recurring patterns.
+
+\subsection{Accuracy}
+\label{sec:accuracy}
 
 \begin{table}[h]
   \centering
-  \begin{tabular}{l r r r r r}
+  \small {
+  \begin{tabular}{l l l r r r r r}
     \hline
-    Method & Known & Abs. & Top 3 & Key & Pos. \\
+    Method & Known & Abs & Top 3 & Key & Pos \\
+    Win, \#Keys & acc. & acc. & acc.  & acc. & acc. \\
     \hline
-    x & x & x & x & x & x\\
+    Dense-3, 40, x & 64.5 & x & 81.8 & 78.2 & 43.6\\
+    Dense-4, 40, x & 63.2 & x & 82.0 & 72.8 & 41.8\\
+    Attn, 40, x & 67.6 & x & 83.6 & 80.0 & 48.4\\
+    GRU, 40, x & x & x & x & x & x\\
     \hline
   \end{tabular}
+  }
   \caption{Results for Linux project}
   \label{tab:linux}
 \end{table}
 
 \begin{table}[h]
   \centering
-  \begin{tabular}{l r r r r r}
+  \small {
+  \begin{tabular}{l l l r r r r r}
     \hline
-    Method & Known & Abs. & Top 3 & Key & Pos. \\
+    Method & Known & Abs & Top 3 & Key & Pos \\
+    Win, \#Keys & acc. & acc. & acc.  & acc. & acc. \\
     \hline
-    x & x & x & x & x & x\\
+    Dense-3, 40, x & 46.3 & x & 64.8 & 64.0 & 14.0\\
+    Dense-4, 40, x & 38.9 & x & 53.9 & 56.4 & 7.3\\
+    Attn, 40, x & 46.6 & x & 64.7 & 62.5 & 18.5\\
+    GRU, 40, x & 41.6 & x & 59.1 & 64.4 & 4.9\\
     \hline
   \end{tabular}
+  }
   \caption{Results for Twisted project}
   \label{tab:twisted}
 \end{table}
@@ -46,6 +63,9 @@ model (29\%). Overall, the accuracy on windows with keyword/positional tokens is
 {\bf 55\%}, which translates to an accuracy of 42\% over all windows (including
 windows with UNKNOWN output, which if outside of the capability of our model to
 predict).
+
+\subsection{Examples}
+\label{sec:examples}
 
 Another experiment we ran was to evaluate the accuracy of the classifier in a
 setting where, if the correct token is not within the top few predictions, the
