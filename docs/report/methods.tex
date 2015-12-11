@@ -40,9 +40,10 @@ u &= \sum_{i=1}^{W}{w_i v_{t_i}}\\
 s_j &= p_j^Tu\\
 L &= \log\left(\frac{e^{s_{t_o}}}{\sum_j{e^{s_j}}}\right)
 \end{align}
-The parameters in this model are the weights $w_i$, and the ``prediction''
-vectors $p_j$. The gradients of the loss w.r.t. the parameters are obtained by
-backpropagation, the details of which are omitted here for space.
+The parameters in this model are the weights $w_i$, the word vectors $v_i$, and
+the ``prediction'' vectors $p_j$. The gradients of the loss w.r.t. the
+parameters are obtained by backpropagation, the details of which are omitted
+here for space.
 
 \subsection{Matrix Vector Model}
 In this case, we do not introduce any averaging as in the case of CBOW, but
@@ -58,16 +59,42 @@ in the case of Fixed Window Weight Model. Thus, the prediction vectors $p_j$ are
 much higher dimensional as well, which means this model has a higher number
 of parameters as compared to Fixed Window Weight Model.
 
-\subsection{Non-Linear Matrix Vector Model}
-This case differs from the Matrix Vector Model by addition of an extra
-non-linear transformation between the concatenated token-vectors and the final
-scores. In this model, we assume
+\subsection{Feed-Forward Neural Network Model}
+\label{sec:nnlm}
+This case differs from the Matrix Vector Model by addition of one or more
+non-linear transformations between the concatenated token-vectors and the final
+scores. We denote a specific instance of this model by NL-$k$, where $k$ is the
+number of non-linearity layers it contains. Thus, for example, NL-$0$ is
+equivalent to the Matrix-Vector model described above, while for NL-$3$ the
+probabilities are obtained as:
 \begin{align}
 u &= [v_{t_1}; v_{t_2}; v_{t_3}; \ldots; v_{t_W}]\\
-y &= Qu\\
-z &= \text{relu}(y)\\
-s_j &= p_j^Tz\\
+z_1 &= \text{relu}(Q_1u)\\
+z_2 &= \text{relu}(Q_2z_1)\\
+z_3 &= \text{relu}(Q_3z_2)\\
+s_j &= p_j^Tz_3\\
 L &= \log\left(\frac{e^{s_{t_o}}}{\sum_j{e^{s_j}}}\right)
 \end{align}
 Here $\text{relu}(.)$ is the rectified linear unit, i.e., $\text{relu}(x) = x$
 if $x \geq 0$, and $0$ otherwise.
+
+\subsection{Feed-Forward Model with Soft Attention}
+\label{sec:annlm}
+Motivated by the recent successes of attention based models, we explore an
+attention mechanism for our problem as well. We experiment with a
+``soft''-attention model, i.e., a weight $a_i$ between 0 and 1 is assigned to
+each position $i$. The attentions are assumed to be the result of a sigmoid
+function on a linear combination of the concatenated word-vectors. Subsequently,
+the word vector for the $i^{th}$ token is weighted by $a_i$, and the
+aforementioned NL-$k$ model is applied on the concatenation of these weighted
+word vectors instead. Thus, for example, an attention based NL-$3$ model takes
+the form of:
+\begin{align}
+u &= [v_{t_1}; v_{t_2}; v_{t_3}; \ldots; v_{t_W}]\\
+a &= \sigma(Au)\\
+z &= [a_1v_{t_1}; a_2v_{t_2}; a_3v_{t_3}; \ldots; a_Wv_{t_W}]\\
+s_j &= \text{NL-}3(z ; Q_1, Q_2, Q_3, p_j)\\
+L &= \log\left(\frac{e^{s_{t_o}}}{\sum_j{e^{s_j}}}\right)
+\end{align}
+Here NL-$3(x ; Q_1, Q_2, Q_3, p_j)$ is the function going from $u$ to $s_j$ in
+the case of a NL-$3$ model, described in Section~\ref{sec:nnlm}.
