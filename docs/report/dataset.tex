@@ -1,3 +1,15 @@
 %\vspace{-5pt}
-\section{Dataset}
+\section{Dataset and Features}
 \label{sec:dataset}
+
+We use two different projects, Linux source~\cite{ref:linuxcode}, a C project,
+and Twisted~\cite{ref:twistedcode}, a Python networking library, to train and
+test our methods. In each case, we use half of all files for training, and the
+remaining half for testing.
+Given a sequence of tokens in an incomplete piece of code,
+we predict the next token.
+We pick these incomplete code pieces randomly from the complete codes in the
+training set.
+Tokens in these incomplete codes constitute the features, and the next token
+occuring in the actual complete code is the "truth".
+The next section describes how we model these tokens.

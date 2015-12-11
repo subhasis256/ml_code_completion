@@ -1,5 +1,5 @@
 %\vspace{-5pt}
-\section{Setup and Model}
+\section{Modeling Tokens}
 \label{sec:model}
 
 \noindent
@@ -57,7 +57,7 @@ we construct the new sequence {\tt[for, int, POS\_TOK\_2, =, 0, ;, POS\_TOK\_2,
 but has appeared in the window, it is also replaced by the corresponding
 positional token string. If the target has not appeared before in the window, it
 is assumed to be a special token {\tt UNKNOWN}. However, as we describe in
-Section~\ref{sec:memoryless}, we ignore such windows since in many such
+Section~\ref{sec:methods}, we ignore such windows since in many such
 cases the token is actually a hereto unseen token.
 
 Such an encoding is advantageous since now the set of prediction targets to
@@ -67,5 +67,4 @@ $W$ and a fixed number of key tokens $K$, it can be seen that the total number
 of prediction targets is $K+W+1$ ($K$ key tokens, $W$ positional tokens, and 1
 unknown token), i.e., a {\it constant}. This immediately opens up the
 possibility of applying simple models such as softmax based linear/non-linear
-classifiers on this data. In Section~\ref{sec:memoryless} we describe some such
-models.
+classifiers on this data.
