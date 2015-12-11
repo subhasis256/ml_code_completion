@@ -1,0 +1,28 @@
+\section{Introduction}
+\label{sec:intro}
+
+\noindent
+Code IDEs such as Eclipse and Microsoft Visual Studio make the task of writing
+code in new languages easier by auto-completing key words and phrases.
+For example, when writing code in C++, an IDE may automatically close an
+opening parenthesis, and suggest else immediately following an if block.
+Such code completion has several problems:
+\begin{enumerate}[topsep=0pt,itemsep=-1ex,partopsep=1ex,parsep=1ex]
+  \item Grammar based code completion requires writing down an exhaustive set
+    of rules. This is tedious and repetitive when done for every new language.
+  \item Predictions do not consider the category of code. For instance, driver
+    codes and math libraries may exhibit different patterns.
+  \item Predictions do not consider context such as header file, class
+    definition, function definition, tabs and spaces, opening and closing
+    braces on the same line.
+  \item Recommendations are often ordered lexicographically, which means some
+    of the top recommendations may not be useful.
+\end{enumerate}
+
+\noindent
+This report explores a learning based approach to code completion. Instead of
+writing grammar based rules, we use machine learning to learn structure and
+patterns in code. We can then not only automate code predictors for different
+languages, but also specialize them for different kinds of projects such as
+drivers and libraries. We can also consider the enclosing context and rank
+predictions.

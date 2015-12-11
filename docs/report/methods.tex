@@ -1,0 +1,73 @@
+%\vspace{-5pt}
+\section{Methods}
+\label{sec:methods}
+
+\noindent
+In this model, we simply take the set of $K+W$ positional and key tokens, and
+the set of $K+W+1$ output tokens, and fit a model similar to word
+vectors~\cite{ref:mikolov:wvec}. The details of the model are described below.
+
+We first assign a $D$ dimensional vector to each one of $K+W$ different key
+tokens and positional tokens. We denote such token-vectors by $v_i$, where $1
+\leq i \leq K+W$. Next, given a fixed size window of tokens $[t_1, t_2, \ldots,
+t_W]$, we compute a score for each possible output $j$, $s_j$ as a function of
+the token-vectors of the tokens in the window, i.e.,
+\[
+s_j = f_j\left(v_{t_1}, v_{t_2}, \ldots v_{t_W}\right)
+\]
+The final loss function for this particular example is given by 
+\[
+L = \log\left(\frac{e^{s_{t_o}}}{\sum_j{e^{s_j}}}\right)
+\]
+where $t_o$ is the output token. This is the cross-entropy loss
+between softmax based probabilities for each output and the actual observed
+output. According to the actual form of the function $f_j$, we get different
+models. A few of these models are described below.
+
+For each model, we use {\sc AdaGrad} optimizer to minimize the total loss
+function with respect to the parameters of that model. {\sc AdaGrad} was chosen
+because it gave the best performance in our case among other alternatives such
+as vanilla SGD and momentum based SGD.
+
+\subsection{Fixed Window Weight Model}
+In the spirit of continuous bag-of-word (CBOW) model~\cite{ref:mikolov:wvec}, in
+this model we assume that a token at position $i$ has a ``weight'' of $w_i$, and
+combine the token-vectors of the window according to these weights. The final
+score is assumed to be a linear function of this weighted token-vectors. Thus,
+the overall model is
+\begin{align}
+u &= \sum_{i=1}^{W}{w_i v_{t_i}}\\
+s_j &= p_j^Tu\\
+L &= \log\left(\frac{e^{s_{t_o}}}{\sum_j{e^{s_j}}}\right)
+\end{align}
+The parameters in this model are the weights $w_i$, and the ``prediction''
+vectors $p_j$. The gradients of the loss w.r.t. the parameters are obtained by
+backpropagation, the details of which are omitted here for space.
+
+\subsection{Matrix Vector Model}
+In this case, we do not introduce any averaging as in the case of CBOW, but
+instead simply concatenate the token-vectors to create a larger vector which is
+then used to create the scores. Formally, the model is
+\begin{align}
+u &= [v_{t_1}; v_{t_2}; v_{t_3}; \ldots; v_{t_W}]\\
+s_j &= p_j^Tu\\
+L &= \log\left(\frac{e^{s_{t_o}}}{\sum_j{e^{s_j}}}\right)
+\end{align}
+Note that since here $u$ is $DW$ dimensional instead of being $D$ dimensional as
+in the case of Fixed Window Weight Model. Thus, the prediction vectors $p_j$ are
+much higher dimensional as well, which means this model has a higher number
+of parameters as compared to Fixed Window Weight Model.
+
+\subsection{Non-Linear Matrix Vector Model}
+This case differs from the Matrix Vector Model by addition of an extra
+non-linear transformation between the concatenated token-vectors and the final
+scores. In this model, we assume
+\begin{align}
+u &= [v_{t_1}; v_{t_2}; v_{t_3}; \ldots; v_{t_W}]\\
+y &= Qu\\
+z &= \text{relu}(y)\\
+s_j &= p_j^Tz\\
+L &= \log\left(\frac{e^{s_{t_o}}}{\sum_j{e^{s_j}}}\right)
+\end{align}
+Here $\text{relu}(.)$ is the rectified linear unit, i.e., $\text{relu}(x) = x$
+if $x \geq 0$, and $0$ otherwise.
