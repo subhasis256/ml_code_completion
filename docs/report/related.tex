@@ -14,10 +14,9 @@ predict the probability of occurence of a sequence of tokens. The frequencies of
 such $n$-grams are obtained from a corpus, and are smoothed by various
 algorithms such as Kneser-Ney smoothing~\cite{ref:kneser-ney} to account for
 sparsity of $n$-grams. Such models can be easily extended to code completion,
-e.g., by assuming each token to be a word and doing $n$-gram analysis over a
-codebase. However, it is difficult to see how such models can be
-used for code completion considering the high fraction of unknown tokens
-from variable and function names.
+by modeling each token as a word and doing $n$-gram analysis over a
+codebase. However, such models do not capture
+the high fraction of unknown tokens from variable and function names very well.
 %used for code completion considering the high fraction of {\tt UNKNOWN} tokens
 %in codes. For example, even in a simple case such as {\tt for(int SOMEVAR = 0;
 %SOMEVAR < EXPRESSION; SOMEVAR++)}, the token {\tt SOMEVAR} can be arbitrary, and
@@ -39,7 +38,7 @@ the form of vector operations (i.e., $v_{\text king} -
 v_{\text queen} = v_{\text man} - v_{\text woman}$). To distinguish such models
 from {\it recurrent} models, we
 call them {\it feed-forward} neural network language models.
-We use the same concept in out token-embedding. We found singificant clustering
+We use the same concept in our token-embedding. We found singificant clustering
 of similar tokens, such as {\tt uint8\_t} and {\tt uint16\_t}, but were unable
 to fund vector relationships.
 %We use the same concept in our token-embeddings, where we attempt to predict
