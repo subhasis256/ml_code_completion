@@ -24,10 +24,11 @@ Our code is available on github~\cite{ref:codecompletion}.
     Dense-4, 40, x & 63.2 & x & 82.0 & 72.8 & 41.8\\
     Attn, 40, x & 67.6 & x & 83.6 & 80.0 & 48.4\\
     GRU, 40, x & x & x & x & x & x\\
+    Ranfom & x & x & x & x & x\\
     \hline
   \end{tabular}
   }
-  \caption{Results for Linux project}
+  \caption{Test accuracy (\%) of predictions for Linux project}
   \label{tab:linux}
 \end{table}
 
@@ -43,12 +44,33 @@ Our code is available on github~\cite{ref:codecompletion}.
     Dense-4, 40, x & 38.9 & x & 53.9 & 56.4 & 7.3\\
     Attn, 40, x & 46.6 & x & 64.7 & 62.5 & 18.5\\
     GRU, 40, x & 41.6 & x & 59.1 & 64.4 & 4.9\\
+    Ranfom & x & x & x & x & x\\
     \hline
   \end{tabular}
   }
-  \caption{Results for Twisted project}
+  \caption{Test accuracy (\%) of predictions for Twisted project}
   \label{tab:twisted}
 \end{table}
+
+\noindent
+Table~\ref{tab:linux} shows results for Linux source, a C project, and
+Table~\ref{tab:twisted} for Twisted, a Python networking library. As mentioned
+in Section~\ref{sec:dataset}, we use half the files for training and half for
+testing.
+Column 1
+lists out the learning method. We also report numbers for a naive, random
+predictor, that predicts a random token as the next token. Known acc. is the
+accuracy for predictions for the cases where the next token is a key token, or
+a positional token from the window being considered. Abs acc. is the accuracy
+for predictions for all cases, considering the cases where the next token is
+neither a key word nor a seen positional token. These are often new function
+names or variable names, or variables outside of our window. Top 3 is the
+percentage of cases where the next token is within top 3 predictions, ignoring
+the unknown cases (unseen variable and function names). Key acc. is the
+accuracy with which we predict key tokens correctly, given the next token is a
+key token,
+and pos. acc. is the accuracy with which we predict positional tokens
+correctly, given the next token is a positional token.
 
 We observed that among the models discussed, the Non-Linear Matrix Vector Model
 gave the best accuracy (55\% accuracy as opposed to $\approx$ 45\% for Fixed
