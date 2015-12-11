@@ -76,7 +76,8 @@ s_j &= p_j^Tz_3\\
 L &= \log\left(\frac{e^{s_{t_o}}}{\sum_j{e^{s_j}}}\right)
 \end{align}
 Here $\text{relu}(.)$ is the rectified linear unit, i.e., $\text{relu}(x) = x$
-if $x \geq 0$, and $0$ otherwise.
+if $x \geq 0$, and $0$ otherwise. In this work, we specifically experimented
+with NL-$0$, NL-$1$, NL-$2$, and NL-$3$.
 
 \subsection{Feed-Forward Model with Soft Attention}
 \label{sec:annlm}
@@ -98,3 +99,21 @@ L &= \log\left(\frac{e^{s_{t_o}}}{\sum_j{e^{s_j}}}\right)
 \end{align}
 Here NL-$3(x ; Q_1, Q_2, Q_3, p_j)$ is the function going from $u$ to $s_j$ in
 the case of a NL-$3$ model, described in Section~\ref{sec:nnlm}.
+
+\subsection{GRU based Recurrent Model}
+\label{sec:rnnlm}
+Recurrent neural network models based on cells like LSTM~\cite{ref:lstm} and
+GRU~\cite{ref:gru} have recently been shown to achieve state-of-the-art
+performance in language models. Inspired by these results, we also attempted to
+use a GRU based recurrent model for our prediction task. Specifically, our model
+was the following:
+\begin{align}
+[g_1; g_2; g_3; \ldots; g_{W}] &= \text{GRU}([v_{t_1}; v_{t_2}; v_{t_3}; \ldots;
+v_{t_W}])\\
+s_j &= p_j^T[g]\\
+L &= \log\left(\frac{e^{s_{t_o}}}{\sum_j{e^{s_j}}}\right)
+\end{align}
+Here, $g_i$ is the output of the $i^{th}$ GRU cell, and we have a dense layer
+after that to get the scores for each output token. As we did not achieve
+competitive performance with this model as compared to NL-$1$, we did not
+experiment further with deeper GRU models.
