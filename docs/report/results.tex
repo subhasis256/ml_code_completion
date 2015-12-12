@@ -61,7 +61,8 @@ lists the learning method, window size and number of key words.
 NL-3 is a feed forward model with 3 non-linearity layers, and NL-4 is a feed
 forward model with 4 non-linearity layers. Attn. computes a weighing
 parameter for each input token in the window, and uses 3 non-linearity layers.
-GRU is a recurrent model.
+GRU is a recurrent model. We do not report numbers for GRU in the Linux codebase
+since it gave poor results in the smaller Twisted codebase.
 Additionally, we report numbers for a fictional random
 predictor that achieves the accuracy of the best predictor in case of keywords,
 but in case of a non-keyword token predicts one randomly from the non-keyword
