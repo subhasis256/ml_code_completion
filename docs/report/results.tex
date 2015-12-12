@@ -20,8 +20,8 @@ Our code is available on github~\cite{ref:codecompletion}.
     Method & Known & Abs & Top 3 & Key & Pos \\
     Win, \#Keys & acc. & acc. & acc.  & acc. & acc. \\
     \hline
-    Dense-3, 40, 2000 & 64.5 & x & 81.8 & 78.2 & 43.6\\
-    Dense-4, 40, 2000 & 63.2 & x & 82.0 & 72.8 & 41.8\\
+    NL-3, 40, 2000 & 64.5 & x & 81.8 & 78.2 & 43.6\\
+    NL-4, 40, 2000 & 63.2 & 50.6 & 82.0 & 72.8 & 41.8\\
     Attn, 40, 1000 & 67.6 & x & 83.6 & 80.0 & 48.4\\
     GRU, 40, 2000 & x & x & x & x & x\\
     Random & x & x & x & x & x\\
@@ -40,8 +40,8 @@ Our code is available on github~\cite{ref:codecompletion}.
     Method & Known & Abs & Top 3 & Key & Pos \\
     Win, \#Keys & acc. & acc. & acc.  & acc. & acc. \\
     \hline
-    Dense-3, 40, 500 & 46.3 & x & 64.8 & 64.0 & 14.0\\
-    Dense-4, 40, 500 & 43.0 & 38.7 & 59.0 & 65.5 & 9.2\\
+    NL-3, 40, 500 & 46.3 & x & 64.8 & 64.0 & 14.0\\
+    NL-4, 40, 500 & 43.0 & 38.7 & 59.0 & 65.5 & 9.2\\
     Attn, 40, 500 & 46.6 & x & 64.7 & 62.5 & 18.5\\
     GRU, 40, 500 & 41.6 & x & 59.1 & 64.4 & 4.9\\
     Random & x & x & x & x & x\\
@@ -58,33 +58,55 @@ Table~\ref{tab:twisted} for Twisted, a Python networking library. As mentioned
 in Section~\ref{sec:dataset}, we use half the files for training and half for
 testing.
 Column 1
-lists out the learning method. We also report numbers for a naive, random
-predictor, that predicts a random token as the next token. Known acc. is the
+lists the learning method, window size and number of key words.
+NL-3 is a feed forward model with 3 non-linearity layers, and NL-4 is a feed
+forward model with 4 non-linearity layers. Attn. computes a weighing
+parameter for each input token in the window, and uses 3 non-linearity layers.
+GRU is a recurrent model.
+Additionally, we report numbers for a naive, random
+predictor, that predicts a random token as the next token.
+
+Known acc. is the
 accuracy for predictions for the cases where the next token is a key token, or
 a positional token from the window being considered. Abs acc. is the accuracy
-for predictions for all cases, considering the cases where the next token is
+for predictions for all cases, including cases where the next token is
 neither a key word nor a seen positional token. These are often new function
 names or variable names, or variables outside of our window. Top 3 is the
 percentage of cases where the next token is within top 3 predictions, ignoring
-the unknown cases (unseen variable and function names). Key acc. is the
+the unknown cases (unseen variable and function names).
+We report this number, because generally, we are interested in the top few
+suggestions as opposed to the top suggestion with a code recommendation system.
+Key acc. is the
 accuracy with which we predict key tokens correctly, given the next token is a
 key token,
 and pos. acc. is the accuracy with which we predict positional tokens
 correctly, given the next token is a positional token.
+These give us insight into how well our methods predict tokens that are not key
+tokens.
 
-We observed that among the models discussed, the Non-Linear Matrix Vector Model
-gave the best accuracy (55\% accuracy as opposed to $\approx$ 45\% for Fixed
-Window Weight Model and $\approx$ 50\% for Matrix Vector Model). Overall, we
-found that 46\% of the windows had an output that is a key token, and 30\% had
-an output that was a positional token. This underlines the importance of also
-considering non-keyword tokens while doing prediction.
+We found that attention gives the best results among all the methods we tried.
+This makes sense because it is also the most general of all models --- it
+directly connects all inputs to the output, (unlike GRU where computed states
+are chained), and it has an additional attention parameter, that is just a
+constant in the simple feed-forward case. We also found that the feed forward
+model with 4 non-linearity layers tends to overfit the training data, giving a slightly
+lower accuracy on test data. Increasing the word vector dimensions also tends
+to result in overfitting. Though regularization can help with overfitting, we
+found that reducing vector dimensions and number of layers was also sufficient
+to reduce high variance from overfitting.
 
-The accuracy of predicting the keyword tokens was {\bf 72\%}, while the accuracy
-of predicting the non-keyword tokens was {\bf 29\%}. We also evaluated the
-accuracy of a random predictor on the non-keyword tokens, and that achieves an
-accuracy of 8\%, which is significantly lower than the accuracy achieved by our
-model (29\%). Overall, the accuracy on windows with keyword/positional tokens is
-{\bf 55\%}, which translates to an accuracy of 42\% over all windows (including
-windows with UNKNOWN output, which if outside of the capability of our model to
-predict).
+The accuracy of predicting non-key words, that is, positional tokens is quite
+high for Linux kernel, a C project, indicating there is a lot of redundancy/
+recurring patterns. The positional token accuracy is lower for Python.
+We think this is because Python is a dynamically typed, high level
+language with less redundancy, and more terse syntax.
+However, in both cases, the top 3 prediction
+accuracy is still much higher than a random predictor, indicating that the
+model does extract some patterns out of the code.
 
+A plot of the word vectors reveals a significant clustering of similar
+words --- {\texttt {uint8\_t}} and {\texttt {uint16\_t}}, different locking and
+unlocking calls, and integers. We have omitted these plots from the report for
+space. Unlike natural language texts, however,
+we did not observe any significant vector relationships between different
+different tokens.
