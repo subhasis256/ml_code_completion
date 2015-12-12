@@ -14,7 +14,7 @@ Our code is available on github~\cite{ref:codecompletion}.
 
 \begin{table}[h]
   \centering
-  \small {
+%  \small {
   \begin{tabular}{l l l r r r r r}
     \hline
     Method & Known & Abs & Top 3 & Key & Pos \\
@@ -23,30 +23,30 @@ Our code is available on github~\cite{ref:codecompletion}.
     NL-3, 40, 2000 & 64.4 & 53.4 & 81.7 & 78.0 & 43.7\\
     NL-4, 64, 2000 & 63.2 & 50.6 & 82.0 & 72.8 & 41.8\\
     Attn, 40, 1000 & 67.5 & 56.0 & 83.6 & 79.9 & 48.4\\
-    Random & x & x & x & x & x\\
+    BestKW-RandPos & 49.8 & 41.3 & -- & 79.9 & 7.0\\
     \hline
   \end{tabular}
-  }
+%  }
   \caption{Test accuracy (\%) of predictions for Linux project}
   \label{tab:linux}
 \end{table}
 
 \begin{table}[h]
   \centering
-  \small {
+%  \normal {
   \begin{tabular}{l l l r r r r r}
     \hline
     Method & Known & Abs & Top 3 & Key & Pos \\
     Win, \#Keys & acc. & acc. & acc.  & acc. & acc. \\
     \hline
-    NL-3, 40, 500 & 46.3 & x & 64.8 & 64.0 & 14.0\\
+    NL-3, 40, 500 & 46.3 & 39.2 & 64.8 & 64.1 & 14.2\\
     NL-4, 40, 500 & 43.0 & 38.7 & 59.0 & 65.5 & 9.2\\
-    Attn, 40, 500 & 46.6 & x & 64.7 & 62.5 & 18.5\\
-    GRU, 40, 500 & 41.6 & x & 59.1 & 64.4 & 4.9\\
-    Random & x & x & x & x & x\\
+    Attn, 40, 500 & 47.9 & 40.6 & 66.5 & 64.6 & 17.6\\
+    GRU, 40, 500 & 41.6 & 35.2 & 59.1 & 64.4 & 4.9\\
+    BestKW-RandPos & 43.6 & -- & 37.5 & 64.4 & 5.5\\
     \hline
   \end{tabular}
-  }
+%  }
   \caption{Test accuracy (\%) of predictions for Twisted project}
   \label{tab:twisted}
 \end{table}
@@ -62,8 +62,10 @@ NL-3 is a feed forward model with 3 non-linearity layers, and NL-4 is a feed
 forward model with 4 non-linearity layers. Attn. computes a weighing
 parameter for each input token in the window, and uses 3 non-linearity layers.
 GRU is a recurrent model.
-Additionally, we report numbers for a naive, random
-predictor, that predicts a random token as the next token.
+Additionally, we report numbers for a fictional random
+predictor that achieves the accuracy of the best predictor in case of keywords,
+but in case of a non-keyword token predicts one randomly from the non-keyword
+tokens in the window. We name this BestKW-RandPos
 
 Known acc. is the
 accuracy for predictions for the cases where the next token is a key token, or
