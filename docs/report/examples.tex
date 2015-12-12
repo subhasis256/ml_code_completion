@@ -21,5 +21,82 @@ PCI\_VDEVICE(SUNDANCE, } are predicted correctly without typing anything.
   \label{fig:codeexample}
 \end{figure}
 
-\subsubsection{Importance of Positional tokens}
+\subsubsection{Importance of Positional Tokens}
+From Figure~\ref{fig:codeexample} we can also see the importance of positional
+tokens. The tokens {\tt PCI\_VDEVICE} and {\tt SUNDANCE} are both not keywords
+(i.e., not frequently observed in the codebase), and yet were predicted
+correctly by our method the second time they were used (in line 3). If we chose
+to ignore such tokens instead, we would not have been able to predict such
+tokens correctly in a majority of cases.
+
+\subsubsection{Learning Frequently Occurring Patterns}
+We also found several interesting patterns that are predicted correctly by our
+system. An example of such a pattern is given in
+Figures~\ref{fig:conditional1}~\&~\ref{fig:conditional2}. In these figures, each
+character is color coded as before, and some additional information is also
+shown. The top 5 predictions at the position of interest (shown in red border),
+are shown in a blue box. Also, the value of attention for each token in the
+prediction window are shown color coded in sky-blue, where deeper blue is
+indicative of more attention (for reference, the first {\tt if} tokens in both
+of these two cases have an attention value of $\approx$ 1).
+
+\begin{figure}
+  \centering
+\begin{subfigure}{\linewidth}
+  \includegraphics[width=\linewidth]{figs/example8.png}
+  \caption{Example 1}
+  \label{fig:conditional1}
+\end{subfigure}
+\begin{subfigure}{\linewidth}
+  \includegraphics[width=\linewidth]{figs/example9.png}
+  \caption{Example 2}
+  \label{fig:conditional2}
+\end{subfigure}
+  \caption{Definition before {\tt if} pattern}
+  \label{fig:ifpattern}
+\end{figure}
+
+Here, a variable is assigned to right before an {\tt if} statement, and the
+prediction is that the variable will be immediately used inside the {\tt if}
+condition. This is a common pattern in Linux code, where if the condition inside
+{\tt if} is too long, it is broken up into an assignment and a subsequent
+conditional.
+
+Also, in the figure the top 5 predictions for each case is given in the blue
+box. We can see that {\tt unlikely} is a common prediction, since {\tt if
+(unlikely(condition))} is a common pattern in Linux code to check for unlikely
+edge cases such as error conditions.
+
+We can also see that the attention of the models is relatively high at the
+correct predictions ({\tt skb} and {\tt framelen} in the first and second cases
+respectively). This shows that even a single layer model can be expected to
+fairly reliably predict the next token (since the attention is derived from a
+single non-linear layer).
+
+A few more interesting examples are shown in Figure~\ref{fig:moreexamples}.
+\begin{figure}
+  \centering
+\begin{subfigure}{\linewidth}
+  \includegraphics[width=\linewidth]{figs/example10.png}
+  \caption{{\tt mutex\_lock} and {\tt mutex\_unlock} pair on same lock variable}
+  \label{fig:lockunlock}
+\end{subfigure}
+\begin{subfigure}{\linewidth}
+  \includegraphics[width=\linewidth]{figs/example4.png}
+  \caption{Duplicate code after function definition predicted correctly}
+  \label{fig:duplicate}
+\end{subfigure}
+\begin{subfigure}{\linewidth}
+  \includegraphics[width=\linewidth]{figs/example7.png}
+  \caption{Member variables predicted correctly}
+  \label{fig:memvar}
+\end{subfigure}
+\begin{subfigure}{\linewidth}
+  \includegraphics[width=0.6\linewidth]{figs/example1.png}
+  \caption{{\tt case} token predicted correctly after each {\tt break;}}
+  \label{fig:breakcase}
+\end{subfigure}
+  \caption{Interesting code patterns predicted correctly}
+  \label{fig:ifpattern}
+\end{figure}
 
